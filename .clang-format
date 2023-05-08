@@ -1,0 +1,12 @@
+﻿---
+AlignAfterOpenBracket: Align
+AlignConsecutiveMacros: 'true'
+AllowShortCaseLabelsOnASingleLine: 'true'
+ColumnLimit: '100'
+IndentWidth: '8'
+Language: Cpp
+PointerAlignment: Left
+SortIncludes: 'true'
+TabWidth: '8'
+
+...
