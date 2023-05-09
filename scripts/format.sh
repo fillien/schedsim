@@ -7,5 +7,4 @@ clang-format -i main.cpp engine.hpp engine.cpp \
 	     scheduler.hpp scheduler.cpp \
 	     server.cpp server.hpp \
 	     event.cpp event.hpp \
-	     tracer.hpp tracer.cpp \
-	     trace.hpp trace.cpp
+	     tracer.hpp tracer.cpp

@@ -26,7 +26,7 @@ int main() {
         // Simulate the system (job set + platform) with the chosen scheduler
         sim->simulation();
 
-        cout << "Logs :\n" << sim->logging_system.format(to_txt_fanch);
+        cout << "Logs :\n" << sim->logging_system.format(to_txt);
 
         return EXIT_SUCCESS;
 }

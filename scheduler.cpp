@@ -6,7 +6,6 @@
 #include "processor.hpp"
 #include "server.hpp"
 #include "task.hpp"
-#include "trace.hpp"
 #include "tracer.hpp"
 
 #include <algorithm>
@@ -35,8 +34,6 @@ auto deadline_order = [](const std::shared_ptr<server>& first,
                          const std::shared_ptr<server>& second) {
         return first->relative_deadline < second->relative_deadline;
 };
-
-auto compute_budget = [](const server serv) -> double { return 0; };
 } // namespace
 
 void scheduler::set_engine(std::weak_ptr<engine> sim) {
@@ -44,10 +41,10 @@ void scheduler::set_engine(std::weak_ptr<engine> sim) {
         simulator = sim;
 }
 
-void scheduler::add_trace(const trace::types& new_trace) const {
+void scheduler::add_trace(const types type, const int target_id, const double payload) const {
         assert(!simulator.expired());
         auto sim = simulator.lock();
-        sim->logging_system.add_trace({sim->current_timestamp, new_trace});
+        sim->logging_system.add_trace({sim->current_timestamp, type, target_id, payload});
 };
 
 auto scheduler::get_active_bandwidth() -> double {
@@ -71,8 +68,6 @@ void scheduler::handle_undefined_event(const event& evt) {
 
 void scheduler::handle_proc_activated(const event& evt) {}
 void scheduler::handle_proc_idle(const event& evt) {}
-void scheduler::handle_proc_stopped(const event& evt) {}
-void scheduler::handle_proc_stopping(const event& evt) {}
 
 void scheduler::handle_serv_active_cont(const event& evt) {
         assert(!simulator.expired());
@@ -96,7 +91,7 @@ void scheduler::handle_serv_active_cont(const event& evt) {
         // A rescheduling is require
         sim->add_event({types::RESCHED, serv, 0}, sim->current_timestamp);
 
-        add_trace(trace::types::sactcont);
+        add_trace(types::SERV_ACT_CONT, serv->id());
 }
 
 void scheduler::handle_serv_active_non_cont(const event& evt) {
@@ -112,7 +107,7 @@ void scheduler::handle_serv_budget_exhausted(const event& evt) {
         auto serv = std::static_pointer_cast<server>(evt.target.lock());
         auto time_consumed = evt.payload; // The budget of the server when it started
 
-        add_trace(trace::types::sbudgetex);
+        add_trace(types::SERV_BUDGET_EXHAUSTED, serv->id());
 
         // Update time parameters
         //  - update virtual time
@@ -123,7 +118,7 @@ void scheduler::handle_serv_budget_exhausted(const event& evt) {
 
         // Postpone the deadline
         serv->relative_deadline += serv->period();
-        add_trace(trace::types::tpostp_b);
+        add_trace(types::SERV_POSTPONE, serv->id());
 
         sim->add_event({types::RESCHED, serv, 0}, sim->current_timestamp);
 }
@@ -131,11 +126,8 @@ void scheduler::handle_serv_budget_exhausted(const event& evt) {
 void scheduler::handle_serv_budget_replenished(const event& evt) {}
 void scheduler::handle_serv_idle(const event& evt) {}
 void scheduler::handle_serv_running(const event& evt) {}
-void scheduler::handle_task_blocked(const event& evt) {}
-void scheduler::handle_task_killed(const event& evt) {}
 void scheduler::handle_task_preempted(const event& evt) {}
 void scheduler::handle_task_scheduled(const event& evt) {}
-void scheduler::handle_task_unblocked(const event& evt) {}
 
 void scheduler::handle_job_arrival(const event& evt) {
         assert(!simulator.expired());
@@ -180,11 +172,13 @@ void scheduler::handle_job_arrival(const event& evt) {
         // Set the task remaining execution time with the WCET of the job
         new_task->set_remaining_execution_time(evt.payload);
 
-        add_trace(trace::types::tarrival);
+        add_trace(types::JOB_ARRIVAL, new_task->id);
         return;
 }
 
 void scheduler::handle_job_finished(const event& evt) {}
+
+void scheduler::handle_sim_finished(const event& evt) { std::cout << "Simulation as finished\n"; }
 
 void scheduler::handle_resched(const event& evt) {
         assert(!simulator.expired());
@@ -203,19 +197,21 @@ void scheduler::handle_resched(const event& evt) {
                 // preempt the task associated with the running server
                 if (highest_priority_server != (*running_server)) {
                         (*running_server)->current_state = server::state::active;
-                        add_trace(trace::types::tpreempted);
+                        add_trace(types::TASK_PREEMPTED, (*running_server)->id());
                 }
         } else {
                 // There is no running server
 
                 // Notify if the processor start to execute a task
-                if (sim->current_plateform.processors.at(0)->current_state !=
-                    processor::state::running) {
-                        add_trace(trace::types::pactivated);
+                const auto& proc = sim->current_plateform.processors.at(0);
+                if (proc->current_state != processor::state::running) {
+                        add_trace(types::PROC_ACTIVATED, proc->id);
                 }
         }
-        add_trace(trace::types::tbegin);
+
         highest_priority_server->current_state = server::state::running;
+        sim->add_event({types::SERV_RUNNING, highest_priority_server, 0}, sim->current_timestamp);
+        add_trace(types::TASK_SCHEDULED, highest_priority_server->id());
 
         // Compute the budget of the selected server
         double new_server_budget = compute_budget(*highest_priority_server);

@@ -68,11 +68,8 @@ void engine::handle(const event& evt) {
         switch (evt.type) {
         case JOB_ARRIVAL: sched->handle_job_arrival(evt); break;
         case JOB_FINISHED: sched->handle_job_finished(evt); break;
-        case PLAT_SPEED_CHANGED: sched->handle_plat_speed_changed(evt); break;
         case PROC_ACTIVATED: sched->handle_proc_activated(evt); break;
         case PROC_IDLED: sched->handle_proc_idle(evt); break;
-        case PROC_STOPPED: sched->handle_proc_stopped(evt); break;
-        case PROC_STOPPING: sched->handle_proc_stopping(evt); break;
         case RESCHED: sched->handle_resched(evt); break;
         case SERV_ACT_CONT: sched->handle_serv_active_cont(evt); break;
         case SERV_ACT_NON_CONT: sched->handle_serv_active_non_cont(evt); break;
@@ -81,13 +78,8 @@ void engine::handle(const event& evt) {
         case SERV_IDLE: sched->handle_serv_idle(evt); break;
         case SERV_RUNNING: sched->handle_serv_running(evt); break;
         case SIM_FINISHED: sched->handle_sim_finished(evt); break;
-        case TASK_BLOCKED: sched->handle_task_blocked(evt); break;
-        case TASK_KILLED: sched->handle_task_killed(evt); break;
-        case TASK_MIGRATED: sched->handle_task_migrated(evt); break;
         case TASK_PREEMPTED: sched->handle_task_preempted(evt); break;
         case TASK_SCHEDULED: sched->handle_task_scheduled(evt); break;
-        case TASK_UNBLOCKED: sched->handle_task_unblocked(evt); break;
-        case TT_MODE: sched->handle_tt_mode(evt); break;
         default: sched->handle_undefined_event(evt);
         }
 }

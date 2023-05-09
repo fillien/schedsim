@@ -20,24 +20,31 @@ enum class types {
         SERV_BUDGET_REPLENISHED,
         SERV_IDLE,
         SERV_RUNNING,
+        SERV_POSTPONE,
         SIM_FINISHED,
         TASK_PREEMPTED,
         TASK_SCHEDULED,
+        VIRTUAL_TIME_UPDATE
 };
 
 class event {
       public:
         int id;
         types type;
-        const std::weak_ptr<entity> target;
+        std::weak_ptr<entity> target;
         double payload;
-        int priority;
 
-        event(const types type, const std::weak_ptr<entity> target, const double payload,
-              const int priority = 0);
+        event(const types type, const std::weak_ptr<entity> target, const double payload);
 
       private:
         static inline int cpt_id{0};
+};
+
+struct trace {
+        double timestamp;
+        types type;
+        int target_id;
+        double payload;
 };
 
 auto operator<<(std::ostream& out, const types& type) -> std::ostream&;

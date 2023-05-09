@@ -74,7 +74,6 @@ file(GLOB source
   "scheduler.cpp"
   "server.cpp"
   "tracer.cpp"
-  "trace.cpp"
   "task.cpp"
 )
 
