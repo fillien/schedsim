@@ -125,7 +125,14 @@ void scheduler::handle_serv_budget_exhausted(const event& evt) {
 
 void scheduler::handle_serv_budget_replenished(const event& evt) {}
 void scheduler::handle_serv_idle(const event& evt) {}
-void scheduler::handle_serv_running(const event& evt) {}
+
+void scheduler::handle_serv_running(const event& evt) {
+	assert(!evt.target.expired());
+        std::shared_ptr<server> serv = std::static_pointer_cast<server>(evt.target.lock());
+	
+	add_trace(types::SERV_RUNNING, serv->id());
+}
+
 void scheduler::handle_task_preempted(const event& evt) {}
 void scheduler::handle_task_scheduled(const event& evt) {}
 
