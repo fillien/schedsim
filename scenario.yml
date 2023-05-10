@@ -1,0 +1,21 @@
+cores: 1
+tasks:
+  - id: 1
+    period: 8
+    utilization: 0.5
+    jobs:
+      - arrival: 0
+        duration: 2
+
+      - arrival: 5
+        duration: 2
+
+  - id: 2
+    period: 12
+    utilization: 0.25
+    jobs:
+      - arrival: 1
+        duration: 4
+        
+      - arrival: 8
+        duration: 3
