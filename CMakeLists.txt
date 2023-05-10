@@ -75,6 +75,8 @@ file(GLOB source
   "server.cpp"
   "tracer.cpp"
   "task.cpp"
+  "barectf.c"
+  "barectf-platform-simulator.c"
 )
 
 add_executable(launch ${source})

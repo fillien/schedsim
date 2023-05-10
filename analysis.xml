@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tmfxml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="xmldefinition.xsd">
+
+  <!-- The state provider assigns states from events -->
+  <stateProvider id="org.eclipse.linuxtools.ust.sim" version="9">
+    <!-- Convenience names for the state values -->
+    <definedValue name="ACTIVE_CONT" value="0" />
+    <definedValue name="RUNNING" value="1" />
+    <definedValue name="ACTIVE_NON_CONT" value="2" />
+
+    <!-- Event handlers -->
+    <eventHandler eventName="serv_idle">
+      <stateChange>
+	<stateAttribute type="constant" value="Server" />
+	<stateAttribute type="eventField" value="tid" />
+	<stateValue type="null" />
+      </stateChange>
+    </eventHandler>
+    <eventHandler eventName="serv_act_cont">
+      <stateChange>
+	<stateAttribute type="constant" value="Server" />
+	<stateAttribute type="eventField" value="tid" />
+	<stateValue type="int" value="$ACTIVE_CONT" />
+      </stateChange>
+    </eventHandler>
+    <eventHandler eventName="serv_running">
+      <stateChange>
+	<stateAttribute type="constant" value="Server" />
+	<stateAttribute type="eventField" value="tid" />
+	<stateValue type="int" value="$RUNNING" />
+      </stateChange>
+    </eventHandler>
+    <eventHandler eventName="serv_budget_exhausted">
+      <stateChange>
+	<stateAttribute type="constant" value="Server" />
+	<stateAttribute type="eventField" value="tid" />
+	<stateValue type="int" value="$ACTIVE_CONT" />
+      </stateChange>
+    </eventHandler>
+    <eventHandler eventName="job_finished">
+      <stateChange>
+	<stateAttribute type="constant" value="Server" />
+	<stateAttribute type="eventField" value="tid" />
+	<stateValue type="int" value="$ACTIVE_CONT" />
+      </stateChange>
+    </eventHandler>
+    <eventHandler eventName="serv_act_non_cont">
+      <stateChange>
+	<stateAttribute type="constant" value="Server" />
+	<stateAttribute type="eventField" value="tid" />
+	<stateValue type="int" value="$ACTIVE_NON_CONT" />
+      </stateChange>
+    </eventHandler>
+    <eventHandler eventName="serv_preempted">
+      <stateChange>
+	<stateAttribute type="constant" value="Server" />
+	<stateAttribute type="eventField" value="tid" />
+	<stateValue type="int" value="$ACTIVE_CONT" />
+      </stateChange>
+    </eventHandler>
+  </stateProvider>
+
+  <!-- This is the definition of the time-graph view -->
+  <timeGraphView id="org.eclipse.linuxtools.tmf.analysis.xml.sstimeview">
+    <head>
+      <analysis id="org.eclipse.linuxtools.ust.sim" />
+      <label value="UST scheduling view" />
+    </head>
+    
+    <!-- Colors assigned to the state values -->
+    <definedValue name="ACTIVE_CONT" value="0" color="#8FF0A4" />
+    <definedValue name="RUNNING" value="1" color="#26A269" />
+    <definedValue name="ACTIVE_NON_CONT" value="2" color="#F6D32D" />
+
+    <!-- Which attributes to "print" in the view -->
+    <entry path="Server/*">
+      <display type="self" />
+    </entry>
+  </timeGraphView>
+</tmfxml>
