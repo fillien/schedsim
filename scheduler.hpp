@@ -5,6 +5,7 @@
 #include "server.hpp"
 #include "tracer.hpp"
 
+#include <cassert>
 #include <functional>
 #include <memory>
 #include <vector>
@@ -16,8 +17,19 @@ class scheduler {
         std::vector<std::shared_ptr<server>> servers;
 
         void add_trace(const types type, const int target_id, const double payload = 0) const;
+        auto is_event_present(const std::shared_ptr<task>& the_task, const types type) -> bool;
         auto get_active_bandwidth() -> double;
         auto compute_budget(const server&) -> double;
+        void update_server_time(const std::shared_ptr<server>& serv, const double time_comsumed);
+        void postpone(const std::shared_ptr<server>& serv);
+        void goto_active_cont(const std::shared_ptr<server>& serv);
+        void goto_active_non_cont(const std::shared_ptr<server>& serv);
+        void goto_idle(const std::shared_ptr<server>& serv);
+
+        auto sim() const -> std::shared_ptr<engine> {
+                assert(!simulator.expired());
+                return simulator.lock();
+        }
 
       public:
         void set_engine(std::weak_ptr<engine> simulator);

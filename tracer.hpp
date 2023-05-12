@@ -1,8 +1,8 @@
 #ifndef TRACER_HPP
 #define TRACER_HPP
 
-#include "event.hpp"
 #include "barectf.h"
+#include "event.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -12,12 +12,12 @@ class tracer {
       private:
         std::vector<trace> trace_store;
 
-	struct barectf_platform_simulator_ctx *platform_ctx;
-	struct barectf_default_ctx *ctx;
-	
+        struct barectf_platform_simulator_ctx* platform_ctx;
+        struct barectf_default_ctx* ctx;
+
       public:
-	tracer(double* clock);
-	~tracer();
+        tracer(double* clock);
+        ~tracer();
         void add_trace(const trace& new_trace);
         void clear();
         auto format(std::function<std::string(const trace&)> func_format) -> std::string;

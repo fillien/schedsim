@@ -5,4 +5,6 @@ tasks:
     utilization: 0.5
     jobs:
       - arrival: 0
-        duration: 3
+        duration: 5
+      - arrival: 5
+        duration: 5

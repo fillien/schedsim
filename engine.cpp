@@ -18,8 +18,8 @@ auto print = [](auto const& map) {
         std::cout << "End =====================\n";
 };
 
-engine::engine(const size_t nb_processors) : current_plateform(plateform(nb_processors)),
-					     logging_system(&this->current_timestamp) {}
+engine::engine(const size_t nb_processors)
+    : current_plateform(plateform(nb_processors)), logging_system(&this->current_timestamp) {}
 
 void engine::set_scheduler(std::shared_ptr<scheduler>& new_sched) {
         sched = new_sched;
@@ -52,7 +52,8 @@ void engine::simulation() {
                 const auto& itr = future_list.begin();
                 if (this->current_timestamp != itr->first) {
                         this->current_timestamp = itr->first;
-                        std::cout << "Current time : " << current_timestamp << '\n';
+                        std::cout << "\033[1;31m"
+                                  << "==== Time " << current_timestamp << " ====\033[0m\n";
                 }
 
                 const event evt = std::move(itr->second);
@@ -60,6 +61,9 @@ void engine::simulation() {
 
                 std::cout << "[engine] handle " << evt << '\n';
                 handle(evt);
+        }
+        if (future_list.begin()->second.type == types::SIM_FINISHED) {
+                handle(future_list.begin()->second);
         }
 }
 

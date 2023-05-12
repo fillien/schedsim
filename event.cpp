@@ -21,10 +21,11 @@ auto operator<<(std::ostream& out, const types& type) -> std::ostream& {
         case SERV_BUDGET_REPLENISHED: return out << "SERV_BUDGET_REPLENISHED";
         case SERV_IDLE: return out << "SERV_IDLE";
         case SERV_RUNNING: return out << "SERV_RUNNING";
-	case SERV_POSTPONE: return out << "SERV_POSTPONE";
+        case SERV_POSTPONE: return out << "SERV_POSTPONE";
         case SIM_FINISHED: return out << "SIM_FINISHED";
         case TASK_PREEMPTED: return out << "TASK_PREEMPTED";
         case TASK_SCHEDULED: return out << "TASK_SCHEDULED";
+        case VIRTUAL_TIME_UPDATE: return out << "VIRTUAL_TIME";
         default: return out << "unknown";
         }
 }
