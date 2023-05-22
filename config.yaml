@@ -35,6 +35,12 @@ trace:
         
         # Two event record types
         event-record-types:
+          sim_finished:
+            payload-field-type:
+              class: structure
+              members:
+                - msg: string
+          
           resched:
             payload-field-type:
               class: structure

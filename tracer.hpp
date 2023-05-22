@@ -16,7 +16,7 @@ class tracer {
         struct barectf_default_ctx* ctx;
 
       public:
-        tracer(double* clock);
+        explicit tracer(double* clock);
         ~tracer();
         void add_trace(const trace& new_trace);
         void clear();

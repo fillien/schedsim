@@ -41,6 +41,7 @@ void tracer::add_trace(const trace& new_trace) {
         case VIRTUAL_TIME_UPDATE:
                 barectf_trace_virtual_time(ctx, new_trace.target_id, new_trace.payload);
                 break;
+        case SIM_FINISHED: barectf_trace_sim_finished(ctx, ""); break;
         default: break;
         }
         trace_store.push_back(std::move(new_trace));
@@ -59,7 +60,7 @@ auto tracer::format(std::function<std::string(const trace&)> func_format) -> std
 auto to_txt(const trace& trace) -> std::string {
         std::ostringstream out{};
 
-        out << "[t=" << std::setw(4) << trace.timestamp << "] " << std::setw(10) << std::left;
+        out << "[t=" << trace.timestamp << "] " << std::setw(10) << std::left;
 
         using enum types;
         switch (trace.type) {
