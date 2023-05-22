@@ -3,7 +3,7 @@
 	xsi:noNamespaceSchemaLocation="xmldefinition.xsd">
 
   <!-- The state provider assigns states from events -->
-  <stateProvider id="org.eclipse.linuxtools.ust.sim" version="9">
+  <stateProvider id="org.eclipse.linuxtools.ust.simsched" version="9">
     <!-- Convenience names for the state values -->
     <definedValue name="ACTIVE_CONT" value="0" />
     <definedValue name="RUNNING" value="1" />
@@ -64,8 +64,8 @@
   <!-- This is the definition of the time-graph view -->
   <timeGraphView id="org.eclipse.linuxtools.tmf.analysis.xml.sstimeview">
     <head>
-      <analysis id="org.eclipse.linuxtools.ust.sim" />
-      <label value="UST scheduling view" />
+      <analysis id="org.eclipse.linuxtools.ust.simsched" />
+      <label value="Scheduling view" />
     </head>
     
     <!-- Colors assigned to the state values -->

@@ -15,6 +15,7 @@ class engine;
 class scheduler {
         std::weak_ptr<engine> simulator;
         std::vector<std::shared_ptr<server>> servers;
+        double last_resched{0};
 
         void add_trace(const types type, const int target_id, const double payload = 0) const;
         auto is_event_present(const std::shared_ptr<task>& the_task, const types type) -> bool;

@@ -45,8 +45,8 @@ int main(const int argc, const char** argv) {
                 tasks.push_back(std::move(new_task));
         }
 
-        // std::weak_ptr<server> null;
-        // sim->add_event({types::SIM_FINISHED, null, 0}, 11);
+        std::weak_ptr<server> null;
+        sim->add_event({types::SIM_FINISHED, null, 0}, 1.5);
 
         // Simulate the system (job set + platform) with the chosen scheduler
         sim->simulation();

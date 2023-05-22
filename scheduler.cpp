@@ -87,12 +87,19 @@ void scheduler::goto_active_cont(const std::shared_ptr<server>& serv) {
 
         // Set the arrival time
         serv->current_state = server::state::active;
+        serv->virtual_time = sim()->current_timestamp;
         serv->relative_deadline = sim()->current_timestamp + serv->period();
 
         // Insert the attached task to the first processor runqueue
         std::shared_ptr<processor> first_proc = sim()->current_plateform.processors.at(0);
         assert(!serv->attached_task.expired());
         first_proc->runqueue.push_back(serv->attached_task.lock());
+
+        // Update the current running server
+        auto running_server = std::ranges::find_if(servers, is_running_server);
+        if (running_server != servers.end()) {
+                update_server_time((*running_server), sim()->current_timestamp - last_resched);
+        }
 
         // A rescheduling is required
         sim()->add_event({types::RESCHED, serv, 0}, sim()->current_timestamp);
@@ -127,20 +134,6 @@ void scheduler::goto_idle(const std::shared_ptr<server>& serv) {
         // Need to search all future event of the running task and delete it before resched
         auto running_server = std::ranges::find_if(servers, is_running_server);
         assert(running_server != servers.end());
-
-        for (auto itr = sim()->future_list.begin(); itr != sim()->future_list.end(); ++itr) {
-                const auto& evt_type = (*itr).second.type;
-                if (evt_type == types::SERV_BUDGET_EXHAUSTED || evt_type == types::JOB_FINISHED) {
-                        // Sure that the target is a server object
-                        auto serv = std::static_pointer_cast<server>((*itr).second.target.lock());
-                        if (serv->id() == (*running_server)->id()) {
-                                // If the event is for the running server delete it
-                                std::cout << (*itr).second << " has been deleted\n";
-                                sim()->future_list.erase(itr);
-                                break;
-                        }
-                }
-        }
 
         sim()->add_event({types::RESCHED, serv, 0}, sim()->current_timestamp);
 }
@@ -211,6 +204,7 @@ void scheduler::handle_job_arrival(const event& evt) {
                 // A rescheduling is require
                 sim()->add_event({types::RESCHED, new_server, 0}, sim()->current_timestamp);
         } else {
+                std::cout << "go to active cont\n";
                 goto_active_cont(new_server);
         }
 
@@ -271,12 +265,20 @@ void scheduler::handle_serv_budget_exhausted(const event& evt) {
 }
 
 void scheduler::handle_resched(const event& evt [[maybe_unused]]) {
+        add_trace(types::RESCHED, 0);
+
         // Check if there is no active and running server
         auto active_servers = servers | std::views::filter(is_active_server);
         auto highest_priority_server = std::ranges::min(active_servers, deadline_order);
         auto running_server = std::ranges::find_if(active_servers, is_running_server);
 
-        add_trace(types::RESCHED, 0);
+        // Remove all future event of type BUDGET_EXHAUSTED and JOB_FINISHED
+        for (auto itr = sim()->future_list.begin(); itr != sim()->future_list.end(); ++itr) {
+                if ((*itr).second.type == types::SERV_BUDGET_EXHAUSTED ||
+                    (*itr).second.type == types::JOB_FINISHED) {
+                        sim()->future_list.erase(itr);
+                }
+        }
 
         // Check that a server is running
         if (running_server != active_servers.end()) {
@@ -324,4 +326,6 @@ void scheduler::handle_resched(const event& evt [[maybe_unused]]) {
                     {types::JOB_FINISHED, highest_priority_server, task_remaining_time},
                     sim()->current_timestamp + task_remaining_time);
         }
+
+        last_resched = sim()->current_timestamp;
 }
