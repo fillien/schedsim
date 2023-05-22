@@ -1,4 +1,5 @@
 .cache/
+/doc/html
 /build
 /vgcore.*
 /trace/stream
