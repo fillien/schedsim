@@ -26,7 +26,7 @@ cmake --build build
 
 You can now execute the compiled binary like this :
 #+begin_src shell
-./build/launch ./scenarios/simple.yml
+./build/src/launch ./scenarios/simple.yml
 #+end_src
 
 
@@ -34,7 +34,7 @@ You can now execute the compiled binary like this :
 The simulator takes a scenario in input and produces a [[https://diamon.org/ctf/][CTF]] trace file and writes some logs to the standard output.
 
 #+begin_src shell
-$ ./build/launch ./scenarios/simple.yml 
+$ ./build/src/launch ./scenarios/simple.yml 
 ==== Time 0 ====
 0
 -----------
@@ -130,6 +130,6 @@ Now the simulator can be compiled with the newly generated =barectf.c= file and 
 
 After compilation, the simulator can be launched and the trace analyse with Babeltrace2 or Trace Compass : 
 #+BEGIN_SRC  shell
-  $ ./build/launch
+  $ ./build/src/launch
   $ babeltrace2 trace
 #+END_SRC
