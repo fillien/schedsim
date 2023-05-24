@@ -8,25 +8,43 @@
 class server;
 class task;
 
+/**
+ * @brief A processor model, composed of a state, a running task and the rest of task ready to be
+ * executed
+ */
 class processor : public entity {
       public:
-        /// Possible states of a processor
+        /**
+         * @brief Possible states of a processor
+         */
         enum class state { idle, running, stopping, stopped };
 
-        /// Unique id
+        /**
+         * Unique id
+         */
         int id;
 
-        /// Current state of the processor, by default it's idle
+        /**
+         * @brief Current state of the processor, by default it's idle
+         */
         state current_state{state::idle};
 
-        /// Running queue of the active tasks
+        /**
+         * @brief Running queue of the active tasks
+         */
         std::vector<std::weak_ptr<task>> runqueue{};
 
-        /// The task currently executed on the processor, by default null because nothing is
-        /// executed
+        /**
+         * @brief The task currently executed on the processor, by default null because nothing is
+         * executed.
+         */
         std::shared_ptr<task> running_task{nullptr};
 
-        processor(const int id);
+        /**
+         * @brief Class constructor
+         * @param id The unique id of the processor.
+         */
+        explicit processor(const int id);
 };
 
 #endif
