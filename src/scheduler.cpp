@@ -145,15 +145,6 @@ void scheduler::handle_sim_finished(const event& evt [[maybe_unused]]) {
         std::cout << "Simulation as finished\n";
         add_trace(types::SIM_FINISHED, 0);
 }
-void scheduler::handle_proc_activated(const event& evt [[maybe_unused]]) {}
-void scheduler::handle_proc_idle(const event& evt [[maybe_unused]]) {}
-void scheduler::handle_serv_budget_replenished(const event& evt [[maybe_unused]]) {}
-void scheduler::handle_serv_idle(const event& evt [[maybe_unused]]) {}
-void scheduler::handle_serv_running(const event& evt [[maybe_unused]]) {}
-void scheduler::handle_task_preempted(const event& evt [[maybe_unused]]) {}
-void scheduler::handle_task_scheduled(const event& evt [[maybe_unused]]) {}
-void scheduler::handle_serv_active_cont(const event& evt [[maybe_unused]]) {}
-void scheduler::handle_serv_active_non_cont(const event& evt [[maybe_unused]]) {}
 
 void scheduler::handle_job_arrival(const event& evt) {
         // The entity is a new task

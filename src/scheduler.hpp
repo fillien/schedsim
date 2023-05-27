@@ -105,20 +105,22 @@ class scheduler {
         void handle_undefined_event(const event& evt);
 
         // Used event handlers
-        void handle_proc_activated(const event& evt);
-        void handle_proc_idle(const event& evt);
-        void handle_serv_active_cont(const event& evt);
-        void handle_serv_active_non_cont(const event& evt);
-        void handle_serv_budget_exhausted(const event& evt);
-        void handle_serv_budget_replenished(const event& evt);
-        void handle_serv_idle(const event& evt);
-        void handle_serv_running(const event& evt);
-        void handle_task_preempted(const event& evt);
-        void handle_task_scheduled(const event& evt);
         void handle_job_arrival(const event& evt);
         void handle_job_finished(const event& evt);
         void handle_resched(const event& evt);
+        void handle_serv_budget_exhausted(const event& evt);
         void handle_sim_finished(const event& evt);
+
+        // Unused event handles
+        void handle_proc_activated(const event& evt [[maybe_unused]]){};
+        void handle_proc_idle(const event& evt [[maybe_unused]]){};
+        void handle_serv_active_cont(const event& evt [[maybe_unused]]){};
+        void handle_serv_active_non_cont(const event& evt [[maybe_unused]]){};
+        void handle_serv_budget_replenished(const event& evt [[maybe_unused]]){};
+        void handle_serv_idle(const event& evt [[maybe_unused]]){};
+        void handle_serv_running(const event& evt [[maybe_unused]]){};
+        void handle_task_preempted(const event& evt [[maybe_unused]]){};
+        void handle_task_scheduled(const event& evt [[maybe_unused]]){};
 };
 
 #endif
