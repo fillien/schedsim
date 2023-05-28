@@ -29,6 +29,8 @@ class scheduler {
          */
         double last_resched{0};
 
+        bool need_resched{false};
+
         /**
          * @brief Helper function to add a new trace to the logs.
          * @param type The kind of event
@@ -94,6 +96,19 @@ class scheduler {
                 return simulator.lock();
         }
 
+        // Mandatory event handler
+        void handle_undefined_event(const event& evt);
+
+        // Used event handlers
+        void handle_job_arrival(const event& evt);
+        void handle_job_finished(const event& evt, bool is_there_new_job);
+
+        void handle_serv_budget_exhausted(const event& evt);
+        void handle_sim_finished(const event& evt);
+        void handle_serv_idle(const event& evt);
+
+        void resched();
+
       public:
         /**
          * @brief A setter to attach a simulation engine
@@ -101,26 +116,7 @@ class scheduler {
          */
         void set_engine(std::weak_ptr<engine> simulator);
 
-        // Mandatory event handler
-        void handle_undefined_event(const event& evt);
-
-        // Used event handlers
-        void handle_job_arrival(const event& evt);
-        void handle_job_finished(const event& evt);
-        void handle_resched(const event& evt);
-        void handle_serv_budget_exhausted(const event& evt);
-        void handle_sim_finished(const event& evt);
-
-        // Unused event handles
-        void handle_proc_activated(const event& evt [[maybe_unused]]){};
-        void handle_proc_idle(const event& evt [[maybe_unused]]){};
-        void handle_serv_active_cont(const event& evt [[maybe_unused]]){};
-        void handle_serv_active_non_cont(const event& evt [[maybe_unused]]){};
-        void handle_serv_budget_replenished(const event& evt [[maybe_unused]]){};
-        void handle_serv_idle(const event& evt [[maybe_unused]]){};
-        void handle_serv_running(const event& evt [[maybe_unused]]){};
-        void handle_task_preempted(const event& evt [[maybe_unused]]){};
-        void handle_task_scheduled(const event& evt [[maybe_unused]]){};
+        void handle(std::vector<event> evts);
 };
 
 #endif

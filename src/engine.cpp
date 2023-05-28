@@ -48,69 +48,27 @@ void engine::add_event(const event& new_event, const double timestamp) {
 
 void engine::simulation() {
         int cpt_burst{0};
-        std::cout << "\033[1;31m"
-                  << "==== Time 0 ====\033[0m\n";
-        while (!future_list.empty() && future_list.begin()->second.type != types::SIM_FINISHED &&
-               cpt_burst < 10) {
-                std::cout << cpt_burst << std::endl;
 
-                // Take the next event and remove it
-                const std::multimap<double, const event>::iterator itr = future_list.begin();
-                std::cout << "-----------\n";
-                if (this->current_timestamp != itr->first) {
-                        cpt_burst = 0;
-                        this->current_timestamp = itr->first;
-                        std::cout << "\033[1;31m"
-                                  << "==== Time " << current_timestamp << " ====\033[0m\n";
+        // Loop until all events have been executed
+        while (!future_list.empty() && cpt_burst < 10) {
+                // A vector to store all the event of the current timestamp
+                std::vector<event> current_events;
+                current_timestamp = future_list.begin()->first;
+
+		std::cout << "========= Time " << current_timestamp << " =========\n";
+
+                // Loop until move all the event of the current timestamp
+                while (!future_list.empty() && future_list.begin()->first <= current_timestamp) {
+                        // Take the next event, store it, and remove the event of the future list
+                        auto itr = future_list.begin();
+                        current_events.push_back(std::move(itr->second));
+                        future_list.erase(itr);
                 }
-
-                const event evt = std::move(itr->second);
-
-                // If the event is a RESCHED, ensure that the last event of the timestamp
-                if (evt.type == types::RESCHED) {
-                        // std::cout << "Current event is a RESCHED\n";
-                        auto current_key = future_list.equal_range(current_timestamp);
-                        // std::cout << "Distance = "
-                        //           << std::distance(current_key.first, current_key.second) <<
-                        //           "\n";
-                        if (std::distance(current_key.first, current_key.second) > 1) {
-                                future_list.erase(itr);
-                                future_list.insert({current_timestamp, std::move(evt)});
-                                std::cout
-                                    << "Replace RESCHED at the end of the current timestamp\n";
-                                continue;
-                        }
-                }
-
-                future_list.erase(itr);
-
-                std::cout << "[engine] handle " << evt << '\n';
-                handle(evt);
+                sched->handle(current_events);
                 cpt_burst++;
         }
-        if (future_list.begin()->second.type == types::SIM_FINISHED) {
-                handle(future_list.begin()->second);
-        }
-}
 
-void engine::handle(const event& evt) {
-        using enum types;
-
-        switch (evt.type) {
-        case JOB_ARRIVAL: sched->handle_job_arrival(evt); break;
-        case JOB_FINISHED: sched->handle_job_finished(evt); break;
-        case PROC_ACTIVATED: sched->handle_proc_activated(evt); break;
-        case PROC_IDLED: sched->handle_proc_idle(evt); break;
-        case RESCHED: sched->handle_resched(evt); break;
-        case SERV_ACT_CONT: sched->handle_serv_active_cont(evt); break;
-        case SERV_ACT_NON_CONT: sched->handle_serv_active_non_cont(evt); break;
-        case SERV_BUDGET_EXHAUSTED: sched->handle_serv_budget_exhausted(evt); break;
-        case SERV_BUDGET_REPLENISHED: sched->handle_serv_budget_replenished(evt); break;
-        case SERV_IDLE: sched->handle_serv_idle(evt); break;
-        case SERV_RUNNING: sched->handle_serv_running(evt); break;
-        case SIM_FINISHED: sched->handle_sim_finished(evt); break;
-        case TASK_PREEMPTED: sched->handle_task_preempted(evt); break;
-        case TASK_SCHEDULED: sched->handle_task_scheduled(evt); break;
-        default: sched->handle_undefined_event(evt);
-        }
+	if(future_list.empty()) {
+		logging_system.add_trace({current_timestamp, types::SIM_FINISHED, 0, 0});
+	}
 }
