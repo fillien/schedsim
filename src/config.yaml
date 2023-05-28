@@ -18,12 +18,12 @@ trace:
       # The Linux FS platform requires a clock type named `default`
       # which has a 1-GHz frequency and the `uint64_t` C type.
       default:
-        frequency: 1
+        frequency: 1000
         offset:
           seconds: 0
           cycles: 0
         origin-is-unix-epoch: false
-        $c-type: double
+        $c-type: uint64_t
 
     # One data stream type
     data-stream-types:

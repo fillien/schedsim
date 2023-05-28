@@ -22,12 +22,12 @@ struct barectf_platform_simulator_ctx {
 	unsigned int full_backend_rand_max;
 };
 
-static double get_clock(void * data)
+static uint64_t get_clock(void * data)
 {
 	struct barectf_platform_simulator_ctx * platform_ctx =
 		_FROM_VOID_PTR(struct barectf_platform_simulator_ctx, data);
 	
-	return (*platform_ctx->clock);
+	return ((double)(*platform_ctx->clock)*1000);
 }
 
 static void write_packet(const struct barectf_platform_simulator_ctx * const platform_ctx)
