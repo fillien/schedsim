@@ -145,19 +145,6 @@ void scheduler::postpone(const std::shared_ptr<server>& serv) {
         add_trace(types::SERV_POSTPONE, serv->id());
 }
 
-void scheduler::goto_active_cont(const std::shared_ptr<server>& serv) {
-        add_trace(types::SERV_ACT_CONT, serv->id());
-
-        // Set the arrival time
-        serv->current_state = server::state::active;
-        serv->relative_deadline = sim()->current_timestamp + serv->period();
-
-        // Insert the attached task to the first processor runqueue
-        std::shared_ptr<processor> first_proc = sim()->current_plateform.processors.at(0);
-        assert(!serv->attached_task.expired());
-        first_proc->runqueue.push_back(serv->attached_task.lock());
-}
-
 void scheduler::goto_active_non_cont(const std::shared_ptr<server>& serv) {
         // Set the state of the calling server to ACTIVE_NON_CONT
         serv->current_state = server::state::active_non_contending;
@@ -197,7 +184,6 @@ void scheduler::handle_job_arrival(const event& evt) {
                 return;
         }
 
-        add_trace(types::JOB_ARRIVAL, new_task->id);
         // Set the task remaining execution time with the WCET of the job
         new_task->remaining_execution_time = evt.payload;
 
@@ -234,9 +220,21 @@ void scheduler::handle_job_arrival(const event& evt) {
 
         if (new_server->current_state != server::state::active &&
             new_server->current_state != server::state::running) {
-                goto_active_cont(new_server);
+                // Set the arrival time
+                new_server->current_state = server::state::active;
+                new_server->relative_deadline = sim()->current_timestamp + new_server->period();
+
+                // Insert the attached task to the first processor runqueue
+                std::shared_ptr<processor> first_proc = sim()->current_plateform.processors.at(0);
+                assert(!new_server->attached_task.expired());
+                first_proc->runqueue.push_back(new_server->attached_task.lock());
+
                 this->need_resched = true;
+                sim()->logging_system.traceGotoActCont(new_server->id());
         }
+
+        sim()->logging_system.traceJobArrival(new_server->id(), new_server->virtual_time,
+                                              new_server->relative_deadline);
 }
 
 void scheduler::handle_job_finished(const event& evt, bool is_there_new_job) {
@@ -259,7 +257,7 @@ void scheduler::handle_job_finished(const event& evt, bool is_there_new_job) {
                 if ((serv->virtual_time - sim()->current_timestamp) > 0) {
                         goto_active_non_cont(serv);
                 } else {
-			handle_serv_idle(evt);
+                        handle_serv_idle(evt);
                 }
         }
         std::cout << "virtual time = " << serv->virtual_time << "\n";
@@ -269,7 +267,7 @@ void scheduler::handle_job_finished(const event& evt, bool is_there_new_job) {
 void scheduler::handle_serv_budget_exhausted(const event& evt) {
         assert(!evt.target.expired());
         auto serv = std::static_pointer_cast<server>(evt.target.lock());
-        auto time_consumed = evt.payload; // The budget of the server when it started
+        const auto time_consumed = evt.payload; // The budget of the server when it started
 
         add_trace(types::SERV_BUDGET_EXHAUSTED, serv->id());
 
@@ -293,12 +291,12 @@ void scheduler::resched() {
         // Check if there is no active and running server
         auto active_servers = servers | std::views::filter(is_active_server);
 
-	if (std::distance(active_servers.begin(), active_servers.end()) == 0) {
-		sim()->current_plateform.processors.at(0)->current_state = processor::state::idle;
-		last_resched = sim()->current_timestamp;
-		return;
-	}
-	
+        if (std::distance(active_servers.begin(), active_servers.end()) == 0) {
+                sim()->current_plateform.processors.at(0)->current_state = processor::state::idle;
+                last_resched = sim()->current_timestamp;
+                return;
+        }
+
         auto highest_priority_server = std::ranges::min(active_servers, deadline_order);
         auto running_server = std::ranges::find_if(active_servers, is_running_server);
 

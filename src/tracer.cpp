@@ -8,6 +8,7 @@
 #include <functional>
 #include <iomanip>
 #include <ios>
+#include <iostream>
 #include <sstream>
 
 tracer::tracer(double* clock) {
@@ -21,11 +22,9 @@ void tracer::add_trace(const trace& new_trace) {
         using enum types;
 
         switch (new_trace.type) {
-        case JOB_ARRIVAL: barectf_trace_job_arrival(ctx, new_trace.target_id); break;
         case JOB_FINISHED: barectf_trace_job_finished(ctx, new_trace.target_id); break;
-        case PROC_IDLED: barectf_trace_proc_idle(ctx, ""); break;
-        case RESCHED: barectf_trace_resched(ctx, ""); break;
-        case SERV_ACT_CONT: barectf_trace_serv_act_cont(ctx, new_trace.target_id); break;
+        case PROC_IDLED: barectf_trace_proc_idle(ctx); break;
+        case RESCHED: barectf_trace_resched(ctx); break;
         case SERV_ACT_NON_CONT: barectf_trace_serv_act_non_cont(ctx, new_trace.target_id); break;
         case SERV_BUDGET_EXHAUSTED:
                 barectf_trace_serv_budget_exhausted(ctx, new_trace.target_id);
@@ -41,11 +40,23 @@ void tracer::add_trace(const trace& new_trace) {
         case VIRTUAL_TIME_UPDATE:
                 barectf_trace_virtual_time(ctx, new_trace.target_id, new_trace.payload);
                 break;
-        case SIM_FINISHED: barectf_trace_sim_finished(ctx, ""); break;
+        case SIM_FINISHED: barectf_trace_sim_finished(ctx); break;
         default: break;
         }
         trace_store.push_back(std::move(new_trace));
 }
+
+void tracer::traceJobArrival(int serverId, int virtualTime, int deadline) {
+        barectf_trace_job_arrival(ctx, serverId, virtualTime, deadline);
+        std::cout << "Task " << serverId << " job arrival, virtual time = " << virtualTime
+                  << ", deadline = " << deadline << '\n';
+}
+
+void tracer::traceGotoActCont(int serverId) {
+        barectf_trace_serv_act_cont(ctx, serverId);
+        std::cout << "Server " << serverId << " go to Active Contending state\n";
+}
+
 void tracer::clear() { trace_store.clear(); }
 
 auto tracer::format(std::function<std::string(const trace&)> func_format) -> std::string {

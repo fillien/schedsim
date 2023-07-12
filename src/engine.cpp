@@ -55,7 +55,7 @@ void engine::simulation() {
                 std::vector<event> current_events;
                 current_timestamp = future_list.begin()->first;
 
-		std::cout << "========= Time " << current_timestamp << " =========\n";
+                std::cout << "========= Time " << current_timestamp << " =========\n";
 
                 // Loop until move all the event of the current timestamp
                 while (!future_list.empty() && future_list.begin()->first <= current_timestamp) {
@@ -68,7 +68,7 @@ void engine::simulation() {
                 cpt_burst++;
         }
 
-	if(future_list.empty()) {
-		logging_system.add_trace({current_timestamp, types::SIM_FINISHED, 0, 0});
-	}
+        if (future_list.empty()) {
+                logging_system.add_trace({current_timestamp, types::SIM_FINISHED, 0, 0});
+        }
 }

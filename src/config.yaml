@@ -38,20 +38,17 @@ trace:
           sim_finished:
             payload-field-type:
               class: structure
-              members:
-                - msg: string
+              members: []
           
           resched:
             payload-field-type:
               class: structure
-              members:
-                - msg: string
-                
+              members: []
+
           proc_idle:
             payload-field-type:
               class: structure
-              members:
-                - msg: string
+              members: []
 
           serv_budget_replenished:
             payload-field-type:
@@ -79,6 +76,8 @@ trace:
               class: structure
               members:
                 - tid: int32
+                - virtual_time: int32
+                - deadline: int32
 
           job_finished:
             payload-field-type:
