@@ -311,6 +311,7 @@ void scheduler::resched() {
 
         if (std::distance(active_servers.begin(), active_servers.end()) == 0) {
                 sim()->current_plateform.processors.at(0)->current_state = processor::state::idle;
+		add_trace(PROC_IDLED, sim()->current_plateform.processors.at(0)->id);
                 last_resched = sim()->current_timestamp;
                 return;
         }
