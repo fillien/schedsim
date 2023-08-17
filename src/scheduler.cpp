@@ -32,7 +32,10 @@ auto is_active_server = [](const std::shared_ptr<server>& current_server) -> boo
 
 auto deadline_order = [](const std::shared_ptr<server>& first,
                          const std::shared_ptr<server>& second) {
-        return first->relative_deadline <= second->relative_deadline;
+        if (first->relative_deadline == second->relative_deadline) {
+		return first->id() < second->id();		
+        }
+	return first->relative_deadline < second->relative_deadline;
 };
 
 auto get_priority = [](const types& type) -> int {
