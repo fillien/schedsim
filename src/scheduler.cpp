@@ -208,12 +208,11 @@ void scheduler::handle_job_arrival(const event& evt) {
                 return serv->attached_task.lock() == new_task;
         };
 
-        // Detect if the task has a server attached, or a new server has to be created
+        // Detect if the task has a server attached, otherwise a new server
+        // has to be created and attached
         std::shared_ptr<server> new_server;
         auto itr = std::find_if(servers.begin(), servers.end(), has_task_a_server);
         if (itr != servers.end()) {
-                // Check that the server is not already in one of active states
-                assert((*itr)->current_state == server::state::inactive);
                 new_server = (*itr);
         } else {
                 // There is no server affected to the awaking task, need to create one
