@@ -17,7 +17,7 @@ class processor : public entity {
         /**
          * @brief Possible states of a processor
          */
-        enum class state { idle, running, stopping, stopped };
+        enum class state { idle, running };
 
         /**
          * Unique id
