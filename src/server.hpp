@@ -14,10 +14,10 @@ class processor;
 class server : public entity {
       public:
         /// Possible states of a server
-        enum class state { idle, running, active, active_non_contending };
+        enum class state { inactive, ready, running, non_cont };
 
         /// Current state of the server
-        state current_state{state::idle};
+        state current_state{state::inactive};
 
         double relative_deadline{0};
         double virtual_time{0};
@@ -38,6 +38,11 @@ class server : public entity {
                 assert(!attached_task.expired());
                 return attached_task.lock()->period;
         };
+
+        auto remaining_exec_time() {
+                assert(!attached_task.expired());
+                return attached_task.lock()->remaining_execution_time;
+        }
 };
 
 auto operator<<(std::ostream& out, const server& serv) -> std::ostream&;

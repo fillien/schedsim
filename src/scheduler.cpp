@@ -26,13 +26,13 @@ auto is_running_server = [](const std::shared_ptr<server>& current_server) -> bo
 };
 
 auto is_active_server = [](const std::shared_ptr<server>& current_server) -> bool {
-        return current_server->current_state == server::state::active ||
+        return current_server->current_state == server::state::ready ||
                is_running_server(current_server);
 };
 
 auto deadline_order = [](const std::shared_ptr<server>& first,
                          const std::shared_ptr<server>& second) {
-        return first->relative_deadline < second->relative_deadline;
+        return first->relative_deadline <= second->relative_deadline;
 };
 
 auto get_priority = [](const types& type) -> int {
@@ -46,7 +46,7 @@ auto get_priority = [](const types& type) -> int {
                 return 1;
         JOB_ARRIVAL:
                 return 2;
-        SERV_IDLE:
+        SERV_INACTIVE:
                 return 3;
         default: return 100;
         }
@@ -82,13 +82,14 @@ void scheduler::handle(std::vector<event> evts) {
         this->need_resched = false;
 
         for (const auto& evt : evts) {
+                using enum types;
                 std::cout << evt.type << std::endl;
 
                 switch (evt.type) {
-                case types::JOB_FINISHED: {
+                case JOB_FINISHED: {
                         auto is_there_new_job{false};
                         for (auto future_evt : evts) {
-                                if (future_evt.type == types::JOB_ARRIVAL &&
+                                if (future_evt.type == JOB_ARRIVAL &&
                                     future_evt.target.lock() == evt.target.lock()) {
                                         is_there_new_job = true;
                                         break;
@@ -98,9 +99,9 @@ void scheduler::handle(std::vector<event> evts) {
                         handle_job_finished(evt, is_there_new_job);
                         break;
                 }
-                case types::SERV_BUDGET_EXHAUSTED: handle_serv_budget_exhausted(evt); break;
-                case types::JOB_ARRIVAL: handle_job_arrival(evt); break;
-                case types::SERV_IDLE: handle_serv_idle(evt); break;
+                case SERV_BUDGET_EXHAUSTED: handle_serv_budget_exhausted(evt); break;
+                case JOB_ARRIVAL: handle_job_arrival(evt); break;
+                case SERV_INACTIVE: handle_serv_inactive(evt); break;
                 default: std::cerr << "Unknown event" << std::endl;
                 }
         }
@@ -110,11 +111,13 @@ void scheduler::handle(std::vector<event> evts) {
         }
 }
 
-void scheduler::handle_serv_idle(const event& evt) {
+void scheduler::handle_serv_inactive(const event& evt) {
+        using enum types;
+
         assert(!evt.target.expired());
         auto serv = std::static_pointer_cast<server>(evt.target.lock());
-        serv->current_state = server::state::idle;
-        add_trace(types::SERV_IDLE, serv->id());
+        serv->current_state = server::state::inactive;
+        add_trace(SERV_INACTIVE, serv->id());
         need_resched = true;
 }
 
@@ -135,20 +138,26 @@ auto scheduler::compute_budget(const server& serv) -> double {
 
 void scheduler::update_server_time(const std::shared_ptr<server>& serv,
                                    const double time_consumed) {
+        using enum types;
+
         serv->virtual_time += time_consumed * (this->get_active_bandwidth() / serv->utilization());
-        add_trace(types::VIRTUAL_TIME_UPDATE, serv->id(), serv->virtual_time);
+        add_trace(VIRTUAL_TIME_UPDATE, serv->id(), serv->virtual_time);
         serv->attached_task.lock()->remaining_execution_time -= time_consumed;
 };
 
 void scheduler::postpone(const std::shared_ptr<server>& serv) {
+        using enum types;
+
         serv->relative_deadline += serv->period();
-        add_trace(types::SERV_POSTPONE, serv->id());
+        add_trace(SERV_POSTPONE, serv->id());
 }
 
-void scheduler::goto_active_non_cont(const std::shared_ptr<server>& serv) {
+void scheduler::goto_non_cont(const std::shared_ptr<server>& serv) {
+        using enum types;
+
         // Set the state of the calling server to ACTIVE_NON_CONT
-        serv->current_state = server::state::active_non_contending;
-        add_trace(types::SERV_ACT_NON_CONT, serv->id());
+        serv->current_state = server::state::non_cont;
+        add_trace(SERV_NON_CONT, serv->id());
 
         // Dequeue the attached task of the processor
         std::shared_ptr<processor> first_proc = sim()->current_plateform.processors.at(0);
@@ -161,7 +170,7 @@ void scheduler::goto_active_non_cont(const std::shared_ptr<server>& serv) {
         }
 
         // Insert a event to pass in IDLE state
-        sim()->add_event({types::SERV_IDLE, serv, 0}, serv->virtual_time);
+        sim()->add_event({SERV_INACTIVE, serv, 0}, serv->virtual_time);
 }
 
 void scheduler::handle_undefined_event(const event& evt [[maybe_unused]]) {
@@ -169,8 +178,10 @@ void scheduler::handle_undefined_event(const event& evt [[maybe_unused]]) {
 }
 
 void scheduler::handle_sim_finished(const event& evt [[maybe_unused]]) {
+        using enum types;
+
         std::cout << "Simulation as finished\n";
-        add_trace(types::SIM_FINISHED, 0);
+        add_trace(SIM_FINISHED, 0);
 }
 
 void scheduler::handle_job_arrival(const event& evt) {
@@ -199,7 +210,7 @@ void scheduler::handle_job_arrival(const event& evt) {
         auto itr = std::find_if(servers.begin(), servers.end(), has_task_a_server);
         if (itr != servers.end()) {
                 // Check that the server is not already in one of active states
-                assert((*itr)->current_state != server::state::active);
+                assert((*itr)->current_state == server::state::inactive);
                 new_server = (*itr);
         } else {
                 // There is no server affected to the awaking task, need to create one
@@ -207,7 +218,7 @@ void scheduler::handle_job_arrival(const event& evt) {
                 servers.push_back(new_server);
         }
 
-        if (new_server->current_state == server::state::idle) {
+        if (new_server->current_state == server::state::inactive) {
                 // Update the current running server
                 auto running_server = std::ranges::find_if(servers, is_running_server);
                 if (running_server != servers.end()) {
@@ -218,10 +229,10 @@ void scheduler::handle_job_arrival(const event& evt) {
                 new_server->virtual_time = sim()->current_timestamp;
         }
 
-        if (new_server->current_state != server::state::active &&
+        if (new_server->current_state != server::state::ready &&
             new_server->current_state != server::state::running) {
                 // Set the arrival time
-                new_server->current_state = server::state::active;
+                new_server->current_state = server::state::ready;
                 new_server->relative_deadline = sim()->current_timestamp + new_server->period();
 
                 // Insert the attached task to the first processor runqueue
@@ -238,12 +249,14 @@ void scheduler::handle_job_arrival(const event& evt) {
 }
 
 void scheduler::handle_job_finished(const event& evt, bool is_there_new_job) {
+        using enum types;
+
         assert(!evt.target.expired());
         auto serv = std::static_pointer_cast<server>(evt.target.lock());
         auto time_consumed = evt.payload; // The budget of the server when it started
 
-        add_trace(types::JOB_FINISHED, serv->id());
-        assert(serv->current_state != server::state::idle);
+        add_trace(JOB_FINISHED, serv->id());
+        assert(serv->current_state != server::state::inactive);
 
         // Update virtual time and remaining execution time
         update_server_time(serv, time_consumed);
@@ -255,9 +268,9 @@ void scheduler::handle_job_finished(const event& evt, bool is_there_new_job) {
         } else {
                 std::cout << "No job plan for now\n";
                 if ((serv->virtual_time - sim()->current_timestamp) > 0) {
-                        goto_active_non_cont(serv);
+                        goto_non_cont(serv);
                 } else {
-                        handle_serv_idle(evt);
+                        handle_serv_inactive(evt);
                 }
         }
         std::cout << "virtual time = " << serv->virtual_time << "\n";
@@ -265,11 +278,13 @@ void scheduler::handle_job_finished(const event& evt, bool is_there_new_job) {
 }
 
 void scheduler::handle_serv_budget_exhausted(const event& evt) {
+        using enum types;
+
         assert(!evt.target.expired());
         auto serv = std::static_pointer_cast<server>(evt.target.lock());
         const auto time_consumed = evt.payload; // The budget of the server when it started
 
-        add_trace(types::SERV_BUDGET_EXHAUSTED, serv->id());
+        add_trace(SERV_BUDGET_EXHAUSTED, serv->id());
 
         update_server_time(serv, time_consumed);
 
@@ -279,14 +294,15 @@ void scheduler::handle_serv_budget_exhausted(const event& evt) {
                 postpone(serv);
         } else {
                 // If yes, trace it
-                add_trace(types::JOB_FINISHED, serv->id());
+                add_trace(JOB_FINISHED, serv->id());
         }
 
         this->need_resched = true;
 }
 
 void scheduler::resched() {
-        add_trace(types::RESCHED, 0);
+        using enum types;
+        add_trace(RESCHED, 0);
 
         // Check if there is no active and running server
         auto active_servers = servers | std::views::filter(is_active_server);
@@ -302,8 +318,8 @@ void scheduler::resched() {
 
         // Remove all future event of type BUDGET_EXHAUSTED and JOB_FINISHED
         for (auto itr = sim()->future_list.begin(); itr != sim()->future_list.end(); ++itr) {
-                if ((*itr).second.type == types::SERV_BUDGET_EXHAUSTED ||
-                    (*itr).second.type == types::JOB_FINISHED) {
+                if ((*itr).second.type == SERV_BUDGET_EXHAUSTED ||
+                    (*itr).second.type == JOB_FINISHED) {
                         std::cout << "Deleted a future event\n";
                         sim()->future_list.erase(itr);
                 }
@@ -311,49 +327,47 @@ void scheduler::resched() {
 
         // Check that a server is running
         if (running_server != active_servers.end()) {
-                // If the highest priority server is higher priority than the running server,
+                // If the highest priority server has higher priority than the running server,
                 // preempt the task associated with the running server
                 if (highest_priority_server != (*running_server)) {
-                        (*running_server)->current_state = server::state::active;
-                        add_trace(types::TASK_PREEMPTED, (*running_server)->id());
+                        (*running_server)->current_state = server::state::ready;
+                        add_trace(TASK_PREEMPTED, (*running_server)->id());
                 }
         } else {
                 // Notify if the processor start to execute a task
                 const auto& proc = sim()->current_plateform.processors.at(0);
                 if (proc->current_state != processor::state::running) {
-                        add_trace(types::PROC_ACTIVATED, proc->id);
+                        add_trace(PROC_ACTIVATED, proc->id);
                 }
                 std::cout << "same task running\n";
         }
 
         // if (highest_priority_server->current_state != server::state::running) {
         highest_priority_server->current_state = server::state::running;
-        add_trace(types::SERV_RUNNING, highest_priority_server->id());
+        add_trace(SERV_RUNNING, highest_priority_server->id());
         //}
 
-        add_trace(types::TASK_SCHEDULED, highest_priority_server->id());
+        add_trace(TASK_SCHEDULED, highest_priority_server->id());
 
         // Compute the budget of the selected server
         double new_server_budget = compute_budget(*highest_priority_server);
-        double task_remaining_time =
-            highest_priority_server->attached_task.lock()->remaining_execution_time;
+        double task_remaining_time = highest_priority_server->remaining_exec_time();
 
         std::cout << "budget : " << new_server_budget << "\n";
         std::cout << "remaining time : " << task_remaining_time << "\n";
 
-        add_trace(types::SERV_BUDGET_REPLENISHED, highest_priority_server->id(), new_server_budget);
+        add_trace(SERV_BUDGET_REPLENISHED, highest_priority_server->id(), new_server_budget);
 
         // Insert the next event about this server in the future list
         if (new_server_budget < task_remaining_time) {
                 // Insert a budget exhausted event
                 sim()->add_event(
-                    {types::SERV_BUDGET_EXHAUSTED, highest_priority_server, new_server_budget},
+                    {SERV_BUDGET_EXHAUSTED, highest_priority_server, new_server_budget},
                     sim()->current_timestamp + new_server_budget);
         } else {
                 // Insert an end of task event
-                sim()->add_event(
-                    {types::JOB_FINISHED, highest_priority_server, task_remaining_time},
-                    sim()->current_timestamp + task_remaining_time);
+                sim()->add_event({JOB_FINISHED, highest_priority_server, task_remaining_time},
+                                 sim()->current_timestamp + task_remaining_time);
         }
 
         last_resched = sim()->current_timestamp;

@@ -74,13 +74,13 @@ class scheduler {
          * @brief Change the state of the server to active non contending state.
          * @param serv The server
          */
-        void goto_active_non_cont(const std::shared_ptr<server>& serv);
+        void goto_non_cont(const std::shared_ptr<server>& serv);
 
         /**
          * @brief Change the state of the server to state idle state.
          * @param serv The server
          */
-        void goto_idle(const std::shared_ptr<server>& serv);
+        void goto_inactive(const std::shared_ptr<server>& serv);
 
         /**
          * @brief A helper function who return a safe pointer to the attached simulation engine.
@@ -99,7 +99,7 @@ class scheduler {
 
         void handle_serv_budget_exhausted(const event& evt);
         void handle_sim_finished(const event& evt);
-        void handle_serv_idle(const event& evt);
+        void handle_serv_inactive(const event& evt);
 
         void resched();
 

@@ -25,14 +25,14 @@ void tracer::add_trace(const trace& new_trace) {
         case JOB_FINISHED: barectf_trace_job_finished(ctx, new_trace.target_id); break;
         case PROC_IDLED: barectf_trace_proc_idle(ctx); break;
         case RESCHED: barectf_trace_resched(ctx); break;
-        case SERV_ACT_NON_CONT: barectf_trace_serv_act_non_cont(ctx, new_trace.target_id); break;
+        case SERV_NON_CONT: barectf_trace_serv_non_cont(ctx, new_trace.target_id); break;
         case SERV_BUDGET_EXHAUSTED:
                 barectf_trace_serv_budget_exhausted(ctx, new_trace.target_id);
                 break;
         case SERV_BUDGET_REPLENISHED:
                 barectf_trace_serv_budget_replenished(ctx, new_trace.target_id, new_trace.payload);
                 break;
-        case SERV_IDLE: barectf_trace_serv_idle(ctx, new_trace.target_id); break;
+        case SERV_INACTIVE: barectf_trace_serv_inactive(ctx, new_trace.target_id); break;
         case SERV_POSTPONE: barectf_trace_serv_postpone(ctx, new_trace.target_id); break;
         case TASK_PREEMPTED: barectf_trace_serv_preempted(ctx, new_trace.target_id); break;
         case SERV_RUNNING: barectf_trace_serv_running(ctx, new_trace.target_id); break;
@@ -52,9 +52,9 @@ void tracer::traceJobArrival(int serverId, int virtualTime, int deadline) {
                   << ", deadline = " << deadline << '\n';
 }
 
-void tracer::traceGotoActCont(int serverId) {
-        barectf_trace_serv_act_cont(ctx, serverId);
-        std::cout << "Server " << serverId << " go to Active Contending state\n";
+void tracer::traceGotoReady(int serverId) {
+        barectf_trace_serv_ready(ctx, serverId);
+        std::cout << "Server " << serverId << " go to ready state\n";
 }
 
 void tracer::clear() { trace_store.clear(); }
@@ -75,10 +75,10 @@ auto to_txt(const trace& trace) -> std::string {
 
         using enum types;
         switch (trace.type) {
-        case SERV_IDLE:
-        case SERV_ACT_CONT:
+        case SERV_INACTIVE:
+        case SERV_READY:
         case SERV_RUNNING:
-        case SERV_ACT_NON_CONT:
+        case SERV_NON_CONT:
         case SERV_BUDGET_EXHAUSTED:
         case SERV_BUDGET_REPLENISHED: out << "Server "; break;
 

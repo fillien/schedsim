@@ -3,25 +3,25 @@
 	xsi:noNamespaceSchemaLocation="xmldefinition.xsd">
 
   <!-- The state provider assigns states from events -->
-  <stateProvider id="org.eclipse.linuxtools.ust.simsched" version="9">
+  <stateProvider id="org.eclipse.linuxtools.ust.simsched" version="11">
     <!-- Convenience names for the state values -->
-    <definedValue name="ACTIVE_CONT" value="0" />
+    <definedValue name="READY" value="0" />
     <definedValue name="RUNNING" value="1" />
-    <definedValue name="ACTIVE_NON_CONT" value="2" />
+    <definedValue name="NON_CONT" value="2" />
 
     <!-- Event handlers -->
-    <eventHandler eventName="serv_idle">
+    <eventHandler eventName="serv_inactive">
       <stateChange>
 	<stateAttribute type="constant" value="Server" />
 	<stateAttribute type="eventField" value="tid" />
 	<stateValue type="null" />
       </stateChange>
     </eventHandler>
-    <eventHandler eventName="serv_act_cont">
+    <eventHandler eventName="serv_ready">
       <stateChange>
 	<stateAttribute type="constant" value="Server" />
 	<stateAttribute type="eventField" value="tid" />
-	<stateValue type="int" value="$ACTIVE_CONT" />
+	<stateValue type="int" value="$READY" />
       </stateChange>
     </eventHandler>
     <eventHandler eventName="serv_running">
@@ -35,28 +35,28 @@
       <stateChange>
 	<stateAttribute type="constant" value="Server" />
 	<stateAttribute type="eventField" value="tid" />
-	<stateValue type="int" value="$ACTIVE_CONT" />
+	<stateValue type="int" value="$READY" />
       </stateChange>
     </eventHandler>
     <eventHandler eventName="job_finished">
       <stateChange>
 	<stateAttribute type="constant" value="Server" />
 	<stateAttribute type="eventField" value="tid" />
-	<stateValue type="int" value="$ACTIVE_CONT" />
+	<stateValue type="int" value="$READY" />
       </stateChange>
     </eventHandler>
-    <eventHandler eventName="serv_act_non_cont">
+    <eventHandler eventName="serv_non_cont">
       <stateChange>
 	<stateAttribute type="constant" value="Server" />
 	<stateAttribute type="eventField" value="tid" />
-	<stateValue type="int" value="$ACTIVE_NON_CONT" />
+	<stateValue type="int" value="$NON_CONT" />
       </stateChange>
     </eventHandler>
     <eventHandler eventName="serv_preempted">
       <stateChange>
 	<stateAttribute type="constant" value="Server" />
 	<stateAttribute type="eventField" value="tid" />
-	<stateValue type="int" value="$ACTIVE_CONT" />
+	<stateValue type="int" value="$READY" />
       </stateChange>
     </eventHandler>
   </stateProvider>
@@ -69,9 +69,9 @@
     </head>
     
     <!-- Colors assigned to the state values -->
-    <definedValue name="ACTIVE_CONT" value="0" color="#8FF0A4" />
+    <definedValue name="READY" value="0" color="#8FF0A4" />
     <definedValue name="RUNNING" value="1" color="#26A269" />
-    <definedValue name="ACTIVE_NON_CONT" value="2" color="#F6D32D" />
+    <definedValue name="NON_CONT" value="2" color="#F6D32D" />
 
     <!-- Which attributes to "print" in the view -->
     <entry path="Server/*">

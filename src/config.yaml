@@ -91,13 +91,13 @@ trace:
               members:
                 - tid: int32
 
-          serv_act_cont:
+          serv_ready:
             payload-field-type:
               class: structure
               members:
                 - tid: int32
 
-          serv_act_non_cont:
+          serv_non_cont:
             payload-field-type:
               class: structure
               members:
@@ -109,7 +109,7 @@ trace:
               members:
                 - tid: int32
 
-          serv_idle:
+          serv_inactive:
             payload-field-type:
               class: structure
               members:
