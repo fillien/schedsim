@@ -275,6 +275,8 @@ void scheduler::handle_job_finished(const event& evt, bool is_there_new_job) {
                         handle_serv_inactive(evt);
                 }
         }
+	this->need_resched = true;
+
         std::cout << "virtual time = " << serv->virtual_time << "\n";
         std::cout << "deadline = " << serv->relative_deadline << "\n";
 }
