@@ -158,7 +158,7 @@ void scheduler::postpone(const std::shared_ptr<server>& serv) {
 void scheduler::goto_non_cont(const std::shared_ptr<server>& serv) {
         using enum types;
 
-        // Set the state of the calling server to ACTIVE_NON_CONT
+        // Set the state of the calling server to NON_CONT
         serv->current_state = server::state::non_cont;
         add_trace(SERV_NON_CONT, serv->id());
 
@@ -233,6 +233,8 @@ void scheduler::handle_job_arrival(const event& evt) {
 
         if (new_server->current_state != server::state::ready &&
             new_server->current_state != server::state::running) {
+		std::cout << "The server wasn't active\n";
+		
                 // Set the arrival time
                 new_server->current_state = server::state::ready;
                 new_server->relative_deadline = sim()->current_timestamp + new_server->period();
@@ -243,7 +245,7 @@ void scheduler::handle_job_arrival(const event& evt) {
                 first_proc->runqueue.push_back(new_server->attached_task.lock());
 
                 this->need_resched = true;
-                sim()->logging_system.traceGotoActCont(new_server->id());
+                sim()->logging_system.traceGotoReady(new_server->id());
         }
 
         sim()->logging_system.traceJobArrival(new_server->id(), new_server->virtual_time,
