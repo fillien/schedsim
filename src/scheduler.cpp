@@ -30,12 +30,19 @@ auto is_active_server = [](const std::shared_ptr<server>& current_server) -> boo
                is_running_server(current_server);
 };
 
+/// Compare two servers and return true if the first have an highest priority
 auto deadline_order = [](const std::shared_ptr<server>& first,
                          const std::shared_ptr<server>& second) {
         if (first->relative_deadline == second->relative_deadline) {
-		return first->id() < second->id();		
+                if (first->current_state == server::state::running) {
+                        return true;
+                } else if (second->current_state == server::state::running) {
+                        return false;
+                } else {
+                        return first->id() < second->id();
+                }
         }
-	return first->relative_deadline < second->relative_deadline;
+        return first->relative_deadline < second->relative_deadline;
 };
 
 auto get_priority = [](const types& type) -> int {
