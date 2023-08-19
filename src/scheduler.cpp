@@ -82,7 +82,7 @@ auto scheduler::is_event_present(const std::shared_ptr<task>& the_task, const ty
         return false;
 }
 
-void scheduler::handle(std::vector<event> evts) {
+void scheduler::handle(std::vector<event> evts, const double& deltatime) {
         // Sort events according to event priority cf:get_priority function
         std::sort(evts.begin(), evts.end(), [](const event& ev1, const event& ev2) {
                 return get_priority(ev1.type) > get_priority(ev2.type);
@@ -111,7 +111,7 @@ void scheduler::handle(std::vector<event> evts) {
                 }
                 case SERV_BUDGET_EXHAUSTED: handle_serv_budget_exhausted(evt); break;
                 case JOB_ARRIVAL: handle_job_arrival(evt); break;
-                case SERV_INACTIVE: handle_serv_inactive(evt); break;
+                case SERV_INACTIVE: handle_serv_inactive(evt, deltatime); break;
                 default: std::cerr << "Unknown event" << std::endl;
                 }
         }
@@ -121,13 +121,28 @@ void scheduler::handle(std::vector<event> evts) {
         }
 }
 
-void scheduler::handle_serv_inactive(const event& evt) {
+void scheduler::handle_serv_inactive(const event& evt, const double& deltatime) {
         using enum types;
 
         assert(!evt.target.expired());
         auto serv = std::static_pointer_cast<server>(evt.target.lock());
         serv->current_state = server::state::inactive;
         add_trace(SERV_INACTIVE, serv->id());
+
+        std::cout << "deltatime = " << deltatime << std::endl;
+
+        // Update running server
+        auto active_servers = servers | std::views::filter(is_active_server);
+        if (std::distance(active_servers.begin(), active_servers.end()) == 0) {
+                sim()->current_plateform.processors.at(0)->current_state = processor::state::idle;
+                add_trace(PROC_IDLED, sim()->current_plateform.processors.at(0)->id);
+                last_resched = sim()->current_timestamp;
+                return;
+        }
+
+        auto highest_priority_server = std::ranges::min(active_servers, deadline_order);
+        update_server_time(highest_priority_server, deltatime);
+
         need_resched = true;
 }
 

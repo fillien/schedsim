@@ -99,7 +99,7 @@ class scheduler {
 
         void handle_serv_budget_exhausted(const event& evt);
         void handle_sim_finished(const event& evt);
-        void handle_serv_inactive(const event& evt);
+        void handle_serv_inactive(const event& evt, const double& deltatime);
 
         void resched();
 
@@ -110,7 +110,7 @@ class scheduler {
          */
         void set_engine(std::weak_ptr<engine> simulator);
 
-        void handle(std::vector<event> evts);
+        void handle(std::vector<event> evts, const double& deltatime);
 };
 
 #endif

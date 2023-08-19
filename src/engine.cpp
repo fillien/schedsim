@@ -48,11 +48,17 @@ void engine::add_event(const event& new_event, const double timestamp) {
 
 void engine::simulation() {
         int cpt_burst{0};
+        double deltatime{0};
 
         // Loop until all events have been executed
         while (!future_list.empty() && cpt_burst < 10) {
                 // A vector to store all the event of the current timestamp
                 std::vector<event> current_events;
+
+                // Compute deltatime since the last time jump
+                deltatime = future_list.begin()->first - current_timestamp;
+
+                // Update current timestamp
                 current_timestamp = future_list.begin()->first;
 
                 std::cout << "========= Time " << current_timestamp << " =========\n";
@@ -64,7 +70,7 @@ void engine::simulation() {
                         current_events.push_back(std::move(itr->second));
                         future_list.erase(itr);
                 }
-                sched->handle(current_events);
+                sched->handle(current_events, deltatime);
                 cpt_burst++;
         }
 
