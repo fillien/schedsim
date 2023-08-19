@@ -240,8 +240,8 @@ void scheduler::handle_job_arrival(const event& evt) {
 
         if (new_server->current_state != server::state::ready &&
             new_server->current_state != server::state::running) {
-		std::cout << "The server wasn't active\n";
-		
+                std::cout << "The server wasn't active\n";
+
                 // Set the arrival time
                 new_server->current_state = server::state::ready;
                 new_server->relative_deadline = sim()->current_timestamp + new_server->period();
@@ -281,10 +281,10 @@ void scheduler::handle_job_finished(const event& evt, bool is_there_new_job) {
                 if ((serv->virtual_time - sim()->current_timestamp) > 0) {
                         goto_non_cont(serv);
                 } else {
-                        handle_serv_inactive(evt);
+                        handle_serv_inactive(evt, time_consumed);
                 }
         }
-	this->need_resched = true;
+        this->need_resched = true;
 
         std::cout << "virtual time = " << serv->virtual_time << "\n";
         std::cout << "deadline = " << serv->relative_deadline << "\n";
@@ -322,7 +322,7 @@ void scheduler::resched() {
 
         if (std::distance(active_servers.begin(), active_servers.end()) == 0) {
                 sim()->current_plateform.processors.at(0)->current_state = processor::state::idle;
-		add_trace(PROC_IDLED, sim()->current_plateform.processors.at(0)->id);
+                add_trace(PROC_IDLED, sim()->current_plateform.processors.at(0)->id);
                 last_resched = sim()->current_timestamp;
                 return;
         }
