@@ -45,6 +45,12 @@ class processor : public entity {
          * @param id The unique id of the processor.
          */
         explicit processor(const std::weak_ptr<engine> sim, const int id);
+
+        /**
+         * @brief Dequeue a task from the processor
+         * @param task_to_remove The task to remove.
+         */
+        void dequeue(std::weak_ptr<task> task_to_remove);
 };
 
 #endif

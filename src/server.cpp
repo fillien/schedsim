@@ -43,10 +43,14 @@ void server::change_state(const state& new_state) {
         case state::non_cont: {
                 switch (current_state) {
                 case state::running: {
-                        // Waiting
                         current_state = state::non_cont;
                         sim()->logging_system.add_trace(
                             {sim()->current_timestamp, types::SERV_NON_CONT, id(), 0});
+
+                        // Insert a event to pass in IDLE state when the time will be equal to the
+                        // virtual time. Deleting this event is necessery if a job arrive.
+                        sim()->add_event({types::SERV_INACTIVE, shared_from_this(), 0},
+                                         virtual_time);
                         return;
                 }
                 default: assert(false);

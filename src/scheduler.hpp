@@ -71,12 +71,6 @@ class scheduler {
         void postpone(const std::shared_ptr<server>& serv);
 
         /**
-         * @brief Change the state of the server to active non contending state.
-         * @param serv The server
-         */
-        void goto_non_cont(const std::shared_ptr<server>& serv);
-
-        /**
          * @brief Change the state of the server to state idle state.
          * @param serv The server
          */

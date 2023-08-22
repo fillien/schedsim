@@ -11,7 +11,7 @@
 class processor;
 
 /// An entity attached to a task that ensure ressources are reserved for this task.
-class server : public entity {
+class server : public entity, public std::enable_shared_from_this<server> {
       public:
         /// Possible states of a server
         enum class state { inactive, ready, running, non_cont };

@@ -167,25 +167,6 @@ void scheduler::postpone(const std::shared_ptr<server>& serv) {
         add_trace(SERV_POSTPONE, serv->id());
 }
 
-void scheduler::goto_non_cont(const std::shared_ptr<server>& serv) {
-        using enum types;
-
-        serv->change_state(server::state::non_cont);
-
-        // Dequeue the attached task of the processor
-        std::shared_ptr<processor> first_proc = sim()->current_plateform->processors.at(0);
-        assert(!serv->attached_task.expired());
-        for (auto itr = first_proc->runqueue.begin(); itr != first_proc->runqueue.end(); ++itr) {
-                if ((*itr).lock()->id == serv->id()) {
-                        first_proc->runqueue.erase(itr);
-                        break;
-                }
-        }
-
-        // Insert a event to pass in IDLE state
-        sim()->add_event({SERV_INACTIVE, serv, 0}, serv->virtual_time);
-}
-
 void scheduler::handle_undefined_event(const event& evt [[maybe_unused]]) {
         std::cerr << "This event is not implemented or ignored";
 }
@@ -282,7 +263,8 @@ void scheduler::handle_job_finished(const event& evt, bool is_there_new_job) {
         } else {
                 std::cout << "No job plan for now\n";
                 if ((serv->virtual_time - sim()->current_timestamp) > 0) {
-                        goto_non_cont(serv);
+                        serv->change_state(server::state::non_cont);
+                        sim()->current_plateform->processors.at(0)->dequeue(serv->attached_task);
                 } else {
                         handle_serv_inactive(evt, time_consumed);
                 }
