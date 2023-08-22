@@ -44,7 +44,7 @@ class processor : public entity {
          * @brief Class constructor
          * @param id The unique id of the processor.
          */
-        explicit processor(const int id);
+        explicit processor(const std::weak_ptr<engine> sim, const int id);
 };
 
 #endif

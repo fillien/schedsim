@@ -108,7 +108,10 @@ class scheduler {
          * @brief A setter to attach a simulation engine
          * @param A unsafe pointer to a simulation engine
          */
-        void set_engine(std::weak_ptr<engine> simulator);
+        void set_engine(std::weak_ptr<engine> new_sim) {
+                assert(!new_sim.expired());
+                simulator = new_sim;
+        }
 
         void handle(std::vector<event> evts, const double& deltatime);
 };

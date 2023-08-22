@@ -3,8 +3,8 @@
 #include <limits>
 #include <cassert>
 
-task::task(const int id, const double& period, const double& utilization):
-    id(id), period(period), utilization(utilization){}
+task::task(const std::weak_ptr<engine> sim, const int id, const double& period, const double& utilization):
+	entity(sim), id(id), period(period), utilization(utilization){}
 
 auto task::is_attached() -> bool {
 	return (attached_proc.get() != nullptr);

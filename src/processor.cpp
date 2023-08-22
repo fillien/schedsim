@@ -1,3 +1,3 @@
 #include "processor.hpp"
 
-processor::processor(const int id) : id(id){};
+processor::processor(const std::weak_ptr<engine> sim, const int id) : entity(sim), id(id){};

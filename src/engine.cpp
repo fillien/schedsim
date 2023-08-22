@@ -18,14 +18,6 @@ auto print = [](auto const& map) {
         std::cout << "End =====================\n";
 };
 
-engine::engine(const size_t nb_processors)
-    : current_plateform(plateform(nb_processors)), logging_system(&this->current_timestamp) {}
-
-void engine::set_scheduler(std::shared_ptr<scheduler>& new_sched) {
-        sched = new_sched;
-        sched->set_engine(shared_from_this());
-}
-
 void engine::add_event(const event& new_event, const double timestamp) {
         // Define if the event need to be unique at the current timestamp
         switch (new_event.type) {

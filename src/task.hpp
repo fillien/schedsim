@@ -38,7 +38,8 @@ class task : public entity {
          * @param period The period of the task.
          * @param utilization The utilization tacken when active.
          */
-        task(const int id, const double& period, const double& utilization);
+        task(const std::weak_ptr<engine> sim, const int id, const double& period,
+             const double& utilization);
 
         /**
          * @brief Return true if the task is currently attached to a processor

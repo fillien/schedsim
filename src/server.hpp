@@ -25,15 +25,18 @@ class server : public entity {
         /// The task to ensure time isolation
         std::weak_ptr<task> attached_task;
 
-        explicit server(const std::weak_ptr<task> attached_task);
+        explicit server(const std::weak_ptr<engine> sim, const std::weak_ptr<task> attached_task);
+
         auto id() const -> int {
                 assert(!attached_task.expired());
                 return attached_task.lock()->id;
         }
+
         auto utilization() const -> double {
                 assert(!attached_task.expired());
                 return attached_task.lock()->utilization;
         };
+
         auto period() const -> double {
                 assert(!attached_task.expired());
                 return attached_task.lock()->period;
@@ -43,6 +46,10 @@ class server : public entity {
                 assert(!attached_task.expired());
                 return attached_task.lock()->remaining_execution_time;
         }
+
+        void change_state(const state& new_state);
+
+        auto get_budget(const double& active_bw) -> double;
 };
 
 auto operator<<(std::ostream& out, const server& serv) -> std::ostream&;

@@ -18,15 +18,10 @@ class plateform : public entity {
         std::vector<std::shared_ptr<processor>> processors;
 
         /**
-         * @brief Default constructor
-         */
-        plateform();
-
-        /**
          * @brief A constructor who create the number of processors set in parameters
          * @param nb_proc Number of processors for the plateform
          */
-        explicit plateform(const std::size_t nb_proc);
+        explicit plateform(const std::weak_ptr<engine> sim, const std::size_t nb_proc);
 };
 
 #endif

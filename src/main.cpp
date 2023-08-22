@@ -8,6 +8,7 @@
 #include "engine.hpp"
 #include "entity.hpp"
 #include "event.hpp"
+#include "plateform.hpp"
 #include "scheduler.hpp"
 #include "server.hpp"
 #include "task.hpp"
@@ -30,17 +31,23 @@ int main(const int argc, const char** argv) {
         YAML::Node config = YAML::LoadFile(argv[1]);
 
         // Create the simulation engine and attache to it a scheduler
-        auto sim = make_shared<engine>(config["cores"].as<int>());
+        auto sim = make_shared<engine>();
         auto sched = make_shared<scheduler>();
         sim->set_scheduler(sched);
+        sched->set_engine(sim);
+
+        // Insert the plateform configured through the scenario file, in the simulation engine
+        auto config_plat = make_shared<plateform>(sim, config["cores"].as<int>());
+        sim->set_plateform(config_plat);
 
         // Prepare a vector to get all the tasks from the parsed scenario file
         std::vector<std::shared_ptr<task>> tasks{config["tasks"].size()};
 
         // Create tasks and job arrival events
         for (auto node : config["tasks"]) {
-                auto new_task = make_shared<task>(node["id"].as<int>(), node["period"].as<double>(),
-                                                  node["utilization"].as<double>());
+                auto new_task =
+                    make_shared<task>(sim, node["id"].as<int>(), node["period"].as<double>(),
+                                      node["utilization"].as<double>());
 
                 // For each job of tasks add a "job arrival" event in the future list
                 for (auto job : node["jobs"]) {

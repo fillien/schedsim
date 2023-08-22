@@ -15,7 +15,7 @@
  * @brief According to a platform and a scheduler, the class simulate in order of time each events
  * contains in the future list
  */
-class engine : public std::enable_shared_from_this<engine> {
+class engine {
         void handle(const event& evt);
 
       public:
@@ -27,7 +27,7 @@ class engine : public std::enable_shared_from_this<engine> {
         /**
          * @brief A model a the platform on which the scheduler will operate.
          */
-        plateform current_plateform;
+        std::shared_ptr<plateform> current_plateform;
 
         /**
          * @brief The tracer that help to generate logs.
@@ -47,21 +47,22 @@ class engine : public std::enable_shared_from_this<engine> {
 
         /**
          * @brief A constructor to help generate the platform.
-         * @param nb_processors The number of processors that compose the platform model
          */
-        explicit engine(const size_t nb_processors);
+        explicit engine() : logging_system(&this->current_timestamp) {}
 
         /**
          * @brief Setter to attach a scheduler.
          * @param new_sched
          */
-        void set_scheduler(std::shared_ptr<scheduler>& new_sched);
+        void set_scheduler(std::shared_ptr<scheduler>& new_sched) { sched = new_sched; }
 
         /**
-         * @brief Retrieve a pointer of the engine object, its help a scheduler object to access
-         * data of the engine.
+         * @brief Setter to attach a plateform.
+         * @param new_plateform
          */
-        auto get_shared() -> std::shared_ptr<engine> { return shared_from_this(); };
+        void set_plateform(std::shared_ptr<plateform>& new_plateform) {
+                current_plateform = new_plateform;
+        };
 
         /**
          * @brief That the main function of the simulator engine, its the event loop that handle the

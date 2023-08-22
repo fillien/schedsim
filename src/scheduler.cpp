@@ -63,11 +63,6 @@ auto get_priority = [](const types& type) -> int {
 };
 } // namespace
 
-void scheduler::set_engine(std::weak_ptr<engine> sim) {
-        assert(!sim.expired());
-        simulator = sim;
-}
-
 void scheduler::add_trace(const types type, const int target_id, const double payload) const {
         sim()->logging_system.add_trace({sim()->current_timestamp, type, target_id, payload});
 };
@@ -134,8 +129,8 @@ void scheduler::handle_serv_inactive(const event& evt, const double& deltatime) 
         // Update running server
         auto active_servers = servers | std::views::filter(is_active_server);
         if (std::distance(active_servers.begin(), active_servers.end()) == 0) {
-                sim()->current_plateform.processors.at(0)->current_state = processor::state::idle;
-                add_trace(PROC_IDLED, sim()->current_plateform.processors.at(0)->id);
+                sim()->current_plateform->processors.at(0)->current_state = processor::state::idle;
+                add_trace(PROC_IDLED, sim()->current_plateform->processors.at(0)->id);
                 last_resched = sim()->current_timestamp;
                 return;
         }
@@ -154,11 +149,6 @@ auto scheduler::get_active_bandwidth() -> double {
                 }
         }
         return active_bandwidth;
-}
-
-auto scheduler::compute_budget(const server& serv) -> double {
-        return serv.utilization() / get_active_bandwidth() *
-               (serv.relative_deadline - serv.virtual_time);
 }
 
 void scheduler::update_server_time(const std::shared_ptr<server>& serv,
@@ -180,12 +170,10 @@ void scheduler::postpone(const std::shared_ptr<server>& serv) {
 void scheduler::goto_non_cont(const std::shared_ptr<server>& serv) {
         using enum types;
 
-        // Set the state of the calling server to NON_CONT
-        serv->current_state = server::state::non_cont;
-        add_trace(SERV_NON_CONT, serv->id());
+        serv->change_state(server::state::non_cont);
 
         // Dequeue the attached task of the processor
-        std::shared_ptr<processor> first_proc = sim()->current_plateform.processors.at(0);
+        std::shared_ptr<processor> first_proc = sim()->current_plateform->processors.at(0);
         assert(!serv->attached_task.expired());
         for (auto itr = first_proc->runqueue.begin(); itr != first_proc->runqueue.end(); ++itr) {
                 if ((*itr).lock()->id == serv->id()) {
@@ -238,7 +226,7 @@ void scheduler::handle_job_arrival(const event& evt) {
                 new_server = (*itr);
         } else {
                 // There is no server affected to the awaking task, need to create one
-                new_server = std::make_shared<server>(new_task);
+                new_server = std::make_shared<server>(sim(), new_task);
                 servers.push_back(new_server);
         }
 
@@ -262,7 +250,7 @@ void scheduler::handle_job_arrival(const event& evt) {
                 new_server->relative_deadline = sim()->current_timestamp + new_server->period();
 
                 // Insert the attached task to the first processor runqueue
-                std::shared_ptr<processor> first_proc = sim()->current_plateform.processors.at(0);
+                std::shared_ptr<processor> first_proc = sim()->current_plateform->processors.at(0);
                 assert(!new_server->attached_task.expired());
                 first_proc->runqueue.push_back(new_server->attached_task.lock());
 
@@ -336,8 +324,8 @@ void scheduler::resched() {
         auto active_servers = servers | std::views::filter(is_active_server);
 
         if (std::distance(active_servers.begin(), active_servers.end()) == 0) {
-                sim()->current_plateform.processors.at(0)->current_state = processor::state::idle;
-                add_trace(PROC_IDLED, sim()->current_plateform.processors.at(0)->id);
+                sim()->current_plateform->processors.at(0)->current_state = processor::state::idle;
+                add_trace(PROC_IDLED, sim()->current_plateform->processors.at(0)->id);
                 last_resched = sim()->current_timestamp;
                 return;
         }
@@ -364,7 +352,7 @@ void scheduler::resched() {
                 }
         } else {
                 // Notify if the processor start to execute a task
-                const auto& proc = sim()->current_plateform.processors.at(0);
+                const auto& proc = sim()->current_plateform->processors.at(0);
                 if (proc->current_state != processor::state::running) {
                         add_trace(PROC_ACTIVATED, proc->id);
                 }
@@ -379,7 +367,7 @@ void scheduler::resched() {
         add_trace(TASK_SCHEDULED, highest_priority_server->id());
 
         // Compute the budget of the selected server
-        double new_server_budget = compute_budget(*highest_priority_server);
+        double new_server_budget = highest_priority_server->get_budget(get_active_bandwidth());
         double task_remaining_time = highest_priority_server->remaining_exec_time();
 
         std::cout << "budget : " << new_server_budget << "\n";
