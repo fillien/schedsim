@@ -50,6 +50,11 @@ trace:
               class: structure
               members: []
 
+          proc_activated:
+            payload-field-type:
+              class: structure
+              members: []
+
           serv_budget_replenished:
             payload-field-type:
               class: structure

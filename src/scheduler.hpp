@@ -20,10 +20,12 @@ class scheduler {
          * @brief The pointer to access the simulation engine
          */
         std::weak_ptr<engine> simulator;
+
         /**
          * @brief A vector to track and own servers objects
          */
         std::vector<std::shared_ptr<server>> servers;
+
         /**
          * @brief Store the last timestamp at which the runqueue has been rescheduled
          */
@@ -47,36 +49,6 @@ class scheduler {
         auto is_event_present(const std::shared_ptr<task>& the_task, const types type) -> bool;
 
         /**
-         * @brief Return the current active bandwidth
-         */
-        auto get_active_bandwidth() -> double;
-
-        /**
-         * @brief Compute budget of a server
-         * @param server The server of which compute the budget
-         */
-        auto compute_budget(const server& serv) -> double;
-
-        /**
-         * @brief Update the virtual time and the remaining execution time of server
-         * @param serv The server to update
-         * @param time_consumed The duration of the elapsed execution
-         */
-        void update_server_time(const std::shared_ptr<server>& serv, const double time_comsumed);
-
-        /**
-         * @brief Move in the future the deadline of the server
-         * @param serv The server to update
-         */
-        void postpone(const std::shared_ptr<server>& serv);
-
-        /**
-         * @brief Change the state of the server to state idle state.
-         * @param serv The server
-         */
-        void goto_inactive(const std::shared_ptr<server>& serv);
-
-        /**
          * @brief A helper function who return a safe pointer to the attached simulation engine.
          */
         auto sim() const -> std::shared_ptr<engine> {
@@ -84,13 +56,10 @@ class scheduler {
                 return simulator.lock();
         }
 
-        // Mandatory event handler
         void handle_undefined_event(const event& evt);
 
-        // Used event handlers
         void handle_job_arrival(const event& evt);
         void handle_job_finished(const event& evt, bool is_there_new_job);
-
         void handle_serv_budget_exhausted(const event& evt);
         void handle_sim_finished(const event& evt);
         void handle_serv_inactive(const event& evt, const double& deltatime);
@@ -108,6 +77,11 @@ class scheduler {
         }
 
         void handle(std::vector<event> evts, const double& deltatime);
+
+        /**
+         * @brief Return the current active bandwidth
+         */
+        auto get_active_bandwidth() -> double;
 };
 
 #endif

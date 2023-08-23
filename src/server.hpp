@@ -49,7 +49,11 @@ class server : public entity, public std::enable_shared_from_this<server> {
 
         void change_state(const state& new_state);
 
-        auto get_budget(const double& active_bw) -> double;
+        auto get_budget() -> double;
+
+        void update_times(const double& timeframe);
+
+        void postpone();
 };
 
 auto operator<<(std::ostream& out, const server& serv) -> std::ostream&;

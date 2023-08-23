@@ -24,6 +24,7 @@ void tracer::add_trace(const trace& new_trace) {
         switch (new_trace.type) {
         case JOB_FINISHED: barectf_trace_job_finished(ctx, new_trace.target_id); break;
         case PROC_IDLED: barectf_trace_proc_idle(ctx); break;
+        case PROC_ACTIVATED: barectf_trace_proc_activated(ctx); break;
         case RESCHED: barectf_trace_resched(ctx); break;
         case SERV_NON_CONT: barectf_trace_serv_non_cont(ctx, new_trace.target_id); break;
         case SERV_BUDGET_EXHAUSTED:
