@@ -21,6 +21,8 @@ void server::change_state(const state& new_state) {
 
         assert(new_state != current_state);
 
+        std::cout << new_state << std::endl;
+
         switch (new_state) {
         case state::ready: {
                 switch (current_state) {
@@ -86,4 +88,14 @@ void server::postpone() {
 auto operator<<(std::ostream& out, const server& serv) -> std::ostream& {
         return out << "S" << serv.id() << " P=" << serv.period() << " U=" << serv.utilization()
                    << " D=" << serv.relative_deadline << " V=" << serv.virtual_time;
+}
+
+auto operator<<(std::ostream& out, const server::state& s) -> std::ostream& {
+        using enum server::state;
+        switch (s) {
+        case inactive: return out << "inactive";
+        case ready: return out << "ready";
+        case running: return out << "running";
+        case non_cont: return out << "non_cont";
+        }
 }

@@ -57,5 +57,6 @@ class server : public entity, public std::enable_shared_from_this<server> {
 };
 
 auto operator<<(std::ostream& out, const server& serv) -> std::ostream&;
+auto operator<<(std::ostream& out, const server::state& s) -> std::ostream&;
 
 #endif
