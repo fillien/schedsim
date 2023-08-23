@@ -17,13 +17,8 @@ auto server::get_budget() -> double {
 }
 
 void server::change_state(const state& new_state) {
-        switch (new_state) {
-        case state::inactive: std::cout << "inactive"; break;
-        case state::non_cont: std::cout << "non_cont"; break;
-        case state::ready: std::cout << "ready"; break;
-        case state::running: std::cout << "running"; break;
-        }
-        std::cout << std::endl;
+        using enum types;
+
         assert(new_state != current_state);
 
         switch (new_state) {
@@ -39,7 +34,7 @@ void server::change_state(const state& new_state) {
                 case state::running: {
                         // Preempted
                         sim()->logging_system.add_trace(
-                            {sim()->current_timestamp, types::TASK_PREEMPTED, id(), 0});
+                            {sim()->current_timestamp, TASK_PREEMPTED, id(), 0});
                         break;
                 }
                 default: assert(false);
@@ -48,49 +43,28 @@ void server::change_state(const state& new_state) {
                 break;
         }
         case state::running: {
-                switch (current_state) {
-                case state::ready: {
-                        // Dispatch
-                        sim()->logging_system.add_trace(
-                            {sim()->current_timestamp, types::SERV_RUNNING, id(), 0});
-                        sim()->logging_system.add_trace(
-                            {sim()->current_timestamp, types::TASK_SCHEDULED, id(), 0});
-                        break;
-                }
-                default: assert(false);
-                }
+                assert(current_state == state::ready);
+                // Dispatch
+                sim()->logging_system.add_trace({sim()->current_timestamp, SERV_RUNNING, id(), 0});
+                sim()->logging_system.add_trace(
+                    {sim()->current_timestamp, TASK_SCHEDULED, id(), 0});
                 current_state = state::running;
                 break;
         }
         case state::non_cont: {
-                switch (current_state) {
-                case state::running: {
-                        sim()->logging_system.add_trace(
-                            {sim()->current_timestamp, types::SERV_NON_CONT, id(), 0});
+                assert(current_state == state::running);
+                sim()->logging_system.add_trace({sim()->current_timestamp, SERV_NON_CONT, id(), 0});
 
-                        // Insert a event to pass in IDLE state when the time will be equal to the
-                        // virtual time. Deleting this event is necessery if a job arrive.
-                        sim()->add_event({types::SERV_INACTIVE, shared_from_this(), 0},
-                                         virtual_time);
-                        break;
-                }
-                default: assert(false);
-                }
+                // Insert a event to pass in IDLE state when the time will be equal to the
+                // virtual time. Deleting this event is necessery if a job arrive.
+                sim()->add_event({SERV_INACTIVE, shared_from_this(), 0}, virtual_time);
                 current_state = state::non_cont;
                 break;
         }
         case state::inactive: {
-                switch (current_state) {
-                case state::running: {
-                        // Anticipated end
-                        break;
-                }
-                case state::non_cont: {
-                        // Ending
-                        break;
-                }
-                default: assert(false);
-                }
+                assert(current_state == state::running || current_state == state::non_cont);
+                sim()->logging_system.add_trace({sim()->current_timestamp, SERV_INACTIVE, id(), 0});
+                current_state = state::inactive;
                 break;
         }
         }

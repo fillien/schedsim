@@ -56,14 +56,12 @@ class scheduler {
                 return simulator.lock();
         }
 
-        void handle_undefined_event(const event& evt);
-
-        void handle_job_arrival(const event& evt);
-        void handle_job_finished(const event& evt, bool is_there_new_job);
-        void handle_serv_budget_exhausted(const event& evt);
-        void handle_sim_finished(const event& evt);
-        void handle_serv_inactive(const event& evt, const double& deltatime);
-
+        void handle_job_arrival(const std::shared_ptr<task>& new_task, const double& job_wcet);
+        void handle_job_finished(const std::shared_ptr<server>& serv, const double& deltatime,
+                                 bool is_there_new_job);
+        void handle_serv_budget_exhausted(const std::shared_ptr<server>& serv,
+                                          const double& deltatime);
+        void handle_serv_inactive(const std::shared_ptr<server>& serv, const double& deltatime);
         void resched();
 
       public:
