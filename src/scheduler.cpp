@@ -87,6 +87,28 @@ auto scheduler::get_active_bandwidth() -> double {
         return active_bandwidth;
 }
 
+auto scheduler::make_server(const std::shared_ptr<task>& new_task) -> std::shared_ptr<server> {
+        // If not, a server is attached to the task if not already, and the server go in
+        // active state. The task remaining execution time is set with the WCET of the job.
+        const auto has_task_a_server = [new_task](const std::shared_ptr<server>& serv) {
+                assert(!serv->attached_task.expired());
+                return serv->attached_task.lock() == new_task;
+        };
+
+        // Detect if the task has a server attached, otherwise a new server
+        // has to be created and attached
+        std::shared_ptr<server> new_server;
+        auto itr = std::find_if(servers.begin(), servers.end(), has_task_a_server);
+        if (itr != servers.end()) {
+                new_server = (*itr);
+        } else {
+                // There is no server affected to the awaking task, need to create one
+                new_server = std::make_shared<server>(sim(), new_task);
+                servers.push_back(new_server);
+        }
+        return new_server;
+}
+
 void scheduler::handle(std::vector<event> evts, const double& deltatime) {
         // Sort events according to event priority cf:get_priority function
         std::sort(evts.begin(), evts.end(), [](const event& ev1, const event& ev2) {
@@ -146,6 +168,13 @@ void scheduler::handle(std::vector<event> evts, const double& deltatime) {
 }
 
 void scheduler::handle_serv_inactive(const std::shared_ptr<server>& serv, const double& deltatime) {
+        std::cout << "serv = " << serv->id() << "\n";
+
+        // If a job arrived during this turn, do not change state to inactive
+        if (serv->cant_be_inactive) {
+                return;
+        }
+
         serv->change_state(server::state::inactive);
 
         std::cout << "deltatime = " << deltatime << std::endl;
@@ -171,27 +200,12 @@ void scheduler::handle_job_arrival(const std::shared_ptr<task>& new_task, const 
                 return;
         }
 
+        auto new_server = make_server(new_task);
+
+        std::cout << "serv = " << new_server->id() << '\n';
+
         // Set the task remaining execution time with the WCET of the job
         new_task->remaining_execution_time = job_wcet;
-
-        // If not, a server is attached to the task if not already, and the server go in
-        // active state. The task remaining execution time is set with the WCET of the job.
-        const auto has_task_a_server = [new_task](const std::shared_ptr<server>& serv) {
-                assert(!serv->attached_task.expired());
-                return serv->attached_task.lock() == new_task;
-        };
-
-        // Detect if the task has a server attached, otherwise a new server
-        // has to be created and attached
-        std::shared_ptr<server> new_server;
-        auto itr = std::find_if(servers.begin(), servers.end(), has_task_a_server);
-        if (itr != servers.end()) {
-                new_server = (*itr);
-        } else {
-                // There is no server affected to the awaking task, need to create one
-                new_server = std::make_shared<server>(sim(), new_task);
-                servers.push_back(new_server);
-        }
 
         if (new_server->current_state == inactive) {
                 // Update the current running server

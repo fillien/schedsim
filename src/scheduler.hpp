@@ -76,6 +76,8 @@ class scheduler {
 
         void handle(std::vector<event> evts, const double& deltatime);
 
+        auto make_server(const std::shared_ptr<task>& new_task) -> std::shared_ptr<server>;
+
         /**
          * @brief Return the current active bandwidth
          */

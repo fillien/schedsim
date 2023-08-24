@@ -22,6 +22,9 @@ class server : public entity, public std::enable_shared_from_this<server> {
         double relative_deadline{0};
         double virtual_time{0};
 
+        bool cant_be_inactive{false};
+        double last_call{0};
+
         /// The task to ensure time isolation
         std::weak_ptr<task> attached_task;
 

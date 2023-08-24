@@ -21,7 +21,13 @@ void server::change_state(const state& new_state) {
 
         assert(new_state != current_state);
 
+        if (last_call != sim()->current_timestamp) {
+                last_call = sim()->current_timestamp;
+                cant_be_inactive = false;
+        }
+
         std::cout << new_state << std::endl;
+        std::cout << current_state << std::endl;
 
         switch (new_state) {
         case state::ready: {
@@ -30,6 +36,22 @@ void server::change_state(const state& new_state) {
                         // Job arrival
                         relative_deadline = sim()->current_timestamp + period();
                         sim()->logging_system.traceGotoReady(id());
+                        break;
+                }
+                case state::non_cont: {
+                        // Remove all future events of type SERV_INACTIVE
+                        /// TODO Replace events insertion and deletion by a timer mechanism.
+                        for (auto itr = sim()->future_list.begin(); itr != sim()->future_list.end();
+                             ++itr) {
+                                const types& t = (*itr).second.type;
+                                if (t == SERV_INACTIVE) {
+                                        sim()->future_list.erase(itr);
+                                }
+                        }
+                        cant_be_inactive = true;
+
+                        sim()->logging_system.add_trace(
+                            {sim()->current_timestamp, SERV_READY, id(), 0});
                         break;
                 }
                 case state::ready:
@@ -59,6 +81,7 @@ void server::change_state(const state& new_state) {
 
                 // Insert a event to pass in IDLE state when the time will be equal to the
                 // virtual time. Deleting this event is necessery if a job arrive.
+                assert(virtual_time > sim()->current_timestamp);
                 sim()->add_event({SERV_INACTIVE, shared_from_this(), 0}, virtual_time);
                 current_state = state::non_cont;
                 break;
@@ -97,5 +120,6 @@ auto operator<<(std::ostream& out, const server::state& s) -> std::ostream& {
         case ready: return out << "ready";
         case running: return out << "running";
         case non_cont: return out << "non_cont";
+        default: return out << "unknown";
         }
 }
