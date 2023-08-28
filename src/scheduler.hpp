@@ -26,11 +26,6 @@ class scheduler {
          */
         std::vector<std::shared_ptr<server>> servers;
 
-        /**
-         * @brief Store the last timestamp at which the runqueue has been rescheduled
-         */
-        double last_resched{0};
-
         bool need_resched{false};
 
         /**
@@ -57,11 +52,9 @@ class scheduler {
         }
 
         void handle_job_arrival(const std::shared_ptr<task>& new_task, const double& job_wcet);
-        void handle_job_finished(const std::shared_ptr<server>& serv, const double& deltatime,
-                                 bool is_there_new_job);
-        void handle_serv_budget_exhausted(const std::shared_ptr<server>& serv,
-                                          const double& deltatime);
-        void handle_serv_inactive(const std::shared_ptr<server>& serv, const double& deltatime);
+        void handle_job_finished(const std::shared_ptr<server>& serv, bool is_there_new_job);
+        void handle_serv_budget_exhausted(const std::shared_ptr<server>& serv);
+        void handle_serv_inactive(const std::shared_ptr<server>& serv);
         void resched();
 
       public:

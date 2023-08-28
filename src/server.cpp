@@ -49,7 +49,6 @@ void server::change_state(const state& new_state) {
                                 }
                         }
                         cant_be_inactive = true;
-
                         sim()->logging_system.add_trace(
                             {sim()->current_timestamp, SERV_READY, id(), 0});
                         break;
@@ -72,6 +71,7 @@ void server::change_state(const state& new_state) {
                 sim()->logging_system.add_trace({sim()->current_timestamp, SERV_RUNNING, id(), 0});
                 sim()->logging_system.add_trace(
                     {sim()->current_timestamp, TASK_SCHEDULED, id(), 0});
+                last_update = sim()->current_timestamp;
                 current_state = state::running;
                 break;
         }
@@ -95,12 +95,19 @@ void server::change_state(const state& new_state) {
         }
 }
 
-void server::update_times(const double& timeframe) {
+void server::update_times() {
+        std::cout << "s" << id() << ", current_state = " << current_state << std::endl;
+        assert(current_state == state::running);
+        const double running_time = sim()->current_timestamp - last_update;
+
+        std::cout << "server = " << id();
+        std::cout << "\nupdate_times, timeframe = " << running_time << '\n';
+
         const double active_bw = sim()->sched->get_active_bandwidth();
-        virtual_time += timeframe * (active_bw / utilization());
+        virtual_time += running_time * (active_bw / utilization());
         sim()->logging_system.add_trace(
             {sim()->current_timestamp, types::VIRTUAL_TIME_UPDATE, id(), virtual_time});
-        attached_task.lock()->remaining_execution_time -= timeframe;
+        attached_task.lock()->remaining_execution_time -= running_time;
 }
 
 void server::postpone() {

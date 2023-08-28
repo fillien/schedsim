@@ -4,6 +4,7 @@
 #include "scheduler.hpp"
 
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <iostream>
 #include <iterator>
@@ -50,10 +51,16 @@ void engine::simulation() {
                 // Compute deltatime since the last time jump
                 deltatime = future_list.begin()->first - current_timestamp;
 
+                if (deltatime < 0) {
+                        std::cout << "false timestamp = " << future_list.begin()->first << "\n";
+                }
+                // assert(deltatime >= 0);
+
                 // Update current timestamp
                 current_timestamp = future_list.begin()->first;
 
                 std::cout << "========= Time " << current_timestamp << " =========\n";
+                std::cout << "deltatime = " << deltatime << '\n';
 
                 // Loop until move all the event of the current timestamp
                 while (!future_list.empty() && future_list.begin()->first <= current_timestamp) {

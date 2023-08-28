@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <bits/ranges_algo.h>
 #include <bits/ranges_base.h>
+#include <bits/ranges_util.h>
 #include <cassert>
 #include <cstdlib>
 #include <exception>
@@ -132,16 +133,15 @@ void scheduler::handle(std::vector<event> evts, const double& deltatime) {
                                         break;
                                 }
                         }
-
                         assert(!evt.target.expired());
                         auto serv = std::static_pointer_cast<server>(evt.target.lock());
-                        handle_job_finished(serv, evt.payload, is_there_new_job);
+                        handle_job_finished(serv, is_there_new_job);
                         break;
                 }
                 case SERV_BUDGET_EXHAUSTED: {
                         assert(!evt.target.expired());
                         auto serv = std::static_pointer_cast<server>(evt.target.lock());
-                        handle_serv_budget_exhausted(serv, evt.payload);
+                        handle_serv_budget_exhausted(serv);
                         break;
                 }
                 case JOB_ARRIVAL: {
@@ -155,7 +155,7 @@ void scheduler::handle(std::vector<event> evts, const double& deltatime) {
                 case SERV_INACTIVE: {
                         assert(!evt.target.expired());
                         auto serv = std::static_pointer_cast<server>(evt.target.lock());
-                        handle_serv_inactive(serv, deltatime);
+                        handle_serv_inactive(serv);
                         break;
                 }
                 default: std::cerr << "Unknown event" << std::endl;
@@ -167,7 +167,7 @@ void scheduler::handle(std::vector<event> evts, const double& deltatime) {
         }
 }
 
-void scheduler::handle_serv_inactive(const std::shared_ptr<server>& serv, const double& deltatime) {
+void scheduler::handle_serv_inactive(const std::shared_ptr<server>& serv) {
         std::cout << "serv = " << serv->id() << "\n";
 
         // If a job arrived during this turn, do not change state to inactive
@@ -177,17 +177,11 @@ void scheduler::handle_serv_inactive(const std::shared_ptr<server>& serv, const 
 
         serv->change_state(server::state::inactive);
 
-        std::cout << "deltatime = " << deltatime << std::endl;
-
-        // Update running server
-        auto active_servers = servers | std::views::filter(is_active_server);
-        if (std::distance(active_servers.begin(), active_servers.end()) == 0) {
-                last_resched = sim()->current_timestamp;
-                return;
+        // Update running server if there is one
+        auto running_server = std::ranges::find_if(servers, is_running_server);
+        if (running_server != servers.end()) {
+                running_server->get()->update_times();
         }
-
-        auto highest_priority_server = std::ranges::min(active_servers, deadline_order);
-        highest_priority_server->update_times(deltatime);
 
         need_resched = true;
 }
@@ -211,9 +205,8 @@ void scheduler::handle_job_arrival(const std::shared_ptr<task>& new_task, const 
                 // Update the current running server
                 auto running_server = std::ranges::find_if(servers, is_running_server);
                 if (running_server != servers.end()) {
-                        (*running_server)->update_times(sim()->current_timestamp - last_resched);
+                        (*running_server)->update_times();
                 }
-
                 new_server->virtual_time = sim()->current_timestamp;
         }
 
@@ -227,8 +220,7 @@ void scheduler::handle_job_arrival(const std::shared_ptr<task>& new_task, const 
                                               new_server->relative_deadline);
 }
 
-void scheduler::handle_job_finished(const std::shared_ptr<server>& serv,
-                                    const double& last_server_budget, bool is_there_new_job) {
+void scheduler::handle_job_finished(const std::shared_ptr<server>& serv, bool is_there_new_job) {
         using enum types;
         using enum server::state;
 
@@ -236,20 +228,20 @@ void scheduler::handle_job_finished(const std::shared_ptr<server>& serv,
         add_trace(JOB_FINISHED, serv->id());
 
         // Update virtual time and remaining execution time
-        serv->update_times(last_server_budget);
+        serv->update_times();
 
         // Looking for another job arrival of the task at the same time
         if (is_there_new_job) {
                 std::cout << "A job is already plan for now\n";
                 serv->postpone();
         } else {
-                std::cout << "No job plan for now\n";
+                /// TODO move this to servers, it's not sched shit
                 sim()->current_plateform->processors.at(0)->dequeue(serv->attached_task);
 
                 if ((serv->virtual_time - sim()->current_timestamp) > 0) {
                         serv->change_state(non_cont);
                 } else {
-                        handle_serv_inactive(serv, last_server_budget);
+                        serv->change_state(inactive);
                 }
         }
         this->need_resched = true;
@@ -258,11 +250,10 @@ void scheduler::handle_job_finished(const std::shared_ptr<server>& serv,
         std::cout << "deadline = " << serv->relative_deadline << "\n";
 }
 
-void scheduler::handle_serv_budget_exhausted(const std::shared_ptr<server>& serv,
-                                             const double& deltatime) {
+void scheduler::handle_serv_budget_exhausted(const std::shared_ptr<server>& serv) {
         using enum types;
         add_trace(SERV_BUDGET_EXHAUSTED, serv->id());
-        serv->update_times(deltatime);
+        serv->update_times();
 
         // Check if the job as been completed at the same time
         if (serv->attached_task.lock()->remaining_execution_time > 0) {
@@ -284,7 +275,6 @@ void scheduler::resched() {
         auto active_servers = servers | std::views::filter(is_active_server);
 
         if (std::distance(active_servers.begin(), active_servers.end()) == 0) {
-                last_resched = sim()->current_timestamp;
                 return;
         }
 
@@ -332,6 +322,4 @@ void scheduler::resched() {
                 sim()->add_event({JOB_FINISHED, highest_priority_server, task_remaining_time},
                                  sim()->current_timestamp + task_remaining_time);
         }
-
-        last_resched = sim()->current_timestamp;
 }

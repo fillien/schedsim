@@ -61,7 +61,7 @@ int main(const int argc, const char** argv) {
         sim->simulation();
 
         // Print logs from the simulation
-        cout << "Logs :\n" << sim->logging_system.format(to_txt);
+        // cout << "Logs :\n" << sim->logging_system.format(to_txt);
 
         return EXIT_SUCCESS;
 }
