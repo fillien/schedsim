@@ -100,6 +100,9 @@ void server::update_times() {
         assert(current_state == state::running);
         const double running_time = sim()->current_timestamp - last_update;
 
+        std::cout << attached_task.lock()->remaining_execution_time - running_time << "\n";
+        assert((attached_task.lock()->remaining_execution_time - running_time) >= 0);
+
         std::cout << "server = " << id();
         std::cout << "\nupdate_times, timeframe = " << running_time << '\n';
 

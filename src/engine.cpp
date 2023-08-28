@@ -54,7 +54,6 @@ void engine::simulation() {
                 if (deltatime < 0) {
                         std::cout << "false timestamp = " << future_list.begin()->first << "\n";
                 }
-                // assert(deltatime >= 0);
 
                 // Update current timestamp
                 current_timestamp = future_list.begin()->first;

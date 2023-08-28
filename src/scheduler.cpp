@@ -281,6 +281,10 @@ void scheduler::resched() {
         auto highest_priority_server = std::ranges::min(active_servers, deadline_order);
         auto running_server = std::ranges::find_if(active_servers, is_running_server);
 
+        for (auto s : active_servers) {
+                std::cout << *s << "\n";
+        }
+
         // Remove all future event of type BUDGET_EXHAUSTED and JOB_FINISHED
         for (auto itr = sim()->future_list.begin(); itr != sim()->future_list.end(); ++itr) {
                 const types& t = (*itr).second.type;
@@ -302,12 +306,16 @@ void scheduler::resched() {
         double new_server_budget = highest_priority_server->get_budget();
         double task_remaining_time = highest_priority_server->remaining_exec_time();
 
-        std::cout << "budget : " << new_server_budget << "\n";
-        std::cout << "remaining time : " << task_remaining_time << "\n";
+        std::cout << "next server is s" << highest_priority_server->id();
+        std::cout << "\nbudget : " << new_server_budget;
+        std::cout << "\nremaining time : " << task_remaining_time << "\n";
 
         if (highest_priority_server->current_state != running) {
                 highest_priority_server->change_state(running);
         }
+
+        assert(new_server_budget >= 0);
+        assert(task_remaining_time >= 0);
 
         add_trace(SERV_BUDGET_REPLENISHED, highest_priority_server->id(), new_server_budget);
 
