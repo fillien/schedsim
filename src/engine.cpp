@@ -40,11 +40,10 @@ void engine::add_event(const event& new_event, const double timestamp) {
 }
 
 void engine::simulation() {
-        int cpt_burst{0};
         double deltatime{0};
 
         // Loop until all events have been executed
-        while (!future_list.empty() && cpt_burst < 10) {
+        while (!future_list.empty()) {
                 // A vector to store all the event of the current timestamp
                 std::vector<event> current_events;
 
@@ -69,7 +68,6 @@ void engine::simulation() {
                         future_list.erase(itr);
                 }
                 sched->handle(current_events, deltatime);
-                cpt_burst++;
         }
 
         if (future_list.empty()) {
