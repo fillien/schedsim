@@ -111,6 +111,8 @@ void server::update_times() {
         sim()->logging_system.add_trace(
             {sim()->current_timestamp, types::VIRTUAL_TIME_UPDATE, id(), virtual_time});
         attached_task.lock()->remaining_execution_time -= running_time;
+
+        last_update = sim()->current_timestamp;
 }
 
 void server::postpone() {
