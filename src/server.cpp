@@ -26,8 +26,7 @@ void server::change_state(const state& new_state) {
                 cant_be_inactive = false;
         }
 
-        std::cout << new_state << std::endl;
-        std::cout << current_state << std::endl;
+        std::cout << current_state << " -> " << new_state << std::endl;
 
         switch (new_state) {
         case state::ready: {

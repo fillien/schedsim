@@ -274,6 +274,7 @@ void scheduler::resched() {
         // Check if there is no active and running server
         auto active_servers = servers | std::views::filter(is_active_server);
 
+        // Check if there are servers in ready or running state
         if (std::distance(active_servers.begin(), active_servers.end()) == 0) {
                 return;
         }
