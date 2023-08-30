@@ -3,7 +3,7 @@
 	xsi:noNamespaceSchemaLocation="xmldefinition.xsd">
 
   <!-- The state provider assigns states from events -->
-  <stateProvider id="org.eclipse.linuxtools.ust.simsched" version="11">
+  <stateProvider id="org.eclipse.linuxtools.ust.simsched" version="12">
     <!-- Convenience names for the state values -->
     <definedValue name="READY" value="0" />
     <definedValue name="RUNNING" value="1" />
@@ -24,7 +24,7 @@
 	<stateValue type="int" value="$READY" />
       </stateChange>
     </eventHandler>
-    <eventHandler eventName="serv_running">
+    <eventHandler eventName="serv_budget_replenished">
       <stateChange>
 	<stateAttribute type="constant" value="Server" />
 	<stateAttribute type="eventField" value="tid" />

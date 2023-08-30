@@ -49,7 +49,7 @@ class server : public entity, public std::enable_shared_from_this<server> {
 
         auto remaining_exec_time() {
                 assert(!attached_task.expired());
-                return attached_task.lock()->remaining_execution_time;
+                return attached_task.lock()->get_remaining_time();
         }
 
         void change_state(const state& new_state);

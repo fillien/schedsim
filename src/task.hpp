@@ -3,6 +3,7 @@
 
 #include "entity.hpp"
 #include <memory>
+#include <queue>
 
 class processor;
 
@@ -15,6 +16,7 @@ class task : public entity {
          * @brief A unique id
          */
         int id;
+
         /**
          * @brief
          */
@@ -24,13 +26,6 @@ class task : public entity {
          * @brief Utilisation of the processor when the task is active.
          */
         double utilization;
-
-        /**
-         * @brief A remaining duration of time that the processor have to execute.
-         * @description When job arrive in the system, the value of this variable is increased by
-         * the duration of the job that arrived.
-         */
-        double remaining_execution_time{0};
 
         /**
          * @brief A constructor with a unique id, the period and the utilization.
@@ -51,11 +46,42 @@ class task : public entity {
          */
         auto has_remaining_time() -> bool;
 
+        /**
+         * @brief Add new job to the queue.
+         * @param duration The duration of the new job
+         */
+        void add_job(const double& duration);
+
+        void consume_time(const double& duration);
+
+        /**
+         * @brief Return remaining execution time
+         */
+        auto get_remaining_time() -> double { return remaining_execution_time; };
+
+        auto has_job() -> bool { return !pending_jobs.empty(); };
+
+        void next_job();
+
       private:
         /**
          * @brief The processor on which the task is executed.
          */
         std::shared_ptr<processor> attached_proc{nullptr};
+
+        /**
+         * @brief A remaining duration of time that the processor have to execute.
+         * @description When job arrive in the system, the value of this variable is increased by
+         * the duration of the job that arrived.
+         */
+        double remaining_execution_time{0};
+
+        /**
+         * @brief Queue of wcet of the pending jobs
+         * @description When a job arrive, his wcet is store in the queue. When the task finish a
+         * job, the remaining_execution_time is set to the next job wcet.
+         */
+        std::queue<double> pending_jobs;
 };
 
 #endif

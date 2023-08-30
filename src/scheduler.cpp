@@ -125,6 +125,7 @@ void scheduler::handle(std::vector<event> evts, const double& deltatime) {
 
                 switch (evt.type) {
                 case JOB_FINISHED: {
+                        // Looking for JOB_ARRIVAL events at the same time for this server
                         auto is_there_new_job{false};
                         for (auto future_evt : evts) {
                                 if (future_evt.type == JOB_ARRIVAL &&
@@ -168,8 +169,6 @@ void scheduler::handle(std::vector<event> evts, const double& deltatime) {
 }
 
 void scheduler::handle_serv_inactive(const std::shared_ptr<server>& serv) {
-        std::cout << "serv = " << serv->id() << "\n";
-
         // If a job arrived during this turn, do not change state to inactive
         if (serv->cant_be_inactive) {
                 return;
@@ -189,17 +188,11 @@ void scheduler::handle_serv_inactive(const std::shared_ptr<server>& serv) {
 void scheduler::handle_job_arrival(const std::shared_ptr<task>& new_task, const double& job_wcet) {
         using enum server::state;
 
-        if (new_task->has_remaining_time()) {
-                std::cerr << "Job arrived but the task is already looping, reject the task\n";
-                return;
-        }
-
         auto new_server = make_server(new_task);
 
-        std::cout << "serv = " << new_server->id() << '\n';
-
         // Set the task remaining execution time with the WCET of the job
-        new_task->remaining_execution_time = job_wcet;
+        // new_task->remaining_execution_time = job_wcet;
+        new_task->add_job(job_wcet);
 
         if (new_server->current_state == inactive) {
                 // Update the current running server
@@ -230,9 +223,11 @@ void scheduler::handle_job_finished(const std::shared_ptr<server>& serv, bool is
         // Update virtual time and remaining execution time
         serv->update_times();
 
-        // Looking for another job arrival of the task at the same time
-        if (is_there_new_job) {
-                std::cout << "A job is already plan for now\n";
+        if (serv->attached_task.lock()->has_job()) {
+                serv->attached_task.lock()->next_job();
+                serv->postpone();
+        } else if (is_there_new_job) {
+                // Looking for another job arrival of the task at the same time
                 serv->postpone();
         } else {
                 /// TODO move this to servers, it's not sched shit
@@ -256,7 +251,7 @@ void scheduler::handle_serv_budget_exhausted(const std::shared_ptr<server>& serv
         serv->update_times();
 
         // Check if the job as been completed at the same time
-        if (serv->attached_task.lock()->remaining_execution_time > 0) {
+        if (serv->attached_task.lock()->get_remaining_time() > 0) {
                 serv->postpone(); // If no, postpone the deadline
         } else {
                 add_trace(JOB_FINISHED, serv->id()); // If yes, trace it
@@ -282,10 +277,6 @@ void scheduler::resched() {
         auto highest_priority_server = std::ranges::min(active_servers, deadline_order);
         auto running_server = std::ranges::find_if(active_servers, is_running_server);
 
-        for (auto s : active_servers) {
-                std::cout << *s << "\n";
-        }
-
         // Remove all future event of type BUDGET_EXHAUSTED and JOB_FINISHED
         for (auto itr = sim()->future_list.begin(); itr != sim()->future_list.end(); ++itr) {
                 const types& t = (*itr).second.type;
@@ -306,10 +297,6 @@ void scheduler::resched() {
         // Compute the budget of the selected server
         double new_server_budget = highest_priority_server->get_budget();
         double task_remaining_time = highest_priority_server->remaining_exec_time();
-
-        std::cout << "next server is s" << highest_priority_server->id();
-        std::cout << "\nbudget : " << new_server_budget;
-        std::cout << "\nremaining time : " << task_remaining_time << "\n";
 
         if (highest_priority_server->current_state != running) {
                 highest_priority_server->change_state(running);

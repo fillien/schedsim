@@ -53,10 +53,7 @@ void tracer::traceJobArrival(int serverId, int virtualTime, int deadline) {
                   << ", deadline = " << deadline << '\n';
 }
 
-void tracer::traceGotoReady(int serverId) {
-        barectf_trace_serv_ready(ctx, serverId);
-        std::cout << "Server " << serverId << " go to ready state\n";
-}
+void tracer::traceGotoReady(int serverId) { barectf_trace_serv_ready(ctx, serverId); }
 
 void tracer::clear() { trace_store.clear(); }
 
