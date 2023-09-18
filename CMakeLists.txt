@@ -4,7 +4,7 @@ include(FetchContent)
 set(CMAKE_BUILD_TYPE Debug)
 
 project("Schedsim"
-  VERSION 0.1
+  VERSION 2023.09
   DESCRIPTION "A scheduling simulator")
 
 # Fetch dependancies
