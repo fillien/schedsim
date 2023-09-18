@@ -1,5 +1,5 @@
 #+title: Schedsim
-#+subtitle: A scheduling simulator with temporal isolation between threads
+#+subtitle: A scheduling discret-event simulator
 
 * Build the project
 In order to build the project, some dependencies have to be installed :
@@ -9,24 +9,24 @@ In order to build the project, some dependencies have to be installed :
   
 On a current Ubuntu LTS the project will build by installing the packages :
 #+begin_src shell
-sudo apt update && sudo apt install cmake doxygen babeltrace2
+  sudo apt update && sudo apt install cmake doxygen babeltrace2
 #+end_src
 
 Now, clone the git repo and enter the directory to build the project :
 #+begin_src shell
-cmake -S . -B build
-cmake --build build
+  cmake -S . -B build
+  cmake --build build
 #+end_src
 
 Or to use Ninja :
 #+begin_src shell
-cmake -S . -B build -G Ninja
-cmake --build build
+  cmake -S . -B build -G Ninja
+  cmake --build build
 #+end_src
 
 You can now execute the compiled binary like this :
 #+begin_src shell
-./build/src/launch ./scenarios/simple.yml
+  ./build/src/launch ./scenarios/simple.yml
 #+end_src
 
 
@@ -34,30 +34,21 @@ You can now execute the compiled binary like this :
 The simulator takes a scenario in input and produces a [[https://diamon.org/ctf/][CTF]] trace file and writes some logs to the standard output.
 
 #+begin_src shell
-$ ./build/src/launch ./scenarios/simple.yml 
-==== Time 0 ====
-0
------------
-[engine] handle [Event Id: 1, Type: JOB_ARRIVAL]
-go to active cont
-virtual time = 0
-deadline = 4
-1
------------
-[engine] handle [Event Id: 4, Type: RESCHED]
-same task running
-budget : 4
-remaining time : 5
-Simulation as finished
-Logs :
-[t=0] Task      1 JOB_ARRIVAL             0
-[t=0] Server    1 SERV_ACT_CONT           0
-[t=0]           0 RESCHED                 0
-[t=0]           0 PROC_ACTIVATED          0
-[t=0] Server    1 SERV_RUNNING            0
-[t=0] Task      1 TASK_SCHEDULED          0
-[t=0] Server    1 SERV_BUDGET_REPLENISHED 4
-[t=0]           0 SIM_FINISHED            0
+  $ ./build/src/launch ./scenarios/simple.yml
+  ========= Time 0 =========
+  JOB_ARRIVAL
+  inactive -> ready
+  Task 1 job arrival, virtual time = 0, deadline = 2
+  ready -> running
+  ========= Time 2 =========
+  SERV_BUDGET_EXHAUSTED
+  ========= Time 4 =========
+  SERV_BUDGET_EXHAUSTED
+  ========= Time 5 =========
+  JOB_FINISHED
+  running -> inactive
+  virtual time = 5
+  deadline = 6
 #+end_src
 
 To simulate a scenario, pass the scenario file as the first argument of the simulator. A little stock of scenarios are available in the =./scenarios/= directory. You can use these to test the simulator and create new scenarios.
@@ -102,12 +93,12 @@ Curently, there is no error detection of the scenario file syntax, so you have t
 * Documentation
 The documentation can be compiled using CMake and Doxygen like this :
 #+begin_src shell
-cmake --build build -t doxygen
+  cmake --build build -t doxygen
 #+end_src
 
 Now open the documentation index page in your web browser :
 #+begin_src shell
-xdg-open ./doc/html/index.html
+  xdg-open ./doc/html/index.html
 #+end_src
 
 
