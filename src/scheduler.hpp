@@ -67,7 +67,7 @@ class scheduler {
                 simulator = new_sim;
         }
 
-        void handle(std::vector<event> evts, const double& deltatime);
+        void handle(std::vector<event> evts);
 
         auto make_server(const std::shared_ptr<task>& new_task) -> std::shared_ptr<server>;
 

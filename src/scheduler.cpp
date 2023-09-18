@@ -110,7 +110,7 @@ auto scheduler::make_server(const std::shared_ptr<task>& new_task) -> std::share
         return new_server;
 }
 
-void scheduler::handle(std::vector<event> evts, const double& deltatime) {
+void scheduler::handle(std::vector<event> evts) {
         // Sort events according to event priority cf:get_priority function
         std::sort(evts.begin(), evts.end(), [](const event& ev1, const event& ev2) {
                 return get_priority(ev1.type) > get_priority(ev2.type);

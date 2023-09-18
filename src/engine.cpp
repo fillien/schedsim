@@ -40,25 +40,15 @@ void engine::add_event(const event& new_event, const double timestamp) {
 }
 
 void engine::simulation() {
-        double deltatime{0};
-
         // Loop until all events have been executed
         while (!future_list.empty()) {
                 // A vector to store all the event of the current timestamp
                 std::vector<event> current_events;
 
-                // Compute deltatime since the last time jump
-                deltatime = future_list.begin()->first - current_timestamp;
-
-                if (deltatime < 0) {
-                        std::cout << "false timestamp = " << future_list.begin()->first << "\n";
-                }
-
                 // Update current timestamp
                 current_timestamp = future_list.begin()->first;
 
                 std::cout << "========= Time " << current_timestamp << " =========\n";
-                std::cout << "deltatime = " << deltatime << '\n';
 
                 // Loop until move all the event of the current timestamp
                 while (!future_list.empty() && future_list.begin()->first <= current_timestamp) {
@@ -67,7 +57,7 @@ void engine::simulation() {
                         current_events.push_back(std::move(itr->second));
                         future_list.erase(itr);
                 }
-                sched->handle(current_events, deltatime);
+                sched->handle(current_events);
         }
 
         if (future_list.empty()) {
