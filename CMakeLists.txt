@@ -10,7 +10,7 @@ project("Schedsim"
 # Fetch dependancies
 FetchContent_Declare(yaml-cpp
   GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
-  GIT_TAG        0579ae3 # 0.7
+  GIT_TAG        f732014 # 0.8
 )
 FetchContent_MakeAvailable(yaml-cpp)
 
