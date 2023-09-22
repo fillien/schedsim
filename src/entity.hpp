@@ -13,7 +13,7 @@ class entity {
 public:
 	std::weak_ptr<engine> simulator;
 
-	entity(const std::weak_ptr<engine> sim): simulator(sim) {}
+	explicit entity(const std::weak_ptr<engine> sim): simulator(sim) {}
 
 	auto sim() const -> std::shared_ptr<engine> {
                 assert(!simulator.expired());

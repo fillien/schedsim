@@ -16,6 +16,8 @@ file(GLOB source
   "plateform.cpp"
   "processor.cpp"
   "scheduler.cpp"
+  "sched_mono.cpp"
+  "sched_parallel.cpp"
   "server.cpp"
   "tracer.cpp"
   "task.cpp"

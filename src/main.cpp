@@ -9,6 +9,7 @@
 #include "entity.hpp"
 #include "event.hpp"
 #include "plateform.hpp"
+#include "sched_mono.hpp"
 #include "scheduler.hpp"
 #include "server.hpp"
 #include "task.hpp"
@@ -32,9 +33,9 @@ int main(const int argc, const char** argv) {
 
         // Create the simulation engine and attache to it a scheduler
         auto sim = make_shared<engine>();
-        auto sched = make_shared<scheduler>();
-        sim->set_scheduler(sched);
-        sched->set_engine(sim);
+        //auto sched = make_shared<sched_mono>(sim);
+        auto sched_global = std::dynamic_pointer_cast<scheduler>(make_shared<sched_mono>(sim));
+        sim->set_scheduler(sched_global);
 
         // Insert the plateform configured through the scenario file, in the simulation engine
         auto config_plat = make_shared<plateform>(sim, config["cores"].as<int>());
