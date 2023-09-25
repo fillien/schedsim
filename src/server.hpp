@@ -24,7 +24,6 @@ class server : public entity, public std::enable_shared_from_this<server> {
 
         bool cant_be_inactive{false};
         double last_call{0};
-
         double last_update{0};
 
         /// The task to ensure time isolation

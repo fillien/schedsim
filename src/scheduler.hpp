@@ -1,26 +1,17 @@
 #ifndef SCHEDULER_HPP
 #define SCHEDULER_HPP
 
+#include "entity.hpp"
 #include "event.hpp"
 #include "server.hpp"
-#include "tracer.hpp"
-
-#include <cassert>
-#include <functional>
 #include <memory>
 #include <vector>
-
-class engine;
 
 /**
  * @brief A class that handle the events of the system accordingly to a scheduling policy.
  */
-class scheduler {
-        /**
-         * @brief The pointer to access the simulation engine
-         */
-        std::weak_ptr<engine> simulator;
-
+class scheduler : public entity {
+      protected:
         /**
          * @brief A vector to track and own servers objects
          */
@@ -43,14 +34,6 @@ class scheduler {
          */
         auto is_event_present(const std::shared_ptr<task>& the_task, const types type) -> bool;
 
-        /**
-         * @brief A helper function who return a safe pointer to the attached simulation engine.
-         */
-        auto sim() const -> std::shared_ptr<engine> {
-                assert(!simulator.expired());
-                return simulator.lock();
-        }
-
         void handle_job_arrival(const std::shared_ptr<task>& new_task, const double& job_wcet);
         void handle_job_finished(const std::shared_ptr<server>& serv, bool is_there_new_job);
         void handle_serv_budget_exhausted(const std::shared_ptr<server>& serv);
@@ -58,23 +41,11 @@ class scheduler {
         void resched();
 
       public:
-        /**
-         * @brief A setter to attach a simulation engine
-         * @param A unsafe pointer to a simulation engine
-         */
-        void set_engine(std::weak_ptr<engine> new_sim) {
-                assert(!new_sim.expired());
-                simulator = new_sim;
-        }
-
+        explicit scheduler(const std::weak_ptr<engine> sim) : entity(sim){};
         void handle(std::vector<event> evts);
+        auto get_active_bandwidth() -> double;
 
         auto make_server(const std::shared_ptr<task>& new_task) -> std::shared_ptr<server>;
-
-        /**
-         * @brief Return the current active bandwidth
-         */
-        auto get_active_bandwidth() -> double;
 };
 
 #endif

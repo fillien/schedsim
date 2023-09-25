@@ -27,6 +27,11 @@ class task : public entity {
          */
         double utilization;
 
+	/**
+         * @brief The processor on which the task is executed.
+         */
+        std::shared_ptr<processor> attached_proc{nullptr};
+
         /**
          * @brief A constructor with a unique id, the period and the utilization.
          * @param id A unique id.
@@ -64,10 +69,7 @@ class task : public entity {
         void next_job();
 
       private:
-        /**
-         * @brief The processor on which the task is executed.
-         */
-        std::shared_ptr<processor> attached_proc{nullptr};
+        
 
         /**
          * @brief A remaining duration of time that the processor have to execute.
