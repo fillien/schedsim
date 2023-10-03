@@ -48,12 +48,14 @@ trace:
           proc_idle:
             payload-field-type:
               class: structure
-              members: []
+              members:
+                - cpuid: int32
 
           proc_activated:
             payload-field-type:
               class: structure
-              members: []
+              members:
+                - cpuid: int32
 
           serv_budget_replenished:
             payload-field-type:
@@ -119,20 +121,26 @@ trace:
               class: structure
               members:
                 - tid: int32  
-                  
+
           serv_running:
             payload-field-type:
               class: structure
               members:
                 - tid: int32
 
-          serv_preempted:
+          task_preempted:
             payload-field-type:
               class: structure
               members:
                 - tid: int32
 
-          serv_scheduled:
+          task_scheduled:
+            payload-field-type:
+              class: structure
+              members:
+                - cpuid: int32
+
+          task_rejected:
             payload-field-type:
               class: structure
               members:

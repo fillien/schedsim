@@ -23,8 +23,8 @@ void tracer::add_trace(const trace& new_trace) {
 
         switch (new_trace.type) {
         case JOB_FINISHED: barectf_trace_job_finished(ctx, new_trace.target_id); break;
-        case PROC_IDLED: barectf_trace_proc_idle(ctx); break;
-        case PROC_ACTIVATED: barectf_trace_proc_activated(ctx); break;
+        case PROC_IDLED: barectf_trace_proc_idle(ctx, new_trace.target_id); break;
+        case PROC_ACTIVATED: barectf_trace_proc_activated(ctx, new_trace.target_id); break;
         case RESCHED: barectf_trace_resched(ctx); break;
         case SERV_NON_CONT: barectf_trace_serv_non_cont(ctx, new_trace.target_id); break;
         case SERV_BUDGET_EXHAUSTED:
@@ -35,9 +35,10 @@ void tracer::add_trace(const trace& new_trace) {
                 break;
         case SERV_INACTIVE: barectf_trace_serv_inactive(ctx, new_trace.target_id); break;
         case SERV_POSTPONE: barectf_trace_serv_postpone(ctx, new_trace.target_id); break;
-        case TASK_PREEMPTED: barectf_trace_serv_preempted(ctx, new_trace.target_id); break;
+        case TASK_PREEMPTED: barectf_trace_task_preempted(ctx, new_trace.target_id); break;
         case SERV_RUNNING: barectf_trace_serv_running(ctx, new_trace.target_id); break;
-        case TASK_SCHEDULED: barectf_trace_serv_scheduled(ctx, new_trace.target_id); break;
+        case TASK_SCHEDULED: barectf_trace_task_scheduled(ctx, new_trace.target_id); break;
+        case TASK_REJECTED: barectf_default_trace_task_rejected(ctx, new_trace.target_id); break;
         case VIRTUAL_TIME_UPDATE:
                 barectf_trace_virtual_time(ctx, new_trace.target_id, new_trace.payload);
                 break;

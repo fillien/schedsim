@@ -26,6 +26,7 @@ enum class types {
         SIM_FINISHED,
         TASK_PREEMPTED,
         TASK_SCHEDULED,
+        TASK_REJECTED,
         VIRTUAL_TIME_UPDATE
 };
 
@@ -65,6 +66,7 @@ struct trace {
          * @brief The id of the entity of the event.
          */
         int target_id;
+
         /**
          * @brief The optionnal payload of the event.
          */
