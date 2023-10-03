@@ -1,4 +1,3 @@
 #!/bin/bash
 
-barectf generate --metadata-dir=trace src/config.yaml
-mv barectf.c barectf.h barectf-bitfield.h src/
+~/.local/bin/barectf generate --code-dir=src --headers-dir=src --include-dir=src --metadata-dir=trace src/config.yaml
