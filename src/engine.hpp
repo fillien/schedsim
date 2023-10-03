@@ -20,6 +20,11 @@ class engine {
 
       public:
         /**
+         * @brief A counter of the time passing.
+         */
+        double current_timestamp{0};
+
+        /**
          * @brief The attached scheduler.
          */
         std::shared_ptr<scheduler> sched;
@@ -39,11 +44,6 @@ class engine {
          * to process himself.
          */
         std::multimap<double, const event> future_list{};
-
-        /**
-         * @brief A counter of the time passing.
-         */
-        double current_timestamp{0};
 
         /**
          * @brief A constructor to help generate the platform.
