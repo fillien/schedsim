@@ -7,6 +7,7 @@
 #include <cassert>
 #include <iostream>
 #include <memory>
+#include <unordered_map>
 
 server::server(const std::weak_ptr<engine> sim, const std::weak_ptr<task> attached_task)
     : entity(sim), attached_task(attached_task){};
@@ -40,13 +41,16 @@ void server::change_state(const state& new_state) {
                 case state::non_cont: {
                         // Remove all future events of type SERV_INACTIVE
                         /// TODO Replace events insertion and deletion by a timer mechanism.
-                        for (auto itr = sim()->future_list.begin(); itr != sim()->future_list.end();
-                             ++itr) {
-                                const types& t = (*itr).second.type;
+                        auto const& serv_id = id();
+                        std::erase_if(sim()->future_list, [serv_id](const auto& event) {
+                                auto const& t = event.second.type;
                                 if (t == SERV_INACTIVE) {
-                                        sim()->future_list.erase(itr);
+                                        auto const& s = std::static_pointer_cast<server>(
+                                            event.second.target.lock());
+                                        return s->id() == serv_id;
                                 }
-                        }
+                                return false;
+                        });
                         cant_be_inactive = true;
                         sim()->logging_system.add_trace(
                             {sim()->current_timestamp, SERV_READY, id(), 0});
@@ -54,9 +58,6 @@ void server::change_state(const state& new_state) {
                 }
                 case state::ready:
                 case state::running: {
-                        // Preempted
-                        sim()->logging_system.add_trace(
-                            {sim()->current_timestamp, TASK_PREEMPTED, id(), 0});
                         break;
                 }
                 default: assert(false);
@@ -68,8 +69,6 @@ void server::change_state(const state& new_state) {
                 assert(current_state == state::ready);
                 // Dispatch
                 sim()->logging_system.add_trace({sim()->current_timestamp, SERV_RUNNING, id(), 0});
-                sim()->logging_system.add_trace(
-                    {sim()->current_timestamp, TASK_SCHEDULED, id(), 0});
                 last_update = sim()->current_timestamp;
                 current_state = state::running;
                 break;
@@ -92,21 +91,6 @@ void server::change_state(const state& new_state) {
                 break;
         }
         }
-}
-
-void server::update_times() {
-        assert(current_state == state::running);
-        const double running_time = sim()->current_timestamp - last_update;
-
-        assert((attached_task.lock()->get_remaining_time() - running_time) >= 0);
-
-        const double active_bw = sim()->sched->get_active_bandwidth();
-        virtual_time += running_time * (active_bw / utilization());
-        sim()->logging_system.add_trace(
-            {sim()->current_timestamp, types::VIRTUAL_TIME_UPDATE, id(), virtual_time});
-        attached_task.lock()->consume_time(running_time);
-
-        last_update = sim()->current_timestamp;
 }
 
 void server::postpone() {

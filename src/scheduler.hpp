@@ -19,6 +19,12 @@ class scheduler : public entity {
 
         bool need_resched{false};
 
+        static auto is_running_server(const std::shared_ptr<server>& current_server) -> bool;
+        static auto is_ready_server(const std::shared_ptr<server>& current_server) -> bool;
+        static auto is_active_server(const std::shared_ptr<server>& current_server) -> bool;
+        static auto deadline_order(const std::shared_ptr<server>& first,
+                                   const std::shared_ptr<server>& second) -> bool;
+
         /**
          * @brief Helper function to add a new trace to the logs.
          * @param type The kind of event
@@ -40,11 +46,21 @@ class scheduler : public entity {
         void handle_serv_inactive(const std::shared_ptr<server>& serv);
         void resched();
 
+        void resched_proc(const std::shared_ptr<processor>& proc_with_server,
+                          const std::shared_ptr<server>& server_to_execute);
+
+        void update_server_times(const std::shared_ptr<server>& serv);
+
+        virtual auto get_server_new_virtual_time(const std::shared_ptr<server>& serv,
+                                                 const double& running_time) -> double = 0;
+        virtual auto get_server_budget(const std::shared_ptr<server>& serv) -> double = 0;
+        virtual auto admission_test(const std::shared_ptr<task>& new_task) -> bool = 0;
+        virtual void custom_scheduler() = 0;
+
       public:
         explicit scheduler(const std::weak_ptr<engine> sim) : entity(sim){};
         void handle(std::vector<event> evts);
         auto get_active_bandwidth() -> double;
-
         auto make_server(const std::shared_ptr<task>& new_task) -> std::shared_ptr<server>;
 };
 

@@ -6,19 +6,12 @@
 #include <vector>
 
 class server;
-class task;
 
 /**
  * @brief A processor model, composed of a state, a running task and the rest of task ready to be
  * executed
  */
-class processor : public entity {
-      private:
-        /**
-         * @brief Running queue of the active tasks
-         */
-        std::vector<std::weak_ptr<task>> runqueue{};
-
+class processor : public entity, public std::enable_shared_from_this<processor> {
       public:
         /**
          * @brief Possible states of a processor
@@ -36,30 +29,30 @@ class processor : public entity {
         state current_state{state::idle};
 
         /**
-         * @brief The task currently executed on the processor, by default null because nothing is
-         * executed.
-         */
-        std::shared_ptr<task> running_task{nullptr};
-
-        /**
          * @brief Class constructor
          * @param id The unique id of the processor.
          */
         explicit processor(const std::weak_ptr<engine> sim, const int id);
 
-        /**
-         * @brief Enqueue a task from the processor
-         * @param task_to_enqueue The task to enqueue.
-         */
-        void enqueue(std::weak_ptr<task> task_to_enqueue);
+        void set_server(std::weak_ptr<server> server_to_execute);
+
+        void clear_server();
+
+        auto get_server() -> std::shared_ptr<server> {
+                assert(!running_server.expired());
+                return this->running_server.lock();
+        };
+
+        auto has_server_running() const -> bool { return !running_server.expired(); };
+        void update_state();
+
+      private:
+        void change_state(const state next_state);
 
         /**
-         * @brief Dequeue a task from the processor
-         * @param task_to_dequeue The task to dequeue.
+         * @brief The task currently running on the processor
          */
-        void dequeue(std::weak_ptr<task> task_to_dequeue);
-
-        void change_state(state next_state);
+        std::weak_ptr<server> running_server;
 };
 
 #endif

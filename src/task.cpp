@@ -2,9 +2,11 @@
 
 #include <limits>
 #include <cassert>
+#include <iostream>
 
-task::task(const std::weak_ptr<engine> sim, const int id, const double& period, const double& utilization):
-	entity(sim), id(id), period(period), utilization(utilization){}
+task::task(const std::weak_ptr<engine> sim, const int id, const double& period,
+           const double& utilization)
+    : entity(sim), id(id), period(period), utilization(utilization) {}
 
 auto task::is_attached() -> bool {
 	return (attached_proc.get() != nullptr);
@@ -29,6 +31,7 @@ void task::consume_time(const double& duration) {
 }
 
 void task::next_job() {
+	std::cout << "remaining jobs of task " << id << ": " << pending_jobs.size() << std::endl;
         remaining_execution_time = pending_jobs.front();
 	pending_jobs.pop();
 }

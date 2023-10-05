@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cstdlib>
 #include <iomanip>
 #include <iostream>
@@ -10,6 +11,7 @@
 #include "event.hpp"
 #include "plateform.hpp"
 #include "sched_mono.hpp"
+#include "sched_parallel.hpp"
 #include "scheduler.hpp"
 #include "server.hpp"
 #include "task.hpp"
@@ -33,13 +35,23 @@ int main(const int argc, const char** argv) {
 
         // Create the simulation engine and attache to it a scheduler
         auto sim = make_shared<engine>();
-        //auto sched = make_shared<sched_mono>(sim);
-        auto sched_global = std::dynamic_pointer_cast<scheduler>(make_shared<sched_mono>(sim));
-        sim->set_scheduler(sched_global);
 
         // Insert the plateform configured through the scenario file, in the simulation engine
         auto config_plat = make_shared<plateform>(sim, config["cores"].as<int>());
         sim->set_plateform(config_plat);
+
+        assert(config_plat->processors.size() >= 1);
+
+        std::shared_ptr<scheduler> sched;
+        if (config_plat->processors.size() == 1) {
+                sched = std::dynamic_pointer_cast<scheduler>(
+                    make_shared<sched_mono>(sim, config_plat->processors.at(0)));
+        } else {
+                sched = std::dynamic_pointer_cast<scheduler>(make_shared<sched_parallel>(sim));
+        }
+        sim->set_scheduler(sched);
+
+        std::cout << "Platform: " << config_plat->processors.size() << " processors\n";
 
         // Prepare a vector to get all the tasks from the parsed scenario file
         std::vector<std::shared_ptr<task>> tasks{config["tasks"].size()};
@@ -63,6 +75,7 @@ int main(const int argc, const char** argv) {
 
         // Print logs from the simulation
         // cout << "Logs :\n" << sim->logging_system.format(to_txt);
+        std::cout << "Simulation ended" << std::endl;
 
         return EXIT_SUCCESS;
 }

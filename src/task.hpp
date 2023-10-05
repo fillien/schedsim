@@ -27,10 +27,10 @@ class task : public entity {
          */
         double utilization;
 
-	/**
+        /**
          * @brief The processor on which the task is executed.
          */
-        std::shared_ptr<processor> attached_proc{nullptr};
+        std::shared_ptr<processor> attached_proc{};
 
         /**
          * @brief A constructor with a unique id, the period and the utilization.
@@ -69,8 +69,6 @@ class task : public entity {
         void next_job();
 
       private:
-        
-
         /**
          * @brief A remaining duration of time that the processor have to execute.
          * @description When job arrive in the system, the value of this variable is increased by

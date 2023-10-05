@@ -27,35 +27,21 @@ class server : public entity, public std::enable_shared_from_this<server> {
         double last_update{0};
 
         /// The task to ensure time isolation
-        std::weak_ptr<task> attached_task;
+        std::shared_ptr<task> attached_task;
 
         explicit server(const std::weak_ptr<engine> sim, const std::weak_ptr<task> attached_task);
 
-        auto id() const -> int {
-                assert(!attached_task.expired());
-                return attached_task.lock()->id;
-        }
+        auto id() const -> int { return attached_task->id; }
 
-        auto utilization() const -> double {
-                assert(!attached_task.expired());
-                return attached_task.lock()->utilization;
-        };
+        auto utilization() const -> double { return attached_task->utilization; };
 
-        auto period() const -> double {
-                assert(!attached_task.expired());
-                return attached_task.lock()->period;
-        };
+        auto period() const -> double { return attached_task->period; };
 
-        auto remaining_exec_time() {
-                assert(!attached_task.expired());
-                return attached_task.lock()->get_remaining_time();
-        }
+        auto remaining_exec_time() { return attached_task->get_remaining_time(); }
 
         void change_state(const state& new_state);
 
         auto get_budget() -> double;
-
-        void update_times();
 
         void postpone();
 };

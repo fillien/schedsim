@@ -3,7 +3,8 @@
 
 #include "event.hpp"
 #include "plateform.hpp"
-#include "scheduler.hpp"
+#include "sched_mono.hpp"
+#include "sched_parallel.hpp"
 #include "tracer.hpp"
 
 #include <cstddef>
@@ -16,8 +17,6 @@
  * contains in the future list
  */
 class engine {
-        void handle(const event& evt);
-
       public:
         /**
          * @brief A counter of the time passing.
@@ -54,13 +53,13 @@ class engine {
          * @brief Setter to attach a scheduler.
          * @param new_sched
          */
-        void set_scheduler(std::shared_ptr<scheduler>& new_sched) { sched = new_sched; }
+        void set_scheduler(const std::shared_ptr<scheduler>& new_sched) { sched = new_sched; }
 
         /**
          * @brief Setter to attach a plateform.
          * @param new_plateform
          */
-        void set_plateform(std::shared_ptr<plateform>& new_plateform) {
+        void set_plateform(const std::shared_ptr<plateform>& new_plateform) {
                 current_plateform = new_plateform;
         };
 
