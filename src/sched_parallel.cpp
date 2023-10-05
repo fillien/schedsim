@@ -45,20 +45,12 @@ auto sched_parallel::get_nb_active_procs() -> int {
         if (nb_active_procs < 1) {
                 nb_active_procs = 1;
         }
-
-        std::cout << "nb_active_procs: " << nb_active_procs << std::endl;
         return nb_active_procs;
 }
 
 auto sched_parallel::get_server_budget(const std::shared_ptr<server>& serv) -> double {
         const auto bw = 1 - (get_inactive_bandwidth() / get_nb_active_procs());
         const auto res = serv->utilization() / bw * (serv->relative_deadline - serv->virtual_time);
-        std::cout << "server " << serv->id() << " budget: " << res << "width"
-                  << "\ninactive_bandwidth: " << get_inactive_bandwidth()
-                  << "\nactive_procs: " << get_nb_active_procs()
-                  << "\nserver utilization:" << serv->utilization()
-                  << "\nserver relative deadline: " << serv->relative_deadline
-                  << "\nserver virtual time: " << serv->virtual_time << std::endl;
         return res;
 }
 
