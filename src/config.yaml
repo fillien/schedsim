@@ -49,13 +49,13 @@ trace:
             payload-field-type:
               class: structure
               members:
-                - cpuid: int32
+                - cpu: int32
 
           proc_activated:
             payload-field-type:
               class: structure
               members:
-                - cpuid: int32
+                - cpu: int32
 
           serv_budget_replenished:
             payload-field-type:
@@ -138,7 +138,7 @@ trace:
             payload-field-type:
               class: structure
               members:
-                - cpuid: int32
+                - cpu: int32
 
           task_rejected:
             payload-field-type:
