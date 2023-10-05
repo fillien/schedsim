@@ -13,11 +13,6 @@ void processor::set_server(std::weak_ptr<server> server_to_execute) {
         assert(!server_to_execute.expired());
         auto const& serv = server_to_execute.lock();
 
-        if (running_server.expired()) {
-                /// TODO change processor state management by writing a update_state method that
-                /// check if there is a running server on the proc at the end of the resched phase.
-                // change_state(state::running);
-        }
         running_server = serv;
         serv->attached_task->attached_proc = shared_from_this();
         sim()->logging_system.add_trace({sim()->current_timestamp, types::TASK_SCHEDULED, id, 0});
@@ -31,8 +26,9 @@ void processor::clear_server() {
 
 void processor::change_state(const processor::state next_state) {
         // assert that a processor can't enter twice in the same state
-        if (next_state == current_state)
+        if (next_state == current_state) {
                 return;
+	}
 
         switch (next_state) {
         case state::idle: {

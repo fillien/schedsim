@@ -35,14 +35,13 @@ auto sched_parallel::get_inactive_bandwidth() -> double {
 }
 
 auto sched_parallel::get_nb_active_procs() -> int {
-        size_t nb_active_procs{0};
+        int nb_active_procs{0};
         for (const auto& proc : sim()->current_plateform->processors) {
                 if (proc->has_server_running()) {
                         nb_active_procs++;
                 }
         }
 
-        // TODO Confirme that active proc can't be lower than 1
         if (nb_active_procs < 1) {
                 nb_active_procs = 1;
         }
@@ -69,11 +68,13 @@ auto sched_parallel::get_server_new_virtual_time(const std::shared_ptr<server>& 
         return serv->virtual_time + bw / serv->utilization() * running_time;
 }
 
-auto sched_parallel::admission_test(const std::shared_ptr<task>& new_task) -> bool { return true; }
+auto sched_parallel::admission_test(const std::shared_ptr<task>& new_task) -> bool {
+        /// TODO Implement admission test for sched_parallel
+        return true;
+}
 
 void sched_parallel::custom_scheduler() {
         while (true) {
-
                 // refresh active servers list
                 auto active_servers = servers | std::views::filter(is_active_server);
 
