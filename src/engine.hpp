@@ -18,6 +18,7 @@
  */
 class engine {
       public:
+        static constexpr double ZERO_ROUNDED = 0.000001;
         /**
          * @brief A counter of the time passing.
          */
@@ -72,7 +73,7 @@ class engine {
         /**
          * @brief A setter to add new event to the the future list.
          */
-        void add_event(const event& new_evt, const double timestamp);
+        void add_event(const event& new_event, const double& timestamp);
 };
 
 #endif

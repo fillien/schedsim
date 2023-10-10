@@ -38,18 +38,18 @@ class task : public entity {
          * @param period The period of the task.
          * @param utilization The utilization tacken when active.
          */
-        task(const std::weak_ptr<engine> sim, const int id, const double& period,
+        task(const std::weak_ptr<engine>& sim, int tid, const double& period,
              const double& utilization);
 
         /**
          * @brief Return true if the task is currently attached to a processor
          */
-        auto is_attached() -> bool;
+        auto is_attached() const -> bool;
 
         /**
          * @brief Return true if the task has remaining time to be executed
          */
-        auto has_remaining_time() -> bool;
+        auto has_remaining_time() const -> bool;
 
         /**
          * @brief Add new job to the queue.
@@ -62,9 +62,9 @@ class task : public entity {
         /**
          * @brief Return remaining execution time
          */
-        auto get_remaining_time() -> double { return remaining_execution_time; };
+        auto get_remaining_time() const -> double { return remaining_execution_time; };
 
-        auto has_job() -> bool { return !pending_jobs.empty(); };
+        auto has_job() const -> bool { return !pending_jobs.empty(); };
 
         void next_job();
 

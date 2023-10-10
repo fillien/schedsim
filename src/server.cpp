@@ -9,7 +9,7 @@
 #include <memory>
 #include <unordered_map>
 
-server::server(const std::weak_ptr<engine> sim, const std::weak_ptr<task> attached_task)
+server::server(const std::weak_ptr<engine>& sim, const std::weak_ptr<task>& attached_task)
     : entity(sim), attached_task(attached_task){};
 
 auto server::get_budget() -> double {
@@ -43,11 +43,11 @@ void server::change_state(const state& new_state) {
                         /// TODO Replace events insertion and deletion by a timer mechanism.
                         auto const& serv_id = id();
                         std::erase_if(sim()->future_list, [serv_id](const auto& event) {
-                                auto const& t = event.second.type;
-                                if (t == SERV_INACTIVE) {
-                                        auto const& s = std::static_pointer_cast<server>(
+                                auto const& evt_t = event.second.type;
+                                if (evt_t == SERV_INACTIVE) {
+                                        auto const& serv = std::static_pointer_cast<server>(
                                             event.second.target.lock());
-                                        return s->id() == serv_id;
+                                        return serv->id() == serv_id;
                                 }
                                 return false;
                         });
@@ -103,9 +103,9 @@ auto operator<<(std::ostream& out, const server& serv) -> std::ostream& {
                    << " D=" << serv.relative_deadline << " V=" << serv.virtual_time;
 }
 
-auto operator<<(std::ostream& out, const server::state& s) -> std::ostream& {
+auto operator<<(std::ostream& out, const server::state& serv_state) -> std::ostream& {
         using enum server::state;
-        switch (s) {
+        switch (serv_state) {
         case inactive: return out << "inactive";
         case ready: return out << "ready";
         case running: return out << "running";

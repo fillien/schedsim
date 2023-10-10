@@ -22,8 +22,10 @@
 #include <vector>
 
 namespace {
-auto get_priority = [](const types& type) -> int {
+
+auto get_priority(const types& type) -> int {
         using enum types;
+        constexpr int MIN_PRIORITY = 100;
 
         // Less is more priority
         switch (type) {
@@ -35,7 +37,7 @@ auto get_priority = [](const types& type) -> int {
                 return 2;
         SERV_INACTIVE:
                 return 3;
-        default: return 100;
+        default: return MIN_PRIORITY;
         }
 };
 } // namespace
@@ -58,11 +60,11 @@ auto scheduler::deadline_order(const std::shared_ptr<server>& first,
         if (first->relative_deadline == second->relative_deadline) {
                 if (first->current_state == server::state::running) {
                         return true;
-                } else if (second->current_state == server::state::running) {
-                        return false;
-                } else {
-                        return first->id() < second->id();
                 }
+                if (second->current_state == server::state::running) {
+                        return false;
+                }
+                return first->id() < second->id();
         }
         return first->relative_deadline < second->relative_deadline;
 }
@@ -72,13 +74,12 @@ void scheduler::add_trace(const types type, const int target_id, const double pa
 }
 
 auto scheduler::is_event_present(const std::shared_ptr<task>& the_task, const types type) -> bool {
-        for (auto evt : sim()->future_list) {
-                if (evt.first == sim()->current_timestamp && evt.second.type == type &&
-                    evt.second.target.lock() == the_task) {
-                        return true;
-                }
-        }
-        return false;
+        const auto timestamp = sim()->current_timestamp;
+        return std::any_of(sim()->future_list.begin(), sim()->future_list.end(),
+                           [&timestamp, &type, &the_task](auto const& evt) -> bool {
+                                   return evt.first == timestamp && evt.second.type == type &&
+                                          evt.second.target.lock() == the_task;
+                           });
 }
 
 auto scheduler::get_active_bandwidth() -> double {
@@ -278,7 +279,7 @@ void scheduler::update_server_times(const std::shared_ptr<server>& serv) {
         std::cout << serv->attached_task->get_remaining_time() - running_time << std::endl;
 
         // Be careful about floating point number computation near 0
-        assert((serv->attached_task->get_remaining_time() - running_time) >= -0.000001);
+        assert((serv->attached_task->get_remaining_time() - running_time) >= -engine::ZERO_ROUNDED);
 
         serv->virtual_time = get_server_new_virtual_time(serv, running_time);
         sim()->logging_system.add_trace(
@@ -307,11 +308,11 @@ void scheduler::resched_proc(const std::shared_ptr<processor>& proc,
                 const auto proc_server_id = proc->get_server()->id();
                 const auto count =
                     std::erase_if(sim()->future_list, [proc_server_id](const auto& event) {
-                            auto const& t = event.second.type;
-                            if (t == SERV_BUDGET_EXHAUSTED || t == JOB_FINISHED) {
-                                    auto const& s = std::static_pointer_cast<server>(
+                            auto const& type = event.second.type;
+                            if (type == SERV_BUDGET_EXHAUSTED || type == JOB_FINISHED) {
+                                    auto const& serv = std::static_pointer_cast<server>(
                                         event.second.target.lock());
-                                    return s->id() == proc_server_id;
+                                    return serv->id() == proc_server_id;
                             }
                             return false;
                     });

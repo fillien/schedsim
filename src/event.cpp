@@ -4,8 +4,8 @@
 #include <memory>
 #include <vector>
 
-event::event(const types type, const std::weak_ptr<entity> target, const double payload)
-    : id(++cpt_id), type(type), target(target), payload(payload) {}
+event::event(types type, const std::weak_ptr<entity>& target, const double& payload)
+    : id(++cpt_id), type(type), target(std::move(target)), payload(payload) {}
 
 auto operator<<(std::ostream& out, const types& type) -> std::ostream& {
         using enum types;
@@ -30,6 +30,6 @@ auto operator<<(std::ostream& out, const types& type) -> std::ostream& {
         }
 }
 
-auto operator<<(std::ostream& out, const event& ev) -> std::ostream& {
-        return out << "[Event Id: " << ev.id << ", Type: " << ev.type << "]";
+auto operator<<(std::ostream& out, const event& evt) -> std::ostream& {
+        return out << "[Event Id: " << evt.id << ", Type: " << evt.type << "]";
 }

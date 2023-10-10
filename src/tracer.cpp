@@ -48,13 +48,15 @@ void tracer::add_trace(const trace& new_trace) {
         trace_store.push_back(std::move(new_trace));
 }
 
-void tracer::traceJobArrival(int serverId, int virtualTime, int deadline) {
-        barectf_trace_job_arrival(ctx, serverId, virtualTime, deadline);
-        std::cout << "Task " << serverId << " job arrival, virtual time = " << virtualTime
-                  << ", deadline = " << deadline << '\n';
+void tracer::traceJobArrival(int m_server_id, double m_virtual_time, double m_deadline) {
+        int virtual_time = static_cast<int>(m_virtual_time);
+        int deadline = static_cast<int>(m_deadline);
+        barectf_trace_job_arrival(ctx, m_server_id, virtual_time, deadline);
+        std::cout << "Task " << m_server_id << " job arrival, virtual time = " << m_virtual_time
+                  << ", deadline = " << m_deadline << '\n';
 }
 
-void tracer::traceGotoReady(int serverId) { barectf_trace_serv_ready(ctx, serverId); }
+void tracer::traceGotoReady(int m_server_id) { barectf_trace_serv_ready(ctx, m_server_id); }
 
 void tracer::clear() { trace_store.clear(); }
 

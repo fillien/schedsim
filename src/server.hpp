@@ -29,7 +29,7 @@ class server : public entity, public std::enable_shared_from_this<server> {
         /// The task to ensure time isolation
         std::shared_ptr<task> attached_task;
 
-        explicit server(const std::weak_ptr<engine> sim, const std::weak_ptr<task> attached_task);
+        explicit server(const std::weak_ptr<engine>& sim, const std::weak_ptr<task>& attached_task);
 
         auto id() const -> int { return attached_task->id; }
 
@@ -47,6 +47,6 @@ class server : public entity, public std::enable_shared_from_this<server> {
 };
 
 auto operator<<(std::ostream& out, const server& serv) -> std::ostream&;
-auto operator<<(std::ostream& out, const server::state& s) -> std::ostream&;
+auto operator<<(std::ostream& out, const server::state& serv_state) -> std::ostream&;
 
 #endif

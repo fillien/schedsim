@@ -41,7 +41,7 @@ class event {
         std::weak_ptr<entity> target;
         double payload;
 
-        event(const types type, const std::weak_ptr<entity> target, const double payload);
+        event(types type, const std::weak_ptr<entity>& target, const double& payload);
 
       private:
         static inline int cpt_id{0};
@@ -85,6 +85,6 @@ auto operator<<(std::ostream& out, const types& type) -> std::ostream&;
  * @param out The ouput stream.
  * @param type The event object.
  */
-auto operator<<(std::ostream& out, const event& ev) -> std::ostream&;
+auto operator<<(std::ostream& out, const event& evt) -> std::ostream&;
 
 #endif

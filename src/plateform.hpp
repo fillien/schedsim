@@ -21,7 +21,7 @@ class plateform : public entity {
          * @brief A constructor who create the number of processors set in parameters
          * @param nb_proc Number of processors for the plateform
          */
-        explicit plateform(const std::weak_ptr<engine> sim, const std::size_t nb_proc);
+        explicit plateform(const std::weak_ptr<engine>& sim, std::size_t nb_proc);
 };
 
 #endif

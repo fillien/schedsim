@@ -17,13 +17,13 @@ class sched_mono : public scheduler {
       public:
         explicit sched_mono(const std::weak_ptr<engine> sim,
                             const std::shared_ptr<processor>& attached_proc)
-            : scheduler(sim), proc(attached_proc) {}
+            : scheduler(sim), proc(std::move(attached_proc)) {}
 
-        auto get_server_budget(const std::shared_ptr<server>& serv) -> double;
+        auto get_server_budget(const std::shared_ptr<server>& serv) -> double override;
         auto get_server_new_virtual_time(const std::shared_ptr<server>& serv,
-                                         const double& running_time) -> double;
-        auto admission_test(const std::shared_ptr<task>& new_task) -> bool;
-        void custom_scheduler();
+                                         const double& running_time) -> double override;
+        auto admission_test(const std::shared_ptr<task>& new_task) -> bool override;
+        void custom_scheduler() override;
 };
 
 #endif

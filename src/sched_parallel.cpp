@@ -17,11 +17,11 @@ auto sched_parallel::processor_order(const std::shared_ptr<processor>& first,
                                      const std::shared_ptr<processor>& second) -> bool {
         if (!first->has_server_running()) {
                 return false;
-        } else if (!second->has_server_running()) {
-                return true;
-        } else {
-                return deadline_order(first->get_server(), second->get_server());
         }
+        if (!second->has_server_running()) {
+                return true;
+        }
+        return deadline_order(first->get_server(), second->get_server());
 }
 
 auto sched_parallel::get_inactive_bandwidth() -> double {
@@ -49,15 +49,14 @@ auto sched_parallel::get_nb_active_procs() -> int {
 }
 
 auto sched_parallel::get_server_budget(const std::shared_ptr<server>& serv) -> double {
-        const auto bw = 1 - (get_inactive_bandwidth() / get_nb_active_procs());
-        const auto res = serv->utilization() / bw * (serv->relative_deadline - serv->virtual_time);
-        return res;
+        const auto bandwidth = 1 - (get_inactive_bandwidth() / get_nb_active_procs());
+        return serv->utilization() / bandwidth * (serv->relative_deadline - serv->virtual_time);
 }
 
 auto sched_parallel::get_server_new_virtual_time(const std::shared_ptr<server>& serv,
                                                  const double& running_time) -> double {
-        const auto bw = 1 - (get_inactive_bandwidth() / get_nb_active_procs());
-        return serv->virtual_time + bw / serv->utilization() * running_time;
+        const auto bandwidth = 1 - (get_inactive_bandwidth() / get_nb_active_procs());
+        return serv->virtual_time + bandwidth / serv->utilization() * running_time;
 }
 
 auto sched_parallel::admission_test(const std::shared_ptr<task>& new_task) -> bool {
@@ -81,11 +80,11 @@ void sched_parallel::custom_scheduler() {
                 auto leastest_priority_processor =
                     std::ranges::max(sim()->current_plateform->processors, processor_order);
 
-                if (leastest_priority_processor->current_state == processor::state::idle ||
+                if (leastest_priority_processor->get_state() == processor::state::idle ||
                     deadline_order(highest_priority_server,
                                    leastest_priority_processor->get_server())) {
-                        std::cout << "proc " << leastest_priority_processor->id << " with server "
-                                  << highest_priority_server->id() << "\n";
+                        std::cout << "proc " << leastest_priority_processor->get_id()
+                                  << " with server " << highest_priority_server->id() << "\n";
 
                         resched_proc(leastest_priority_processor, highest_priority_server);
                 } else {

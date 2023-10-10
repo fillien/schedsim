@@ -25,7 +25,7 @@ int main(const int argc, const char** argv) {
         using namespace std;
 
         // Check that there is a scenario file pass by argument
-        if (argc != 2) {
+        if (argc < 2) {
                 std::cerr << "No input scenario\n";
                 return EXIT_FAILURE;
         }
@@ -40,7 +40,7 @@ int main(const int argc, const char** argv) {
         auto config_plat = make_shared<plateform>(sim, config["cores"].as<int>());
         sim->set_plateform(config_plat);
 
-        assert(config_plat->processors.size() >= 1);
+        assert(!config_plat->processors.empty());
 
         std::shared_ptr<scheduler> sched;
         if (config_plat->processors.size() == 1) {

@@ -4,15 +4,15 @@
 #include <cassert>
 #include <iostream>
 
-task::task(const std::weak_ptr<engine> sim, const int id, const double& period,
+task::task(const std::weak_ptr<engine>& sim, const int tid, const double& period,
            const double& utilization)
-    : entity(sim), id(id), period(period), utilization(utilization) {}
+    : entity(sim), id(tid), period(period), utilization(utilization) {}
 
-auto task::is_attached() -> bool {
-	return (attached_proc.get() != nullptr);
+auto task::is_attached() const -> bool {
+	return (attached_proc != nullptr);
 }
 
-auto task::has_remaining_time() -> bool {
+auto task::has_remaining_time() const -> bool {
 	return (this->remaining_execution_time > 0);
 }
 

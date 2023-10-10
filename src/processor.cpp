@@ -7,7 +7,7 @@
 #include <iostream>
 #include <memory>
 
-processor::processor(const std::weak_ptr<engine> sim, const int id) : entity(sim), id(id){};
+processor::processor(const std::weak_ptr<engine>& sim, int cpu_id) : entity(sim), id(cpu_id){};
 
 void processor::set_server(std::weak_ptr<server> server_to_execute) {
         assert(!server_to_execute.expired());
@@ -24,11 +24,11 @@ void processor::clear_server() {
         this->running_server.reset();
 }
 
-void processor::change_state(const processor::state next_state) {
+void processor::change_state(const processor::state& next_state) {
         // assert that a processor can't enter twice in the same state
         if (next_state == current_state) {
                 return;
-	}
+        }
 
         switch (next_state) {
         case state::idle: {

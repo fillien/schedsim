@@ -46,8 +46,8 @@ class tracer {
          */
         void add_trace(const trace& new_trace);
 
-        void traceJobArrival(int serverId, int virtualTime, int deadline);
-        void traceGotoReady(int serverId);
+        void traceJobArrival(int m_server_id, double m_virtual_time, double m_deadline);
+        void traceGotoReady(int m_server_id);
 
         /**
          * @brief Delete the logs

@@ -19,20 +19,10 @@ class processor : public entity, public std::enable_shared_from_this<processor> 
         enum class state { idle, running };
 
         /**
-         * Unique id
-         */
-        int id;
-
-        /**
-         * @brief Current state of the processor, by default it's idle
-         */
-        state current_state{state::idle};
-
-        /**
          * @brief Class constructor
          * @param id The unique id of the processor.
          */
-        explicit processor(const std::weak_ptr<engine> sim, const int id);
+        explicit processor(const std::weak_ptr<engine>& sim, int cpu_id);
 
         void set_server(std::weak_ptr<server> server_to_execute);
 
@@ -45,14 +35,26 @@ class processor : public entity, public std::enable_shared_from_this<processor> 
 
         auto has_server_running() const -> bool { return !running_server.expired(); };
         void update_state();
+        auto get_state() const { return current_state; };
+        auto get_id() const { return id; };
 
       private:
-        void change_state(const state next_state);
+        /**
+         * Unique id
+         */
+        int id;
 
         /**
          * @brief The task currently running on the processor
          */
         std::weak_ptr<server> running_server;
+
+        /**
+         * @brief Current state of the processor, by default it's idle
+         */
+        state current_state{state::idle};
+
+        void change_state(const state& next_state);
 };
 
 #endif

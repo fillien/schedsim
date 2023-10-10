@@ -11,23 +11,15 @@
 #include <map>
 #include <memory>
 
-auto print = [](auto const& map) {
-        std::cout << "Begin ===================\n";
-        for (const auto& pair : map) {
-                std::cout << '{' << pair.first << ": " << pair.second << "}\n";
-        }
-        std::cout << "End =====================\n";
-};
-
-void engine::add_event(const event& new_event, const double timestamp) {
+void engine::add_event(const event& new_event, const double& timestamp) {
         // Define if the event need to be unique at the current timestamp
         switch (new_event.type) {
         // List of event who need to be unique
         case types::RESCHED: {
-                auto it = future_list.find(timestamp);
+                auto itr = future_list.find(timestamp);
 
                 // If the event doesn't already exist, insert it
-                if (it == future_list.end()) {
+                if (itr == future_list.end()) {
                         future_list.insert({timestamp, std::move(new_event)});
                 }
         } break;
