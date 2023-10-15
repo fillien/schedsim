@@ -8,4 +8,5 @@ clang-format -i src/main.cpp src/engine.hpp src/engine.cpp \
 	     src/sched_mono.hpp src/sched_mono.cpp \
 	     src/sched_parallel.hpp src/sched_parallel.cpp \
 	     src/server.cpp src/server.hpp \
-	     src/tracer_json.hpp src/tracer_json.cpp
+	     src/tracer_json.hpp src/tracer_json.cpp \
+	     tests/main.cpp

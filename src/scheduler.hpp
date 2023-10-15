@@ -7,6 +7,17 @@
 #include <memory>
 #include <vector>
 
+struct priorities {
+        constexpr static int MIN_PRIORITY = 100;
+        auto operator()([[maybe_unused]] const events::job_finished& evt) { return 0; };
+        auto operator()([[maybe_unused]] const events::serv_budget_exhausted& evt) { return 1; };
+        auto operator()([[maybe_unused]] const events::job_arrival& evt) { return 2; };
+        auto operator()([[maybe_unused]] const events::serv_inactive& evt) { return 3; };
+        auto operator()([[maybe_unused]] auto& evt) { return MIN_PRIORITY; };
+};
+
+auto get_priority(const events::event& evt) -> int;
+
 /**
  * @brief A class that handle the events of the system accordingly to a scheduling policy.
  */

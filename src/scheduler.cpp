@@ -22,28 +22,7 @@
 #include <variant>
 #include <vector>
 
-namespace {
-
-auto get_priority(const events::event& evt) -> int {
-        constexpr int MIN_PRIORITY = 100;
-
-        // Less is more priority
-        if (std::holds_alternative<events::job_finished>(evt)) {
-                return 0;
-        }
-        if (std::holds_alternative<events::serv_budget_exhausted>(evt)) {
-                return 1;
-        }
-        if (std::holds_alternative<events::job_arrival>(evt)) {
-                return 2;
-        }
-        if (std::holds_alternative<events::serv_inactive>(evt)) {
-                return 3;
-        }
-        return MIN_PRIORITY;
-};
-
-} // namespace
+auto get_priority(const events::event& evt) -> int { return std::visit(priorities{}, evt); };
 
 auto scheduler::is_running_server(const std::shared_ptr<server>& current_server) -> bool {
         return current_server->current_state == server::state::running;
