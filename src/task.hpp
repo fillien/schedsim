@@ -44,12 +44,12 @@ class task : public entity {
         /**
          * @brief Return true if the task is currently attached to a processor
          */
-        auto is_attached() const -> bool;
+        [[nodiscard]] auto is_attached() const -> bool;
 
         /**
          * @brief Return true if the task has remaining time to be executed
          */
-        auto has_remaining_time() const -> bool;
+        [[nodiscard]] auto has_remaining_time() const -> bool;
 
         /**
          * @brief Add new job to the queue.
@@ -62,9 +62,11 @@ class task : public entity {
         /**
          * @brief Return remaining execution time
          */
-        auto get_remaining_time() const -> double { return remaining_execution_time; };
+        [[nodiscard]] auto get_remaining_time() const -> double {
+                return remaining_execution_time;
+        };
 
-        auto has_job() const -> bool { return !pending_jobs.empty(); };
+        [[nodiscard]] auto has_job() const -> bool { return !pending_jobs.empty(); };
 
         void next_job();
 

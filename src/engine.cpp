@@ -11,31 +11,19 @@
 #include <map>
 #include <memory>
 
-void engine::add_event(const event& new_event, const double& timestamp) {
-        // Define if the event need to be unique at the current timestamp
-        switch (new_event.type) {
-        // List of event who need to be unique
-        case types::RESCHED: {
-                auto itr = future_list.find(timestamp);
+void engine::add_event(const events::event& new_event, const double& timestamp) {
+        future_list.insert({timestamp, std::move(new_event)});
+}
 
-                // If the event doesn't already exist, insert it
-                if (itr == future_list.end()) {
-                        future_list.insert({timestamp, std::move(new_event)});
-                }
-        } break;
-
-        // For other event, just insert it
-        default: {
-                future_list.insert({timestamp, std::move(new_event)});
-        }
-        }
+void engine::add_trace(const events::event& new_trace) {
+        past_list.insert({current_timestamp, std::move(new_trace)});
 }
 
 void engine::simulation() {
         // Loop until all events have been executed
         while (!future_list.empty()) {
                 // A vector to store all the event of the current timestamp
-                std::vector<event> current_events;
+                std::vector<events::event> current_events;
 
                 // Update current timestamp
                 current_timestamp = future_list.begin()->first;
@@ -53,6 +41,6 @@ void engine::simulation() {
         }
 
         if (future_list.empty()) {
-                logging_system.add_trace({current_timestamp, types::SIM_FINISHED, 0, 0});
+                add_trace(events::sim_finished{});
         }
 }

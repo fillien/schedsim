@@ -15,6 +15,7 @@ public:
 
 	explicit entity(const std::weak_ptr<engine> sim): simulator(sim) {}
 
+	[[nodiscard]]
 	auto sim() const -> std::shared_ptr<engine> {
                 assert(!simulator.expired());
                 return simulator.lock();

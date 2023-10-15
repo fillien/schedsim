@@ -3,22 +3,20 @@
 
 #include "event.hpp"
 #include "plateform.hpp"
-#include "sched_mono.hpp"
-#include "sched_parallel.hpp"
-#include "tracer.hpp"
+#include "scheduler.hpp"
+#include "tracer_json.hpp"
 
-#include <cstddef>
-#include <cstdio>
+#include <iostream>
 #include <map>
 #include <memory>
+#include <variant>
 
 /**
  * @brief According to a platform and a scheduler, the class simulate in order of time each events
  * contains in the future list
  */
 class engine {
-      public:
-        static constexpr double ZERO_ROUNDED = 0.000001;
+      private:
         /**
          * @brief A counter of the time passing.
          */
@@ -31,24 +29,29 @@ class engine {
 
         /**
          * @brief A model a the platform on which the scheduler will operate.
+         * @TODO Maybe refactor this in a unique_ptr, I mean it'll be alone all the running time
          */
         std::shared_ptr<plateform> current_plateform;
 
         /**
-         * @brief The tracer that help to generate logs.
+         * @brief The list of past events, it's a pair of the timestamp of the event and the event
+         * to process himself.
          */
-        tracer logging_system;
+        std::multimap<double, events::event> past_list{};
+
+      public:
+        static constexpr double ZERO_ROUNDED = 0.000001;
 
         /**
          * @brief The list of future events, it's a pair of the timestamp of the event and the event
          * to process himself.
          */
-        std::multimap<double, const event> future_list{};
+        std::multimap<double, events::event> future_list{};
 
         /**
          * @brief A constructor to help generate the platform.
          */
-        explicit engine() : logging_system(&this->current_timestamp) {}
+        explicit engine() = default;
 
         /**
          * @brief Setter to attach a scheduler.
@@ -70,10 +73,31 @@ class engine {
          */
         void simulation();
 
+        [[nodiscard]] auto get_plateform() const -> std::shared_ptr<plateform> {
+                return current_plateform;
+        };
+
+        [[nodiscard]] auto get_time() const -> double { return current_timestamp; };
+
+        [[nodiscard]] auto get_future_list() const -> std::multimap<double, events::event> {
+                return this->future_list;
+        };
+
         /**
-         * @brief A setter to add new event to the the future list.
+         * @brief Add new event to the the future list.
          */
-        void add_event(const event& new_event, const double& timestamp);
+        void add_event(const events::event& new_event, const double& timestamp);
+
+        /**
+         * @brief Add a trace to logs (past list)
+         */
+        void add_trace(const events::event& new_trace);
+
+        void print() {
+                for (auto& trace : past_list) {
+                        print_json(trace);
+                }
+        };
 };
 
 #endif

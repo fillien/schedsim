@@ -15,11 +15,10 @@
 #include "scheduler.hpp"
 #include "server.hpp"
 #include "task.hpp"
-#include "tracer.hpp"
 #include "yaml-cpp/node/node.h"
 #include "yaml-cpp/yaml.h"
 
-int main(const int argc, const char** argv) {
+auto main(const int argc, const char** argv) -> int {
         constexpr double START_TIME = 0;
 
         using namespace std;
@@ -64,7 +63,7 @@ int main(const int argc, const char** argv) {
 
                 // For each job of tasks add a "job arrival" event in the future list
                 for (auto job : node["jobs"]) {
-                        sim->add_event({types::JOB_ARRIVAL, new_task, job["duration"].as<double>()},
+                        sim->add_event(events::job_arrival{new_task, job["duration"].as<double>()},
                                        job["arrival"].as<double>());
                 }
                 tasks.push_back(std::move(new_task));
@@ -73,8 +72,8 @@ int main(const int argc, const char** argv) {
         // Simulate the system (job set + platform) with the chosen scheduler
         sim->simulation();
 
-        // Print logs from the simulation
-        // cout << "Logs :\n" << sim->logging_system.format(to_txt);
+        sim->print();
+
         std::cout << "Simulation ended" << std::endl;
 
         return EXIT_SUCCESS;

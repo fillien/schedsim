@@ -14,6 +14,13 @@ class scheduler : public entity {
       private:
         bool need_resched{false};
 
+        void handle_job_arrival(const std::shared_ptr<task>& new_task, const double& job_duration);
+        void handle_job_finished(const std::shared_ptr<server>& serv, bool is_there_new_job);
+        void handle_serv_budget_exhausted(const std::shared_ptr<server>& serv);
+        void handle_serv_inactive(const std::shared_ptr<server>& serv);
+        void resched();
+        void update_server_times(const std::shared_ptr<server>& serv);
+
       protected:
         /**
          * @brief A vector to track and own servers objects
@@ -26,31 +33,8 @@ class scheduler : public entity {
         static auto deadline_order(const std::shared_ptr<server>& first,
                                    const std::shared_ptr<server>& second) -> bool;
 
-        /**
-         * @brief Helper function to add a new trace to the logs.
-         * @param type The kind of event
-         * @param target_id Id of the object that is link to the kind of event
-         * @param payload A optionnal payload
-         */
-        void add_trace(types type, int target_id, double payload = 0) const;
-
-        /**
-         * @brief Check if a type of event is present at the current timestamp and act on a task
-         * @param the_task The task on which the event is applied
-         * @param type The type of event to looking for
-         */
-        auto is_event_present(const std::shared_ptr<task>& the_task, types type) -> bool;
-
-        void handle_job_arrival(const std::shared_ptr<task>& new_task, const double& job_wcet);
-        void handle_job_finished(const std::shared_ptr<server>& serv, bool is_there_new_job);
-        void handle_serv_budget_exhausted(const std::shared_ptr<server>& serv);
-        void handle_serv_inactive(const std::shared_ptr<server>& serv);
-        void resched();
-
         void resched_proc(const std::shared_ptr<processor>& proc_with_server,
                           const std::shared_ptr<server>& server_to_execute);
-
-        void update_server_times(const std::shared_ptr<server>& serv);
 
         virtual auto get_server_new_virtual_time(const std::shared_ptr<server>& serv,
                                                  const double& running_time) -> double = 0;
@@ -62,8 +46,8 @@ class scheduler : public entity {
         explicit scheduler(const std::weak_ptr<engine> sim) : entity(sim){};
         virtual ~scheduler() = default;
 
-        void handle(std::vector<event> evts);
-        auto get_active_bandwidth() -> double;
+        void handle(std::vector<events::event> evts);
+        [[nodiscard]] auto get_active_bandwidth() const -> double;
         auto make_server(const std::shared_ptr<task>& new_task) -> std::shared_ptr<server>;
 };
 

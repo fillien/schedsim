@@ -36,7 +36,7 @@ auto sched_parallel::get_inactive_bandwidth() -> double {
 
 auto sched_parallel::get_nb_active_procs() -> int {
         int nb_active_procs{0};
-        for (const auto& proc : sim()->current_plateform->processors) {
+        for (const auto& proc : sim()->get_plateform()->processors) {
                 if (proc->has_server_running()) {
                         nb_active_procs++;
                 }
@@ -59,7 +59,8 @@ auto sched_parallel::get_server_new_virtual_time(const std::shared_ptr<server>& 
         return serv->virtual_time + bandwidth / serv->utilization() * running_time;
 }
 
-auto sched_parallel::admission_test(const std::shared_ptr<task>& new_task) -> bool {
+auto sched_parallel::admission_test([[maybe_unused]] const std::shared_ptr<task>& new_task)
+    -> bool {
         /// TODO Implement admission test for sched_parallel
         return true;
 }
@@ -78,7 +79,7 @@ void sched_parallel::custom_scheduler() {
                 // Get the processeur that is idle or with the maximum deadline
                 auto highest_priority_server = std::ranges::min(active_servers, deadline_order);
                 auto leastest_priority_processor =
-                    std::ranges::max(sim()->current_plateform->processors, processor_order);
+                    std::ranges::max(sim()->get_plateform()->processors, processor_order);
 
                 if (leastest_priority_processor->get_state() == processor::state::idle ||
                     deadline_order(highest_priority_server,

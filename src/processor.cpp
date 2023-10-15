@@ -1,5 +1,6 @@
 #include "processor.hpp"
 #include "engine.hpp"
+#include "event.hpp"
 #include "server.hpp"
 #include "task.hpp"
 
@@ -15,7 +16,7 @@ void processor::set_server(std::weak_ptr<server> server_to_execute) {
 
         running_server = serv;
         serv->attached_task->attached_proc = shared_from_this();
-        sim()->logging_system.add_trace({sim()->current_timestamp, types::TASK_SCHEDULED, id, 0});
+        sim()->add_trace(events::task_scheduled{serv->attached_task, shared_from_this()});
 }
 
 void processor::clear_server() {
@@ -33,14 +34,12 @@ void processor::change_state(const processor::state& next_state) {
         switch (next_state) {
         case state::idle: {
                 current_state = state::idle;
-                sim()->logging_system.add_trace(
-                    {sim()->current_timestamp, types::PROC_IDLED, id, 0});
+                sim()->add_trace(events::proc_idled{shared_from_this()});
                 break;
         }
         case state::running: {
                 current_state = state::running;
-                sim()->logging_system.add_trace(
-                    {sim()->current_timestamp, types::PROC_ACTIVATED, id, 0});
+                sim()->add_trace(events::proc_activated{shared_from_this()});
                 break;
         }
         }

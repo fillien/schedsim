@@ -7,23 +7,18 @@
 #include <cassert>
 #include <iostream>
 #include <memory>
+#include <typeinfo>
 #include <unordered_map>
+#include <variant>
 
 server::server(const std::weak_ptr<engine>& sim, const std::weak_ptr<task>& attached_task)
     : entity(sim), attached_task(attached_task){};
 
-auto server::get_budget() -> double {
-        const double active_bw = sim()->sched->get_active_bandwidth();
-        return utilization() / active_bw * (relative_deadline - virtual_time);
-}
-
 void server::change_state(const state& new_state) {
-        using enum types;
-
         assert(new_state != current_state);
 
-        if (last_call != sim()->current_timestamp) {
-                last_call = sim()->current_timestamp;
+        if (last_call != sim()->get_time()) {
+                last_call = sim()->get_time();
                 cant_be_inactive = false;
         }
 
@@ -34,26 +29,23 @@ void server::change_state(const state& new_state) {
                 switch (current_state) {
                 case state::inactive: {
                         // Job arrival
-                        relative_deadline = sim()->current_timestamp + period();
-                        sim()->logging_system.traceGotoReady(id());
+                        relative_deadline = sim()->get_time() + period();
+                        sim()->add_trace(events::serv_ready{shared_from_this()});
                         break;
                 }
                 case state::non_cont: {
                         // Remove all future events of type SERV_INACTIVE
                         /// TODO Replace events insertion and deletion by a timer mechanism.
                         auto const& serv_id = id();
-                        std::erase_if(sim()->future_list, [serv_id](const auto& event) {
-                                auto const& evt_t = event.second.type;
-                                if (evt_t == SERV_INACTIVE) {
-                                        auto const& serv = std::static_pointer_cast<server>(
-                                            event.second.target.lock());
-                                        return serv->id() == serv_id;
+                        std::erase_if(sim()->future_list, [serv_id](const auto& evt) {
+                                if (holds_alternative<events::serv_inactive>(evt.second)) {
+                                        auto knowned = std::get<events::serv_inactive>(evt.second);
+                                        return knowned.serv->id() == serv_id;
                                 }
                                 return false;
                         });
                         cant_be_inactive = true;
-                        sim()->logging_system.add_trace(
-                            {sim()->current_timestamp, SERV_READY, id(), 0});
+                        sim()->add_trace(events::serv_ready{shared_from_this()});
                         break;
                 }
                 case state::ready:
@@ -68,25 +60,25 @@ void server::change_state(const state& new_state) {
         case state::running: {
                 assert(current_state == state::ready);
                 // Dispatch
-                sim()->logging_system.add_trace({sim()->current_timestamp, SERV_RUNNING, id(), 0});
-                last_update = sim()->current_timestamp;
+                sim()->add_trace(events::serv_running{shared_from_this()});
+                last_update = sim()->get_time();
                 current_state = state::running;
                 break;
         }
         case state::non_cont: {
                 assert(current_state == state::running);
-                sim()->logging_system.add_trace({sim()->current_timestamp, SERV_NON_CONT, id(), 0});
+                sim()->add_trace(events::serv_non_cont{shared_from_this()});
 
                 // Insert a event to pass in IDLE state when the time will be equal to the
                 // virtual time. Deleting this event is necessery if a job arrive.
-                assert(virtual_time > sim()->current_timestamp);
-                sim()->add_event({SERV_INACTIVE, shared_from_this(), 0}, virtual_time);
+                assert(virtual_time > sim()->get_time());
+                sim()->add_event(events::serv_inactive{shared_from_this()}, virtual_time);
                 current_state = state::non_cont;
                 break;
         }
         case state::inactive: {
                 assert(current_state == state::running || current_state == state::non_cont);
-                sim()->logging_system.add_trace({sim()->current_timestamp, SERV_INACTIVE, id(), 0});
+                sim()->add_trace(events::serv_inactive{shared_from_this()});
                 current_state = state::inactive;
                 break;
         }
@@ -95,7 +87,7 @@ void server::change_state(const state& new_state) {
 
 void server::postpone() {
         relative_deadline += period();
-        sim()->logging_system.add_trace({sim()->current_timestamp, types::SERV_POSTPONE, id(), 0});
+        sim()->add_trace(events::serv_postpone{shared_from_this(), relative_deadline});
 }
 
 auto operator<<(std::ostream& out, const server& serv) -> std::ostream& {
