@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cstdlib>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <iterator>
@@ -72,8 +73,10 @@ auto main(const int argc, const char** argv) -> int {
         // Simulate the system (job set + platform) with the chosen scheduler
         sim->simulation();
 
-        sim->print();
-
+        std::ofstream logs;
+        logs.open("out.json");
+        logs << sim->print() << std::endl;
+        logs.close();
         std::cout << "Simulation ended" << std::endl;
 
         return EXIT_SUCCESS;

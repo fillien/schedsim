@@ -71,6 +71,6 @@ struct log_json {
         };
 };
 
-void print_json(const std::pair<double, events::event>& evt);
+auto print_json(const std::pair<double, events::event>& evt) -> std::string;
 
 #endif

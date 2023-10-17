@@ -9,6 +9,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <sstream>
 #include <variant>
 
 /**
@@ -93,10 +94,12 @@ class engine {
          */
         void add_trace(const events::event& new_trace);
 
-        void print() {
+        auto print() -> std::string {
+                std::ostringstream out;
                 for (auto& trace : past_list) {
-                        print_json(trace);
+                        out << print_json(trace);
                 }
+                return out.str();
         };
 };
 
