@@ -94,13 +94,7 @@ class engine {
          */
         void add_trace(const events::event& new_trace);
 
-        auto print() -> std::string {
-                std::ostringstream out;
-                for (auto& trace : past_list) {
-                        out << print_json(trace);
-                }
-                return out.str();
-        };
+        auto print() -> std::string { return print_json(past_list); };
 };
 
 #endif

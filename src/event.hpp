@@ -57,6 +57,7 @@ struct serv_postpone {
 
 struct serv_ready {
         std::shared_ptr<server> serv;
+        double deadline;
 };
 
 struct serv_running {

@@ -5,6 +5,7 @@
 #include "nlohmann/json.hpp"
 
 #include <iostream>
+#include <map>
 #include <variant>
 
 struct log_json {
@@ -26,7 +27,7 @@ struct log_json {
         };
         auto operator()([[maybe_unused]] const events::resched& evt) const {
                 return json{{"type", "resched"}};
-        }
+        };
         auto operator()(const events::serv_non_cont& evt) {
                 return json{{"type", "serv_non_cont"}, {"tid", evt.serv->id()}};
         };
@@ -45,7 +46,8 @@ struct log_json {
                             {"deadline", evt.new_deadline}};
         };
         auto operator()(const events::serv_ready& evt) const {
-                return json{{"type", "serv_ready"}, {"tid", evt.serv->id()}};
+                return json{
+                    {"type", "serv_ready"}, {"tid", evt.serv->id()}, {"deadline", evt.deadline}};
         };
         auto operator()(const events::serv_running& evt) const {
                 return json{{"type", "serv_running"}, {"tid", evt.serv->id()}};
@@ -71,6 +73,6 @@ struct log_json {
         };
 };
 
-auto print_json(const std::pair<double, events::event>& evt) -> std::string;
+auto print_json(const std::multimap<double, events::event>& log) -> std::string;
 
 #endif

@@ -30,7 +30,7 @@ void server::change_state(const state& new_state) {
                 case state::inactive: {
                         // Job arrival
                         relative_deadline = sim()->get_time() + period();
-                        sim()->add_trace(events::serv_ready{shared_from_this()});
+                        sim()->add_trace(events::serv_ready{shared_from_this(), relative_deadline});
                         break;
                 }
                 case state::non_cont: {
@@ -45,7 +45,7 @@ void server::change_state(const state& new_state) {
                                 return false;
                         });
                         cant_be_inactive = true;
-                        sim()->add_trace(events::serv_ready{shared_from_this()});
+                        sim()->add_trace(events::serv_ready{shared_from_this(), relative_deadline});
                         break;
                 }
                 case state::ready:

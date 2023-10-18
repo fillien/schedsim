@@ -53,7 +53,7 @@ auto scheduler::deadline_order(const std::shared_ptr<server>& first,
 
 auto scheduler::get_active_bandwidth() const -> double {
         double active_bandwidth{0};
-        for (auto serv : servers) {
+        for (const auto& serv : servers) {
                 if (is_active_server(serv)) {
                         active_bandwidth += serv->utilization();
                 }
