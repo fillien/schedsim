@@ -3,3 +3,10 @@
 /build
 /vgcore.*
 /trace/stream
+/rtsched.sty
+/out.json
+/test.log
+/test.pdf
+/test.tex
+/test.aux
+/mydessin.tex
