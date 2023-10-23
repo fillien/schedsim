@@ -9,4 +9,7 @@ clang-format -i src/main.cpp src/engine.hpp src/engine.cpp \
 	     src/sched_parallel.hpp src/sched_parallel.cpp \
 	     src/server.cpp src/server.hpp \
 	     src/tracer_json.hpp src/tracer_json.cpp \
-	     tests/main.cpp
+	     tests/main.cpp \
+	     viewer/parse_trace.cpp viewer/parse_trace.hpp \
+	     viewer/rtsched.cpp viewer/rtsched.hpp \
+	     viewer/trace.hpp viewer/main.cpp

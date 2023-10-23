@@ -35,7 +35,7 @@ auto serialize(const command& com) -> std::string {
             com);
 }
 
-	auto grid_print(const struct grid& grid) -> std::string {
+auto grid_print(const struct grid& grid) -> std::string {
         std::ostringstream out;
         out << "\\begin{RTGrid}{" << grid.nb_axis << "}{" << grid.duration << "}\n";
         for (const auto& com : grid.commands) {

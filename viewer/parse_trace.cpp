@@ -47,6 +47,12 @@ auto parse_trace(nlohmann::json trace) -> traces::trace {
                 out = proc_activated{.proc_id = trace.at("cpu").get<size_t>()};
         } else if (std::holds_alternative<proc_idled>(search->second)) {
                 out = proc_idled{.proc_id = trace.at("cpu").get<size_t>()};
+        } else if (std::holds_alternative<serv_inactive>(search->second)) {
+                out = serv_inactive{.serv_id = trace.at("tid").get<size_t>()};
+        } else if (std::holds_alternative<serv_budget_replenished>(search->second)) {
+                out = serv_budget_replenished{
+                    .serv_id = trace.at("tid").get<size_t>(),
+                };
         } else if (std::holds_alternative<serv_budget_exhausted>(search->second)) {
                 out = serv_budget_exhausted{.serv_id = trace.at("tid").get<size_t>()};
         } else if (std::holds_alternative<serv_non_cont>(search->second)) {
@@ -55,7 +61,8 @@ auto parse_trace(nlohmann::json trace) -> traces::trace {
                 out = serv_postpone{.serv_id = trace.at("tid").get<size_t>(),
                                     .new_deadline = trace.at("deadline").get<double>()};
         } else if (std::holds_alternative<serv_ready>(search->second)) {
-                out = serv_ready{.serv_id = trace.at("tid").get<size_t>(), .deadline = trace.at("deadline").get<double>()};
+                out = serv_ready{.serv_id = trace.at("tid").get<size_t>(),
+                                 .deadline = trace.at("deadline").get<double>()};
         } else if (std::holds_alternative<serv_running>(search->second)) {
                 out = serv_running{.serv_id = trace.at("tid").get<size_t>()};
         } else if (std::holds_alternative<task_preempted>(search->second)) {
