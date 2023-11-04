@@ -10,6 +10,7 @@ clang-format -i src/main.cpp src/engine.hpp src/engine.cpp \
 	     src/server.cpp src/server.hpp \
 	     src/tracer_json.hpp src/tracer_json.cpp \
 	     tests/main.cpp \
-	     viewer/parse_trace.cpp viewer/parse_trace.hpp \
-	     viewer/rtsched.cpp viewer/rtsched.hpp \
+	     viewer/inputs/json.cpp viewer/inputs/json.hpp \
+	     viewer/outputs/rtsched.cpp viewer/outputs/rtsched.hpp \
+	     viewer/outputs/textual.cpp viewer/outputs/textual.hpp \
 	     viewer/trace.hpp viewer/main.cpp

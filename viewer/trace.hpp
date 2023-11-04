@@ -1,81 +1,56 @@
 #ifndef TRACE_HPP
 #define TRACE_HPP
 
-#include <cstddef>
 #include <variant>
 
 namespace traces {
+
+struct serv_trace {
+        std::size_t id;
+};
+
 struct resched {};
 struct sim_finished {};
+struct job_finished : public serv_trace {};
+struct serv_budget_replenished : public serv_trace {};
+struct serv_inactive : public serv_trace {};
+struct serv_budget_exhausted : public serv_trace {};
+struct serv_non_cont : public serv_trace {};
+struct serv_running : public serv_trace {};
+struct task_rejected : public serv_trace {};
+struct task_preempted : public serv_trace {};
 
-struct job_arrival {
-        size_t task_id;
+struct job_arrival : public serv_trace {
         double job_duration;
 };
 
-struct job_finished {
-        size_t task_id;
-};
-
-struct proc_activated {
-        size_t proc_id;
-};
-
-struct proc_idled {
-        size_t proc_id;
-};
-
-struct serv_budget_replenished {
-        size_t serv_id;
-};
-
-struct serv_inactive {
-        size_t serv_id;
-};
-
-struct serv_budget_exhausted {
-        size_t serv_id;
-};
-
-struct serv_non_cont {
-        size_t serv_id;
-};
-
-struct serv_postpone {
-        size_t serv_id;
+struct serv_postpone : public serv_trace {
         double new_deadline;
 };
 
-struct serv_ready {
-        size_t serv_id;
+struct serv_ready : public serv_trace {
         double deadline;
 };
 
-struct serv_running {
-        size_t serv_id;
+struct task_scheduled : public serv_trace {
+        std::size_t proc_id;
 };
 
-struct task_preempted {
-        size_t task_id;
-};
-
-struct task_scheduled {
-        size_t task_id;
-        size_t proc_id;
-};
-
-struct task_rejected {
-        size_t task_id;
-};
-
-struct virtual_time_update {
-        size_t task_id;
+struct virtual_time_update : public serv_trace {
         double new_virtual_time;
 };
 
-using trace = std::variant<sim_finished, resched, virtual_time_update, job_arrival, job_finished,
-                           proc_activated, proc_idled, serv_budget_exhausted, serv_inactive,
-                           serv_budget_replenished, serv_non_cont, serv_postpone, serv_ready,
-                           serv_running, task_preempted, task_scheduled, task_rejected>;
+struct proc_activated {
+        std::size_t id;
+};
+
+struct proc_idled {
+        std::size_t id;
+};
+
+using trace = std::variant<
+    sim_finished, resched, virtual_time_update, job_arrival, job_finished, proc_activated,
+    proc_idled, serv_budget_exhausted, serv_inactive, serv_budget_replenished, serv_non_cont,
+    serv_postpone, serv_ready, serv_running, task_preempted, task_scheduled, task_rejected>;
 }; // namespace traces
 #endif
