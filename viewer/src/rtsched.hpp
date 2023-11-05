@@ -1,7 +1,7 @@
 #ifndef OUTPUTS_RTSCHED_HPP
 #define OUTPUTS_RTSCHED_HPP
 
-#include "../trace.hpp"
+#include "trace.hpp"
 #include <string>
 #include <variant>
 #include <vector>

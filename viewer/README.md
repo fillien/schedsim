@@ -5,7 +5,7 @@ Convert simulation traces to a readeable textual logs or a RTSched GANTT diagram
 
 ## Screenshot
 
-![App screenshot](screenshot.png)
+![App screenshot](external/screenshot.png)
 
 
 ## Build & use

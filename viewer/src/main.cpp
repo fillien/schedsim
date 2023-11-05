@@ -1,6 +1,7 @@
-#include "inputs/json.hpp"
-#include "outputs/rtsched.hpp"
-#include "outputs/textual.hpp"
+#include "trace.hpp"
+#include "json.hpp"
+#include "textual.hpp"
+#include "rtsched.hpp"
 
 #include <cstdlib>
 #include <filesystem>

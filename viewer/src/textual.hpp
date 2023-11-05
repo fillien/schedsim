@@ -1,7 +1,7 @@
 #ifndef OUTPUT_TEXTUAL_HPP
 #define OUTPUT_TEXTUAL_HPP
 
-#include "../trace.hpp"
+#include "trace.hpp"
 #include <iostream>
 #include <vector>
 

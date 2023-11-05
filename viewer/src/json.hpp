@@ -1,8 +1,8 @@
 #ifndef INPUTS_JSON_HPP
 #define INPUTS_JSON_HPP
 
-#include "../trace.hpp"
-#include "nlohmann/json.hpp"
+#include "trace.hpp"
+#include <nlohmann/json.hpp>
 #include <filesystem>
 #include <iostream>
 #include <sstream>
