@@ -1,8 +1,3 @@
-# Color ninja output
-#add_compile_options(-fdiagnostics-color=always -fsanitize=address)
-#add_compile_options(-fdiagnostics-color=always)
-#add_link_options(
-
 add_executable(viewer)
 
 target_compile_features(viewer PRIVATE cxx_std_23)
