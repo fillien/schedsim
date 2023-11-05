@@ -6,6 +6,10 @@
 #include <variant>
 #include <vector>
 
+namespace {
+using input_data = std::vector<std::pair<double, traces::trace>>;
+}
+
 namespace outputs::rtsched {
 
 struct TaskArrival {
@@ -22,6 +26,7 @@ struct TaskExecution {
         std::size_t index;
         double start;
         double stop;
+        std::size_t cpu;
 };
 
 struct TaskEnd {
@@ -43,11 +48,8 @@ struct grid {
         std::vector<command> commands;
 };
 
-void print(std::ostream& out, const std::vector<std::pair<double, traces::trace>>& in);
+void print(std::ostream& out, const input_data& in);
 
-void serialize(std::ostream& out, const command& com);
-
-void plot(rtsched::grid& grid, const std::vector<std::pair<double, traces::trace>>& traces);
 }; // namespace outputs::rtsched
 
 #endif

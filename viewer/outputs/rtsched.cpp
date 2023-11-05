@@ -1,5 +1,8 @@
 #include "rtsched.hpp"
 
+#include <array>
+#include <cmath>
+#include <cstddef>
 #include <iostream>
 #include <map>
 #include <set>
@@ -17,7 +20,7 @@ template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 namespace {
 using namespace outputs::rtsched;
 
-auto count_tasks(const std::vector<std::pair<double, traces::trace>>& traces) -> std::size_t
+auto count_tasks(const input_data& traces) -> std::size_t
 {
         using namespace traces;
 
@@ -32,7 +35,16 @@ auto count_tasks(const std::vector<std::pair<double, traces::trace>>& traces) ->
         return cpt.size();
 }
 
-auto get_last_timestamp(const std::vector<std::pair<double, traces::trace>>& traces) -> double
+auto get_color(std::size_t cpu_id) -> std::string
+{
+        constexpr std::array colors{"red",       "green",  "blue", "cyan",  "magenta",
+                                    "yellow",    "black",  "gray", "white", "darkgray",
+                                    "lightgray", "brown",  "lime", "olive", "orange",
+                                    "pink",      "purple", "teal", "violet"};
+        return colors.at(cpu_id);
+}
+
+auto get_last_timestamp(const input_data& traces) -> double
 {
         double last_timestamp{0};
         if (traces.rbegin() != traces.rend()) {
@@ -42,20 +54,42 @@ auto get_last_timestamp(const std::vector<std::pair<double, traces::trace>>& tra
         return last_timestamp;
 }
 
-void open_execution_zone(std::map<std::size_t, double>& start_times, double time, std::size_t tid)
+void open_execution_zone(
+    std::map<std::size_t, std::pair<double, std::size_t>>& start_times, double time,
+    std::size_t tid, std::size_t cpu)
 {
         if (auto search = start_times.find(tid); search == std::end(start_times)) {
-                start_times.insert({tid, time});
+                start_times.insert({tid, {time, cpu}});
         }
 }
 
 void close_execution_zone(
-    std::map<std::size_t, double>& start_times, double time, std::size_t tid, grid& grid)
+    std::map<std::size_t, std::pair<double, std::size_t>>& start_times, double stop,
+    std::size_t tid, grid& grid)
 {
         if (auto search = start_times.find(tid); search != std::end(start_times)) {
-                grid.commands.emplace_back(
-                    outputs::rtsched::TaskExecution{tid, search->second, time});
+                const auto start = search->second.first;
+                const auto cpu = search->second.second;
+                grid.commands.emplace_back(outputs::rtsched::TaskExecution{tid, start, stop, cpu});
                 start_times.erase(tid);
+        }
+}
+
+void open_extra_budget_zone(
+    std::map<std::size_t, double>& extra_budget_times, double time, std::size_t tid)
+{
+        if (auto search = extra_budget_times.find(tid); search == std::end(extra_budget_times)) {
+                extra_budget_times.insert({tid, time});
+        }
+}
+
+void close_extra_budget_zone(
+    std::map<std::size_t, double>& extra_budget_times, double time, std::size_t tid, grid& grid)
+{
+        if (auto search = extra_budget_times.find(tid); search != std::end(extra_budget_times)) {
+                grid.commands.emplace_back(
+                    outputs::rtsched::TaskRespTime{tid, search->second, time - search->second});
+                extra_budget_times.erase(tid);
         }
 }
 
@@ -69,13 +103,10 @@ void new_deadline(grid& grid, double time, std::size_t tid)
         grid.commands.emplace_back(outputs::rtsched::TaskDeadline{tid, time});
 }
 
-}; // namespace
-
-namespace outputs::rtsched {
-
-void plot(rtsched::grid& grid, const std::vector<std::pair<double, traces::trace>>& traces)
+void plot(grid& grid, const input_data& traces)
 {
-        std::map<std::size_t, double> start_times;
+        std::map<std::size_t, std::pair<double, std::size_t>> execution_times;
+        std::map<std::size_t, double> extra_budget_times;
 
         for (const auto& tra : traces) {
                 double time = tra.first;
@@ -90,20 +121,21 @@ void plot(rtsched::grid& grid, const std::vector<std::pair<double, traces::trace
                         [&time, &grid](traces::serv_ready evt) {
                                 new_deadline(grid, time, evt.id);
                         },
-
-                        // Openning execution zone event
-                        [&start_times, &time](traces::task_scheduled evt) {
-                                open_execution_zone(start_times, time, evt.id);
+                        [&execution_times, &time](traces::task_scheduled evt) {
+                                open_execution_zone(execution_times, time, evt.id, evt.proc_id);
                         },
-                        // Closing execution zone events
-                        [&start_times, &time, &grid](traces::task_preempted evt) {
-                                close_execution_zone(start_times, time, evt.id, grid);
+                        [&execution_times, &time, &grid](traces::task_preempted evt) {
+                                close_execution_zone(execution_times, time, evt.id, grid);
                         },
-                        [&start_times, &time, &grid](traces::serv_non_cont evt) {
-                                close_execution_zone(start_times, time, evt.id, grid);
+                        [&execution_times, &extra_budget_times, &time,
+                         &grid](traces::serv_non_cont evt) {
+                                close_execution_zone(execution_times, time, evt.id, grid);
+                                open_extra_budget_zone(extra_budget_times, time, evt.id);
                         },
-                        [&start_times, &time, &grid](traces::serv_inactive evt) {
-                                close_execution_zone(start_times, time, evt.id, grid);
+                        [&execution_times, &extra_budget_times, &time,
+                         &grid](traces::serv_inactive evt) {
+                                close_execution_zone(execution_times, time, evt.id, grid);
+                                close_extra_budget_zone(extra_budget_times, time, evt.id, grid);
                         },
                         [](auto) {}},
                     tra.second);
@@ -121,8 +153,8 @@ void serialize(std::ostream& out, const command& com)
                         out << "\\TaskDeadline{" << com.index << "}{" << com.deadline << "}";
                 },
                 [&out](const TaskExecution& com) {
-                        out << "\\TaskExecution{" << com.index << "}{" << com.start << "}{"
-                            << com.stop << "}";
+                        out << "\\TaskExecution[color=" << get_color(com.cpu) << "]{" << com.index
+                            << "}{" << com.start << "}{" << com.stop << "}";
                 },
                 [&out](const TaskEnd& com) {
                         out << "\\TaskEnd{" << com.index << "}{" << com.stop << "}";
@@ -134,14 +166,18 @@ void serialize(std::ostream& out, const command& com)
             com);
 }
 
-void print(std::ostream& out, const std::vector<std::pair<double, traces::trace>>& in)
+}; // namespace
+
+namespace outputs::rtsched {
+
+void print(std::ostream& out, const input_data& in)
 {
         constexpr auto ADDITIONNAL_TIME_AFTER_LAST_EVENT{1};
 
         struct rtsched::grid grid;
 
         grid.nb_axis = count_tasks(in);
-        grid.duration = get_last_timestamp(in) + ADDITIONNAL_TIME_AFTER_LAST_EVENT;
+        grid.duration = std::ceil(get_last_timestamp(in) + ADDITIONNAL_TIME_AFTER_LAST_EVENT);
 
         plot(grid, in);
 
