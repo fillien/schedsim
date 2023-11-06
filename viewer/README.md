@@ -21,3 +21,8 @@ And use it with the trace you want to open :
 ```bash
 ./build/viewer/viewer trace.json
 ```
+
+Generate a RTsched diagram :
+```bash
+./build/viewer/viewer -o diagram.tex trace.json
+```
