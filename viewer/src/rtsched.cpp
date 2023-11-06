@@ -1,4 +1,5 @@
 #include "rtsched.hpp"
+#include "trace.hpp"
 
 #include <array>
 #include <cmath>
@@ -103,42 +104,45 @@ void new_deadline(grid& grid, double time, std::size_t tid)
         grid.commands.emplace_back(outputs::rtsched::TaskDeadline{tid, time});
 }
 
-void plot(grid& grid, const input_data& traces)
+void plot(grid& grid, const std::vector<std::pair<double, traces::trace>>& traces)
 {
         std::map<std::size_t, std::pair<double, std::size_t>> execution_times;
         std::map<std::size_t, double> extra_budget_times;
 
         for (const auto& tra : traces) {
-                double time = tra.first;
+                const auto timestamp = tra.first;
+                const auto event = tra.second;
                 std::visit(
                     overloaded{
-                        [&time, &grid](traces::job_arrival evt) {
-                                new_arrival(grid, time, evt.id);
+                        [&timestamp, &grid](traces::job_arrival evt) {
+                                new_arrival(grid, timestamp, evt.id);
                         },
-                        [&time, &grid](traces::serv_postpone evt) {
-                                new_deadline(grid, time, evt.id);
+                        [&timestamp, &grid](traces::serv_postpone evt) {
+                                new_deadline(grid, timestamp, evt.id);
                         },
-                        [&time, &grid](traces::serv_ready evt) {
-                                new_deadline(grid, time, evt.id);
+                        [&timestamp, &grid](traces::serv_ready evt) {
+                                new_deadline(grid, timestamp, evt.id);
                         },
-                        [&execution_times, &time](traces::task_scheduled evt) {
-                                open_execution_zone(execution_times, time, evt.id, evt.proc_id);
+                        [&execution_times, &timestamp](traces::task_scheduled evt) {
+                                open_execution_zone(
+                                    execution_times, timestamp, evt.id, evt.proc_id);
                         },
-                        [&execution_times, &time, &grid](traces::task_preempted evt) {
-                                close_execution_zone(execution_times, time, evt.id, grid);
+                        [&execution_times, &timestamp, &grid](traces::task_preempted evt) {
+                                close_execution_zone(execution_times, timestamp, evt.id, grid);
                         },
-                        [&execution_times, &extra_budget_times, &time,
+                        [&execution_times, &extra_budget_times, &timestamp,
                          &grid](traces::serv_non_cont evt) {
-                                close_execution_zone(execution_times, time, evt.id, grid);
-                                open_extra_budget_zone(extra_budget_times, time, evt.id);
+                                close_execution_zone(execution_times, timestamp, evt.id, grid);
+                                open_extra_budget_zone(extra_budget_times, timestamp, evt.id);
                         },
-                        [&execution_times, &extra_budget_times, &time,
+                        [&execution_times, &extra_budget_times, &timestamp,
                          &grid](traces::serv_inactive evt) {
-                                close_execution_zone(execution_times, time, evt.id, grid);
-                                close_extra_budget_zone(extra_budget_times, time, evt.id, grid);
+                                close_execution_zone(execution_times, timestamp, evt.id, grid);
+                                close_extra_budget_zone(
+                                    extra_budget_times, timestamp, evt.id, grid);
                         },
                         [](auto) {}},
-                    tra.second);
+                    event);
         }
 }
 
