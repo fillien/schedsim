@@ -11,10 +11,17 @@
 #include <unordered_map>
 #include <variant>
 
-server::server(const std::weak_ptr<engine>& sim, const std::weak_ptr<task>& attached_task)
-    : entity(sim), attached_task(attached_task){};
+server::server(const std::weak_ptr<engine>& sim) : entity(sim){};
 
-void server::change_state(const state& new_state) {
+void server::set_task(const std::shared_ptr<task>& task_to_attach)
+{
+        attached_task = task_to_attach;
+}
+
+void server::unset_task() { attached_task.reset(); }
+
+void server::change_state(const state& new_state)
+{
         assert(new_state != current_state);
 
         if (last_call != sim()->get_time()) {
@@ -22,6 +29,7 @@ void server::change_state(const state& new_state) {
                 cant_be_inactive = false;
         }
 
+        std::cout << "S" << id() << " ";
         std::cout << current_state << " -> " << new_state << std::endl;
 
         switch (new_state) {
@@ -58,7 +66,7 @@ void server::change_state(const state& new_state) {
                 break;
         }
         case state::running: {
-                assert(current_state == state::ready);
+                assert(current_state == state::ready || current_state == state::running);
                 // Dispatch
                 sim()->add_trace(events::serv_running{shared_from_this()});
                 last_update = sim()->get_time();
@@ -85,17 +93,21 @@ void server::change_state(const state& new_state) {
         }
 }
 
-void server::postpone() {
+void server::postpone()
+{
         relative_deadline += period();
+        std::cout << "S" << id() << " POSTPONED" << std::endl;
         sim()->add_trace(events::serv_postpone{shared_from_this(), relative_deadline});
 }
 
-auto operator<<(std::ostream& out, const server& serv) -> std::ostream& {
+auto operator<<(std::ostream& out, const server& serv) -> std::ostream&
+{
         return out << "S" << serv.id() << " P=" << serv.period() << " U=" << serv.utilization()
                    << " D=" << serv.relative_deadline << " V=" << serv.virtual_time;
 }
 
-auto operator<<(std::ostream& out, const server::state& serv_state) -> std::ostream& {
+auto operator<<(std::ostream& out, const server::state& serv_state) -> std::ostream&
+{
         using enum server::state;
         switch (serv_state) {
         case inactive: return out << "inactive";

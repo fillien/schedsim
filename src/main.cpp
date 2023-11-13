@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cassert>
 #include <cstdlib>
 #include <fstream>
@@ -11,7 +12,7 @@
 #include "entity.hpp"
 #include "event.hpp"
 #include "plateform.hpp"
-#include "sched_mono.hpp"
+//#include "sched_mono.hpp"
 #include "sched_parallel.hpp"
 #include "scheduler.hpp"
 #include "server.hpp"
@@ -19,7 +20,8 @@
 #include "yaml-cpp/node/node.h"
 #include "yaml-cpp/yaml.h"
 
-auto main(const int argc, const char** argv) -> int {
+auto main(const int argc, const char** argv) -> int
+{
         constexpr double START_TIME = 0;
 
         using namespace std;
@@ -42,13 +44,7 @@ auto main(const int argc, const char** argv) -> int {
 
         assert(!config_plat->processors.empty());
 
-        std::shared_ptr<scheduler> sched;
-        if (config_plat->processors.size() == 1) {
-                sched = std::dynamic_pointer_cast<scheduler>(
-                    make_shared<sched_mono>(sim, config_plat->processors.at(0)));
-        } else {
-                sched = std::dynamic_pointer_cast<scheduler>(make_shared<sched_parallel>(sim));
-        }
+        std::shared_ptr<scheduler> sched = make_shared<sched_parallel>(sim);
         sim->set_scheduler(sched);
 
         std::cout << "Platform: " << config_plat->processors.size() << " processors\n";
@@ -58,14 +54,15 @@ auto main(const int argc, const char** argv) -> int {
 
         // Create tasks and job arrival events
         for (auto node : config["tasks"]) {
-                auto new_task =
-                    make_shared<task>(sim, node["id"].as<int>(), node["period"].as<double>(),
-                                      node["utilization"].as<double>());
+                auto new_task = make_shared<task>(
+                    sim, node["id"].as<int>(), node["period"].as<double>(),
+                    node["utilization"].as<double>());
 
                 // For each job of tasks add a "job arrival" event in the future list
                 for (auto job : node["jobs"]) {
-                        sim->add_event(events::job_arrival{new_task, job["duration"].as<double>()},
-                                       job["arrival"].as<double>());
+                        sim->add_event(
+                            events::job_arrival{new_task, job["duration"].as<double>()},
+                            job["arrival"].as<double>());
                 }
                 tasks.push_back(std::move(new_task));
         }

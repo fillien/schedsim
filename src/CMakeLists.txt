@@ -1,7 +1,7 @@
 # Color ninja output
-add_compile_options(-fdiagnostics-color=always -fsanitize=address)
+#add_compile_options(-fdiagnostics-color=always -fsanitize=address)
 #add_compile_options(-fdiagnostics-color=always)
-add_link_options(-fsanitize=address)
+#add_link_options(-fsanitize=address)
 
 file(GLOB source
   "main.cpp"

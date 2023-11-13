@@ -1,7 +1,8 @@
 ﻿---
-AlignAfterOpenBracket: Align
+AlignAfterOpenBracket: AlwaysBreak
 AlignConsecutiveMacros: 'true'
 AllowShortCaseLabelsOnASingleLine: 'true'
+BreakBeforeBraces: Stroustrup
 ColumnLimit: '100'
 IndentWidth: '8'
 Language: Cpp

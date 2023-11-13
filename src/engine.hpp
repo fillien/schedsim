@@ -64,7 +64,8 @@ class engine {
          * @brief Setter to attach a plateform.
          * @param new_plateform
          */
-        void set_plateform(const std::shared_ptr<plateform>& new_plateform) {
+        void set_plateform(const std::shared_ptr<plateform>& new_plateform)
+        {
                 current_plateform = new_plateform;
         };
 
@@ -74,13 +75,15 @@ class engine {
          */
         void simulation();
 
-        [[nodiscard]] auto get_plateform() const -> std::shared_ptr<plateform> {
+        [[nodiscard]] auto get_plateform() const -> std::shared_ptr<plateform>
+        {
                 return current_plateform;
         };
 
         [[nodiscard]] auto get_time() const -> double { return current_timestamp; };
 
-        [[nodiscard]] auto get_future_list() const -> std::multimap<double, events::event> {
+        [[nodiscard]] auto get_future_list() const -> std::multimap<double, events::event>
+        {
                 return this->future_list;
         };
 
@@ -93,6 +96,13 @@ class engine {
          * @brief Add a trace to logs (past list)
          */
         void add_trace(const events::event& new_trace);
+
+        static void round_zero(double& value)
+        {
+                if (value >= -ZERO_ROUNDED || value <= ZERO_ROUNDED) {
+                        value = 0;
+                }
+        }
 
         auto print() -> std::string { return print_json(past_list); };
 };

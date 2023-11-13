@@ -6,11 +6,12 @@
 #include <queue>
 
 class processor;
+class server;
 
 /**
  * @brief task A model of a user code that is executed by a processor
  */
-class task : public entity {
+class task : public entity, public std::enable_shared_from_this<task> {
       public:
         /**
          * @brief A unique id
@@ -38,8 +39,9 @@ class task : public entity {
          * @param period The period of the task.
          * @param utilization The utilization tacken when active.
          */
-        task(const std::weak_ptr<engine>& sim, int tid, const double& period,
-             const double& utilization);
+        task(
+            const std::weak_ptr<engine>& sim, int tid, const double& period,
+            const double& utilization);
 
         /**
          * @brief Return true if the task is currently attached to a processor
@@ -62,13 +64,19 @@ class task : public entity {
         /**
          * @brief Return remaining execution time
          */
-        [[nodiscard]] auto get_remaining_time() const -> double {
+        [[nodiscard]] auto get_remaining_time() const -> double
+        {
                 return remaining_execution_time;
         };
 
         [[nodiscard]] auto has_job() const -> bool { return !pending_jobs.empty(); };
 
         void next_job();
+
+        [[nodiscard]] auto get_server() const -> std::shared_ptr<server> { return attached_serv; };
+        void set_server(const std::shared_ptr<server>& serv_to_attach);
+        void unset_server();
+        [[nodiscard]] auto has_server() const -> bool;
 
       private:
         /**
@@ -84,6 +92,8 @@ class task : public entity {
          * job, the remaining_execution_time is set to the next job wcet.
          */
         std::queue<double> pending_jobs;
+
+        std::shared_ptr<server> attached_serv{};
 };
 
 #endif

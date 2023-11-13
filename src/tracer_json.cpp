@@ -6,7 +6,8 @@
 #include <string>
 
 // auto print_json(const std::pair<double, events::event>& evt) -> std::string {
-auto print_json(const std::multimap<double, events::event>& log) -> std::string {
+auto print_json(const std::multimap<double, events::event>& log) -> std::string
+{
         using json = nlohmann::json;
 
         std::ostringstream out;

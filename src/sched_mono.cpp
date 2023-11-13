@@ -4,11 +4,13 @@
 #include <memory>
 #include <ranges>
 
-auto sched_mono::is_in_runqueue(const std::shared_ptr<server>& current_server) -> bool {
+auto sched_mono::is_in_runqueue(const std::shared_ptr<server>& current_server) -> bool
+{
         return is_ready_server(current_server) || is_running_server(current_server);
 }
 
-auto sched_mono::get_active_bandwidth() -> double {
+auto sched_mono::get_active_bandwidth() -> double
+{
         double active_bandwidth{0};
         for (auto serv : servers) {
                 if (is_active_server(serv)) {
@@ -18,18 +20,21 @@ auto sched_mono::get_active_bandwidth() -> double {
         return active_bandwidth;
 }
 
-auto sched_mono::get_server_budget(const std::shared_ptr<server>& serv) -> double {
+auto sched_mono::get_server_budget(const std::shared_ptr<server>& serv) -> double
+{
         const double active_bw = get_active_bandwidth();
         return serv->utilization() / active_bw * (serv->relative_deadline - serv->virtual_time);
 }
 
-auto sched_mono::get_server_new_virtual_time(const std::shared_ptr<server>& serv,
-                                             const double& running_time) -> double {
+auto sched_mono::get_server_new_virtual_time(
+    const std::shared_ptr<server>& serv, const double& running_time) -> double
+{
         const auto active_bw = get_active_bandwidth();
         return serv->virtual_time + running_time * (active_bw / serv->utilization());
 }
 
-auto sched_mono::admission_test(const std::shared_ptr<task>& new_task) -> bool {
+auto sched_mono::admission_test(const std::shared_ptr<task>& new_task) -> bool
+{
         double active_utilisation{0};
         for (auto serv : servers) {
                 if (serv->current_state != server::state::inactive) {
@@ -43,7 +48,8 @@ auto sched_mono::admission_test(const std::shared_ptr<task>& new_task) -> bool {
         return (new_task->utilization + active_utilisation) <= 1;
 }
 
-void sched_mono::custom_scheduler() {
+void sched_mono::custom_scheduler()
+{
         // Check if there is no active and running server
         auto runqueue_servers = servers | std::views::filter(is_in_runqueue);
 
@@ -59,7 +65,8 @@ void sched_mono::custom_scheduler() {
                 if (deadline_order(highest_priority_server, running_server)) {
                         resched_proc(proc, highest_priority_server);
                 }
-        } else {
+        }
+        else {
                 resched_proc(proc, highest_priority_server);
         }
 }

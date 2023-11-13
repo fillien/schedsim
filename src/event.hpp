@@ -82,10 +82,10 @@ struct virtual_time_update {
         double new_virtual_time;
 };
 
-using event = std::variant<resched, sim_finished, virtual_time_update, job_arrival, job_finished,
-                           proc_activated, proc_idled, serv_budget_exhausted, serv_inactive,
-                           serv_budget_replenished, serv_non_cont, serv_postpone, serv_ready,
-                           serv_running, task_preempted, task_scheduled, task_rejected>;
+using event = std::variant<
+    resched, sim_finished, virtual_time_update, job_arrival, job_finished, proc_activated,
+    proc_idled, serv_budget_exhausted, serv_inactive, serv_budget_replenished, serv_non_cont,
+    serv_postpone, serv_ready, serv_running, task_preempted, task_scheduled, task_rejected>;
 }; // namespace events
 
 #endif

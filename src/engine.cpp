@@ -11,15 +11,18 @@
 #include <map>
 #include <memory>
 
-void engine::add_event(const events::event& new_event, const double& timestamp) {
+void engine::add_event(const events::event& new_event, const double& timestamp)
+{
         future_list.insert({timestamp, std::move(new_event)});
 }
 
-void engine::add_trace(const events::event& new_trace) {
+void engine::add_trace(const events::event& new_trace)
+{
         past_list.insert({current_timestamp, std::move(new_trace)});
 }
 
-void engine::simulation() {
+void engine::simulation()
+{
         // Loop until all events have been executed
         while (!future_list.empty()) {
                 // A vector to store all the event of the current timestamp

@@ -10,22 +10,25 @@
 
 processor::processor(const std::weak_ptr<engine>& sim, int cpu_id) : entity(sim), id(cpu_id){};
 
-void processor::set_server(std::weak_ptr<server> server_to_execute) {
+void processor::set_server(std::weak_ptr<server> server_to_execute)
+{
         assert(!server_to_execute.expired());
         auto const& serv = server_to_execute.lock();
 
         running_server = serv;
-        serv->attached_task->attached_proc = shared_from_this();
-        sim()->add_trace(events::task_scheduled{serv->attached_task, shared_from_this()});
+        serv->get_task()->attached_proc = shared_from_this();
+        sim()->add_trace(events::task_scheduled{serv->get_task(), shared_from_this()});
 }
 
-void processor::clear_server() {
+void processor::clear_server()
+{
         std::cout << "clear server on proc " << id << std::endl;
-        running_server.lock()->attached_task->attached_proc = nullptr;
+        running_server.lock()->get_task()->attached_proc = nullptr;
         this->running_server.reset();
 }
 
-void processor::change_state(const processor::state& next_state) {
+void processor::change_state(const processor::state& next_state)
+{
         // assert that a processor can't enter twice in the same state
         if (next_state == current_state) {
                 return;
@@ -45,10 +48,12 @@ void processor::change_state(const processor::state& next_state) {
         }
 }
 
-void processor::update_state() {
+void processor::update_state()
+{
         if (has_server_running()) {
                 change_state(state::running);
-        } else {
+        }
+        else {
                 change_state(state::idle);
         }
 }
