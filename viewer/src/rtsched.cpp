@@ -118,10 +118,10 @@ void plot(grid& grid, const std::vector<std::pair<double, traces::trace>>& trace
                                 new_arrival(grid, timestamp, evt.id);
                         },
                         [&timestamp, &grid](traces::serv_postpone evt) {
-                                new_deadline(grid, timestamp, evt.id);
+                                new_deadline(grid, evt.new_deadline, evt.id);
                         },
                         [&timestamp, &grid](traces::serv_ready evt) {
-                                new_deadline(grid, timestamp, evt.id);
+                                new_deadline(grid, evt.deadline, evt.id);
                         },
                         [&execution_times, &timestamp](traces::task_scheduled evt) {
                                 open_execution_zone(
