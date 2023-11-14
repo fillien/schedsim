@@ -45,13 +45,10 @@ auto sched_parallel::processor_order(const processor& first, const processor& se
 
 auto sched_parallel::get_inactive_bandwidth() -> double
 {
-        double inactive_bandwidth{0};
-        for (auto serv : servers) {
-                if (serv->current_state == server::state::inactive) {
-                        inactive_bandwidth += serv->utilization();
-                }
-        }
-        return inactive_bandwidth;
+        const auto TOTAL_UTILIZATION{get_total_utilization()};
+        const auto MAX_UTILIZATION{get_max_utilization(servers)};
+        const auto NB_PROCS{static_cast<double>(get_nb_active_procs())};
+        return NB_PROCS - (NB_PROCS - 1) * MAX_UTILIZATION - TOTAL_UTILIZATION;
 }
 
 auto sched_parallel::get_nb_active_procs(const double& new_utilization) -> std::size_t
