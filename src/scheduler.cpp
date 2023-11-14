@@ -299,6 +299,41 @@ void scheduler::update_server_times(const std::shared_ptr<server>& serv)
         serv->last_update = sim()->get_time();
 }
 
+void scheduler::cancel_alarms(const server& serv)
+{
+        /// @TODO replace with iterator inside server and/or server if performance needed.
+        using namespace events;
+        const auto tid = serv.id();
+        std::erase_if(sim()->future_list, [tid](const auto& entry) {
+                if (const auto& evt = std::get_if<serv_budget_exhausted>(&entry.second)) {
+                        return evt->serv->id() == tid;
+                }
+                if (const auto& evt = std::get_if<job_finished>(&entry.second)) {
+                        return evt->server_of_job->id() == tid;
+                }
+                return false;
+        });
+}
+
+void scheduler::set_alarms(const std::shared_ptr<server>& serv)
+{
+        using namespace events;
+        const double new_budget{get_server_budget(serv)};
+        const double remaining_time{serv->remaining_exec_time()};
+
+        assert(new_budget >= 0);
+        assert(remaining_time >= 0);
+
+        sim()->add_trace(serv_budget_replenished{serv, new_budget});
+
+        if (new_budget < remaining_time) {
+                sim()->add_event(serv_budget_exhausted{serv}, sim()->get_time() + new_budget);
+        }
+        else {
+                sim()->add_event(job_finished{serv}, sim()->get_time() + remaining_time);
+        }
+}
+
 void scheduler::resched()
 {
         sim()->add_trace(events::resched{});
@@ -311,27 +346,7 @@ void scheduler::resched_proc(
         if (proc->has_server_running()) {
                 // Remove all future event of type BUDGET_EXHAUSTED and JOB_FINISHED of the server
                 // that will be preempted
-                const auto proc_server_id = proc->get_server()->id();
-                std::erase_if(sim()->future_list, [proc_server_id](const auto& evt) {
-                        if (std::holds_alternative<events::serv_budget_exhausted>(evt.second)) {
-                                const auto& [serv] =
-                                    std::get<events::serv_budget_exhausted>(evt.second);
-                                if (serv->id() == proc_server_id) {
-                                        std::cout << "REMOVE BUDGET_EXHAUSTED FOR S" << serv->id()
-                                                  << std::endl;
-                                }
-                                return serv->id() == proc_server_id;
-                        }
-                        if (std::holds_alternative<events::job_finished>(evt.second)) {
-                                const auto& [serv] = std::get<events::job_finished>(evt.second);
-                                if (serv->id() == proc_server_id) {
-                                        std::cout << "REMOVE JOB_FINISHED FOR S" << serv->id()
-                                                  << std::endl;
-                                }
-                                return serv->id() == proc_server_id;
-                        }
-                        return false;
-                });
+                cancel_alarms(*server_to_execute);
 
                 sim()->add_trace(events::task_preempted{proc->get_server()->get_task()});
                 proc->get_server()->change_state(server::state::ready);

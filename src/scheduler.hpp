@@ -54,6 +54,15 @@ class scheduler : public entity {
             const std::shared_ptr<server>& server_to_execute);
         void update_server_times(const std::shared_ptr<server>& serv);
         void update_running_servers();
+
+        /**
+         * @brief Remove all future event of type BUDGET_EXHAUSTED and JOB_FINISHED of the given
+         * server
+         * @param serv The server with alarms
+         */
+        void cancel_alarms(const server& serv);
+        void set_alarms(const std::shared_ptr<server>& serv);
+
         virtual auto
         get_server_new_virtual_time(const std::shared_ptr<server>& serv, const double& running_time)
             -> double = 0;

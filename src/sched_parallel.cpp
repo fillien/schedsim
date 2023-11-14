@@ -136,59 +136,10 @@ void sched_parallel::custom_scheduler()
         // Set next job finish or budget exhausted event for each proc with a task
         for (auto proc : sim()->get_plateform()->processors) {
                 if (proc->has_server_running()) {
-                        const auto& serv = proc->get_server();
-
-                        const auto proc_server_id = proc->get_server()->id();
-                        std::erase_if(sim()->future_list, [proc_server_id](const auto& evt) {
-                                if (std::holds_alternative<events::serv_budget_exhausted>(
-                                        evt.second)) {
-                                        const auto& [serv] =
-                                            std::get<events::serv_budget_exhausted>(evt.second);
-                                        if (serv->id() == proc_server_id) {
-                                                std::cout << "REMOVE BUDGET_EXHAUSTED FOR S"
-                                                          << serv->id() << " AT " << evt.first
-                                                          << std::endl;
-                                        }
-                                        return serv->id() == proc_server_id;
-                                }
-                                if (std::holds_alternative<events::job_finished>(evt.second)) {
-                                        const auto& [serv] =
-                                            std::get<events::job_finished>(evt.second);
-                                        if (serv->id() == proc_server_id) {
-                                                std::cout << "REMOVE JOB_FINISHED FOR S"
-                                                          << serv->id() << std::endl;
-                                        }
-                                        return serv->id() == proc_server_id;
-                                }
-                                return false;
-                        });
-
-                        // Compute the budget of the selected server
-                        double new_server_budget = get_server_budget(serv);
-                        double task_remaining_time = serv->remaining_exec_time();
-
-                        assert(new_server_budget >= 0);
-                        assert(task_remaining_time >= 0);
-
-                        sim()->add_trace(events::serv_budget_replenished{serv, new_server_budget});
-
-                        // Insert the next event about this server in the future list
-                        if (new_server_budget < task_remaining_time) {
-                                // Insert a budget exhausted event
-                                sim()->add_event(
-                                    events::serv_budget_exhausted{serv},
-                                    sim()->get_time() + new_server_budget);
-                                std::cout << "INSERT BUDGET_EXHAUSTED FOR S" << serv->id() << " AT "
-                                          << sim()->get_time() + new_server_budget << std::endl;
-                        }
-                        else {
-                                // Insert an end of task event
-                                std::cout << "INSERT JOB_FINISHED FOR S" << serv->id() << std::endl;
-                                sim()->add_event(
-                                    events::job_finished{serv},
-                                    sim()->get_time() + task_remaining_time);
-                        }
-                        std::cout << "S" << serv->id() << " on P" << proc->get_id() << std::endl;
+                        cancel_alarms(*proc->get_server());
+                        set_alarms(proc->get_server());
+                        std::cout << "S" << proc->get_server()->id() << " on P" << proc->get_id()
+                                  << std::endl;
                 }
         }
 }
