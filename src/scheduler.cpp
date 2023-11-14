@@ -23,7 +23,17 @@
 #include <variant>
 #include <vector>
 
-auto get_priority(const events::event& evt) -> int { return std::visit(priorities{}, evt); };
+auto get_priority(const events::event& evt) -> int
+{
+        constexpr static int MIN_PRIORITY = 100;
+        return std::visit(
+            overloaded{
+                [](events::job_finished&) { return 0; },
+                [](events::serv_budget_exhausted&) { return 1; },
+                [](events::job_arrival&) { return 2; }, [](events::serv_inactive&) { return 3; },
+                [](auto&) { return MIN_PRIORITY; }},
+            evt);
+};
 
 void scheduler::update_running_servers()
 {
@@ -34,48 +44,47 @@ void scheduler::update_running_servers()
         }
 };
 
-auto scheduler::is_running_server(const std::shared_ptr<server>& current_server) -> bool
+auto scheduler::is_running_server(const server& serv) -> bool
 {
-        return current_server->current_state == server::state::running;
+        return serv.current_state == server::state::running;
 }
 
-auto scheduler::is_ready_server(const std::shared_ptr<server>& current_server) -> bool
+auto scheduler::is_ready_server(const server& serv) -> bool
 {
-        return current_server->current_state == server::state::ready;
+        return serv.current_state == server::state::ready;
 }
 
-auto scheduler::has_job_server(const std::shared_ptr<server>& current_server) -> bool
+auto scheduler::has_job_server(const server& serv) -> bool
 {
-        return (current_server->current_state == server::state::ready) ||
-               (current_server->current_state == server::state::running);
+        return (serv.current_state == server::state::ready) ||
+               (serv.current_state == server::state::running);
 }
 
-auto scheduler::is_active_server(const std::shared_ptr<server>& current_server) -> bool
+auto scheduler::is_active_server(const server& serv) -> bool
 {
-        return current_server->current_state != server::state::inactive;
+        return serv.current_state != server::state::inactive;
 }
 
 /// Compare two servers and return true if the first have an highest priority
-auto scheduler::deadline_order(
-    const std::shared_ptr<server>& first, const std::shared_ptr<server>& second) -> bool
+auto scheduler::deadline_order(const server& first, const server& second) -> bool
 {
-        if (first->relative_deadline == second->relative_deadline) {
-                if (first->current_state == server::state::running) {
+        if (first.relative_deadline == second.relative_deadline) {
+                if (first.current_state == server::state::running) {
                         return true;
                 }
-                if (second->current_state == server::state::running) {
+                if (second.current_state == server::state::running) {
                         return false;
                 }
-                return first->id() < second->id();
+                return first.id() < second.id();
         }
-        return first->relative_deadline < second->relative_deadline;
+        return first.relative_deadline < second.relative_deadline;
 }
 
 auto scheduler::get_active_bandwidth() const -> double
 {
         double active_bandwidth{0};
         for (const auto& serv : servers) {
-                if (is_active_server(serv)) {
+                if (is_active_server(*serv)) {
                         active_bandwidth += serv->utilization();
                 }
         }
@@ -86,12 +95,8 @@ void scheduler::detach_server_if_needed(const std::shared_ptr<task>& inactive_ta
 {
         // Check if there is a future job arrival
         auto search = std::ranges::find_if(sim()->future_list, [inactive_task](auto& evt) {
-                if (std::holds_alternative<events::job_arrival>(evt.second)) {
-                        auto new_task = std::get<events::job_arrival>(evt.second);
-                        if (new_task.task_of_job == inactive_task) {
-                                std::cout << "There is a job in the future" << std::endl;
-                                return true;
-                        }
+                if (const auto& new_task = std::get_if<events::job_arrival>(&evt.second)) {
+                        return (new_task->task_of_job == inactive_task);
                 }
                 return false;
         });
@@ -114,10 +119,6 @@ void scheduler::handle(std::vector<events::event> evts)
                     return get_priority(ev1) > get_priority(ev2);
             });
 
-        for (auto& evt : evts) {
-                std::cout << std::visit(log_json{}, evt) << std::endl;
-        }
-
         // Reset flags
         this->need_resched = false;
 
@@ -128,12 +129,10 @@ void scheduler::handle(std::vector<events::event> evts)
                         const auto& [serv] = std::get<events::job_finished>(evt);
                         auto is_there_new_job{false};
                         for (auto future_evt : evts) {
-                                if (std::holds_alternative<events::job_arrival>(future_evt)) {
-                                        const auto& [future_evt_task, job_duration] =
-                                            std::get<events::job_arrival>(future_evt);
-                                        if (future_evt_task == serv->get_task()) {
-                                                is_there_new_job = true;
-                                        }
+                                if (const auto& job_evt =
+                                        std::get_if<events::job_arrival>(&future_evt)) {
+                                        is_there_new_job =
+                                            (job_evt->task_of_job == serv->get_task());
                                 }
                         }
                         handle_job_finished(serv, is_there_new_job);
@@ -176,7 +175,7 @@ void scheduler::handle_serv_inactive(const std::shared_ptr<server>& serv)
         detach_server_if_needed(serv->get_task());
 
         // Update running server if there is one
-        auto running_servers = servers | std::views::filter(is_running_server);
+        auto running_servers = servers | std::views::filter(from_shared<server>(is_running_server));
         for (auto& serv : running_servers) {
                 update_server_times(serv);
         }
@@ -209,7 +208,8 @@ void scheduler::handle_job_arrival(
 
         if (new_task->get_server()->current_state == server::state::inactive) {
                 // Update running server if there is one
-                auto running_servers = servers | std::views::filter(is_running_server);
+                auto running_servers =
+                    servers | std::views::filter(from_shared<server>(is_running_server));
                 for (auto& serv : running_servers) {
                         update_server_times(serv);
                 }
@@ -354,10 +354,9 @@ void scheduler::resched_proc(
         }
 
         if (server_to_execute->current_state == server::state::running) {
-                std::cout << "server_to_execute " << server_to_execute->id()
-                          << " is running on proc "
-                          << server_to_execute->get_task()->attached_proc->get_id()
-                          << " and want to execute on proc " << proc->get_id() << std::endl;
+                std::cout << "migration of server S" << server_to_execute->id() << " from P"
+                          << server_to_execute->get_task()->attached_proc->get_id() << " to P"
+                          << proc->get_id() << std::endl;
         }
         else {
                 server_to_execute->change_state(server::state::running);

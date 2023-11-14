@@ -8,17 +8,6 @@
 #include <memory>
 #include <vector>
 
-struct priorities {
-        constexpr static int MIN_PRIORITY = 100;
-        auto operator()([[maybe_unused]] const events::job_finished& evt) { return 0; };
-        auto operator()([[maybe_unused]] const events::serv_budget_exhausted& evt) { return 1; };
-        auto operator()([[maybe_unused]] const events::job_arrival& evt) { return 2; };
-        auto operator()([[maybe_unused]] const events::serv_inactive& evt) { return 3; };
-        auto operator()([[maybe_unused]] auto& evt) { return MIN_PRIORITY; };
-};
-
-auto get_priority(const events::event& evt) -> int;
-
 /**
  * @brief A class that handle the events of the system accordingly to a scheduling policy.
  */
@@ -40,13 +29,11 @@ class scheduler : public entity {
          */
         std::vector<std::shared_ptr<server>> servers;
 
-        static auto is_running_server(const std::shared_ptr<server>& current_server) -> bool;
-        static auto is_ready_server(const std::shared_ptr<server>& current_server) -> bool;
-        static auto is_active_server(const std::shared_ptr<server>& current_server) -> bool;
-        static auto has_job_server(const std::shared_ptr<server>& current_server) -> bool;
-        static auto
-        deadline_order(const std::shared_ptr<server>& first, const std::shared_ptr<server>& second)
-            -> bool;
+        static auto is_running_server(const server& serv) -> bool;
+        static auto is_ready_server(const server& serv) -> bool;
+        static auto is_active_server(const server& serv) -> bool;
+        static auto has_job_server(const server& serv) -> bool;
+        static auto deadline_order(const server& first, const server& second) -> bool;
         [[nodiscard]] auto get_total_utilization() const -> double { return total_utilization; };
 
         void resched_proc(

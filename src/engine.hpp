@@ -12,6 +12,28 @@
 #include <sstream>
 #include <variant>
 
+template <class... Ts> struct overloaded : Ts... {
+        using Ts::operator()...;
+};
+
+template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
+template <typename T>
+auto from_shared(std::function<bool(const T&)> func)
+    -> std::function<bool(const std::shared_ptr<T>&)>
+{
+        return [func](const std::shared_ptr<T>& arg) -> bool { return func(*arg); };
+}
+
+template <typename T>
+auto from_shared(std::function<bool(const T&, const T&)> func)
+    -> std::function<bool(const std::shared_ptr<T>&, const std::shared_ptr<T>&)>
+{
+        return [func](const std::shared_ptr<T>& arg1, const std::shared_ptr<T>& arg2) -> bool {
+                return func(*arg1, *arg2);
+        };
+}
+
 /**
  * @brief According to a platform and a scheduler, the class simulate in order of time each events
  * contains in the future list

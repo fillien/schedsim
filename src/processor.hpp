@@ -28,7 +28,7 @@ class processor : public entity, public std::enable_shared_from_this<processor> 
 
         void clear_server();
 
-        auto get_server() -> std::shared_ptr<server>
+        auto get_server() const -> std::shared_ptr<server>
         {
                 assert(!running_server.expired());
                 return this->running_server.lock();
