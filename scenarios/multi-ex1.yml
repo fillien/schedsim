@@ -20,7 +20,7 @@ tasks:
       - arrival: 6
         duration: 2
 
-  - id: 2
+  - id: 3
     period: 2
     utilization: 0.25
     jobs:
