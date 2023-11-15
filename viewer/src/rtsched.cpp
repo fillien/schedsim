@@ -48,9 +48,7 @@ auto get_color(std::size_t cpu_id) -> std::string
 auto get_last_timestamp(const input_data& traces) -> double
 {
         double last_timestamp{0};
-        if (traces.rbegin() != traces.rend()) {
-                last_timestamp = std::prev(traces.end())->first;
-        }
+        if (traces.rbegin() != traces.rend()) { last_timestamp = std::prev(traces.end())->first; }
 
         return last_timestamp;
 }

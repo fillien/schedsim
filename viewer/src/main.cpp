@@ -28,9 +28,7 @@ auto main(int argc, char* argv[]) -> int
         const std::vector<std::string_view> args(argv + 1, argv + argc);
         std::vector<std::pair<double, traces::trace>> input_traces{};
 
-        if (args.empty()) {
-                throw std::runtime_error("No input traces file");
-        }
+        if (args.empty()) { throw std::runtime_error("No input traces file"); }
 
         for (auto arg = std::begin(args); arg != std::end(args); ++arg) {
                 if (*arg == "-o" || *arg == "--output") {

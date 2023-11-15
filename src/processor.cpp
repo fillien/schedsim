@@ -30,9 +30,7 @@ void processor::clear_server()
 void processor::change_state(const processor::state& next_state)
 {
         // assert that a processor can't enter twice in the same state
-        if (next_state == current_state) {
-                return;
-        }
+        if (next_state == current_state) { return; }
 
         switch (next_state) {
         case state::idle: {
@@ -50,9 +48,7 @@ void processor::change_state(const processor::state& next_state)
 
 void processor::update_state()
 {
-        if (has_server_running()) {
-                change_state(state::running);
-        }
+        if (has_server_running()) { change_state(state::running); }
         else {
                 change_state(state::idle);
         }

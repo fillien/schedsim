@@ -43,7 +43,5 @@ void engine::simulation()
                 sched->handle(current_events);
         }
 
-        if (future_list.empty()) {
-                add_trace(events::sim_finished{});
-        }
+        if (future_list.empty()) { add_trace(events::sim_finished{}); }
 }

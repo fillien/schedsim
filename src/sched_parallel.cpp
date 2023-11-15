@@ -18,7 +18,8 @@
 #include <vector>
 
 auto get_max_utilization(
-    std::vector<std::shared_ptr<server>>& servers, const double& new_utilization = 0) -> double
+    const std::vector<std::shared_ptr<server>>& servers, const double& new_utilization = 0)
+    -> double
 {
         if (std::distance(std::begin(servers), std::end(servers)) > 0) {
                 auto u_max = std::max_element(
@@ -34,16 +35,12 @@ auto get_max_utilization(
 
 auto sched_parallel::processor_order(const processor& first, const processor& second) -> bool
 {
-        if (!first.has_server_running()) {
-                return false;
-        }
-        if (!second.has_server_running()) {
-                return true;
-        }
+        if (!first.has_server_running()) { return false; }
+        if (!second.has_server_running()) { return true; }
         return deadline_order(*(first.get_server()), *(second.get_server()));
 }
 
-auto sched_parallel::get_inactive_bandwidth() -> double
+auto sched_parallel::get_inactive_bandwidth() const -> double
 {
         const auto TOTAL_UTILIZATION{get_total_utilization()};
         const auto MAX_UTILIZATION{get_max_utilization(servers)};
@@ -51,7 +48,7 @@ auto sched_parallel::get_inactive_bandwidth() -> double
         return NB_PROCS - (NB_PROCS - 1) * MAX_UTILIZATION - TOTAL_UTILIZATION;
 }
 
-auto sched_parallel::get_nb_active_procs(const double& new_utilization) -> std::size_t
+auto sched_parallel::get_nb_active_procs(const double& new_utilization) const -> std::size_t
 {
         constexpr double MIN_NB_PROCS{1};
         const auto MAX_NB_PROCS{static_cast<double>(sim()->get_plateform()->processors.size())};
@@ -64,35 +61,33 @@ auto sched_parallel::get_nb_active_procs(const double& new_utilization) -> std::
         return static_cast<std::size_t>(nb_procs);
 }
 
-auto sched_parallel::get_server_budget(const std::shared_ptr<server>& serv) -> double
+auto sched_parallel::get_server_budget(const server& serv) const -> double
 {
         const double NB_ACTIVE_PROCS{static_cast<double>(get_nb_active_procs())};
         const auto bandwidth{1 - (get_inactive_bandwidth() / NB_ACTIVE_PROCS)};
-        return serv->utilization() / bandwidth * (serv->relative_deadline - serv->virtual_time);
+        return serv.utilization() / bandwidth * (serv.relative_deadline - serv.virtual_time);
 }
 
-auto sched_parallel::get_server_new_virtual_time(
-    const std::shared_ptr<server>& serv, const double& running_time) -> double
+auto sched_parallel::get_server_virtual_time(const server& serv, const double& running_time)
+    -> double
 {
         const double NB_ACTIVE_PROCS{static_cast<double>(get_nb_active_procs())};
         const auto bandwidth{1 - (get_inactive_bandwidth() / NB_ACTIVE_PROCS)};
-        return serv->virtual_time + bandwidth / serv->utilization() * running_time;
+        return serv.virtual_time + bandwidth / serv.utilization() * running_time;
 }
 
-auto sched_parallel::admission_test([[maybe_unused]] const std::shared_ptr<task>& new_task) -> bool
+auto sched_parallel::admission_test(const task& new_task) const -> bool
 {
-        const auto NB_PROCS{static_cast<double>(get_nb_active_procs(new_task->utilization))};
-        const auto U_MAX{get_max_utilization(servers, new_task->utilization)};
-        const auto NEW_TOTAL_UTILIZATION{get_total_utilization() + new_task->utilization};
+        const auto NB_PROCS{static_cast<double>(get_nb_active_procs(new_task.utilization))};
+        const auto U_MAX{get_max_utilization(servers, new_task.utilization)};
+        const auto NEW_TOTAL_UTILIZATION{get_total_utilization() + new_task.utilization};
         return (NEW_TOTAL_UTILIZATION <= (NB_PROCS - (NB_PROCS - 1) * U_MAX));
 }
 
 void sched_parallel::custom_scheduler()
 {
         for (auto proc : sim()->get_plateform()->processors) {
-                if (proc->has_server_running()) {
-                        update_server_times(proc->get_server());
-                }
+                if (proc->has_server_running()) { update_server_times(proc->get_server()); }
         }
 
         while (true) {
@@ -101,10 +96,11 @@ void sched_parallel::custom_scheduler()
                     servers | std::views::filter(from_shared<server>(is_ready_server));
 
                 std::cout << "nb ready_servers: "
-                          << std::distance(ready_servers.begin(), ready_servers.end()) << std::endl;
+                          << std::distance(std::begin(ready_servers), std::end(ready_servers))
+                          << std::endl;
 
                 // Check if there are servers in ready or running state
-                if (std::distance(ready_servers.begin(), ready_servers.end()) == 0) {
+                if (std::distance(std::begin(ready_servers), std::end(ready_servers)) == 0) {
                         break;
                 }
 

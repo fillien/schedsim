@@ -121,9 +121,7 @@ class engine {
 
         static void round_zero(double& value)
         {
-                if (value >= -ZERO_ROUNDED || value <= ZERO_ROUNDED) {
-                        value = 0;
-                }
+                if (value >= -ZERO_ROUNDED || value <= ZERO_ROUNDED) { value = 0; }
         }
 
         auto print() -> std::string { return print_json(past_list); };

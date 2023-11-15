@@ -34,7 +34,7 @@ class scheduler : public entity {
         static auto is_active_server(const server& serv) -> bool;
         static auto has_job_server(const server& serv) -> bool;
         static auto deadline_order(const server& first, const server& second) -> bool;
-        [[nodiscard]] auto get_total_utilization() const -> double { return total_utilization; };
+        auto get_total_utilization() const -> double { return total_utilization; };
 
         void resched_proc(
             const std::shared_ptr<processor>& proc_with_server,
@@ -50,11 +50,10 @@ class scheduler : public entity {
         void cancel_alarms(const server& serv);
         void set_alarms(const std::shared_ptr<server>& serv);
 
-        virtual auto
-        get_server_new_virtual_time(const std::shared_ptr<server>& serv, const double& running_time)
+        virtual auto get_server_virtual_time(const server& serv, const double& running_time)
             -> double = 0;
-        virtual auto get_server_budget(const std::shared_ptr<server>& serv) -> double = 0;
-        virtual auto admission_test(const std::shared_ptr<task>& new_task) -> bool = 0;
+        virtual auto get_server_budget(const server& serv) const -> double = 0;
+        virtual auto admission_test(const task& new_task) const -> bool = 0;
         virtual void custom_scheduler() = 0;
 
       public:
@@ -62,7 +61,7 @@ class scheduler : public entity {
         virtual ~scheduler() = default;
 
         void handle(std::vector<events::event> evts);
-        [[nodiscard]] auto get_active_bandwidth() const -> double;
+        auto get_active_bandwidth() const -> double;
 };
 
 #endif

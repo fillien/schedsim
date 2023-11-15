@@ -49,9 +49,7 @@ auto inputs::json::parse_trace(nlohmann::json trace) -> traces::trace
             {"virtual_time_update", virtual_time_update{}}};
 
         auto search = to_trace.find(trace.at("type").get<std::string>());
-        if (search == std::end(to_trace)) {
-                throw std::out_of_range("Unsupported event");
-        }
+        if (search == std::end(to_trace)) { throw std::out_of_range("Unsupported event"); }
 
         traces::trace out;
 

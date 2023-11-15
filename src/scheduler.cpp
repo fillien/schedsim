@@ -38,9 +38,7 @@ auto get_priority(const events::event& evt) -> int
 void scheduler::update_running_servers()
 {
         for (const auto& proc : sim()->get_plateform()->processors) {
-                if (proc->has_server_running()) {
-                        update_server_times(proc->get_server());
-                }
+                if (proc->has_server_running()) { update_server_times(proc->get_server()); }
         }
 };
 
@@ -69,12 +67,8 @@ auto scheduler::is_active_server(const server& serv) -> bool
 auto scheduler::deadline_order(const server& first, const server& second) -> bool
 {
         if (first.relative_deadline == second.relative_deadline) {
-                if (first.current_state == server::state::running) {
-                        return true;
-                }
-                if (second.current_state == server::state::running) {
-                        return false;
-                }
+                if (first.current_state == server::state::running) { return true; }
+                if (second.current_state == server::state::running) { return false; }
                 return first.id() < second.id();
         }
         return first.relative_deadline < second.relative_deadline;
@@ -84,9 +78,7 @@ auto scheduler::get_active_bandwidth() const -> double
 {
         double active_bandwidth{0};
         for (const auto& serv : servers) {
-                if (is_active_server(*serv)) {
-                        active_bandwidth += serv->utilization();
-                }
+                if (is_active_server(*serv)) { active_bandwidth += serv->utilization(); }
         }
         return active_bandwidth;
 }
@@ -154,9 +146,7 @@ void scheduler::handle(std::vector<events::event> evts)
                 }
         }
 
-        if (this->need_resched) {
-                resched();
-        }
+        if (this->need_resched) { resched(); }
 
         // Update plateform state
         for (auto const& proc : sim()->get_plateform()->processors) {
@@ -167,9 +157,7 @@ void scheduler::handle(std::vector<events::event> evts)
 void scheduler::handle_serv_inactive(const std::shared_ptr<server>& serv)
 {
         // If a job arrived during this turn, do not change state to inactive
-        if (serv->cant_be_inactive) {
-                return;
-        }
+        if (serv->cant_be_inactive) { return; }
 
         serv->change_state(server::state::inactive);
         detach_server_if_needed(serv->get_task());
@@ -189,7 +177,7 @@ void scheduler::handle_job_arrival(
         sim()->add_trace(events::job_arrival{new_task, job_duration});
 
         if (!new_task->has_server()) {
-                if (!admission_test(new_task)) {
+                if (!admission_test(*new_task)) {
                         sim()->add_trace(events::task_rejected{new_task});
                         return;
                 }
@@ -247,9 +235,7 @@ void scheduler::handle_job_finished(const std::shared_ptr<server>& serv, bool is
         else {
                 serv->get_task()->attached_proc->clear_server();
 
-                if ((serv->virtual_time - sim()->get_time()) > 0) {
-                        serv->change_state(non_cont);
-                }
+                if ((serv->virtual_time - sim()->get_time()) > 0) { serv->change_state(non_cont); }
                 else {
                         serv->change_state(inactive);
                         // TODO Manage server detach
@@ -291,7 +277,7 @@ void scheduler::update_server_times(const std::shared_ptr<server>& serv)
         // Be careful about floating point computation near 0
         assert((serv->get_task()->get_remaining_time() - running_time) >= -engine::ZERO_ROUNDED);
 
-        serv->virtual_time = get_server_new_virtual_time(serv, running_time);
+        serv->virtual_time = get_server_virtual_time(*serv, running_time);
         std::cout << "S" << serv->id() << " VIRTUAL_TIME = " << serv->virtual_time << std::endl;
         sim()->add_trace(events::virtual_time_update{serv->get_task(), serv->virtual_time});
 
@@ -318,7 +304,7 @@ void scheduler::cancel_alarms(const server& serv)
 void scheduler::set_alarms(const std::shared_ptr<server>& serv)
 {
         using namespace events;
-        const double new_budget{get_server_budget(serv)};
+        const double new_budget{get_server_budget(*serv)};
         const double remaining_time{serv->remaining_exec_time()};
 
         assert(new_budget >= 0);
@@ -344,8 +330,6 @@ void scheduler::resched_proc(
     const std::shared_ptr<processor>& proc, const std::shared_ptr<server>& server_to_execute)
 {
         if (proc->has_server_running()) {
-                // Remove all future event of type BUDGET_EXHAUSTED and JOB_FINISHED of the server
-                // that will be preempted
                 cancel_alarms(*server_to_execute);
 
                 sim()->add_trace(events::task_preempted{proc->get_server()->get_task()});

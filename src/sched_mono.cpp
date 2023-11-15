@@ -13,9 +13,7 @@ auto sched_mono::get_active_bandwidth() -> double
 {
         double active_bandwidth{0};
         for (auto serv : servers) {
-                if (is_active_server(serv)) {
-                        active_bandwidth += serv->utilization();
-                }
+                if (is_active_server(serv)) { active_bandwidth += serv->utilization(); }
         }
         return active_bandwidth;
 }
