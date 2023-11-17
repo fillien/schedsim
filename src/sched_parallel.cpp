@@ -14,6 +14,7 @@
 #include <iterator>
 #include <memory>
 #include <numeric>
+#include <ostream>
 #include <ranges>
 #include <vector>
 
@@ -81,14 +82,13 @@ auto sched_parallel::admission_test(const task& new_task) const -> bool
         const auto NB_PROCS{static_cast<double>(get_nb_active_procs(new_task.utilization))};
         const auto U_MAX{get_max_utilization(servers, new_task.utilization)};
         const auto NEW_TOTAL_UTILIZATION{get_total_utilization() + new_task.utilization};
+        std::cout << "new total U: " << NEW_TOTAL_UTILIZATION << std::endl;
         return (NEW_TOTAL_UTILIZATION <= (NB_PROCS - (NB_PROCS - 1) * U_MAX));
 }
 
 void sched_parallel::custom_scheduler()
 {
-        for (auto proc : sim()->get_plateform()->processors) {
-                if (proc->has_server_running()) { update_server_times(proc->get_server()); }
-        }
+        update_running_servers();
 
         while (true) {
                 // refresh active servers list

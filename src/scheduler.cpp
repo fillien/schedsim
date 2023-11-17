@@ -19,21 +19,22 @@
 #include <map>
 #include <memory>
 #include <numeric>
+#include <ostream>
 #include <ranges>
 #include <variant>
 #include <vector>
 
-auto get_priority(const events::event& evt) -> int
+auto compare_events(const events::event& ev1, const events::event& ev2) -> bool
 {
         constexpr static int MIN_PRIORITY = 100;
-        return std::visit(
-            overloaded{
-                [](events::job_finished&) { return 0; },
-                [](events::serv_budget_exhausted&) { return 1; },
-                [](events::job_arrival&) { return 2; }, [](events::serv_inactive&) { return 3; },
-                [](auto&) { return MIN_PRIORITY; }},
-            evt);
-};
+        constexpr auto get_priority = overloaded{
+            [](const events::job_finished&) { return 0; },
+            [](const events::serv_budget_exhausted&) { return 1; },
+            [](const events::serv_inactive&) { return 2; },
+            [](const events::job_arrival&) { return 3; }, [](const auto&) { return MIN_PRIORITY; }};
+
+        return std::visit(get_priority, ev1) < std::visit(get_priority, ev2);
+}
 
 void scheduler::update_running_servers()
 {
@@ -61,6 +62,15 @@ auto scheduler::has_job_server(const server& serv) -> bool
 auto scheduler::is_active_server(const server& serv) -> bool
 {
         return serv.current_state != server::state::inactive;
+}
+
+auto scheduler::get_total_utilization() const -> double
+{
+        double total_u{0};
+        for (const auto& serv : servers) {
+                if (is_active_server(*serv)) { total_u += serv->utilization(); }
+        }
+        return total_u;
 }
 
 /// Compare two servers and return true if the first have an highest priority
@@ -105,11 +115,7 @@ void scheduler::detach_server_if_needed(const std::shared_ptr<task>& inactive_ta
 void scheduler::handle(std::vector<events::event> evts)
 {
         // Sort events according to event priority cf:get_priority function
-        std::sort(
-            std::begin(evts), std::end(evts),
-            [](const events::event& ev1, const events::event& ev2) {
-                    return get_priority(ev1) > get_priority(ev2);
-            });
+        std::sort(std::begin(evts), std::end(evts), compare_events);
 
         // Reset flags
         this->need_resched = false;
@@ -117,6 +123,7 @@ void scheduler::handle(std::vector<events::event> evts)
         for (const auto& evt : evts) {
                 /// TODO refactor to a visitor pattern
                 if (std::holds_alternative<events::job_finished>(evt)) {
+                        std::cout << "JOB_FINISHED\n";
                         // Looking for JOB_ARRIVAL events at the same time for this server
                         const auto& [serv] = std::get<events::job_finished>(evt);
                         auto is_there_new_job{false};
@@ -130,16 +137,19 @@ void scheduler::handle(std::vector<events::event> evts)
                         handle_job_finished(serv, is_there_new_job);
                 }
                 else if (std::holds_alternative<events::serv_budget_exhausted>(evt)) {
+                        std::cout << "SERV_BUDGET_EXHAUSTED\n";
                         const auto& [serv] = std::get<events::serv_budget_exhausted>(evt);
                         handle_serv_budget_exhausted(serv);
                 }
-                else if (std::holds_alternative<events::job_arrival>(evt)) {
-                        const auto& [serv, job_duration] = std::get<events::job_arrival>(evt);
-                        handle_job_arrival(serv, job_duration);
-                }
                 else if (std::holds_alternative<events::serv_inactive>(evt)) {
+                        std::cout << "SERV_INACTIVE\n";
                         const auto& [serv] = std::get<events::serv_inactive>(evt);
                         handle_serv_inactive(serv);
+                }
+                else if (std::holds_alternative<events::job_arrival>(evt)) {
+                        std::cout << "JOB_ARRIVAL\n";
+                        const auto& [serv, job_duration] = std::get<events::job_arrival>(evt);
+                        handle_job_arrival(serv, job_duration);
                 }
                 else {
                         std::cerr << "Unknowned event" << std::endl;
@@ -178,9 +188,13 @@ void scheduler::handle_job_arrival(
 
         if (!new_task->has_server()) {
                 if (!admission_test(*new_task)) {
+                        std::cout << "TID " << new_task->id << " rejected\n";
                         sim()->add_trace(events::task_rejected{new_task});
                         return;
                 }
+
+                // Total utilization increased -> updates running servers
+                update_running_servers();
 
                 auto new_server = std::make_shared<server>(sim());
                 new_task->set_server(new_server);
@@ -195,13 +209,7 @@ void scheduler::handle_job_arrival(
         new_task->add_job(job_duration);
 
         if (new_task->get_server()->current_state == server::state::inactive) {
-                // Update running server if there is one
-                auto running_servers =
-                    servers | std::views::filter(from_shared<server>(is_running_server));
-                for (auto& serv : running_servers) {
-                        update_server_times(serv);
-                }
-
+                update_running_servers();
                 new_task->get_server()->virtual_time = sim()->get_time();
         }
 

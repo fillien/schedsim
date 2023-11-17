@@ -8,6 +8,8 @@
 #include <memory>
 #include <vector>
 
+auto compare_events(const events::event& ev1, const events::event& ev2) -> bool;
+
 /**
  * @brief A class that handle the events of the system accordingly to a scheduling policy.
  */
@@ -34,7 +36,7 @@ class scheduler : public entity {
         static auto is_active_server(const server& serv) -> bool;
         static auto has_job_server(const server& serv) -> bool;
         static auto deadline_order(const server& first, const server& second) -> bool;
-        auto get_total_utilization() const -> double { return total_utilization; };
+        auto get_total_utilization() const -> double;
 
         void resched_proc(
             const std::shared_ptr<processor>& proc_with_server,
