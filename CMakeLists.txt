@@ -15,12 +15,12 @@ set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wpedantic -Wno-unused")
 
 FetchContent_Declare(yaml_cpp
   GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
-  GIT_TAG        f732014 # 0.8
+  GIT_TAG        51adc5f7392648622c80909f65bf794fc48d013f # latest master
 )
 FetchContent_MakeAvailable(yaml_cpp)
 FetchContent_Declare(json
   GIT_REPOSITORY https://github.com/nlohmann/json.git
-  GIT_TAG        bc889af # 3.11.2
+  GIT_TAG        6eab7a2b187b10b2494e39c1961750bfd1bda500 # latest master
 )
 FetchContent_MakeAvailable(json)
 FetchContent_Declare(googletest
