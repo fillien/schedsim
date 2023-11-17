@@ -44,7 +44,10 @@ struct log_json {
         };
         auto operator()(const events::serv_budget_replenished& evt) const
         {
-                return json{{"type", "serv_budget_replenished"}, {"tid", evt.serv->id()}};
+                return json{
+                    {"type", "serv_budget_replenished"},
+                    {"tid", evt.serv->id()},
+                    {"budget", evt.budget}};
         };
         auto operator()(const events::serv_inactive& evt) const
         {

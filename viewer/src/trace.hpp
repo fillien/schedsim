@@ -12,7 +12,6 @@ struct serv_trace {
 struct resched {};
 struct sim_finished {};
 struct job_finished : public serv_trace {};
-struct serv_budget_replenished : public serv_trace {};
 struct serv_inactive : public serv_trace {};
 struct serv_budget_exhausted : public serv_trace {};
 struct serv_non_cont : public serv_trace {};
@@ -30,6 +29,10 @@ struct serv_postpone : public serv_trace {
 
 struct serv_ready : public serv_trace {
         double deadline;
+};
+
+struct serv_budget_replenished : public serv_trace {
+        double budget;
 };
 
 struct task_scheduled : public serv_trace {

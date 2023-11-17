@@ -48,6 +48,8 @@ void serialize(std::ostream& out, const traces::trace& tra)
                 [&out](traces::serv_budget_replenished tra) {
                         color_name(out, "serv_budget_replenished");
                         color_arg(out, "tid", tra.id);
+                        out << ", ";
+                        color_arg(out, "budget", tra.budget);
                 },
                 [&out](traces::serv_inactive tra) {
                         color_name(out, "serv_inactive");

@@ -89,8 +89,7 @@ auto inputs::json::parse_trace(nlohmann::json trace) -> traces::trace
                 },
                 [&out, &trace](serv_budget_replenished) {
                         out = serv_budget_replenished{
-                            trace.at("tid").get<std::size_t>(),
-                        };
+                            trace.at("tid").get<std::size_t>(), trace.at("budget").get<double>()};
                 },
                 [&out, &trace](serv_inactive) {
                         out = serv_inactive{trace.at("tid").get<std::size_t>()};
