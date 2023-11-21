@@ -1,5 +1,6 @@
 #include "task.hpp"
 #include "server.hpp"
+#include "engine.hpp"
 
 #include <limits>
 #include <cassert>
@@ -25,13 +26,14 @@ void task::unset_server() {
 	attached_serv.reset();
 }
 
-auto task::has_remaining_time() const -> bool {
-	return (this->remaining_execution_time > 0);
+auto task::has_remaining_time() const -> bool
+{
+	return (sim()->round_zero(this->remaining_execution_time) > 0);
 }
 
 void task::add_job(const double& duration) {
         assert(duration >= 0);
-        if (pending_jobs.empty() && remaining_execution_time == 0) {
+        if (pending_jobs.empty() && sim()->round_zero(remaining_execution_time) <= 0) {
 		remaining_execution_time = duration;
         } else {
                 pending_jobs.push(duration);
@@ -40,11 +42,13 @@ void task::add_job(const double& duration) {
 
 void task::consume_time(const double& duration) {
         assert(duration >= 0);
-	remaining_execution_time -= duration;
+        remaining_execution_time -= duration;
+        //std::cout << "task id: " << id << std::endl;
+	//std::cout << remaining_execution_time << std::endl;
+	assert(sim()->round_zero(remaining_execution_time) >= 0);
 }
 
 void task::next_job() {
-	std::cout << "remaining jobs of task " << id << ": " << pending_jobs.size() << std::endl;
         remaining_execution_time = pending_jobs.front();
 	pending_jobs.pop();
 }

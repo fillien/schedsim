@@ -108,7 +108,7 @@ void scheduler::detach_server_if_needed(const std::shared_ptr<task>& inactive_ta
                 inactive_task->unset_server();
                 total_utilization -= inactive_task->utilization;
                 sim()->round_zero(total_utilization);
-                std::cout << "New total utilization: " << total_utilization << std::endl;
+                //std::cout << "New total utilization: " << total_utilization << std::endl;
         }
 }
 
@@ -123,7 +123,6 @@ void scheduler::handle(std::vector<events::event> evts)
         for (const auto& evt : evts) {
                 /// TODO refactor to a visitor pattern
                 if (std::holds_alternative<events::job_finished>(evt)) {
-                        std::cout << "JOB_FINISHED\n";
                         // Looking for JOB_ARRIVAL events at the same time for this server
                         const auto& [serv] = std::get<events::job_finished>(evt);
                         auto is_there_new_job{false};
@@ -137,17 +136,14 @@ void scheduler::handle(std::vector<events::event> evts)
                         handle_job_finished(serv, is_there_new_job);
                 }
                 else if (std::holds_alternative<events::serv_budget_exhausted>(evt)) {
-                        std::cout << "SERV_BUDGET_EXHAUSTED\n";
                         const auto& [serv] = std::get<events::serv_budget_exhausted>(evt);
                         handle_serv_budget_exhausted(serv);
                 }
                 else if (std::holds_alternative<events::serv_inactive>(evt)) {
-                        std::cout << "SERV_INACTIVE\n";
                         const auto& [serv] = std::get<events::serv_inactive>(evt);
                         handle_serv_inactive(serv);
                 }
                 else if (std::holds_alternative<events::job_arrival>(evt)) {
-                        std::cout << "JOB_ARRIVAL\n";
                         const auto& [serv, job_duration] = std::get<events::job_arrival>(evt);
                         handle_job_arrival(serv, job_duration);
                 }
@@ -188,7 +184,7 @@ void scheduler::handle_job_arrival(
 
         if (!new_task->has_server()) {
                 if (!admission_test(*new_task)) {
-                        std::cout << "TID " << new_task->id << " rejected\n";
+                        //std::cout << "TID " << new_task->id << " rejected\n";
                         sim()->add_trace(events::task_rejected{new_task});
                         return;
                 }
@@ -200,7 +196,6 @@ void scheduler::handle_job_arrival(
                 new_task->set_server(new_server);
                 servers.push_back(new_server);
                 total_utilization += new_task->utilization;
-                std::cout << "New total utilization: " << total_utilization << std::endl;
         }
 
         assert(new_task->has_server());
@@ -224,7 +219,7 @@ void scheduler::handle_job_finished(const std::shared_ptr<server>& serv, bool is
 {
         using enum server::state;
 
-        std::cout << "S" << serv->id() << " job finished\n";
+        //std::cout << "S" << serv->id() << " job finished\n";
 
         assert(serv->current_state != inactive);
         sim()->add_trace(events::job_finished{serv});
@@ -252,8 +247,8 @@ void scheduler::handle_job_finished(const std::shared_ptr<server>& serv, bool is
         }
         this->need_resched = true;
 
-        std::cout << "virtual time = " << serv->virtual_time << "\n";
-        std::cout << "deadline = " << serv->relative_deadline << "\n";
+        //std::cout << "virtual time = " << serv->virtual_time << "\n";
+        //std::cout << "deadline = " << serv->relative_deadline << "\n";
 }
 
 void scheduler::handle_serv_budget_exhausted(const std::shared_ptr<server>& serv)
@@ -263,6 +258,7 @@ void scheduler::handle_serv_budget_exhausted(const std::shared_ptr<server>& serv
 
         // Check if the job as been completed at the same time
         if (serv->get_task()->get_remaining_time() > 0) {
+		std::cout << "postpone: " << serv->id() << ", remaining: " << serv->get_task()->get_remaining_time();
                 serv->postpone(); // If no, postpone the deadline
         }
         else {
@@ -277,16 +273,16 @@ void scheduler::update_server_times(const std::shared_ptr<server>& serv)
         assert(serv->current_state == server::state::running);
 
         const double running_time = sim()->get_time() - serv->last_update;
-        std::cout << "running_time = " << running_time;
-        std::cout << "\nremaining_time = " << serv->get_task()->get_remaining_time();
-        std::cout << "\nnew remaining_time = "
-                  << serv->get_task()->get_remaining_time() - running_time << std::endl;
+        //std::cout << "running_time = " << running_time;
+        //std::cout << "\nremaining_time = " << serv->get_task()->get_remaining_time();
+        //std::cout << "\nnew remaining_time = "
+        //          << serv->get_task()->get_remaining_time() - running_time << std::endl;
 
         // Be careful about floating point computation near 0
         assert((serv->get_task()->get_remaining_time() - running_time) >= -engine::ZERO_ROUNDED);
 
         serv->virtual_time = get_server_virtual_time(*serv, running_time);
-        std::cout << "S" << serv->id() << " VIRTUAL_TIME = " << serv->virtual_time << std::endl;
+        //std::cout << "S" << serv->id() << " VIRTUAL_TIME = " << serv->virtual_time << std::endl;
         sim()->add_trace(events::virtual_time_update{serv->get_task(), serv->virtual_time});
 
         serv->get_task()->consume_time(running_time);
@@ -315,6 +311,8 @@ void scheduler::set_alarms(const std::shared_ptr<server>& serv)
         const double new_budget{get_server_budget(*serv)};
         const double remaining_time{serv->remaining_exec_time()};
 
+	//std::cout << remaining_time << std::endl;
+	
         assert(new_budget >= 0);
         assert(remaining_time >= 0);
 
@@ -346,9 +344,9 @@ void scheduler::resched_proc(
         }
 
         if (server_to_execute->current_state == server::state::running) {
-                std::cout << "migration of server S" << server_to_execute->id() << " from P"
-                          << server_to_execute->get_task()->attached_proc->get_id() << " to P"
-                          << proc->get_id() << std::endl;
+                //std::cout << "migration of server S" << server_to_execute->id() << " from P"
+                //          << server_to_execute->get_task()->attached_proc->get_id() << " to P"
+                //          << proc->get_id() << std::endl;
         }
         else {
                 server_to_execute->change_state(server::state::running);
