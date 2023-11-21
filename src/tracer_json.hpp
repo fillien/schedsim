@@ -7,6 +7,7 @@
 #include <iostream>
 #include <map>
 #include <variant>
+#include <fstream>
 
 struct log_json {
         using json = nlohmann::json;
@@ -97,6 +98,8 @@ struct log_json {
         };
 };
 
-auto print_json(const std::multimap<double, events::event>& log) -> std::string;
+void prepare_log_file();
+void write_log_file(std::multimap<double, events::event>& logs);
+void finish_log_file();
 
 #endif

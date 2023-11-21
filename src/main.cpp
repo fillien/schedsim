@@ -47,7 +47,7 @@ auto main(const int argc, const char** argv) -> int
         std::shared_ptr<scheduler> sched = make_shared<sched_parallel>(sim);
         sim->set_scheduler(sched);
 
-        std::cout << "Platform: " << config_plat->processors.size() << " processors\n";
+        //std::cout << "Platform: " << config_plat->processors.size() << " processors\n";
 
         // Prepare a vector to get all the tasks from the parsed scenario file
         std::vector<std::shared_ptr<task>> tasks{config["tasks"].size()};
@@ -67,13 +67,15 @@ auto main(const int argc, const char** argv) -> int
                 tasks.push_back(std::move(new_task));
         }
 
-        // Simulate the system (job set + platform) with the chosen scheduler
+	// Simulate the system (job set + platform) with the chosen scheduler
         sim->simulation();
 
+        /*
         std::ofstream logs;
         logs.open("out.json");
         logs << sim->print() << std::endl;
         logs.close();
+	*/
         std::cout << "Simulation ended" << std::endl;
 
         return EXIT_SUCCESS;

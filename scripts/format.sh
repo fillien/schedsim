@@ -13,4 +13,5 @@ clang-format -i src/main.cpp src/engine.hpp src/engine.cpp \
 	     viewer/src/json.cpp viewer/src/json.hpp \
 	     viewer/src/rtsched.cpp viewer/src/rtsched.hpp \
 	     viewer/src/textual.cpp viewer/src/textual.hpp \
-	     viewer/src/trace.hpp viewer/src/main.cpp
+	     viewer/src/trace.hpp viewer/src/main.cpp \
+	     generator/src/main.cpp

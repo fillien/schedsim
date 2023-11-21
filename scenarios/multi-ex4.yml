@@ -25,5 +25,5 @@ tasks:
     period: 23
     utilization: 0.5
     jobs:
-      - arrival: 10
+      - arrival: 5.5
         duration: 6

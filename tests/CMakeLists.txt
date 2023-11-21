@@ -6,7 +6,7 @@ file(GLOB source
   "../src/plateform.cpp"
   "../src/processor.cpp"
   "../src/scheduler.cpp"
-  "../src/sched_mono.cpp"
+#  "../src/sched_mono.cpp"
   "../src/sched_parallel.cpp"
   "../src/server.cpp"
   "../src/tracer_json.cpp"

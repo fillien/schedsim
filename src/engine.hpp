@@ -63,7 +63,7 @@ class engine {
         std::multimap<double, events::event> past_list{};
 
       public:
-        static constexpr double ZERO_ROUNDED = 0.000001;
+        static constexpr double ZERO_ROUNDED = 0.0000001;
 
         /**
          * @brief The list of future events, it's a pair of the timestamp of the event and the event
@@ -119,12 +119,11 @@ class engine {
          */
         void add_trace(const events::event& new_trace);
 
-        static void round_zero(double& value)
+        static auto round_zero(const double& value) -> double
         {
-                if (value >= -ZERO_ROUNDED || value <= ZERO_ROUNDED) { value = 0; }
+                if (value >= -ZERO_ROUNDED || value <= ZERO_ROUNDED) { return 0; }
+		return value;
         }
-
-        auto print() -> std::string { return print_json(past_list); };
 };
 
 #endif
