@@ -17,4 +17,5 @@ file(GLOB source
 )
 
 add_executable(launch ${source})
-target_link_libraries(launch PRIVATE yaml-cpp nlohmann_json)
+target_include_directories(launch PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../protocols)
+target_link_libraries(launch PRIVATE protocols yaml-cpp nlohmann_json)

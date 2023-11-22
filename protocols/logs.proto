@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+package logs;
+
+message resched {}
+message sim_finished {}
+
+message job_arrival {
+        int64 task_of_job = 1;
+        double job_duration = 2;
+}
+
+message job_finished {
+        int64 server_of_job = 1;
+}
+
+message proc_activated {
+        int64 proc = 1;
+}
+
+message proc_idled {
+        int64 proc = 1;
+}
+
+message serv_budget_replenished {
+        int64 serv = 1;
+        double budget = 2;
+}
+
+message serv_inactive {
+        int64 serv = 1;
+}
+
+message serv_budget_exhausted {
+        int64 serv = 1;
+}
+
+message serv_non_cont {
+        int64 serv = 1;
+}
+
+message serv_postpone {
+        int64 serv = 1;
+        double new_deadline = 2;
+}
+
+message serv_ready {
+        int64 serv = 1;
+        double deadline = 2;
+}
+
+message serv_running {
+        int64 serv = 1;
+}
+
+message task_preempted {
+        int64 the_task = 1;
+}
+
+message task_scheduled {
+        int64 sched_task = 1;
+        int64 proc = 2;
+}
+
+message task_rejected {
+        int64 the_task = 1;
+}
+
+message virtual_time_update {
+        int64 the_task = 1;
+        double new_virtual_time = 2;
+}
