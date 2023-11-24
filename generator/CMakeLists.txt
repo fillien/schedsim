@@ -1,11 +1,11 @@
 add_executable(generator)
 
 target_compile_features(generator PRIVATE cxx_std_23)
-target_compile_options(generator PRIVATE -fdiagnostics-color=always -fsanitize=address)
-target_link_options(generator PRIVATE -fsanitize=address)
+#target_compile_options(generator PRIVATE -fdiagnostics-color=always -fsanitize=address)
+#target_link_options(generator PRIVATE -fsanitize=address)
 
 target_sources(generator PRIVATE
   src/main.cpp
 )
 
-target_link_libraries(generator yaml-cpp)
+target_link_libraries(generator scenario)

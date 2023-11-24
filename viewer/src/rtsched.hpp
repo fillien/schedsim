@@ -1,13 +1,14 @@
 #ifndef OUTPUTS_RTSCHED_HPP
 #define OUTPUTS_RTSCHED_HPP
 
-#include "trace.hpp"
+#include "traces.hpp"
+#include <map>
 #include <string>
 #include <variant>
 #include <vector>
 
 namespace {
-using input_data = std::vector<std::pair<double, traces::trace>>;
+using input_data = std::multimap<double, traces::trace>;
 }
 
 namespace outputs::rtsched {

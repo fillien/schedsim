@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -13,16 +14,16 @@
 #include "event.hpp"
 #include "plateform.hpp"
 //#include "sched_mono.hpp"
+#include "scenario.hpp"
 #include "sched_parallel.hpp"
 #include "scheduler.hpp"
 #include "server.hpp"
 #include "task.hpp"
-#include "yaml-cpp/node/node.h"
-#include "yaml-cpp/yaml.h"
+#include "traces.hpp"
 
 auto main(const int argc, const char** argv) -> int
 {
-        constexpr double START_TIME = 0;
+        constexpr double START_TIME{0};
 
         using namespace std;
 
@@ -33,50 +34,42 @@ auto main(const int argc, const char** argv) -> int
         }
 
         // Open the scenario
-        YAML::Node config = YAML::LoadFile(argv[1]);
+        std::filesystem::path input_taskset{argv[1]};
+        scenario::setting taskset = scenario::read_file(input_taskset);
+
+        std::cout << "Coeurs: " << taskset.nb_cores
+                  << "\nNombre de tâches: " << taskset.tasks.size() << "\n";
 
         // Create the simulation engine and attache to it a scheduler
         auto sim = make_shared<engine>();
 
         // Insert the plateform configured through the scenario file, in the simulation engine
-        auto config_plat = make_shared<plateform>(sim, config["cores"].as<int>());
+        auto config_plat = make_shared<plateform>(sim, taskset.nb_cores);
         sim->set_plateform(config_plat);
-
-        assert(!config_plat->processors.empty());
 
         std::shared_ptr<scheduler> sched = make_shared<sched_parallel>(sim);
         sim->set_scheduler(sched);
 
-        //std::cout << "Platform: " << config_plat->processors.size() << " processors\n";
-
-        // Prepare a vector to get all the tasks from the parsed scenario file
-        std::vector<std::shared_ptr<task>> tasks{config["tasks"].size()};
+        std::vector<std::shared_ptr<task>> tasks{taskset.tasks.size()};
 
         // Create tasks and job arrival events
-        for (auto node : config["tasks"]) {
+        for (auto input_task : taskset.tasks) {
                 auto new_task = make_shared<task>(
-                    sim, node["id"].as<int>(), node["period"].as<double>(),
-                    node["utilization"].as<double>());
+                    sim, input_task.id, input_task.period, input_task.utilization);
 
                 // For each job of tasks add a "job arrival" event in the future list
-                for (auto job : node["jobs"]) {
-                        sim->add_event(
-                            events::job_arrival{new_task, job["duration"].as<double>()},
-                            job["arrival"].as<double>());
+                for (auto job : input_task.jobs) {
+                        sim->add_event(events::job_arrival{new_task, job.duration}, job.arrival);
                 }
                 tasks.push_back(std::move(new_task));
         }
 
-	// Simulate the system (job set + platform) with the chosen scheduler
+        // Simulate the system (job set + platform) with the chosen scheduler
         sim->simulation();
-
-        /*
-        std::ofstream logs;
-        logs.open("out.json");
-        logs << sim->print() << std::endl;
-        logs.close();
-	*/
         std::cout << "Simulation ended" << std::endl;
+
+        std::filesystem::path output_logs{"out.json"};
+        traces::write_log_file(sim->get_traces(), output_logs);
 
         return EXIT_SUCCESS;
 }

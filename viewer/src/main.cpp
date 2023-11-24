@@ -1,7 +1,6 @@
-#include "json.hpp"
 #include "rtsched.hpp"
 #include "textual.hpp"
-#include "trace.hpp"
+#include "traces.hpp"
 
 #include <cstdlib>
 #include <filesystem>
@@ -26,7 +25,6 @@ auto main(int argc, char* argv[]) -> int
         bool has_defined_output_file{false};
 
         const std::vector<std::string_view> args(argv + 1, argv + argc);
-        std::vector<std::pair<double, traces::trace>> input_traces{};
 
         if (args.empty()) { throw std::runtime_error("No input traces file"); }
 
@@ -58,19 +56,12 @@ auto main(int argc, char* argv[]) -> int
                 }
         }
 
-        std::string input_json{};
-
-        {
-                std::ifstream input_file{input_filepath};
-                input_file >> input_json;
-        }
-
-        inputs::json::parse(input_json, input_traces);
-        outputs::textual::print(std::cout, input_traces);
+        auto parsed = traces::read_log_file(input_filepath);
+        outputs::textual::print(std::cout, parsed);
 
         if (has_defined_output_file) {
                 std::ofstream output_file(output_filepath);
-                outputs::rtsched::print(output_file, input_traces);
+                outputs::rtsched::print(output_file, parsed);
         }
 
         return EXIT_SUCCESS;

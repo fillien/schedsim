@@ -4,8 +4,9 @@
 #include "event.hpp"
 #include "plateform.hpp"
 #include "scheduler.hpp"
-#include "tracer_json.hpp"
+#include "traces.hpp"
 
+#include <functional>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -60,7 +61,7 @@ class engine {
          * @brief The list of past events, it's a pair of the timestamp of the event and the event
          * to process himself.
          */
-        std::multimap<double, events::event> past_list{};
+        std::multimap<double, traces::trace> past_list{};
 
       public:
         static constexpr double ZERO_ROUNDED = 0.0000001;
@@ -117,13 +118,15 @@ class engine {
         /**
          * @brief Add a trace to logs (past list)
          */
-        void add_trace(const events::event& new_trace);
+        void add_trace(const traces::trace& new_trace);
 
         static auto round_zero(const double& value) -> double
         {
                 if (value >= -ZERO_ROUNDED || value <= ZERO_ROUNDED) { return 0; }
-		return value;
+                return value;
         }
+
+        auto get_traces() { return past_list; };
 };
 
 #endif

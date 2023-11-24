@@ -2,6 +2,7 @@
 #define PROCESSOR_HPP
 
 #include "entity.hpp"
+#include <cstddef>
 #include <memory>
 #include <vector>
 
@@ -43,7 +44,7 @@ class processor : public entity, public std::enable_shared_from_this<processor> 
         /**
          * Unique id
          */
-        int id;
+        std::size_t id;
 
         /**
          * @brief The task currently running on the processor

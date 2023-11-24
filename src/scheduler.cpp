@@ -5,13 +5,13 @@
 #include "processor.hpp"
 #include "server.hpp"
 #include "task.hpp"
-#include "tracer_json.hpp"
 
 #include <algorithm>
 #include <bits/ranges_algo.h>
 #include <bits/ranges_base.h>
 #include <bits/ranges_util.h>
 #include <cassert>
+#include <cstdint>
 #include <cstdlib>
 #include <exception>
 #include <iostream>
@@ -108,7 +108,7 @@ void scheduler::detach_server_if_needed(const std::shared_ptr<task>& inactive_ta
                 inactive_task->unset_server();
                 total_utilization -= inactive_task->utilization;
                 sim()->round_zero(total_utilization);
-                //std::cout << "New total utilization: " << total_utilization << std::endl;
+                // std::cout << "New total utilization: " << total_utilization << std::endl;
         }
 }
 
@@ -180,12 +180,13 @@ void scheduler::handle_serv_inactive(const std::shared_ptr<server>& serv)
 void scheduler::handle_job_arrival(
     const std::shared_ptr<task>& new_task, const double& job_duration)
 {
-        sim()->add_trace(events::job_arrival{new_task, job_duration});
+        sim()->add_trace(traces::job_arrival{static_cast<uint16_t>(new_task->id), job_duration});
 
         if (!new_task->has_server()) {
                 if (!admission_test(*new_task)) {
-                        //std::cout << "TID " << new_task->id << " rejected\n";
-                        sim()->add_trace(events::task_rejected{new_task});
+                        // std::cout << "TID " << new_task->id << " rejected\n";
+                        sim()->add_trace(
+                            traces::task_rejected{static_cast<uint16_t>(new_task->id)});
                         return;
                 }
 
@@ -219,10 +220,10 @@ void scheduler::handle_job_finished(const std::shared_ptr<server>& serv, bool is
 {
         using enum server::state;
 
-        //std::cout << "S" << serv->id() << " job finished\n";
+        // std::cout << "S" << serv->id() << " job finished\n";
 
         assert(serv->current_state != inactive);
-        sim()->add_trace(events::job_finished{serv});
+        sim()->add_trace(traces::job_finished{static_cast<uint16_t>(serv->id())});
 
         // Update virtual time and remaining execution time
         update_server_times(serv);
@@ -247,22 +248,24 @@ void scheduler::handle_job_finished(const std::shared_ptr<server>& serv, bool is
         }
         this->need_resched = true;
 
-        //std::cout << "virtual time = " << serv->virtual_time << "\n";
-        //std::cout << "deadline = " << serv->relative_deadline << "\n";
+        // std::cout << "virtual time = " << serv->virtual_time << "\n";
+        // std::cout << "deadline = " << serv->relative_deadline << "\n";
 }
 
 void scheduler::handle_serv_budget_exhausted(const std::shared_ptr<server>& serv)
 {
-        sim()->add_trace(events::serv_budget_exhausted{serv});
+        sim()->add_trace(traces::serv_budget_exhausted{static_cast<uint16_t>(serv->id())});
         update_server_times(serv);
 
         // Check if the job as been completed at the same time
         if (serv->get_task()->get_remaining_time() > 0) {
-		std::cout << "postpone: " << serv->id() << ", remaining: " << serv->get_task()->get_remaining_time();
+                std::cout << "postpone: " << serv->id()
+                          << ", remaining: " << serv->get_task()->get_remaining_time();
                 serv->postpone(); // If no, postpone the deadline
         }
         else {
-                sim()->add_trace(events::job_finished{serv}); // If yes, trace it
+                sim()->add_trace(
+                    traces::job_finished{static_cast<uint16_t>(serv->id())}); // If yes, trace it
         }
 
         this->need_resched = true;
@@ -273,17 +276,18 @@ void scheduler::update_server_times(const std::shared_ptr<server>& serv)
         assert(serv->current_state == server::state::running);
 
         const double running_time = sim()->get_time() - serv->last_update;
-        //std::cout << "running_time = " << running_time;
-        //std::cout << "\nremaining_time = " << serv->get_task()->get_remaining_time();
-        //std::cout << "\nnew remaining_time = "
-        //          << serv->get_task()->get_remaining_time() - running_time << std::endl;
+        // std::cout << "running_time = " << running_time;
+        // std::cout << "\nremaining_time = " << serv->get_task()->get_remaining_time();
+        // std::cout << "\nnew remaining_time = "
+        //           << serv->get_task()->get_remaining_time() - running_time << std::endl;
 
         // Be careful about floating point computation near 0
         assert((serv->get_task()->get_remaining_time() - running_time) >= -engine::ZERO_ROUNDED);
 
         serv->virtual_time = get_server_virtual_time(*serv, running_time);
-        //std::cout << "S" << serv->id() << " VIRTUAL_TIME = " << serv->virtual_time << std::endl;
-        sim()->add_trace(events::virtual_time_update{serv->get_task(), serv->virtual_time});
+        // std::cout << "S" << serv->id() << " VIRTUAL_TIME = " << serv->virtual_time << std::endl;
+        sim()->add_trace(traces::virtual_time_update{
+            static_cast<uint16_t>(serv->get_task()->id), serv->virtual_time});
 
         serv->get_task()->consume_time(running_time);
         serv->last_update = sim()->get_time();
@@ -311,12 +315,13 @@ void scheduler::set_alarms(const std::shared_ptr<server>& serv)
         const double new_budget{get_server_budget(*serv)};
         const double remaining_time{serv->remaining_exec_time()};
 
-	//std::cout << remaining_time << std::endl;
-	
+        // std::cout << remaining_time << std::endl;
+
         assert(new_budget >= 0);
         assert(remaining_time >= 0);
 
-        sim()->add_trace(serv_budget_replenished{serv, new_budget});
+        sim()->add_trace(
+            traces::serv_budget_replenished{static_cast<uint16_t>(serv->id()), new_budget});
 
         if (new_budget < remaining_time) {
                 sim()->add_event(serv_budget_exhausted{serv}, sim()->get_time() + new_budget);
@@ -328,7 +333,7 @@ void scheduler::set_alarms(const std::shared_ptr<server>& serv)
 
 void scheduler::resched()
 {
-        sim()->add_trace(events::resched{});
+        sim()->add_trace(traces::resched{});
         custom_scheduler();
 }
 
@@ -338,15 +343,16 @@ void scheduler::resched_proc(
         if (proc->has_server_running()) {
                 cancel_alarms(*server_to_execute);
 
-                sim()->add_trace(events::task_preempted{proc->get_server()->get_task()});
+                sim()->add_trace(traces::task_preempted{
+                    static_cast<uint16_t>(proc->get_server()->get_task()->id)});
                 proc->get_server()->change_state(server::state::ready);
                 proc->clear_server();
         }
 
         if (server_to_execute->current_state == server::state::running) {
-                //std::cout << "migration of server S" << server_to_execute->id() << " from P"
-                //          << server_to_execute->get_task()->attached_proc->get_id() << " to P"
-                //          << proc->get_id() << std::endl;
+                // std::cout << "migration of server S" << server_to_execute->id() << " from P"
+                //           << server_to_execute->get_task()->attached_proc->get_id() << " to P"
+                //           << proc->get_id() << std::endl;
         }
         else {
                 server_to_execute->change_state(server::state::running);

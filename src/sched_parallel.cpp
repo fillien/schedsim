@@ -81,7 +81,7 @@ auto sched_parallel::admission_test(const task& new_task) const -> bool
         const auto NB_PROCS{static_cast<double>(get_nb_active_procs(new_task.utilization))};
         const auto U_MAX{get_max_utilization(servers, new_task.utilization)};
         const auto NEW_TOTAL_UTILIZATION{get_total_utilization() + new_task.utilization};
-        //std::cout << "new total U: " << NEW_TOTAL_UTILIZATION << std::endl;
+        // std::cout << "new total U: " << NEW_TOTAL_UTILIZATION << std::endl;
         return (NEW_TOTAL_UTILIZATION <= (NB_PROCS - (NB_PROCS - 1) * U_MAX));
 }
 
@@ -94,9 +94,9 @@ void sched_parallel::custom_scheduler()
                 auto ready_servers =
                     servers | std::views::filter(from_shared<server>(is_ready_server));
 
-                //std::cout << "nb ready_servers: "
-                //          << std::distance(std::begin(ready_servers), std::end(ready_servers))
-                //          << std::endl;
+                // std::cout << "nb ready_servers: "
+                //           << std::distance(std::begin(ready_servers), std::end(ready_servers))
+                //           << std::endl;
 
                 // Check if there are servers in ready or running state
                 if (std::distance(std::begin(ready_servers), std::end(ready_servers)) == 0) {
@@ -110,9 +110,9 @@ void sched_parallel::custom_scheduler()
                 auto leastest_priority_processor = std::ranges::max(
                     sim()->get_plateform()->processors, from_shared<processor>(processor_order));
 
-                //std::cout << "server id: " << highest_priority_server->id()
-                //          << ", deadline: " << highest_priority_server->relative_deadline
-                //          << std::endl;
+                // std::cout << "server id: " << highest_priority_server->id()
+                //           << ", deadline: " << highest_priority_server->relative_deadline
+                //           << std::endl;
 
                 if (!leastest_priority_processor->has_server_running() ||
                     deadline_order(
@@ -128,10 +128,10 @@ void sched_parallel::custom_scheduler()
         for (auto proc : sim()->get_plateform()->processors) {
                 if (proc->has_server_running()) {
                         cancel_alarms(*proc->get_server());
-			//std::cout << "id: " << proc->get_server()->id() << std::endl;
+                        // std::cout << "id: " << proc->get_server()->id() << std::endl;
                         set_alarms(proc->get_server());
-                        //std::cout << "S" << proc->get_server()->id() << " on P" << proc->get_id()
-                        //          << std::endl;
+                        // std::cout << "S" << proc->get_server()->id() << " on P" << proc->get_id()
+                        //           << std::endl;
                 }
         }
 }

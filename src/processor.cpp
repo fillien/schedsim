@@ -3,8 +3,10 @@
 #include "event.hpp"
 #include "server.hpp"
 #include "task.hpp"
+#include "traces.hpp"
 
 #include <cassert>
+#include <cstdint>
 #include <iostream>
 #include <memory>
 
@@ -17,12 +19,14 @@ void processor::set_server(std::weak_ptr<server> server_to_execute)
 
         running_server = serv;
         serv->get_task()->attached_proc = shared_from_this();
-        sim()->add_trace(events::task_scheduled{serv->get_task(), shared_from_this()});
+        sim()->add_trace(traces::task_scheduled{
+            static_cast<uint16_t>(serv->get_task()->id),
+            static_cast<uint16_t>(shared_from_this()->id)});
 }
 
 void processor::clear_server()
 {
-        //std::cout << "clear server on proc " << id << std::endl;
+        // std::cout << "clear server on proc " << id << std::endl;
         running_server.lock()->get_task()->attached_proc = nullptr;
         this->running_server.reset();
 }
@@ -35,12 +39,13 @@ void processor::change_state(const processor::state& next_state)
         switch (next_state) {
         case state::idle: {
                 current_state = state::idle;
-                sim()->add_trace(events::proc_idled{shared_from_this()});
+                sim()->add_trace(traces::proc_idled{static_cast<uint16_t>(shared_from_this()->id)});
                 break;
         }
         case state::running: {
                 current_state = state::running;
-                sim()->add_trace(events::proc_activated{shared_from_this()});
+                sim()->add_trace(
+                    traces::proc_activated{static_cast<uint16_t>(shared_from_this()->id)});
                 break;
         }
         }

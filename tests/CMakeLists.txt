@@ -1,6 +1,7 @@
 enable_testing()
 
-file(GLOB source
+add_executable(tests)
+target_sources(tests PRIVATE
   "main.cpp"
   "../src/engine.cpp"
   "../src/plateform.cpp"
@@ -9,15 +10,12 @@ file(GLOB source
 #  "../src/sched_mono.cpp"
   "../src/sched_parallel.cpp"
   "../src/server.cpp"
-  "../src/tracer_json.cpp"
   "../src/task.cpp"
 )
 
-add_executable(tests ${source})
 target_link_libraries(
   tests
   GTest::gtest_main
-  nlohmann_json
 )
 
 include(GoogleTest)
