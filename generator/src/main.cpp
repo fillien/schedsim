@@ -1,6 +1,7 @@
 #include "scenario.hpp"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
@@ -14,7 +15,8 @@
 // Function to generate a random double between min and max
 auto getRandomDouble(double min, double max) -> double
 {
-        static std::mt19937_64 random_gen;
+        static std::mt19937_64 random_gen(
+            std::chrono::high_resolution_clock::now().time_since_epoch().count());
         std::uniform_real_distribution<double> dis(min, max);
         return dis(random_gen);
 }
