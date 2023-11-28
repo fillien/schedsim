@@ -1,12 +1,11 @@
 #ifndef TRACES_HPP
 #define TRACES_HPP
 
-#include "nlohmann/json.hpp"
+#include "nlohmann/json_fwd.hpp"
 #include <cstdint>
 #include <filesystem>
 #include <map>
 #include <variant>
-#include <vector>
 
 namespace traces {
 struct resched {};

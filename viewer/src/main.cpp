@@ -1,3 +1,4 @@
+#include "energy.hpp"
 #include "rtsched.hpp"
 #include "textual.hpp"
 #include "traces.hpp"
@@ -6,8 +7,8 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
-#include <ostream>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -58,6 +59,7 @@ auto main(int argc, char* argv[]) -> int
 
         auto parsed = traces::read_log_file(input_filepath);
         outputs::textual::print(std::cout, parsed);
+        outputs::energy::plot(parsed);
 
         if (has_defined_output_file) {
                 std::ofstream output_file(output_filepath);

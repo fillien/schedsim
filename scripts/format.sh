@@ -11,6 +11,7 @@ clang-format -i src/main.cpp src/engine.hpp src/engine.cpp \
 	     tests/main.cpp \
 	     viewer/src/rtsched.cpp viewer/src/rtsched.hpp \
 	     viewer/src/textual.cpp viewer/src/textual.hpp \
+	     viewer/src/energy.cpp viewer/src/energy.hpp \
 	     viewer/src/main.cpp \
 	     traces/traces.cpp traces/traces.hpp \
 	     scenario/scenario.cpp scenario/scenario.hpp \
