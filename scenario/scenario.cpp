@@ -1,6 +1,11 @@
 #include "scenario.hpp"
+#include "nlohmann/detail/iterators/iter_impl.hpp"
+#include "nlohmann/detail/json_ref.hpp"
 #include "nlohmann/json.hpp"
+#include <algorithm>
 #include <fstream>
+#include <map>
+#include <string>
 
 auto scenario::to_json(const scenario::setting& tasks) -> nlohmann::json
 {

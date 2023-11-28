@@ -1,11 +1,9 @@
 #ifndef SCENARIO_HPP
 #define SCENARIO_HPP
 
-#include "nlohmann/json.hpp"
-
+#include "nlohmann/json_fwd.hpp"
 #include <cstdint>
 #include <filesystem>
-#include <fstream>
 #include <vector>
 
 namespace scenario {
