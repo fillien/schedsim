@@ -23,8 +23,6 @@
 
 auto main(const int argc, const char** argv) -> int
 {
-        constexpr double START_TIME{0};
-
         using namespace std;
 
         // Check that there is a scenario file pass by argument

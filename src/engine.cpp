@@ -42,11 +42,15 @@ void engine::simulation()
                         current_events.push_back(std::move(itr->second));
                         future_list.erase(itr);
                 }
+
+                // Pass the current events to the scheduler for handling
                 sched->handle(current_events);
         }
 
+        // Add a simulation finished trace to the past list
         if (future_list.empty()) { add_trace(traces::sim_finished{}); }
 
+        // Write the past list to a JSON file named "out.json"
         std::filesystem::path output{"out.json"};
         traces::write_log_file(past_list, output);
 }

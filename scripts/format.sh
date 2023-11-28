@@ -1,6 +1,7 @@
 #!/bin/sh
 
-clang-format -i src/main.cpp src/engine.hpp src/engine.cpp \
+clang-format -i src/main.cpp src/entity.hpp \
+             src/engine.hpp src/engine.cpp \
 	     src/plateform.hpp src/plateform.cpp \
 	     src/processor.hpp src/processor.cpp \
 	     src/task.hpp src/event.hpp \

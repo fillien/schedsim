@@ -1,6 +1,5 @@
 #include "processor.hpp"
 #include "engine.hpp"
-#include "event.hpp"
 #include "server.hpp"
 #include "task.hpp"
 #include "traces.hpp"

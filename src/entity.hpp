@@ -7,16 +7,26 @@
 class engine;
 
 /**
- * @brief A empty class that can be handled by the event system.
+ * @brief Represents an empty class that can be handled by the event system.
  */
 class entity {
-public:
-	std::weak_ptr<engine> simulator;
+      public:
+        std::weak_ptr<engine> simulator; /**< Weak pointer to the engine for event handling. */
 
-	explicit entity(const std::weak_ptr<engine> sim): simulator(sim) {}
+        /**
+         * @brief Constructs an entity with a weak pointer to the engine.
+         * @param sim Weak pointer to the engine.
+         */
+        explicit entity(const std::weak_ptr<engine> sim) : simulator(sim) {}
 
-	[[nodiscard]]
-	auto sim() const -> std::shared_ptr<engine> {
+        /**
+         * @brief Retrieves a shared pointer to the engine.
+         * @return Shared pointer to the engine.
+         *
+         * Asserts that the weak pointer to the engine is still valid.
+         */
+        [[nodiscard]] auto sim() const -> std::shared_ptr<engine>
+        {
                 assert(!simulator.expired());
                 return simulator.lock();
         }

@@ -166,10 +166,10 @@ auto traces::from_json(const nlohmann::json& log) -> traces::trace
 void traces::write_log_file(
     const std::multimap<double, traces::trace>& logs, std::filesystem::path& file)
 {
-        using json = nlohmann::json;
-
         std::ofstream out;
         out.open(file);
+
+        /// Wait that the file is open
         while (!out.is_open()) {}
 
         out << "[";
@@ -187,12 +187,16 @@ auto traces::read_log_file(std::filesystem::path& file) -> std::multimap<double,
 {
         std::string input{};
         {
-                std::ifstream input_file{"out.json"};
+                std::ifstream input_file{file};
+
+                /// Wait that the file is open
+                while (!input_file.is_open()) {}
                 input_file >> input;
         }
 
-        auto json_input = nlohmann::json::parse(input);
         std::multimap<double, traces::trace> parsed_traces{};
+
+        auto json_input = nlohmann::json::parse(input);
 
         for (auto& json_trace : json_input) {
                 parsed_traces.insert({json_trace.at("time").get<double>(), from_json(json_trace)});
