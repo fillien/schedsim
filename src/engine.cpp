@@ -27,8 +27,6 @@ void engine::add_trace(const traces::trace& new_trace)
 
 void engine::simulation()
 {
-        constexpr size_t MAX_LOGS_SIZE{500};
-
         // Loop until all events have been executed
         while (!future_list.empty()) {
                 // A vector to store all the event of the current timestamp
@@ -36,8 +34,6 @@ void engine::simulation()
 
                 // Update current timestamp
                 current_timestamp = future_list.begin()->first;
-
-                // std::cout << "========= Time " << current_timestamp << " =========\n";
 
                 // Loop until move all the event of the current timestamp
                 while (!future_list.empty() && future_list.begin()->first <= current_timestamp) {

@@ -108,7 +108,6 @@ void scheduler::detach_server_if_needed(const std::shared_ptr<task>& inactive_ta
                 inactive_task->unset_server();
                 total_utilization -= inactive_task->utilization;
                 sim()->round_zero(total_utilization);
-                // std::cout << "New total utilization: " << total_utilization << std::endl;
         }
 }
 
@@ -220,8 +219,6 @@ void scheduler::handle_job_finished(const std::shared_ptr<server>& serv, bool is
 {
         using enum server::state;
 
-        // std::cout << "S" << serv->id() << " job finished\n";
-
         assert(serv->current_state != inactive);
         sim()->add_trace(traces::job_finished{static_cast<uint16_t>(serv->id())});
 
@@ -247,9 +244,6 @@ void scheduler::handle_job_finished(const std::shared_ptr<server>& serv, bool is
                 }
         }
         this->need_resched = true;
-
-        // std::cout << "virtual time = " << serv->virtual_time << "\n";
-        // std::cout << "deadline = " << serv->relative_deadline << "\n";
 }
 
 void scheduler::handle_serv_budget_exhausted(const std::shared_ptr<server>& serv)
@@ -276,10 +270,6 @@ void scheduler::update_server_times(const std::shared_ptr<server>& serv)
         assert(serv->current_state == server::state::running);
 
         const double running_time = sim()->get_time() - serv->last_update;
-        // std::cout << "running_time = " << running_time;
-        // std::cout << "\nremaining_time = " << serv->get_task()->get_remaining_time();
-        // std::cout << "\nnew remaining_time = "
-        //           << serv->get_task()->get_remaining_time() - running_time << std::endl;
 
         // Be careful about floating point computation near 0
         assert((serv->get_task()->get_remaining_time() - running_time) >= -engine::ZERO_ROUNDED);
@@ -348,11 +338,7 @@ void scheduler::resched_proc(
                 proc->clear_server();
         }
 
-        if (server_to_execute->current_state == server::state::running) {
-                // std::cout << "migration of server S" << server_to_execute->id() << " from P"
-                //           << server_to_execute->get_task()->attached_proc->get_id() << " to P"
-                //           << proc->get_id() << std::endl;
-        }
+        if (server_to_execute->current_state == server::state::running) {}
         else {
                 server_to_execute->change_state(server::state::running);
         }
