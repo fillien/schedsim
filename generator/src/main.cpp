@@ -214,15 +214,12 @@ auto main(int argc, char* argv[]) -> int
                         }
                         arg = std::next(arg);
                         output_filepath = *arg;
-                        if (!exists(output_filepath)) {
-                                throw std::runtime_error(
-                                    std::string(output_filepath) + ": No such file");
-                        }
                         if (!output_filepath.has_filename() ||
                             output_filepath.extension() != ".json") {
                                 throw std::runtime_error(
                                     std::string(output_filepath) + ": Not a JSON scenario file");
                         }
+                        has_define_output_file = true;
                 }
                 else {
                         std::cerr << "Unknown argument" << std::endl;
@@ -233,6 +230,7 @@ auto main(int argc, char* argv[]) -> int
         if (!has_define_nb_cores || !has_define_nb_tasks || !has_define_nb_jobs ||
             !has_define_totalu || !has_define_output_file) {
                 std::cerr << "Too few argument" << std::endl;
+                return EXIT_FAILURE;
         }
 
         // Generate task set
