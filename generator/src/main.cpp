@@ -166,6 +166,7 @@ auto main(int argc, char* argv[]) -> int
         int nb_jobs_per_task{0};
         double total_utilization{0};
 
+        /// Parse CLI arguments
         const std::vector<std::string> args(argv + 1, argv + argc);
 
         if (args.empty()) { throw std::runtime_error("No input number of task to generate"); }
