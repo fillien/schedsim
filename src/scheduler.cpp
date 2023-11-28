@@ -341,8 +341,7 @@ void scheduler::resched_proc(
     const std::shared_ptr<processor>& proc, const std::shared_ptr<server>& server_to_execute)
 {
         if (proc->has_server_running()) {
-                cancel_alarms(*server_to_execute);
-
+                cancel_alarms(*(proc->get_server()));
                 sim()->add_trace(traces::task_preempted{
                     static_cast<uint16_t>(proc->get_server()->get_task()->id)});
                 proc->get_server()->change_state(server::state::ready);
