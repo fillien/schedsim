@@ -1,0 +1,50 @@
+{
+  "cores": 1,
+  "tasks": [
+    {
+      "id": 1,
+      "period": 8,
+      "utilization": 0.5,
+      "jobs": [
+        {
+          "arrival": 0,
+          "duration": 6
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "period": 12,
+      "utilization": 0.25,
+      "jobs": [
+        {
+          "arrival": 1,
+          "duration": 4
+        },
+        {
+          "arrival": 0,
+          "duration": 3
+        },
+        {
+          "arrival": 2,
+          "duration": 3
+        },
+        {
+          "arrival": 10,
+          "duration": 5
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "period": 10,
+      "utilization": 0.1,
+      "jobs": [
+        {
+          "arrival": 2,
+          "duration": 2
+        }
+      ]
+    }
+  ]
+}

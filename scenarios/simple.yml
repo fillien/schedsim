@@ -1,9 +1,0 @@
-cores: 1
-tasks:
-  - id: 1
-    period: 2
-    utilization: 0.5
-    jobs:
-      - arrival: 0
-        duration: 5
-

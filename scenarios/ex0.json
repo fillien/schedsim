@@ -1,0 +1,35 @@
+{
+  "cores": 1,
+  "tasks": [
+    {
+      "id": 1,
+      "period": 5,
+      "utilization": 0.5,
+      "jobs": [
+        {
+          "arrival": 0,
+          "duration": 5
+        },
+        {
+          "arrival": 10,
+          "duration": 5
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "period": 5,
+      "utilization": 0.5,
+      "jobs": [
+        {
+          "arrival": 0,
+          "duration": 5
+        },
+        {
+          "arrival": 10,
+          "duration": 5
+        }
+      ]
+    }
+  ]
+}
