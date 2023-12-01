@@ -16,4 +16,5 @@ clang-format -i src/main.cpp src/entity.hpp \
 	     viewer/src/main.cpp \
 	     traces/traces.cpp traces/traces.hpp \
 	     scenario/scenario.cpp scenario/scenario.hpp \
+	     generator/src/task_generator.cpp generator/src/task_generator.hpp \
 	     generator/src/main.cpp

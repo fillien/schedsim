@@ -6,6 +6,7 @@ target_compile_features(generator PRIVATE cxx_std_23)
 
 target_sources(generator PRIVATE
   src/main.cpp
+  src/task_generator.cpp
 )
 
 target_link_libraries(generator scenario)
