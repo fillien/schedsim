@@ -41,7 +41,9 @@ class task : public entity, public std::enable_shared_from_this<task> {
          * @param utilization The utilization taken when active.
          */
         task(
-            const std::weak_ptr<engine>& sim, int tid, const double& period,
+            const std::weak_ptr<engine>& sim,
+            int tid,
+            const double& period,
             const double& utilization);
 
         /**

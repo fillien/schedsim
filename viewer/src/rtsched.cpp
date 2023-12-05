@@ -38,10 +38,26 @@ auto count_tasks(const input_data& traces) -> std::size_t
 
 auto get_color(std::size_t cpu_id) -> std::string
 {
-        constexpr std::array colors{"red",       "green",  "blue", "cyan",  "magenta",
-                                    "yellow",    "black",  "gray", "white", "darkgray",
-                                    "lightgray", "brown",  "lime", "olive", "orange",
-                                    "pink",      "purple", "teal", "violet"};
+        constexpr std::array colors{
+            "red",
+            "green",
+            "blue",
+            "cyan",
+            "magenta",
+            "yellow",
+            "black",
+            "gray",
+            "white",
+            "darkgray",
+            "lightgray",
+            "brown",
+            "lime",
+            "olive",
+            "orange",
+            "pink",
+            "purple",
+            "teal",
+            "violet"};
         return colors.at(cpu_id);
 }
 
@@ -54,8 +70,10 @@ auto get_last_timestamp(const input_data& traces) -> double
 }
 
 void open_execution_zone(
-    std::map<std::size_t, std::pair<double, std::size_t>>& start_times, double time,
-    std::size_t tid, std::size_t cpu)
+    std::map<std::size_t, std::pair<double, std::size_t>>& start_times,
+    double time,
+    std::size_t tid,
+    std::size_t cpu)
 {
         if (auto search = start_times.find(tid); search == std::end(start_times)) {
                 start_times.insert({tid, {time, cpu}});
@@ -63,8 +81,10 @@ void open_execution_zone(
 }
 
 void close_execution_zone(
-    std::map<std::size_t, std::pair<double, std::size_t>>& start_times, double stop,
-    std::size_t tid, grid& grid)
+    std::map<std::size_t, std::pair<double, std::size_t>>& start_times,
+    double stop,
+    std::size_t tid,
+    grid& grid)
 {
         if (auto search = start_times.find(tid); search != std::end(start_times)) {
                 const auto start = search->second.first;
@@ -128,13 +148,13 @@ void plot(grid& grid, const std::multimap<double, traces::trace>& traces)
                         [&execution_times, &timestamp, &grid](traces::task_preempted evt) {
                                 close_execution_zone(execution_times, timestamp, evt.task_id, grid);
                         },
-                        [&execution_times, &extra_budget_times, &timestamp,
-                         &grid](traces::serv_non_cont evt) {
+                        [&execution_times, &extra_budget_times, &timestamp, &grid](
+                            traces::serv_non_cont evt) {
                                 close_execution_zone(execution_times, timestamp, evt.task_id, grid);
                                 open_extra_budget_zone(extra_budget_times, timestamp, evt.task_id);
                         },
-                        [&execution_times, &extra_budget_times, &timestamp,
-                         &grid](traces::serv_inactive evt) {
+                        [&execution_times, &extra_budget_times, &timestamp, &grid](
+                            traces::serv_inactive evt) {
                                 close_execution_zone(execution_times, timestamp, evt.task_id, grid);
                                 close_extra_budget_zone(
                                     extra_budget_times, timestamp, evt.task_id, grid);

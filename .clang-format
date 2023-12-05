@@ -1,9 +1,11 @@
 ﻿---
 AlignAfterOpenBracket: AlwaysBreak
 AlignConsecutiveMacros: 'true'
-AllowShortCaseLabelsOnASingleLine: 'true'
 AllowShortBlocksOnASingleLine: Always
+AllowShortCaseLabelsOnASingleLine: 'true'
 AllowShortIfStatementsOnASingleLine: WithoutElse
+BinPackArguments: 'false'
+BinPackParameters: 'false'
 BreakBeforeBraces: Stroustrup
 ColumnLimit: '100'
 IndentWidth: '8'

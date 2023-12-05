@@ -31,7 +31,8 @@ auto compare_events(const events::event& ev1, const events::event& ev2) -> bool
             [](const events::job_finished&) { return 0; },
             [](const events::serv_budget_exhausted&) { return 1; },
             [](const events::serv_inactive&) { return 2; },
-            [](const events::job_arrival&) { return 3; }, [](const auto&) { return MIN_PRIORITY; }};
+            [](const events::job_arrival&) { return 3; },
+            [](const auto&) { return MIN_PRIORITY; }};
 
         return std::visit(get_priority, ev1) < std::visit(get_priority, ev2);
 }

@@ -24,7 +24,8 @@ auto get_max_utilization(
 {
         if (std::distance(std::begin(servers), std::end(servers)) > 0) {
                 auto u_max = std::max_element(
-                    std::begin(servers), std::end(servers),
+                    std::begin(servers),
+                    std::end(servers),
                     [](const std::shared_ptr<server>& first,
                        const std::shared_ptr<server>& second) {
                             return (first->utilization() < second->utilization());
