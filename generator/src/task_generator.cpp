@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cmath>
 #include <random>
+#include <stdexcept>
 
 /**
  * @brief Generate a random double within the specified range.
@@ -69,6 +70,10 @@ auto get_random_log_uniform(double min, double max) -> double
 auto generate_taskset(int nb_tasks, double max_period, double total_utilization)
     -> std::vector<scenario::task>
 {
+        if (total_utilization <= 0) {
+                throw std::invalid_argument("Total utilization must be greater than 0");
+        }
+
         std::vector<scenario::task> taskset;
         double remaining_utilization = total_utilization;
 
@@ -86,7 +91,9 @@ auto generate_taskset(int nb_tasks, double max_period, double total_utilization)
                                 double utilization = utilizations[tid - 1];
                                 double period = get_random_log_uniform(1, max_period);
                                 scenario::task new_task{
-                                    static_cast<uint16_t>(tid), utilization, period,
+                                    static_cast<uint16_t>(tid),
+                                    utilization,
+                                    period,
                                     std::vector<scenario::job>{}};
                                 taskset.push_back(new_task);
                         }
