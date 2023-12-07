@@ -97,11 +97,14 @@ void outputs::energy::plot(const std::multimap<double, traces::trace>& input)
 
         namespace plt = matplot;
 
-        plt::subplot(2, 1, 0);
         plt::plot(power_timestamps, power_measures);
-
-        plt::subplot(2, 1, 1);
-        plt::plot(energy_timestamps, energy_measures);
+        plt::title("Power Consumption Over Time");
+        plt::xlabel("Time");
+        plt::ylabel("Power Consumption");
+        plt::hold(plt::on);
+        plt::plot(energy_timestamps, energy_measures)->use_y2(true);
+        plt::y2label("Cumulative Energy Consumption");
+        plt::title("Power and Cumulative Energy Consumption Over Time");
 
         plt::show();
 }
