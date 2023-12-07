@@ -3,6 +3,7 @@
 #include "textual.hpp"
 #include "traces.hpp"
 
+#include "cxxopts.hpp"
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -10,10 +11,8 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <typeinfo>
 #include <vector>
-
-/// @TODO Write the helper
-void print_helper(std::ostream& out) { out << "TODO Write the helper" << std::endl; }
 
 auto main(int argc, char* argv[]) -> int
 {
@@ -21,49 +20,55 @@ auto main(int argc, char* argv[]) -> int
 
         const path DEFAULT_INPUT_FILE{"out.json"};
 
-        path input_filepath{DEFAULT_INPUT_FILE};
-        path output_filepath{};
-        bool has_defined_output_file{false};
+        cxxopts::Options options("viewer", "Analyze simulation trace and produce stats and plots");
+        options.add_options()("h,help", "Helper")("p,print", "Print trace logs")(
+            "e,energy", "Plot power & cumulative energy comsumption")(
+            "r,rtsched", "Generate RTSched latex file", cxxopts::value<std::string>())(
+            "traces", "Traces from simulator", cxxopts::value<std::string>());
 
-        const std::vector<std::string_view> args(argv + 1, argv + argc);
+        try {
+                options.parse_positional({"traces"});
+                const auto cli = options.parse(argc, argv);
 
-        if (args.empty()) { throw std::runtime_error("No input traces file"); }
-
-        for (auto arg = std::begin(args); arg != std::end(args); ++arg) {
-                if (*arg == "-o" || *arg == "--output") {
-                        if (has_defined_output_file) {
-                                throw std::runtime_error("Already defined a output file");
-                        }
-                        arg = std::next(arg);
-                        output_filepath = *arg;
-                        has_defined_output_file = true;
+                if (cli.arguments().empty()) {
+                        std::cerr << options.help() << std::endl;
+                        return EXIT_FAILURE;
                 }
-                else if (*arg == "-h" || *arg == "--help") {
-                        print_helper(std::cout);
+
+                if (cli.count("help")) {
+                        std::cout << options.help() << std::endl;
                         return EXIT_SUCCESS;
                 }
-                else {
-                        input_filepath = *arg;
-                        if (!exists(input_filepath)) {
-                                throw std::runtime_error(
-                                    std::string(input_filepath) + ": No such file");
-                        }
-                        if (!input_filepath.has_extension() ||
-                            input_filepath.extension() != ".json") {
-                                throw std::runtime_error(
-                                    std::string(input_filepath) + ": Not a JSON trace file");
-                        }
-                        break;
+
+                if (!cli.count("traces")) {
+                        std::cerr << "No input trace file" << std::endl;
+                        return EXIT_FAILURE;
+                }
+
+                path input_filepath = cli["traces"].as<std::string>();
+                if (!exists(input_filepath)) {
+                        std::cerr << input_filepath << " no such file" << std::endl;
+                        return EXIT_FAILURE;
+                }
+                auto parsed = traces::read_log_file(input_filepath);
+
+                if (cli.count("print")) { outputs::textual::print(std::cout, parsed); }
+
+                if (cli.count("energy")) { outputs::energy::plot(parsed); }
+
+                if (cli.count("rtsched")) {
+                        std::filesystem::path output_file(cli["rtsched"].as<std::string>());
+                        std::ofstream fd(output_file);
+                        outputs::rtsched::print(fd, parsed);
                 }
         }
-
-        auto parsed = traces::read_log_file(input_filepath);
-        outputs::textual::print(std::cout, parsed);
-        outputs::energy::plot(parsed);
-
-        if (has_defined_output_file) {
-                std::ofstream output_file(output_filepath);
-                outputs::rtsched::print(output_file, parsed);
+        catch (cxxopts::exceptions::parsing& e) {
+                std::cerr << "Error parsing casting option: " << e.what() << std::endl;
+                return EXIT_FAILURE;
+        }
+        catch (std::bad_cast& e) {
+                std::cerr << "Error parsing casting option: " << e.what() << std::endl;
+                return EXIT_FAILURE;
         }
 
         return EXIT_SUCCESS;
