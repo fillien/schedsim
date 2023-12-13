@@ -33,6 +33,8 @@ void serialize(std::ostream& out, const traces::trace& tra)
                         color_arg(out, "tid", tra.task_id);
                         out << ", ";
                         color_arg(out, "duration", tra.duration);
+                        out << ", ";
+                        color_arg(out, "deadline", tra.deadline);
                 },
                 [&out](traces::job_finished tra) {
                         color_name(out, "job_finished");

@@ -13,6 +13,8 @@ clang-format -i src/main.cpp src/entity.hpp \
 	     viewer/src/rtsched.cpp viewer/src/rtsched.hpp \
 	     viewer/src/textual.cpp viewer/src/textual.hpp \
 	     viewer/src/energy.cpp viewer/src/energy.hpp \
+	     viewer/src/stats.cpp viewer/src/stats.hpp \
+	     viewer/src/deadline_misses.cpp viewer/src/deadline_misses.hpp \
 	     viewer/src/main.cpp \
 	     traces/traces.cpp traces/traces.hpp \
 	     scenario/scenario.cpp scenario/scenario.hpp \

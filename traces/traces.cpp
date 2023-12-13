@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <ostream>
 #include <variant>
 
 template <class... Ts> struct overloaded : Ts... {
@@ -21,7 +22,8 @@ auto traces::to_json(const traces::trace& log) -> nlohmann::json
                         return json{
                             {"type", "job_arrival"},
                             {"tid", tra.task_id},
-                            {"duration", tra.duration}};
+                            {"duration", tra.duration},
+                            {"deadline", tra.deadline}};
                 },
                 [](const traces::job_finished& tra) {
                         return json{{"type", "job_finished"}, {"tid", tra.task_id}};
@@ -155,7 +157,9 @@ auto traces::from_json(const nlohmann::json& log) -> traces::trace
                 [&out, &log](job_finished) { out = job_finished{log.at("tid").get<uint16_t>()}; },
                 [&out, &log](job_arrival) {
                         out = job_arrival{
-                            log.at("tid").get<uint16_t>(), log.at("duration").get<double>()};
+                            log.at("tid").get<uint16_t>(),
+                            log.at("duration").get<double>(),
+                            log.at("deadline").get<double>()};
                 },
                 [&out](resched) { out = resched{}; },
                 [&out](sim_finished) { out = sim_finished{}; }},

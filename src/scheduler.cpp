@@ -180,7 +180,10 @@ void scheduler::handle_serv_inactive(const std::shared_ptr<server>& serv)
 void scheduler::handle_job_arrival(
     const std::shared_ptr<task>& new_task, const double& job_duration)
 {
-        sim()->add_trace(traces::job_arrival{static_cast<uint16_t>(new_task->id), job_duration});
+        sim()->add_trace(traces::job_arrival{
+            static_cast<uint16_t>(new_task->id),
+            job_duration,
+            sim()->get_time() + new_task->period});
 
         if (!new_task->has_server()) {
                 if (!admission_test(*new_task)) {

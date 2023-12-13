@@ -1,9 +1,12 @@
+#include "deadline_misses.hpp"
 #include "energy.hpp"
 #include "rtsched.hpp"
+#include "stats.hpp"
 #include "textual.hpp"
 #include "traces.hpp"
 
 #include "cxxopts.hpp"
+#include <cstddef>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -24,6 +27,14 @@ auto main(int argc, char* argv[]) -> int
         options.add_options()("h,help", "Helper")("p,print", "Print trace logs")(
             "e,energy", "Plot power & cumulative energy comsumption")(
             "r,rtsched", "Generate RTSched latex file", cxxopts::value<std::string>())(
+            "u,utilizations", "Print per core utilization")(
+            "preemptions", "Print number of preemption")("waiting", "Print average waiting time")(
+            "deadlines-rates",
+            "Print deadline missed rates",
+            cxxopts::value<std::size_t>()->implicit_value("0"))(
+            "deadlines-counts",
+            "Print deadline missed counts",
+            cxxopts::value<std::size_t>()->implicit_value("0"))(
             "traces", "Traces from simulator", cxxopts::value<std::string>());
 
         try {
@@ -60,6 +71,35 @@ auto main(int argc, char* argv[]) -> int
                         std::filesystem::path output_file(cli["rtsched"].as<std::string>());
                         std::ofstream fd(output_file);
                         outputs::rtsched::print(fd, parsed);
+                }
+
+                if (cli.count("utilizations")) { outputs::stats::print_utilizations(parsed); }
+
+                if (cli.count("preemptions")) { outputs::stats::print_nb_preemption(parsed); }
+
+                if (cli.count("waiting")) { outputs::stats::print_average_waiting_time(parsed); }
+
+                if (cli.count("deadlines-rates")) {
+                        auto tid{cli["deadlines-rates"].as<std::size_t>()};
+                        auto deadlines{outputs::stats::detect_deadline_misses(parsed)};
+                        if (tid > 0) {
+                                outputs::stats::print_task_deadline_missed_rate(deadlines, tid);
+                        }
+                        else {
+                                outputs::stats::print_deadline_missed_rate(deadlines);
+                        }
+                }
+
+                if (cli.count("deadlines-counts")) {
+                        std::size_t tid{cli["deadlines-counts"].as<std::size_t>()};
+                        auto deadlines{outputs::stats::detect_deadline_misses(parsed)};
+                        std::cout << tid << std::endl;
+                        if (tid > 0) {
+                                outputs::stats::print_task_deadline_missed_count(deadlines, tid);
+                        }
+                        else {
+                                outputs::stats::print_deadline_missed_count(deadlines);
+                        }
                 }
         }
         catch (cxxopts::exceptions::parsing& e) {

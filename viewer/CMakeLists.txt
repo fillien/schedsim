@@ -29,6 +29,10 @@ target_sources(viewer PRIVATE
   src/textual.hpp
   src/energy.hpp
   src/energy.cpp
+  src/stats.hpp
+  src/stats.cpp
+  src/deadline_misses.hpp
+  src/deadline_misses.cpp
 )
 
 target_link_libraries(viewer PRIVATE traces matplot cxxopts)

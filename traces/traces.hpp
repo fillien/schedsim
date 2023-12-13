@@ -25,6 +25,7 @@ struct sim_finished {};
 struct job_arrival {
         uint16_t task_id; /**< ID of the task. */
         double duration;  /**< Duration of the job. */
+        double deadline;  /**< Absolut deadline of the job. */
 };
 
 /**
