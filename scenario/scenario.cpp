@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <fstream>
 #include <map>
+#include <sstream>
 #include <string>
 
 auto scenario::to_json(const scenario::setting& tasks) -> nlohmann::json
@@ -56,7 +57,11 @@ auto scenario::read_file(std::filesystem::path& file) -> scenario::setting
         std::string input{};
         {
                 std::ifstream input_file{file};
-                input_file >> input;
+                if (input_file) {
+                        std::ostringstream oss;
+                        oss << input_file.rdbuf();
+                        input = oss.str();
+                }
         }
 
         auto json_input = nlohmann::json::parse(input);
