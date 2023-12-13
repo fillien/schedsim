@@ -191,7 +191,9 @@ auto traces::read_log_file(std::filesystem::path& file) -> std::multimap<double,
 
                 /// Wait that the file is open
                 while (!input_file.is_open()) {}
-                input_file >> input;
+                std::ostringstream oss;
+                oss << input_file.rdbuf();
+                input = oss.str();
         }
 
         std::multimap<double, traces::trace> parsed_traces{};
