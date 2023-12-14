@@ -6,6 +6,10 @@
 #include <random>
 #include <stdexcept>
 
+namespace {
+using hr_clk = std::chrono::high_resolution_clock;
+static std::mt19937_64 random_gen(hr_clk::now().time_since_epoch().count());
+
 /**
  * @brief Generate a random double within the specified range.
  *
@@ -15,33 +19,50 @@
  */
 auto get_random_double(double min, double max) -> double
 {
-        static std::mt19937_64 random_gen(
-            std::chrono::high_resolution_clock::now().time_since_epoch().count());
         std::uniform_real_distribution<double> dis(min, max);
         return dis(random_gen);
 }
 
 /**
- * @brief Generate a random double using the UUnifast algorithm.
+ * @brief Generates a set of task utilizations using the UUniFast discard algorithm.
  *
- * @param total_utilization The total utilization to be distributed among tasks.
  * @param nb_tasks The number of tasks to generate utilizations for.
- * @return A random double representing the assigned utilization for a task.
+ * @param total_utilization The total system utilization to be distributed
+ *                         among the generated tasks.
+ *
+ * @return A vector of doubles representing the generated task utilizations.
  */
-auto uunifast(double total_utilization, int nb_tasks) -> double
+auto uunifast_discard(std::size_t nb_tasks, double total_utilization) -> std::vector<double>
 {
+        // From "Techniques For The Synthesis Of Multiprocessor Tasksets"
+        constexpr std::size_t DISCARD_LIMIT{1000};
+        std::size_t discard_counter{0};
+	std::uniform_real_distribution<double> distribution(0, 1);
+        std::vector<double> utilizations;
         double sum_utilization = total_utilization;
-        double next_sum_utilization{0};
-        double utilization{0};
 
-        for (int i = 1; i < nb_tasks; ++i) {
-                next_sum_utilization =
-                    sum_utilization * pow(get_random_double(0, 1), 1.0 / (nb_tasks - i));
-                utilization = sum_utilization - next_sum_utilization;
+        for (std::size_t i{1}; i < nb_tasks; ++i) {
+                double new_rand{distribution(random_gen)};
+                double next_sum_utilization{
+                    sum_utilization * std::pow(new_rand, 1.0 / static_cast<double>(nb_tasks - i))};
+
+                if ((sum_utilization - next_sum_utilization) > 1) {
+                        if (discard_counter > DISCARD_LIMIT) {
+                                throw std::runtime_error("The utilization generation has exceeded "
+                                                         "the limit of rejected task sets");
+                        }
+                        discard_counter++;
+                        i = 0;
+                        utilizations.clear();
+                        continue;
+                }
+
+                utilizations.push_back(sum_utilization - next_sum_utilization);
                 sum_utilization = next_sum_utilization;
         }
+        utilizations.push_back(sum_utilization);
 
-        return sum_utilization;
+        return utilizations;
 }
 
 /**
@@ -53,55 +74,10 @@ auto uunifast(double total_utilization, int nb_tasks) -> double
  */
 auto get_random_log_uniform(double min, double max) -> double
 {
-        double log_min = log(min);
-        double log_max = log(max);
-        double log_value = get_random_double(log_min, log_max);
-        return exp(log_value);
+        return exp(get_random_double(log(min), log(max)));
 }
 
-/**
- * @brief Generate a task set with log-uniformly distributed periods.
- *
- * @param nb_tasks The number of tasks to generate in the task set.
- * @param max_period The maximum period allowed for tasks.
- * @param total_utilization The total utilization to distribute among tasks.
- * @return A vector of tasks representing the generated task set.
- */
-auto generate_taskset(int nb_tasks, double max_period, double total_utilization)
-    -> std::vector<scenario::task>
-{
-        if (total_utilization <= 0) {
-                throw std::invalid_argument("Total utilization must be greater than 0");
-        }
-
-        std::vector<scenario::task> taskset;
-        double remaining_utilization = total_utilization;
-
-        while (remaining_utilization > 0) {
-                std::vector<double> utilizations;
-                for (int i = 0; i < nb_tasks; ++i) {
-                        double utilization = uunifast(remaining_utilization, nb_tasks - i);
-                        utilizations.push_back(utilization);
-                        remaining_utilization -= utilization;
-                }
-
-                // Discard task sets with insufficient utilization
-                if (remaining_utilization <= 0) {
-                        for (int tid = 1; tid <= nb_tasks; ++tid) {
-                                double utilization = utilizations[tid - 1];
-                                double period = get_random_log_uniform(1, max_period);
-                                scenario::task new_task{
-                                    static_cast<uint16_t>(tid),
-                                    utilization,
-                                    period,
-                                    std::vector<scenario::job>{}};
-                                taskset.push_back(new_task);
-                        }
-                }
-        }
-
-        return taskset;
-}
+} // namespace
 
 /**
  * @brief Function to generate job execution times using a Weibull distribution.
@@ -117,10 +93,40 @@ void generate_jobs(scenario::task& task, int nb_job)
 
         double next_arrival{0};
         task.jobs.resize(nb_job);
-        for (size_t i = 0; i < task.jobs.size(); ++i) {
+        for (std::size_t i = 0; i < task.jobs.size(); ++i) {
                 next_arrival += uniform_dis(generator);
                 task.jobs.at(i).arrival = next_arrival;
                 task.jobs.at(i).duration = weibull_dis(generator);
                 next_arrival += task.period;
         }
+}
+
+/**
+ * @brief Generate a task set with log-uniformly distributed periods.
+ *
+ * @param nb_tasks The number of tasks to generate in the task set.
+ * @param max_period The maximum period allowed for tasks.
+ * @param total_utilization The total utilization to distribute among tasks.
+ * @return A vector of tasks representing the generated task set.
+ */
+auto generate_taskset(std::size_t nb_tasks, double max_period, double total_utilization)
+    -> std::vector<scenario::task>
+{
+        if (total_utilization <= 0) {
+                throw std::invalid_argument("Total utilization must be greater than 0");
+        }
+
+        std::vector<scenario::task> taskset;
+        auto utilizations = uunifast_discard(nb_tasks, total_utilization);
+
+        for (std::size_t tid{0}; tid < nb_tasks; ++tid) {
+                scenario::task new_task{
+                    .id = static_cast<uint16_t>(tid + 1),
+                    .utilization = utilizations.at(tid),
+                    .period = get_random_log_uniform(1, max_period),
+                    .jobs = std::vector<scenario::job>{}};
+                taskset.push_back(new_task);
+        }
+
+        return taskset;
 }

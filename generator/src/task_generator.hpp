@@ -22,13 +22,12 @@ auto get_random_double(double min, double max) -> double;
 auto uunifast(double total_utilization, int nb_tasks) -> double;
 
 /**
- * @brief Generate a random number from a log-uniform distribution.
+ * @brief Function to generate job execution times using a Weibull distribution.
  *
- * @param min The minimum value of the log-uniform distribution.
- * @param max The maximum value of the log-uniform distribution.
- * @return A random number from the log-uniform distribution within the specified range.
+ * @param task The task for which jobs are generated.
+ * @param nb_job Number of jobs to generate.
  */
-auto get_random_log_uniform(double min, double max) -> double;
+void generate_jobs(scenario::task& task, int nb_job);
 
 /**
  * @brief Generate a task set with log-uniformly distributed periods.
@@ -38,15 +37,7 @@ auto get_random_log_uniform(double min, double max) -> double;
  * @param total_utilization The total utilization to distribute among tasks.
  * @return A vector of tasks representing the generated task set.
  */
-auto generate_taskset(int nb_tasks, double max_period, double total_utilization)
+auto generate_taskset(std::size_t nb_tasks, double max_period, double total_utilization)
     -> std::vector<scenario::task>;
-
-/**
- * @brief Function to generate job execution times using a Weibull distribution.
- *
- * @param task The task for which jobs are generated.
- * @param nb_job Number of jobs to generate.
- */
-void generate_jobs(scenario::task& task, int nb_job);
 
 #endif
