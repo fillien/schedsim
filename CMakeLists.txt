@@ -19,15 +19,14 @@ add_subdirectory(external/json)
 set(MATPLOTPP_BUILD_TESTS OFF)
 set(MATPLOTPP_BUILD_EXAMPLES OFF)
 
-add_subdirectory(scenario)
-add_subdirectory(traces)
+add_subdirectory(protocols)
 add_subdirectory(doc)
-add_subdirectory(viewer)
-add_subdirectory(generator)
-add_subdirectory(src)
+add_subdirectory(schedview)
+add_subdirectory(schedgen)
+add_subdirectory(schedsim)
 
 install(
-  TARGETS launch viewer generator
+  TARGETS schedsim schedview schedgen
   EXPORT ${PROJECT_NAME}_Targets
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUEDIR}
 )

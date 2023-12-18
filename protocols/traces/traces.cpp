@@ -16,74 +16,75 @@ template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 auto traces::to_json(const traces::trace& log) -> nlohmann::json
 {
         using json = nlohmann::json;
+	using namespace traces;
         return std::visit(
             overloaded{
-                [](const traces::job_arrival& tra) {
+                [](const job_arrival& tra) {
                         return json{
                             {"type", "job_arrival"},
                             {"tid", tra.task_id},
                             {"duration", tra.duration},
                             {"deadline", tra.deadline}};
                 },
-                [](const traces::job_finished& tra) {
+                [](const job_finished& tra) {
                         return json{{"type", "job_finished"}, {"tid", tra.task_id}};
                 },
-                [](const traces::proc_idled& tra) {
+                [](const proc_idled& tra) {
                         return json{{"type", "proc_idled"}, {"cpu", tra.proc_id}};
                 },
-                [](const traces::proc_activated& tra) {
+                [](const proc_activated& tra) {
                         return json{{"type", "proc_activated"}, {"cpu", tra.proc_id}};
                 },
-                []([[maybe_unused]] const traces::resched& tra) {
+                []([[maybe_unused]] const resched& tra) {
                         return json{{"type", "resched"}};
                 },
-                [](const traces::serv_non_cont& tra) {
+                [](const serv_non_cont& tra) {
                         return json{{"type", "serv_non_cont"}, {"tid", tra.task_id}};
                 },
-                [](const traces::serv_budget_exhausted& tra) {
+                [](const serv_budget_exhausted& tra) {
                         return json{{"type", "serv_budget_exhausted"}, {"tid", tra.task_id}};
                 },
-                [](const traces::serv_budget_replenished& tra) {
+                [](const serv_budget_replenished& tra) {
                         return json{
                             {"type", "serv_budget_replenished"},
                             {"tid", tra.task_id},
                             {"budget", tra.budget}};
                 },
-                [](const traces::serv_inactive& tra) {
+                [](const serv_inactive& tra) {
                         return json{{"type", "serv_inactive"}, {"tid", tra.task_id}};
                 },
-                [](const traces::serv_postpone& tra) {
+                [](const serv_postpone& tra) {
                         return json{
                             {"type", "serv_postpone"},
                             {"tid", tra.task_id},
                             {"deadline", tra.deadline}};
                 },
-                [](const traces::serv_ready& tra) {
+                [](const serv_ready& tra) {
                         return json{
                             {"type", "serv_ready"},
                             {"tid", tra.task_id},
                             {"deadline", tra.deadline}};
                 },
-                [](const traces::serv_running& tra) {
+                [](const serv_running& tra) {
                         return json{{"type", "serv_running"}, {"tid", tra.task_id}};
                 },
-                [](const traces::task_preempted& tra) {
+                [](const task_preempted& tra) {
                         return json{{"type", "task_preempted"}, {"tid", tra.task_id}};
                 },
-                [](const traces::task_scheduled& tra) {
+                [](const task_scheduled& tra) {
                         return json{
                             {"type", "task_scheduled"}, {"tid", tra.task_id}, {"cpu", tra.proc_id}};
                 },
-                [](const traces::task_rejected& tra) {
+                [](const task_rejected& tra) {
                         return json{{"type", "task_rejected"}, {"tid", tra.task_id}};
                 },
-                [](const traces::virtual_time_update& tra) {
+                [](const virtual_time_update& tra) {
                         return json{
                             {"type", "virtual_time_update"},
                             {"tid", tra.task_id},
                             {"virtual_time", tra.virtual_time}};
                 },
-                []([[maybe_unused]] const traces::sim_finished& tra) {
+                []([[maybe_unused]] const sim_finished& tra) {
                         return json{{"type", "sim_finished"}};
                 }},
             log);
@@ -91,7 +92,7 @@ auto traces::to_json(const traces::trace& log) -> nlohmann::json
 
 auto traces::from_json(const nlohmann::json& log) -> traces::trace
 {
-        using namespace traces;
+	using namespace traces;
         const std::map<std::string, traces::trace> convert{
             {"sim_finished", sim_finished{}},
             {"resched", resched{}},
@@ -114,7 +115,7 @@ auto traces::from_json(const nlohmann::json& log) -> traces::trace
         auto search = convert.find(log.at("type").get<std::string>());
         if (search == std::end(convert)) { throw std::out_of_range("Unsupported event"); }
 
-        trace out;
+	traces::trace out;
 
         std::visit(
             overloaded{
@@ -168,7 +169,7 @@ auto traces::from_json(const nlohmann::json& log) -> traces::trace
 }
 
 void traces::write_log_file(
-    const std::multimap<double, traces::trace>& logs, std::filesystem::path& file)
+	const std::multimap<double, traces::trace>& logs, std::filesystem::path& file)
 {
         std::ofstream out;
         out.open(file);
