@@ -3,7 +3,6 @@ project("Schedsim"
   VERSION 2023.09
   DESCRIPTION "A scheduling simulator")
 
-include(FetchContent)
 include(CTest)
 
 set(CMAKE_BUILD_TYPE Debug)
@@ -24,6 +23,7 @@ add_subdirectory(doc)
 add_subdirectory(schedview)
 add_subdirectory(schedgen)
 add_subdirectory(schedsim)
+add_subdirectory(tests)
 
 install(
   TARGETS schedsim schedview schedgen

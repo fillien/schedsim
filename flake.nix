@@ -1,5 +1,5 @@
 {
-  description = "A template for Nix based C++ project setup.";
+  description = "Schedsim is a C++ scheduling simulator";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -11,18 +11,13 @@
   ] (system: let
     pkgs = import nixpkgs {
       inherit system;
-
-      # Add overlays here if you need to override the nixpkgs
-      # official packages.
-      overlays = [];
-      
-      # config.allowUnfree = true;
     };
   in {
     devShells.default = pkgs.mkShell rec {
       name = "schesim";
       packages = with pkgs; [
         cmake
+        gtest
       ];
     };
 
