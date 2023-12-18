@@ -1,6 +1,4 @@
 #include "scenario.hpp"
-#include "nlohmann/detail/iterators/iter_impl.hpp"
-#include "nlohmann/detail/json_ref.hpp"
 #include "nlohmann/json.hpp"
 #include <algorithm>
 #include <fstream>
