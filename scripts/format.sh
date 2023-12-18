@@ -1,22 +1,43 @@
 #!/bin/sh
 
-clang-format -i src/main.cpp src/entity.hpp \
-             src/engine.hpp src/engine.cpp \
-	     src/plateform.hpp src/plateform.cpp \
-	     src/processor.hpp src/processor.cpp \
-	     src/task.hpp src/event.hpp \
-	     src/scheduler.hpp src/scheduler.cpp \
-	     src/sched_mono.hpp src/sched_mono.cpp \
-	     src/sched_parallel.hpp src/sched_parallel.cpp \
-	     src/server.cpp src/server.hpp \
+clang-format -i \
+	     protocols/scenorio/scenario.cpp \
+	     protocols/traces/traces.cpp \
+	     schedgen/src/main.cpp \
+	     schedgen/src/task_generator.cpp \
+	     schedsim/src/engine.cpp \
+	     schedsim/src/main.cpp \
+	     schedsim/src/plateform.cpp \
+	     schedsim/src/processor.cpp \
+	     schedsim/src/sched_mono.cpp \
+	     schedsim/src/sched_parallel.cpp \
+	     schedsim/src/scheduler.cpp \
+	     schedsim/src/server.cpp \
+	     schedsim/src/task.cpp \
+	     schedview/src/core_utilization.cpp \
+	     schedview/src/deadline_misses.cpp \
+	     schedview/src/energy.cpp \
+	     schedview/src/main.cpp \
+	     schedview/src/rtsched.cpp \
+	     schedview/src/stats.cpp \
+	     schedview/src/textual.cpp \
 	     tests/main.cpp \
-	     viewer/src/rtsched.cpp viewer/src/rtsched.hpp \
-	     viewer/src/textual.cpp viewer/src/textual.hpp \
-	     viewer/src/energy.cpp viewer/src/energy.hpp \
-	     viewer/src/stats.cpp viewer/src/stats.hpp \
-	     viewer/src/deadline_misses.cpp viewer/src/deadline_misses.hpp \
-	     viewer/src/main.cpp \
-	     traces/traces.cpp traces/traces.hpp \
-	     scenario/scenario.cpp scenario/scenario.hpp \
-	     generator/src/task_generator.cpp generator/src/task_generator.hpp \
-	     generator/src/main.cpp
+	     protocols/scenario/scenario.hpp \
+	     protocols/traces/traces.hpp \
+	     schedgen/src/task_generator.hpp \
+	     schedsim/src/engine.hpp \
+	     schedsim/src/entity.hpp \
+	     schedsim/src/event.hpp \
+	     schedsim/src/plateform.hpp \
+	     schedsim/src/processor.hpp \
+	     schedsim/src/sched_mono.hpp \
+	     schedsim/src/sched_parallel.hpp \
+	     schedsim/src/scheduler.hpp \
+	     schedsim/src/server.hpp \
+	     schedsim/src/task.hpp \
+	     schedview/src/core_utilization.hpp \
+	     schedview/src/deadline_misses.hpp \
+	     schedview/src/energy.hpp \
+	     schedview/src/rtsched.hpp \
+	     schedview/src/stats.hpp \
+	     schedview/src/textual.hpp

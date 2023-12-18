@@ -1,7 +1,6 @@
 #include "deadline_misses.hpp"
 #include "traces.hpp"
 
-
 #include <algorithm>
 #include <cmath>
 #include <cstddef>

@@ -16,7 +16,7 @@ template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 auto traces::to_json(const traces::trace& log) -> nlohmann::json
 {
         using json = nlohmann::json;
-	using namespace traces;
+        using namespace traces;
         return std::visit(
             overloaded{
                 [](const job_arrival& tra) {
@@ -92,7 +92,7 @@ auto traces::to_json(const traces::trace& log) -> nlohmann::json
 
 auto traces::from_json(const nlohmann::json& log) -> traces::trace
 {
-	using namespace traces;
+        using namespace traces;
         const std::map<std::string, traces::trace> convert{
             {"sim_finished", sim_finished{}},
             {"resched", resched{}},
@@ -115,7 +115,7 @@ auto traces::from_json(const nlohmann::json& log) -> traces::trace
         auto search = convert.find(log.at("type").get<std::string>());
         if (search == std::end(convert)) { throw std::out_of_range("Unsupported event"); }
 
-	traces::trace out;
+        traces::trace out;
 
         std::visit(
             overloaded{
@@ -169,7 +169,7 @@ auto traces::from_json(const nlohmann::json& log) -> traces::trace
 }
 
 void traces::write_log_file(
-	const std::multimap<double, traces::trace>& logs, std::filesystem::path& file)
+    const std::multimap<double, traces::trace>& logs, std::filesystem::path& file)
 {
         std::ofstream out;
         out.open(file);
