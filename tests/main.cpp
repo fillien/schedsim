@@ -1,14 +1,4 @@
-#include "gtest/gtest.h"
-#include "scenario.hpp"
-
-#include <algorithm>
-#include <variant>
-#include <vector>
-
-TEST(Scenario, Jobs)
-{
-        EXPECT_EQ(true, true);
-}
+#include <gtest/gtest.h>
 
 int main(int argc, char** argv)
 {
