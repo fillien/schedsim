@@ -1,7 +1,7 @@
 #!/bin/sh
 
 clang-format -i \
-	     protocols/scenorio/scenario.cpp \
+	     protocols/scenario/scenario.cpp \
 	     protocols/traces/traces.cpp \
 	     schedgen/src/main.cpp \
 	     schedgen/src/task_generator.cpp \
