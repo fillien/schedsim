@@ -17,6 +17,9 @@
       name = "schesim";
       packages = with pkgs; [
         cmake
+        doxygen
+        graphviz
+        ninja
         gtest
       ];
     };
