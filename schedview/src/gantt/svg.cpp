@@ -1,11 +1,12 @@
 #include "svg.hpp"
 #include "gantt.hpp"
-#include <array>
+
 #include <cstddef>
 #include <ostream>
 #include <sstream>
 #include <string>
 
+namespace {
 constexpr double AXIS_HEIGHT{64};
 constexpr double TIME_UNIT{100};
 const double EVENT_HEIGHT{40};
@@ -30,31 +31,6 @@ std::string style{"<style>"
                   ".anc { stroke: black; stroke-width: 1px; fill: url(#bars); }"
                   ".timestamp { font-size: 10px; text-anchor: middle; }"
                   "</style>"};
-
-constexpr std::array<std::pair<const char*, const char*>, 19> colors = {
-    {{"red", "#FF0000"},
-     {"green", "#008000"},
-     {"blue", "#0000FF"},
-     {"cyan", "#00FFFF"},
-     {"magenta", "#FF00FF"},
-     {"yellow", "#FFFF00"},
-     {"black", "#000000"},
-     {"gray", "#808080"},
-     {"white", "#FFFFFF"},
-     {"darkgray", "#A9A9A9"},
-     {"lightgray", "#D3D3D3"},
-     {"brown", "#A52A2A"},
-     {"lime", "#00FF00"},
-     {"olive", "#808000"},
-     {"orange", "#FFA500"},
-     {"pink", "#FFC0CB"},
-     {"purple", "#800080"},
-     {"teal", "#008080"},
-     {"violet", "#EE82EE"}}};
-
-auto get_color_name(std::size_t index) -> std::string { return colors.at(index).first; }
-
-auto get_color_hex(std::size_t index) -> std::string { return colors.at(index).second; }
 
 auto operator<<(std::ostream& out, const outputs::gantt::arrival& evt) -> std::ostream&
 {
@@ -85,7 +61,7 @@ auto operator<<(std::ostream& out, const outputs::gantt::execution& evt) -> std:
         const double DURATION{evt.stop - evt.start};
         out << "<rect class='task' x='" << TIME_UNIT * evt.start << "' y='" << TASK_OFFSET_Y;
         out << "' width='" << TIME_UNIT * DURATION << "' height='" << TASK_HEIGHT_MAX;
-        out << "' fill='" << get_color_hex(evt.cpu) << "'>";
+        out << "' fill='" << outputs::gantt::get_color_hex(evt.cpu) << "'>";
         out << "<title>";
         out << "start: " << evt.start << NEWLINE;
         out << "stop: " << evt.stop << NEWLINE;
@@ -125,6 +101,7 @@ template <typename T> auto operator<<(std::ostream& out, const std::vector<T>& v
         }
         return out;
 }
+}; // namespace
 
 auto outputs::gantt::svg::draw(const outputs::gantt::gantt& chart) -> std::string
 {

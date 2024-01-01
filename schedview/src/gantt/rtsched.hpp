@@ -1,56 +1,11 @@
 #ifndef OUTPUTS_RTSCHED_HPP
 #define OUTPUTS_RTSCHED_HPP
 
-#include "traces.hpp"
-#include <map>
+#include "gantt.hpp"
 #include <string>
-#include <variant>
-#include <vector>
-
-namespace {
-using input_data = std::multimap<double, traces::trace>;
-}
 
 namespace outputs::gantt::rtsched {
-
-struct TaskArrival {
-        std::size_t index;
-        double arrival;
+auto draw(const outputs::gantt::gantt& chart) -> std::string;
 };
-
-struct TaskDeadline {
-        std::size_t index;
-        double deadline;
-};
-
-struct TaskExecution {
-        std::size_t index;
-        double start;
-        double stop;
-        std::size_t cpu;
-};
-
-struct TaskEnd {
-        std::size_t index;
-        double stop;
-};
-
-struct TaskRespTime {
-        std::size_t index;
-        double start;
-        double stop;
-};
-
-using command = std::variant<TaskArrival, TaskDeadline, TaskExecution, TaskEnd, TaskRespTime>;
-
-struct grid {
-        std::size_t nb_axis;
-        double duration;
-        std::vector<command> commands;
-};
-
-void print(std::ostream& out, const input_data& in);
-
-}; // namespace outputs::rtsched
 
 #endif

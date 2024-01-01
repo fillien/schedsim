@@ -1,211 +1,53 @@
 #include "rtsched.hpp"
 #include "gantt.hpp"
-#include "traces.hpp"
 
-#include <array>
-#include <cmath>
-#include <cstddef>
 #include <iostream>
-#include <map>
-#include <set>
 #include <sstream>
 #include <string>
 #include <variant>
 #include <vector>
 
-template <class... Ts> struct overloaded : Ts... {
-        using Ts::operator()...;
-};
-
-template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
-
 namespace {
-using namespace outputs::gantt::rtsched;
-
-auto count_tasks(const input_data& traces) -> std::size_t
+auto operator<<(std::ostream& out, const outputs::gantt::arrival& evt) -> std::ostream&
 {
-        using namespace traces;
-
-        std::set<std::size_t> cpt;
-
-        for (const auto& tra : traces) {
-                if (std::holds_alternative<job_arrival>(tra.second)) {
-                        cpt.insert(std::get<job_arrival>(tra.second).task_id);
-                }
-        }
-
-        return cpt.size();
+        return out << "\\TaskArrival{" << evt.index << "}{" << evt.timestamp << "}";
 }
 
-auto get_color(std::size_t cpu_id) -> std::string
+auto operator<<(std::ostream& out, const outputs::gantt::deadline& evt) -> std::ostream&
 {
-        constexpr std::array colors{
-            "red",
-            "green",
-            "blue",
-            "cyan",
-            "magenta",
-            "yellow",
-            "black",
-            "gray",
-            "white",
-            "darkgray",
-            "lightgray",
-            "brown",
-            "lime",
-            "olive",
-            "orange",
-            "pink",
-            "purple",
-            "teal",
-            "violet"};
-        return colors.at(cpu_id);
+        return out << "\\TaskDeadline{" << evt.index << "}{" << evt.timestamp << "}";
 }
 
-auto get_last_timestamp(const input_data& traces) -> double
+auto operator<<(std::ostream& out, const outputs::gantt::execution& evt) -> std::ostream&
 {
-        double last_timestamp{0};
-        if (traces.rbegin() != traces.rend()) { last_timestamp = std::prev(traces.end())->first; }
-
-        return last_timestamp;
+        using namespace outputs::gantt;
+        return out << "\\TaskExecution[color=" << get_color_name(evt.cpu) << "]{" << evt.index
+                   << "}{" << evt.start << "}{" << evt.stop << "}";
 }
 
-void open_execution_zone(
-    std::map<std::size_t, std::pair<double, std::size_t>>& start_times,
-    double time,
-    std::size_t tid,
-    std::size_t cpu)
+auto operator<<(std::ostream& out, const outputs::gantt::active_non_cont& evt) -> std::ostream&
 {
-        if (auto search = start_times.find(tid); search == std::end(start_times)) {
-                start_times.insert({tid, {time, cpu}});
-        }
+        return out << "\\TaskRespTime{" << evt.index << "}{" << evt.start << "}{" << evt.stop
+                   << "}";
 }
 
-void close_execution_zone(
-    std::map<std::size_t, std::pair<double, std::size_t>>& start_times,
-    double stop,
-    std::size_t tid,
-    grid& grid)
+auto operator<<(std::ostream& out, const outputs::gantt::command& cmd) -> std::ostream&
 {
-        if (auto search = start_times.find(tid); search != std::end(start_times)) {
-                const auto start = search->second.first;
-                const auto cpu = search->second.second;
-                grid.commands.emplace_back(
-                    outputs::gantt::rtsched::TaskExecution{tid, start, stop, cpu});
-                start_times.erase(tid);
-        }
+        std::visit([&](auto&& cmd) { out << cmd; }, cmd);
+        return out;
 }
-
-void open_extra_budget_zone(
-    std::map<std::size_t, double>& extra_budget_times, double time, std::size_t tid)
-{
-        if (auto search = extra_budget_times.find(tid); search == std::end(extra_budget_times)) {
-                extra_budget_times.insert({tid, time});
-        }
-}
-
-void close_extra_budget_zone(
-    std::map<std::size_t, double>& extra_budget_times, double time, std::size_t tid, grid& grid)
-{
-        if (auto search = extra_budget_times.find(tid); search != std::end(extra_budget_times)) {
-                grid.commands.emplace_back(outputs::gantt::rtsched::TaskRespTime{
-                    tid, search->second, time - search->second});
-                extra_budget_times.erase(tid);
-        }
-}
-
-void new_arrival(grid& grid, double time, std::size_t tid)
-{
-        grid.commands.emplace_back(outputs::gantt::rtsched::TaskArrival{tid, time});
-}
-
-void new_deadline(grid& grid, double time, std::size_t tid)
-{
-        grid.commands.emplace_back(outputs::gantt::rtsched::TaskDeadline{tid, time});
-}
-
-void plot(grid& grid, const std::multimap<double, traces::trace>& traces)
-{
-        std::map<std::size_t, std::pair<double, std::size_t>> execution_times;
-        std::map<std::size_t, double> extra_budget_times;
-
-        for (const auto& tra : traces) {
-                const auto timestamp = tra.first;
-                const auto event = tra.second;
-                std::visit(
-                    overloaded{
-                        [&](traces::job_arrival evt) { new_arrival(grid, timestamp, evt.task_id); },
-                        [&](traces::serv_postpone evt) {
-                                new_deadline(grid, evt.deadline, evt.task_id);
-                        },
-                        [&](traces::serv_ready evt) {
-                                new_deadline(grid, evt.deadline, evt.task_id);
-                        },
-                        [&](traces::task_scheduled evt) {
-                                open_execution_zone(
-                                    execution_times, timestamp, evt.task_id, evt.proc_id);
-                        },
-                        [&](traces::task_preempted evt) {
-                                close_execution_zone(execution_times, timestamp, evt.task_id, grid);
-                        },
-                        [&](traces::serv_non_cont evt) {
-                                close_execution_zone(execution_times, timestamp, evt.task_id, grid);
-                                open_extra_budget_zone(extra_budget_times, timestamp, evt.task_id);
-                        },
-                        [&](traces::serv_inactive evt) {
-                                close_execution_zone(execution_times, timestamp, evt.task_id, grid);
-                                close_extra_budget_zone(
-                                    extra_budget_times, timestamp, evt.task_id, grid);
-                        },
-                        [](auto) {}},
-                    event);
-        }
-}
-
-void serialize(std::ostream& out, const command& com)
-{
-        return std::visit(
-            overloaded{
-                [&](const TaskArrival& com) {
-                        out << "\\TaskArrival{" << com.index << "}{" << com.arrival << "}";
-                },
-                [&](const TaskDeadline& com) {
-                        out << "\\TaskDeadline{" << com.index << "}{" << com.deadline << "}";
-                },
-                [&](const TaskExecution& com) {
-                        out << "\\TaskExecution[color=" << get_color(com.cpu) << "]{" << com.index
-                            << "}{" << com.start << "}{" << com.stop << "}";
-                },
-                [&](const TaskEnd& com) {
-                        out << "\\TaskEnd{" << com.index << "}{" << com.stop << "}";
-                },
-                [&](const TaskRespTime& com) {
-                        out << "\\TaskRespTime{" << com.index << "}{" << com.start << "}{"
-                            << com.stop << "}";
-                }},
-            com);
-}
-
 }; // namespace
 
 namespace outputs::gantt::rtsched {
-void print(std::ostream& out, const input_data& in)
+auto draw(const outputs::gantt::gantt& chart) -> std::string
 {
-        constexpr auto ADDITIONNAL_TIME_AFTER_LAST_EVENT{1};
-
-        struct rtsched::grid grid;
-
-        grid.nb_axis = count_tasks(in);
-        grid.duration = std::ceil(get_last_timestamp(in) + ADDITIONNAL_TIME_AFTER_LAST_EVENT);
-
-        plot(grid, in);
-
-        out << "\\begin{RTGrid}{" << grid.nb_axis << "}{" << grid.duration << "}\n";
-        for (const auto& com : grid.commands) {
-                serialize(out, com);
-                out << '\n';
+        std::stringstream out;
+        out << "\\begin{RTGrid}{" << chart.nb_axis << "}{" << chart.duration << "}\n";
+        for (const auto& cmd : chart.commands) {
+                out << cmd << '\n';
         }
         out << "\\end{RTGrid}\n";
+        return out.str();
 }
 
 }; // namespace outputs::gantt::rtsched

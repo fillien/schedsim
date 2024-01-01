@@ -23,8 +23,8 @@ clang-format -i \
 	     schedview/src/gantt/svg.cpp \
 	     schedview/src/stats.cpp \
 	     schedview/src/textual.cpp \
-
 	     tests/main.cpp \
+	     tests/scenario.cpp \
 	     protocols/scenario/scenario.hpp \
 	     protocols/traces/traces.hpp \
 	     schedgen/src/task_generator.hpp \

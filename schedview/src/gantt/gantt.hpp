@@ -1,12 +1,38 @@
 #ifndef GANTT_HPP
 #define GANTT_HPP
 
-#include <vector>
-#include <variant>
-#include <map>
 #include "traces.hpp"
+#include <array>
+#include <map>
+#include <variant>
+#include <vector>
 
 namespace outputs::gantt {
+
+constexpr std::array<std::pair<const char*, const char*>, 19> colors = {
+    {{"red", "#FF0000"},
+     {"green", "#008000"},
+     {"blue", "#0000FF"},
+     {"cyan", "#00FFFF"},
+     {"magenta", "#FF00FF"},
+     {"yellow", "#FFFF00"},
+     {"black", "#000000"},
+     {"gray", "#808080"},
+     {"white", "#FFFFFF"},
+     {"darkgray", "#A9A9A9"},
+     {"lightgray", "#D3D3D3"},
+     {"brown", "#A52A2A"},
+     {"lime", "#00FF00"},
+     {"olive", "#808000"},
+     {"orange", "#FFA500"},
+     {"pink", "#FFC0CB"},
+     {"purple", "#800080"},
+     {"teal", "#008080"},
+     {"violet", "#EE82EE"}}};
+
+inline auto get_color_name(std::size_t index) -> std::string { return colors.at(index).first; }
+
+inline auto get_color_hex(std::size_t index) -> std::string { return colors.at(index).second; }
 
 struct arrival {
         std::size_t index;
@@ -20,7 +46,7 @@ struct deadline {
 
 struct execution {
         std::size_t index;
-	std::size_t cpu;
+        std::size_t cpu;
         double start;
         double stop;
 };
@@ -40,6 +66,6 @@ struct gantt {
 };
 
 auto generate_gantt(const std::multimap<double, traces::trace>& logs) -> gantt;
-};
+}; // namespace outputs::gantt
 
 #endif

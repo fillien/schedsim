@@ -71,14 +71,14 @@ auto main(int argc, char* argv[]) -> int
                 if (cli.count("energy")) { outputs::energy::plot(parsed); }
 
                 if (cli.count("rtsched")) {
+			outputs::gantt::gantt chart{outputs::gantt::generate_gantt(parsed)};
                         std::filesystem::path output_file(cli["rtsched"].as<std::string>());
                         std::ofstream fd(output_file);
-                        outputs::gantt::rtsched::print(fd, parsed);
+			fd << outputs::gantt::rtsched::draw(chart);
                 }
 
                 if (cli.count("svg")) {
                         outputs::gantt::gantt hello = outputs::gantt::generate_gantt(parsed);
-
                         std::cout << outputs::gantt::svg::draw(hello);
                 }
 
