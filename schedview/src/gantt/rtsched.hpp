@@ -11,7 +11,7 @@ namespace {
 using input_data = std::multimap<double, traces::trace>;
 }
 
-namespace outputs::rtsched {
+namespace outputs::gantt::rtsched {
 
 struct TaskArrival {
         std::size_t index;

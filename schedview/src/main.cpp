@@ -1,6 +1,8 @@
 #include "deadline_misses.hpp"
 #include "energy.hpp"
-#include "rtsched.hpp"
+#include "gantt/gantt.hpp"
+#include "gantt/rtsched.hpp"
+#include "gantt/svg.hpp"
 #include "stats.hpp"
 #include "textual.hpp"
 #include "traces.hpp"
@@ -27,7 +29,8 @@ auto main(int argc, char* argv[]) -> int
         options.add_options()("h,help", "Helper")("p,print", "Print trace logs")(
             "e,energy", "Plot power & cumulative energy comsumption")(
             "r,rtsched", "Generate RTSched latex file", cxxopts::value<std::string>())(
-            "u,utilizations", "Print per core utilization")(
+            "s,svg",
+            "Generate GANTT chart in SVG file")("u,utilizations", "Print per core utilization")(
             "preemptions", "Print number of preemption")("waiting", "Print average waiting time")(
             "deadlines-rates",
             "Print deadline missed rates",
@@ -70,7 +73,13 @@ auto main(int argc, char* argv[]) -> int
                 if (cli.count("rtsched")) {
                         std::filesystem::path output_file(cli["rtsched"].as<std::string>());
                         std::ofstream fd(output_file);
-                        outputs::rtsched::print(fd, parsed);
+                        outputs::gantt::rtsched::print(fd, parsed);
+                }
+
+                if (cli.count("svg")) {
+                        outputs::gantt::gantt hello = outputs::gantt::generate_gantt(parsed);
+
+                        std::cout << outputs::gantt::svg::draw(hello);
                 }
 
                 if (cli.count("utilizations")) { outputs::stats::print_utilizations(parsed); }

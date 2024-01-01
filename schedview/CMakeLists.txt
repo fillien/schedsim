@@ -8,8 +8,12 @@ target_link_options(schedview PRIVATE -fsanitize=address)
 
 target_sources(schedview PRIVATE
   src/main.cpp
-  src/rtsched.cpp
-  src/rtsched.hpp
+  src/gantt/gantt.cpp
+  src/gantt/gantt.hpp
+  src/gantt/svg.cpp
+  src/gantt/svg.hpp
+  src/gantt/rtsched.cpp
+  src/gantt/rtsched.hpp
   src/textual.cpp
   src/textual.hpp
   src/energy.hpp

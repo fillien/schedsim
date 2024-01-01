@@ -1,4 +1,5 @@
 #include "rtsched.hpp"
+#include "gantt.hpp"
 #include "traces.hpp"
 
 #include <array>
@@ -19,7 +20,7 @@ template <class... Ts> struct overloaded : Ts... {
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 namespace {
-using namespace outputs::rtsched;
+using namespace outputs::gantt::rtsched;
 
 auto count_tasks(const input_data& traces) -> std::size_t
 {
@@ -89,7 +90,8 @@ void close_execution_zone(
         if (auto search = start_times.find(tid); search != std::end(start_times)) {
                 const auto start = search->second.first;
                 const auto cpu = search->second.second;
-                grid.commands.emplace_back(outputs::rtsched::TaskExecution{tid, start, stop, cpu});
+                grid.commands.emplace_back(
+                    outputs::gantt::rtsched::TaskExecution{tid, start, stop, cpu});
                 start_times.erase(tid);
         }
 }
@@ -106,20 +108,20 @@ void close_extra_budget_zone(
     std::map<std::size_t, double>& extra_budget_times, double time, std::size_t tid, grid& grid)
 {
         if (auto search = extra_budget_times.find(tid); search != std::end(extra_budget_times)) {
-                grid.commands.emplace_back(
-                    outputs::rtsched::TaskRespTime{tid, search->second, time - search->second});
+                grid.commands.emplace_back(outputs::gantt::rtsched::TaskRespTime{
+                    tid, search->second, time - search->second});
                 extra_budget_times.erase(tid);
         }
 }
 
 void new_arrival(grid& grid, double time, std::size_t tid)
 {
-        grid.commands.emplace_back(outputs::rtsched::TaskArrival{tid, time});
+        grid.commands.emplace_back(outputs::gantt::rtsched::TaskArrival{tid, time});
 }
 
 void new_deadline(grid& grid, double time, std::size_t tid)
 {
-        grid.commands.emplace_back(outputs::rtsched::TaskDeadline{tid, time});
+        grid.commands.emplace_back(outputs::gantt::rtsched::TaskDeadline{tid, time});
 }
 
 void plot(grid& grid, const std::multimap<double, traces::trace>& traces)
@@ -132,29 +134,25 @@ void plot(grid& grid, const std::multimap<double, traces::trace>& traces)
                 const auto event = tra.second;
                 std::visit(
                     overloaded{
-                        [&timestamp, &grid](traces::job_arrival evt) {
-                                new_arrival(grid, timestamp, evt.task_id);
-                        },
-                        [&timestamp, &grid](traces::serv_postpone evt) {
+                        [&](traces::job_arrival evt) { new_arrival(grid, timestamp, evt.task_id); },
+                        [&](traces::serv_postpone evt) {
                                 new_deadline(grid, evt.deadline, evt.task_id);
                         },
-                        [&timestamp, &grid](traces::serv_ready evt) {
+                        [&](traces::serv_ready evt) {
                                 new_deadline(grid, evt.deadline, evt.task_id);
                         },
-                        [&execution_times, &timestamp](traces::task_scheduled evt) {
+                        [&](traces::task_scheduled evt) {
                                 open_execution_zone(
                                     execution_times, timestamp, evt.task_id, evt.proc_id);
                         },
-                        [&execution_times, &timestamp, &grid](traces::task_preempted evt) {
+                        [&](traces::task_preempted evt) {
                                 close_execution_zone(execution_times, timestamp, evt.task_id, grid);
                         },
-                        [&execution_times, &extra_budget_times, &timestamp, &grid](
-                            traces::serv_non_cont evt) {
+                        [&](traces::serv_non_cont evt) {
                                 close_execution_zone(execution_times, timestamp, evt.task_id, grid);
                                 open_extra_budget_zone(extra_budget_times, timestamp, evt.task_id);
                         },
-                        [&execution_times, &extra_budget_times, &timestamp, &grid](
-                            traces::serv_inactive evt) {
+                        [&](traces::serv_inactive evt) {
                                 close_execution_zone(execution_times, timestamp, evt.task_id, grid);
                                 close_extra_budget_zone(
                                     extra_budget_times, timestamp, evt.task_id, grid);
@@ -168,20 +166,20 @@ void serialize(std::ostream& out, const command& com)
 {
         return std::visit(
             overloaded{
-                [&out](const TaskArrival& com) {
+                [&](const TaskArrival& com) {
                         out << "\\TaskArrival{" << com.index << "}{" << com.arrival << "}";
                 },
-                [&out](const TaskDeadline& com) {
+                [&](const TaskDeadline& com) {
                         out << "\\TaskDeadline{" << com.index << "}{" << com.deadline << "}";
                 },
-                [&out](const TaskExecution& com) {
+                [&](const TaskExecution& com) {
                         out << "\\TaskExecution[color=" << get_color(com.cpu) << "]{" << com.index
                             << "}{" << com.start << "}{" << com.stop << "}";
                 },
-                [&out](const TaskEnd& com) {
+                [&](const TaskEnd& com) {
                         out << "\\TaskEnd{" << com.index << "}{" << com.stop << "}";
                 },
-                [&out](const TaskRespTime& com) {
+                [&](const TaskRespTime& com) {
                         out << "\\TaskRespTime{" << com.index << "}{" << com.start << "}{"
                             << com.stop << "}";
                 }},
@@ -190,8 +188,7 @@ void serialize(std::ostream& out, const command& com)
 
 }; // namespace
 
-namespace outputs::rtsched {
-
+namespace outputs::gantt::rtsched {
 void print(std::ostream& out, const input_data& in)
 {
         constexpr auto ADDITIONNAL_TIME_AFTER_LAST_EVENT{1};
@@ -211,4 +208,4 @@ void print(std::ostream& out, const input_data& in)
         out << "\\end{RTGrid}\n";
 }
 
-}; // namespace outputs::rtsched
+}; // namespace outputs::gantt::rtsched

@@ -18,9 +18,12 @@ clang-format -i \
 	     schedview/src/deadline_misses.cpp \
 	     schedview/src/energy.cpp \
 	     schedview/src/main.cpp \
-	     schedview/src/rtsched.cpp \
+	     schedview/src/gantt/gantt.cpp \
+	     schedview/src/gantt/rtsched.cpp \
+	     schedview/src/gantt/svg.cpp \
 	     schedview/src/stats.cpp \
 	     schedview/src/textual.cpp \
+
 	     tests/main.cpp \
 	     protocols/scenario/scenario.hpp \
 	     protocols/traces/traces.hpp \
@@ -38,6 +41,8 @@ clang-format -i \
 	     schedview/src/core_utilization.hpp \
 	     schedview/src/deadline_misses.hpp \
 	     schedview/src/energy.hpp \
-	     schedview/src/rtsched.hpp \
+	     schedview/src/gantt/gantt.hpp \
+	     schedview/src/gantt/rtsched.hpp \
+	     schedview/src/gantt/svg.hpp \
 	     schedview/src/stats.hpp \
 	     schedview/src/textual.hpp
