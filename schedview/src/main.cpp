@@ -26,20 +26,21 @@ auto main(int argc, char* argv[]) -> int
         const path DEFAULT_INPUT_FILE{"out.json"};
 
         cxxopts::Options options("viewer", "Analyze simulation trace and produce stats and plots");
-        options.add_options()("h,help", "Helper")("p,print", "Print trace logs")(
-            "e,energy", "Plot power & cumulative energy comsumption")(
-            "r,rtsched", "Generate RTSched latex file", cxxopts::value<std::string>())(
-            "s,svg",
-            "Generate GANTT chart in SVG file")("u,utilizations", "Print per core utilization")(
-            "preemptions", "Print number of preemption")("waiting", "Print average waiting time")(
-            "deadlines-rates",
-            "Print deadline missed rates",
-            cxxopts::value<std::size_t>()->implicit_value("0"))(
-            "deadlines-counts",
-            "Print deadline missed counts",
-            cxxopts::value<std::size_t>()->implicit_value("0"))(
-            "traces", "Traces from simulator", cxxopts::value<std::string>());
-
+        // clang-format off
+        options.add_options()
+                ("h,help", "Helper")
+                ("p,print", "Print trace logs")
+                ("e,energy", "Plot power & cumulative energy comsumption")
+                ("r,rtsched", "Generate RTSched latex file", cxxopts::value<std::string>())
+                ("s,svg", "Generate GANTT chart in SVG file")
+                ("u,utilizations", "Print per core utilization")
+                ("preemptions", "Print number of preemption")
+                ("waiting", "Print average waiting time")
+                ("deadlines-rates", "Print deadline missed rates", cxxopts::value<std::size_t>()->implicit_value("0"))
+                ("deadlines-counts", "Print deadline missed counts", cxxopts::value<std::size_t>()->implicit_value("0"))
+                ("traces", "Traces from simulator", cxxopts::value<std::string>());
+        // clang-format on
+	
         try {
                 options.parse_positional({"traces"});
                 const auto cli = options.parse(argc, argv);
