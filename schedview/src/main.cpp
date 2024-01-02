@@ -40,7 +40,7 @@ auto main(int argc, char* argv[]) -> int
                 ("deadlines-counts", "Print deadline missed counts", cxxopts::value<std::size_t>()->implicit_value("0"))
                 ("traces", "Traces from simulator", cxxopts::value<std::string>());
         // clang-format on
-	
+
         try {
                 options.parse_positional({"traces"});
                 const auto cli = options.parse(argc, argv);
@@ -72,10 +72,10 @@ auto main(int argc, char* argv[]) -> int
                 if (cli.count("energy")) { outputs::energy::plot(parsed); }
 
                 if (cli.count("rtsched")) {
-			outputs::gantt::gantt chart{outputs::gantt::generate_gantt(parsed)};
+                        outputs::gantt::gantt chart{outputs::gantt::generate_gantt(parsed)};
                         std::filesystem::path output_file(cli["rtsched"].as<std::string>());
                         std::ofstream fd(output_file);
-			fd << outputs::gantt::rtsched::draw(chart);
+                        fd << outputs::gantt::rtsched::draw(chart);
                 }
 
                 if (cli.count("svg")) {

@@ -37,10 +37,9 @@ auto operator<<(std::ostream& out, const outputs::gantt::arrival& evt) -> std::o
 {
         const double OFFSET_Y{AXIS_HEIGHT * static_cast<double>(evt.index)};
         out << "<line class='event' x1='" << OFFSET_X + TIME_UNIT * evt.timestamp << "' x2='"
-            << OFFSET_X + TIME_UNIT * evt.timestamp;
-        out << "' y1='" << OFFSET_Y << "' y2='" << OFFSET_Y - EVENT_HEIGHT;
-        out << "'><title>arrival: " << evt.timestamp << "</title>";
-        out << "</line>";
+            << OFFSET_X + TIME_UNIT * evt.timestamp << "' y1='" << OFFSET_Y << "' y2='"
+            << OFFSET_Y - EVENT_HEIGHT << "'><title>arrival: " << evt.timestamp << "</title>"
+            << "</line>";
         return out;
 }
 
@@ -48,10 +47,9 @@ auto operator<<(std::ostream& out, const outputs::gantt::deadline& evt) -> std::
 {
         const double OFFSET_Y{AXIS_HEIGHT * static_cast<double>(evt.index)};
         out << "<line class='event' x1='" << OFFSET_X + TIME_UNIT * evt.timestamp << "' x2='"
-            << OFFSET_X + TIME_UNIT * evt.timestamp;
-        out << "' y1='" << OFFSET_Y - EVENT_HEIGHT << "' y2='" << OFFSET_Y;
-        out << "'><title>deadline: " << evt.timestamp << "</title>";
-        out << "</line>";
+            << OFFSET_X + TIME_UNIT * evt.timestamp << "' y1='" << OFFSET_Y - EVENT_HEIGHT
+            << "' y2='" << OFFSET_Y << "'><title>deadline: " << evt.timestamp << "</title>"
+            << "</line>";
         return out;
 }
 
@@ -60,15 +58,13 @@ auto operator<<(std::ostream& out, const outputs::gantt::execution& evt) -> std:
         constexpr double TASK_HEIGHT_MAX{30};
         const double TASK_OFFSET_Y{static_cast<double>(evt.index - 1) * AXIS_HEIGHT + 33};
         const double DURATION{evt.stop - evt.start};
-        out << "<rect class='task' x='" << OFFSET_X + TIME_UNIT * evt.start << "' y='" << TASK_OFFSET_Y;
-        out << "' width='" << TIME_UNIT * DURATION << "' height='" << TASK_HEIGHT_MAX;
-        out << "' fill='" << outputs::gantt::get_color_hex(evt.cpu) << "'>";
-        out << "<title>";
-        out << "start: " << evt.start << NEWLINE;
-        out << "stop: " << evt.stop << NEWLINE;
-        out << "duration: " << DURATION;
-        out << "</title>";
-        out << "</rect>";
+        out << "<rect class='task' x='" << OFFSET_X + TIME_UNIT * evt.start << "' y='"
+            << TASK_OFFSET_Y << "' width='" << TIME_UNIT * DURATION << "' height='"
+            << TASK_HEIGHT_MAX << "' fill='" << outputs::gantt::get_color_hex(evt.cpu) << "'>"
+            << "<title>"
+            << "start: " << evt.start << NEWLINE << "stop: " << evt.stop << NEWLINE
+            << "duration: " << DURATION << "</title>"
+            << "</rect>";
         return out;
 }
 
@@ -77,15 +73,13 @@ auto operator<<(std::ostream& out, const outputs::gantt::active_non_cont& evt) -
         constexpr double TASK_HEIGHT_MAX{30};
         const double TASK_OFFSET_Y{static_cast<double>(evt.index - 1) * AXIS_HEIGHT + 33};
         const double DURATION{evt.stop - evt.start};
-        out << "<rect class='anc' x='" << OFFSET_X + TIME_UNIT * evt.start << "' y='" << TASK_OFFSET_Y;
-        out << "' width='" << TIME_UNIT * DURATION << "' height='" << TASK_HEIGHT_MAX;
-        out << "'>";
-        out << "<title>";
-        out << "start: " << evt.start << NEWLINE;
-        out << "stop: " << evt.start + DURATION << NEWLINE;
-        out << "duration: " << DURATION;
-        out << "</title>";
-        out << "</rect>";
+        out << "<rect class='anc' x='" << OFFSET_X + TIME_UNIT * evt.start << "' y='"
+            << TASK_OFFSET_Y << "' width='" << TIME_UNIT * DURATION << "' height='"
+            << TASK_HEIGHT_MAX << "'>"
+            << "<title>"
+            << "start: " << evt.start << NEWLINE << "stop: " << evt.start + DURATION << NEWLINE
+            << "duration: " << DURATION << "</title>"
+            << "</rect>";
         return out;
 }
 
@@ -106,20 +100,23 @@ template <typename T> auto operator<<(std::ostream& out, const std::vector<T>& v
 
 auto outputs::gantt::svg::draw(const outputs::gantt::gantt& chart) -> std::string
 {
+        constexpr auto HTML_HEADER{"<!DOCTYPE html><html><head></head><body>"};
+        constexpr auto HTML_FOOTER{"</body></html>"};
         std::stringstream out;
-        out << "<svg viewBox='0 0 " << OFFSET_X + chart.duration * TIME_UNIT;
-        out << " " << static_cast<double>(chart.nb_axis) * AXIS_HEIGHT
-            << "' xmlns='http://www.w3.org/2000/svg'>\n";
-        out << defs << style << '\n';
+
+        out << HTML_HEADER << "<svg viewBox='0 0 " << OFFSET_X + chart.duration * TIME_UNIT << " "
+            << static_cast<double>(chart.nb_axis) * AXIS_HEIGHT
+            << "' xmlns='http://www.w3.org/2000/svg'>\n"
+            << defs << style << '\n';
         for (std::size_t i = 1; i <= chart.nb_axis; ++i) {
                 auto axis = static_cast<double>(i);
-		auto BASELINE {AXIS_HEIGHT * axis};
-		out << "<text x='0' y='" << BASELINE - (AXIS_HEIGHT/4) << "'>" << TAU_SYM << i << "</text>";
-                out << "<line x1='" << OFFSET_X << "' y1='" << BASELINE;
-                out << "' x2='" << OFFSET_X + chart.duration * TIME_UNIT;
-                out << "' y2='" << BASELINE << "' stroke='black' stroke-width='1'/>\n";
+                auto BASELINE{AXIS_HEIGHT * axis};
+                out << "<text x='0' y='" << BASELINE - (AXIS_HEIGHT / 4) << "'>" << TAU_SYM << i
+                    << "</text>"
+                    << "<line x1='" << OFFSET_X << "' y1='" << BASELINE << "' x2='"
+                    << OFFSET_X + chart.duration * TIME_UNIT << "' y2='" << BASELINE
+                    << "' stroke='black' stroke-width='1'/>\n";
         }
-        out << chart.commands;
-        out << "</svg>\n";
+        out << chart.commands << "</svg>\n" << HTML_FOOTER;
         return out.str();
 }
