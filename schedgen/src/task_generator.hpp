@@ -2,15 +2,8 @@
 #define TASK_GENERATOR_HPP
 
 #include "scenario.hpp"
-
-/**
- * @brief Generate a random double within the specified range.
- *
- * @param min The minimum value of the range.
- * @param max The maximum value of the range.
- * @return A random double within the specified range.
- */
-auto get_random_double(double min, double max) -> double;
+#include <cstddef>
+#include <vector>
 
 /**
  * @brief Generate a random double using the UUnifast algorithm.
@@ -27,7 +20,7 @@ auto uunifast(double total_utilization, int nb_tasks) -> double;
  * @param task The task for which jobs are generated.
  * @param nb_job Number of jobs to generate.
  */
-void generate_jobs(scenario::task& task, int nb_job);
+auto generate_jobs(std::vector<double> utilization) -> std::vector<scenario::job>;
 
 /**
  * @brief Generate a task set with log-uniformly distributed periods.
@@ -37,7 +30,7 @@ void generate_jobs(scenario::task& task, int nb_job);
  * @param total_utilization The total utilization to distribute among tasks.
  * @return A vector of tasks representing the generated task set.
  */
-auto generate_taskset(std::size_t nb_tasks, double max_period, double total_utilization)
+auto generate_taskset(std::size_t nb_tasks, std::size_t nb_jobs, double total_utilization, double success_rate)
     -> std::vector<scenario::task>;
 
 #endif

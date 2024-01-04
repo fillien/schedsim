@@ -75,7 +75,7 @@ auto main(int argc, char* argv[]) -> int
         taskset.nb_cores = nb_cores;
 
         try {
-                taskset.tasks = generate_taskset(nb_tasks, MAX_PERIOD, total_utilization);
+                taskset.tasks = generate_taskset(100, 1000, 0.8, 0.8);
         }
         catch (std::invalid_argument& e) {
                 std::cerr << "Invalide argument: " << e.what() << std::endl;
@@ -84,7 +84,7 @@ auto main(int argc, char* argv[]) -> int
 
         // Generate jobs and arrivals for each task
         for (auto& gen_task : taskset.tasks) {
-                generate_jobs(gen_task, nb_jobs_per_task);
+                // generate_jobs(gen_task, nb_jobs_per_task);
         }
 
         // Write the scenario to output file
