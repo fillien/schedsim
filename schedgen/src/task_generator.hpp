@@ -30,7 +30,8 @@ auto generate_jobs(std::vector<double> utilization) -> std::vector<scenario::job
  * @param total_utilization The total utilization to distribute among tasks.
  * @return A vector of tasks representing the generated task set.
  */
-auto generate_taskset(std::size_t nb_tasks, std::size_t nb_jobs, double total_utilization, double success_rate)
+auto generate_taskset(
+    std::size_t nb_tasks, std::size_t nb_jobs, double total_utilization, double success_rate)
     -> std::vector<scenario::task>;
 
 #endif

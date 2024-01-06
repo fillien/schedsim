@@ -93,14 +93,14 @@ auto generate_jobs(std::vector<double> durations) -> std::vector<scenario::job>
         std::default_random_engine generator;
 
         double next_arrival{0};
-/*
-        for (std::size_t i = 0; i < task.jobs.size(); ++i) {
-                next_arrival += uniform_dis(generator);
-                task.jobs.at(i).arrival = next_arrival;
-                task.jobs.at(i).duration = weibull_dis(generator);
-                next_arrival += task.period;
-        }
-*/
+        /*
+                for (std::size_t i = 0; i < task.jobs.size(); ++i) {
+                        next_arrival += uniform_dis(generator);
+                        task.jobs.at(i).arrival = next_arrival;
+                        task.jobs.at(i).duration = weibull_dis(generator);
+                        next_arrival += task.period;
+                }
+        */
         return std::vector<scenario::job>(1);
 }
 
@@ -136,38 +136,27 @@ auto generate_taskset(
 
         for (std::size_t tid{0}; tid < nb_tasks; ++tid) {
                 std::vector<double> durations(
-			std::round(nb_jobs * utilizations.at(tid) * 1 / total_utilization));
+                    std::round(nb_jobs * utilizations.at(tid) * 1 / total_utilization));
                 sum_jobs += durations.size();
 
-		if (durations.size() == 0) {
-			continue;
-		}
+                if (durations.size() == 0) { continue; }
 
                 std::ranges::generate(
-			durations.begin(), durations.end(), []() { return bounded_weibull(20, 60); });
+                    durations.begin(), durations.end(), []() { return bounded_weibull(20, 60); });
 
                 std::sort(durations.begin(), durations.end());
 
-                std::cout << '[';
-                for (const auto& dur : durations) {
-                        std::cout << dur << ' ';
-                }
-                std::cout << ']' << std::endl;
-
-		std::size_t index = std::ceil((durations.size()-1) * success_rate);
-		std::cout << "index: " << index << std::endl;
+                std::size_t index = std::ceil((durations.size() - 1) * success_rate);
                 double period{durations.at(index)};
 
-                std::cout << "period : " << period << std::endl;
-
                 scenario::task new_task{
-			.id = static_cast<uint16_t>(tid + 1),
-			.utilization = utilizations.at(tid),
-			.period = period,
-			.jobs = generate_jobs(durations)};
+                    .id = static_cast<uint16_t>(tid + 1),
+                    .utilization = utilizations.at(tid),
+                    .period = period,
+                    .jobs = generate_jobs(durations)};
                 taskset.push_back(new_task);
 
-		std::cout << std::endl;
+                std::cout << std::endl;
         }
 
         std::cout << "input nb_jobs: " << nb_jobs << std::endl;
