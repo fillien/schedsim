@@ -1,6 +1,7 @@
 #include "scenario.hpp"
 #include "task_generator.hpp"
 
+#include <cstddef>
 #include <cstdlib>
 #include <cxxopts.hpp>
 #include <filesystem>
@@ -9,86 +10,82 @@
 #include <string>
 #include <typeinfo>
 
-auto main(int argc, char* argv[]) -> int
+namespace fs = std::filesystem;
+
+struct app_config {
+        fs::path output_filepath{"scenario.json"};
+        std::size_t nb_cores{0};
+        std::size_t nb_tasks{0};
+        std::size_t nb_jobs{0};
+        double total_utilization{1};
+        double success_rate{1};
+};
+
+auto parse_args(int argc, char** argv) -> app_config
 {
-        using namespace std::filesystem;
+        app_config config;
 
-        constexpr double MAX_PERIOD{100};
-        const path DEFAULT_OUTPUT_FILE{"scenario.json"};
-
-        path output_filepath{DEFAULT_OUTPUT_FILE};
-        int nb_cores{0};
-        int nb_tasks{0};
-        int nb_jobs_per_task{0};
-        double total_utilization{0};
-
+        // clang-format off
         cxxopts::Options options("generator", "Generate task for monocore and multicore systems");
-        options.add_options()("h,help", "Helper")(
-            "c,cores", "Number of cores", cxxopts::value<int>())(
-            "t,tasks", "Number of tasks to generate", cxxopts::value<int>())(
-            "j,jobs", "Number of jobs per tasks", cxxopts::value<int>())(
-            "u,totalu", "Total utilization of the taskset", cxxopts::value<double>())(
-            "o,output", "Output file to write the scenario", cxxopts::value<std::string>());
+        options.add_options()
+                ("h,help", "Helper")
+                ("c,cores", "Number of cores", cxxopts::value<int>())
+                ("t,tasks", "Number of tasks to generate", cxxopts::value<int>())
+                ("j,jobs", "Number of jobs", cxxopts::value<int>())
+                ("u,totalu", "Total utilization of the taskset", cxxopts::value<double>())
+                ("s,success", "Rate of deadlines met (0..1)", cxxopts::value<double>())
+                ("o,output", "Output file to write the scenario", cxxopts::value<std::string>());
+        // clang-format on
+        const auto cli = options.parse(argc, argv);
 
-        try {
-                const auto cli = options.parse(argc, argv);
-                const bool mandatory_args = cli.count("cores") && cli.count("tasks") &&
-                                            cli.count("jobs") && cli.count("totalu");
-
-                if (cli.arguments().empty()) {
-                        std::cerr << options.help() << std::endl;
-                        return EXIT_FAILURE;
-                }
-
-                if (cli.count("help")) {
-                        std::cout << options.help() << std::endl;
-                        return EXIT_SUCCESS;
-                }
-
-                if (!mandatory_args) {
-                        std::cerr << "Missing arguments" << std::endl;
-                        return EXIT_FAILURE;
-                }
-
-                if (cli.count("cores")) { nb_cores = cli["cores"].as<int>(); }
-                if (cli.count("tasks")) { nb_tasks = cli["tasks"].as<int>(); }
-                if (cli.count("jobs")) { nb_jobs_per_task = cli["jobs"].as<int>(); }
-                if (cli.count("totalu")) { total_utilization = cli["totalu"].as<double>(); }
-                if (cli.count("output")) { output_filepath = cli["output"].as<std::string>(); }
+        if (cli.count("help") || cli.arguments().empty()) {
+                std::cout << options.help() << std::endl;
+                exit(cli.arguments().empty() ? EXIT_FAILURE : EXIT_SUCCESS);
         }
-        catch (cxxopts::exceptions::parsing& e) {
-                std::cerr << "Error parsing command-line options: " << e.what() << std::endl;
-                return EXIT_FAILURE;
+
+        config.nb_cores = cli["cores"].as<int>();
+        config.nb_tasks = cli["tasks"].as<int>();
+        config.nb_jobs = cli["jobs"].as<int>();
+        config.total_utilization = cli["totalu"].as<double>();
+        config.success_rate = cli["success"].as<double>();
+        if (cli.count("output")) { config.output_filepath = cli["output"].as<std::string>(); }
+
+        return config;
+}
+
+auto main(int argc, char** argv) -> int
+{
+        try {
+                auto config = parse_args(argc, argv);
+
+                if (config.nb_cores <= 0) {
+                        std::cerr << "There must be at least one core to execute the taskset"
+                                  << std::endl;
+                        return EXIT_FAILURE;
+                }
+
+                auto taskset = generate_taskset(
+                    config.nb_cores,
+                    config.nb_tasks,
+                    config.nb_jobs,
+                    config.total_utilization,
+                    config.success_rate);
+                // Write the scenario to output file
+                scenario::write_file(config.output_filepath, taskset);
+
+                return EXIT_SUCCESS;
+        }
+        catch (const cxxopts::exceptions::parsing& e) {
+                std::cerr << "Error parsing options: " << e.what() << std::endl;
         }
         catch (std::bad_cast& e) {
                 std::cerr << "Error parsing casting option: " << e.what() << std::endl;
-                return EXIT_FAILURE;
         }
-
-        // Generate task set
-        scenario::setting taskset{};
-
-        if (nb_cores <= 0) {
-                std::cerr << "There must be at least one core to execute the taskset" << std::endl;
-                return EXIT_FAILURE;
+        catch (const std::invalid_argument& e) {
+                std::cerr << "Invalid argument: " << e.what() << std::endl;
         }
-        taskset.nb_cores = nb_cores;
-
-        try {
-                taskset.tasks = generate_taskset(100, 1000, 0.8, 0.8);
+        catch (const std::exception& e) {
+                std::cerr << "Error: " << e.what() << std::endl;
         }
-        catch (std::invalid_argument& e) {
-                std::cerr << "Invalide argument: " << e.what() << std::endl;
-                return EXIT_FAILURE;
-        }
-
-        // Generate jobs and arrivals for each task
-        for (auto& gen_task : taskset.tasks) {
-                // generate_jobs(gen_task, nb_jobs_per_task);
-        }
-
-        // Write the scenario to output file
-        scenario::write_file(output_filepath, taskset);
-
-        return EXIT_SUCCESS;
+        return EXIT_FAILURE;
 }

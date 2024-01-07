@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <iostream>
 #include <random>
 #include <stdexcept>
@@ -15,17 +16,28 @@ using hr_clk = std::chrono::high_resolution_clock;
 static std::mt19937_64 random_gen(hr_clk::now().time_since_epoch().count());
 
 /**
- * @brief Generates a set of task utilizations using the UUniFast discard algorithm.
+ * @brief Generates a vector of utilizations for a given number of tasks such that their total
+ * equals the specified total utilization.
  *
- * @param nb_tasks The number of tasks to generate utilizations for.
- * @param total_utilization The total system utilization to be distributed
- *                         among the generated tasks.
+ * This function implements the UUniFast algorithm, which is designed to uniformly distribute total
+ * utilization among a given number of tasks. The algorithm ensures that the sum of generated
+ * utilizations closely matches the specified total utilization. It's commonly used in real-time
+ * systems to generate task utilizations for simulation and testing purposes. The function may
+ * discard and retry the generation process if the utilizations deviate significantly, ensuring a
+ * valid and uniform distribution.
  *
- * @return A vector of doubles representing the generated task utilizations.
+ * @param nb_tasks The number of tasks for which to generate utilizations.
+ * @param total_utilization The total utilization to be distributed among all tasks.
+ * @return A vector of double values, each representing the utilization for a task.
+ *
+ * @exception std::runtime_error Thrown if the function exceeds the limit of discarded task sets due
+ * to unrealistic utilization values.
+ *
+ * @note The function will iterate and attempt to generate a uniform distribution of utilizations.
+ * It may discard the current set and retry if the generated values are not realistic or feasible.
  */
 auto uunifast_discard(std::size_t nb_tasks, double total_utilization) -> std::vector<double>
 {
-        // From "Techniques For The Synthesis Of Multiprocessor Tasksets"
         constexpr std::size_t DISCARD_LIMIT{1000};
         std::size_t discard_counter{0};
         std::uniform_real_distribution<double> distribution(0, 1);
@@ -82,41 +94,59 @@ auto bounded_weibull(double min, double max) -> double
 }
 } // namespace
 
-/**
- * @brief Function to generate job execution times using a Weibull distribution.
- *
- * @param task The task for which jobs are generated.
- * @param nb_job Number of jobs to generate.
- */
-auto generate_jobs(std::vector<double> durations) -> std::vector<scenario::job>
+auto generate_jobs(std::vector<double> durations, double period) -> std::vector<scenario::job>
 {
-        std::default_random_engine generator;
+        using namespace scenario;
+        std::vector<job> jobs;
+        jobs.reserve(durations.size());
 
-        double next_arrival{0};
-        /*
-                for (std::size_t i = 0; i < task.jobs.size(); ++i) {
-                        next_arrival += uniform_dis(generator);
-                        task.jobs.at(i).arrival = next_arrival;
-                        task.jobs.at(i).duration = weibull_dis(generator);
-                        next_arrival += task.period;
-                }
-        */
-        return std::vector<scenario::job>(1);
+        double next_arrival = 0;
+        for (const auto& duration : durations) {
+                jobs.push_back(job{next_arrival, duration});
+                next_arrival += period;
+        }
+
+        return jobs;
 }
 
-/**
- * @brief Generate a task set with log-uniformly distributed periods.
- *
- * @param nb_tasks The number of tasks to generate in the task set.
- * @param max_period The maximum period allowed for tasks.
- * @param total_utilization The total utilization to distribute among tasks.
- * @return A vector of tasks representing the generated task set.
-
- */
-auto generate_taskset(
-    std::size_t nb_tasks, std::size_t nb_jobs, double total_utilization, double success_rate)
-    -> std::vector<scenario::task>
+auto generate_task(std::size_t tid, double utilization, std::size_t nb_jobs, double success_rate)
+    -> scenario::task
 {
+        using namespace scenario;
+        using std::ceil;
+
+        assert(nb_jobs > 0);
+        assert(success_rate >= 0 && success_rate <= 1);
+
+        constexpr double PERIOD_MIN{20};
+        constexpr double PERIOD_MAX{60};
+        std::vector<double> durations(nb_jobs);
+
+        std::ranges::generate(durations.begin(), durations.end(), []() {
+                return bounded_weibull(PERIOD_MIN, PERIOD_MAX);
+        });
+
+        std::sort(durations.begin(), durations.end());
+
+        const size_t index{static_cast<std::size_t>(ceil((nb_jobs - 1) * success_rate))};
+        const double period{durations.at(index)};
+        return task{
+            .id = static_cast<uint16_t>(tid + 1),
+            .utilization = utilization,
+            .period = period,
+            .jobs = generate_jobs(durations, period)};
+}
+
+auto generate_taskset(
+    std::size_t nb_cores,
+    std::size_t nb_tasks,
+    std::size_t total_nb_jobs,
+    double total_utilization,
+    double success_rate) -> scenario::setting
+{
+        using namespace scenario;
+        using std::round;
+
         // TODO Fix the difference between the number of jobs generated and the number of jobs
         // asked.
 
@@ -124,43 +154,23 @@ auto generate_taskset(
                 throw std::invalid_argument("Total utilization must be greater than 0");
         }
 
-        std::vector<scenario::task> taskset;
+        if (success_rate < 0 || success_rate > 1) {
+                throw std::invalid_argument("Success rate is not between 0 and 1");
+        }
+
         auto utilizations = uunifast_discard(nb_tasks, total_utilization);
 
-        for (const auto& uti : utilizations) {
-                std::cout << uti << ' ';
-        }
-        std::cout << std::endl;
+        std::vector<task> tasks;
+        tasks.reserve(nb_tasks);
+        for (size_t tid = 0; tid < nb_tasks; ++tid) {
+                const double task_util = utilizations.at(tid);
+                const auto nb_jobs = static_cast<std::size_t>(
+                    round(static_cast<double>(total_nb_jobs) * task_util / total_utilization));
 
-        std::size_t sum_jobs{0};
+                if (nb_jobs == 0) { continue; }
 
-        for (std::size_t tid{0}; tid < nb_tasks; ++tid) {
-                std::vector<double> durations(
-                    std::round(nb_jobs * utilizations.at(tid) * 1 / total_utilization));
-                sum_jobs += durations.size();
-
-                if (durations.size() == 0) { continue; }
-
-                std::ranges::generate(
-                    durations.begin(), durations.end(), []() { return bounded_weibull(20, 60); });
-
-                std::sort(durations.begin(), durations.end());
-
-                std::size_t index = std::ceil((durations.size() - 1) * success_rate);
-                double period{durations.at(index)};
-
-                scenario::task new_task{
-                    .id = static_cast<uint16_t>(tid + 1),
-                    .utilization = utilizations.at(tid),
-                    .period = period,
-                    .jobs = generate_jobs(durations)};
-                taskset.push_back(new_task);
-
-                std::cout << std::endl;
+                tasks.push_back(generate_task(tid, task_util, nb_jobs, success_rate));
         }
 
-        std::cout << "input nb_jobs: " << nb_jobs << std::endl;
-        std::cout << "output nb_jobs: " << sum_jobs << std::endl;
-
-        return taskset;
+        return setting{.nb_cores = static_cast<uint16_t>(nb_cores), .tasks = tasks};
 }
