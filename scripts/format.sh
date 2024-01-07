@@ -25,6 +25,7 @@ clang-format -i \
 	     schedview/src/textual.cpp \
 	     tests/main.cpp \
 	     tests/scenario.cpp \
+	     tests/traces.cpp \
 	     protocols/scenario/scenario.hpp \
 	     protocols/traces/traces.hpp \
 	     schedgen/src/task_generator.hpp \

@@ -5,6 +5,7 @@ add_executable(tests)
 target_sources(tests PRIVATE
   "main.cpp"
   "scenario.cpp"
+  "traces.cpp"
 )
 
 target_link_libraries(
@@ -12,6 +13,7 @@ target_link_libraries(
   GTest::gtest
   GTest::gtest_main
   scenario
+  traces
   json
 )
 

@@ -104,8 +104,8 @@ class ScenarioFileIOTest : public ::testing::Test {
 
 TEST_F(ScenarioFileIOTest, WriteAndReadFile)
 {
-        EXPECT_NO_THROW(scenario::write_file(temp_file, test_setting));
         scenario::setting read_setting{};
+        EXPECT_NO_THROW(scenario::write_file(temp_file, test_setting));
         EXPECT_NO_THROW(read_setting = scenario::read_file(temp_file));
 
         ASSERT_EQ(read_setting.nb_cores, test_setting.nb_cores);
