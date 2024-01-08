@@ -3,6 +3,7 @@
 clang-format -i \
 	     protocols/scenario/scenario.cpp \
 	     protocols/traces/traces.cpp \
+	     protocols/platform/platform.cpp \
 	     schedgen/src/main.cpp \
 	     schedgen/src/task_generator.cpp \
 	     schedsim/src/engine.cpp \
@@ -26,8 +27,10 @@ clang-format -i \
 	     tests/main.cpp \
 	     tests/scenario.cpp \
 	     tests/traces.cpp \
+	     tests/platform.cpp \
 	     protocols/scenario/scenario.hpp \
 	     protocols/traces/traces.hpp \
+	     protocols/platform/platform.hpp \
 	     schedgen/src/task_generator.hpp \
 	     schedsim/src/engine.hpp \
 	     schedsim/src/entity.hpp \

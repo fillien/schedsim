@@ -6,6 +6,7 @@ target_sources(tests PRIVATE
   "main.cpp"
   "scenario.cpp"
   "traces.cpp"
+  "platform.cpp"
 )
 
 target_link_libraries(
@@ -14,6 +15,7 @@ target_link_libraries(
   GTest::gtest_main
   scenario
   traces
+  platform
   json
 )
 
