@@ -23,7 +23,6 @@ void processor::set_server(std::weak_ptr<server> server_to_execute)
 
 void processor::clear_server()
 {
-        // std::cout << "clear server on proc " << id << std::endl;
         running_server.lock()->get_task()->attached_proc = nullptr;
         this->running_server.reset();
 }

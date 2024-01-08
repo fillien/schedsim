@@ -186,7 +186,6 @@ void scheduler::handle_job_arrival(
 
         if (!new_task->has_server()) {
                 if (!admission_test(*new_task)) {
-                        // std::cout << "TID " << new_task->id << " rejected\n";
                         sim()->add_trace(traces::task_rejected{new_task->id});
                         return;
                 }
@@ -255,8 +254,6 @@ void scheduler::handle_serv_budget_exhausted(const std::shared_ptr<server>& serv
 
         // Check if the job as been completed at the same time
         if (serv->get_task()->get_remaining_time() > 0) {
-                std::cout << "postpone: " << serv->id()
-                          << ", remaining: " << serv->get_task()->get_remaining_time();
                 serv->postpone(); // If no, postpone the deadline
         }
         else {
@@ -276,7 +273,6 @@ void scheduler::update_server_times(const std::shared_ptr<server>& serv)
         assert((serv->get_task()->get_remaining_time() - running_time) >= -engine::ZERO_ROUNDED);
 
         serv->virtual_time = get_server_virtual_time(*serv, running_time);
-        // std::cout << "S" << serv->id() << " VIRTUAL_TIME = " << serv->virtual_time << std::endl;
         sim()->add_trace(traces::virtual_time_update{serv->get_task()->id, serv->virtual_time});
 
         serv->get_task()->consume_time(running_time);
@@ -304,8 +300,6 @@ void scheduler::set_alarms(const std::shared_ptr<server>& serv)
         using namespace events;
         const double new_budget{get_server_budget(*serv)};
         const double remaining_time{serv->remaining_exec_time()};
-
-        // std::cout << remaining_time << std::endl;
 
         assert(new_budget >= 0);
         assert(remaining_time >= 0);

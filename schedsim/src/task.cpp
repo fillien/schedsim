@@ -48,8 +48,6 @@ void task::consume_time(const double& duration)
 {
         assert(duration >= 0);
         remaining_execution_time -= duration;
-        // std::cout << "task id: " << id << std::endl;
-        // std::cout << remaining_execution_time << std::endl;
         assert(sim()->round_zero(remaining_execution_time) >= 0);
 }
 

@@ -30,9 +30,6 @@ void server::change_state(const state& new_state)
                 cant_be_inactive = false;
         }
 
-        // std::cout << "S" << id() << " ";
-        // std::cout << current_state << " -> " << new_state << std::endl;
-
         switch (new_state) {
         case state::ready: {
                 switch (current_state) {
@@ -99,7 +96,6 @@ void server::change_state(const state& new_state)
 void server::postpone()
 {
         relative_deadline += period();
-        // std::cout << "S" << id() << " POSTPONED" << std::endl;
         sim()->add_trace(traces::serv_postpone{shared_from_this()->id(), relative_deadline});
 }
 
