@@ -23,111 +23,111 @@ struct sim_finished {};
  * @brief Represents a job arrival event.
  */
 struct job_arrival {
-        uint16_t task_id; /**< ID of the task. */
-        double duration;  /**< Duration of the job. */
-        double deadline;  /**< Absolut deadline of the job. */
+        std::size_t task_id; /**< ID of the task. */
+        double duration;     /**< Duration of the job. */
+        double deadline;     /**< Absolut deadline of the job. */
 };
 
 /**
  * @brief Represents a job finished event.
  */
 struct job_finished {
-        uint16_t task_id; /**< ID of the task. */
+        std::size_t task_id; /**< ID of the task. */
 };
 
 /**
  * @brief Represents a processor activated event.
  */
 struct proc_activated {
-        uint16_t proc_id; /**< ID of the processor. */
+        std::size_t proc_id; /**< ID of the processor. */
 };
 
 /**
  * @brief Represents a processor idled event.
  */
 struct proc_idled {
-        uint16_t proc_id; /**< ID of the processor. */
+        std::size_t proc_id; /**< ID of the processor. */
 };
 
 /**
  * @brief Represents a service budget replenished event.
  */
 struct serv_budget_replenished {
-        uint16_t task_id; /**< ID of the task. */
-        double budget;    /**< Replenished budget. */
+        std::size_t task_id; /**< ID of the task. */
+        double budget;       /**< Replenished budget. */
 };
 
 /**
  * @brief Represents a service inactive event.
  */
 struct serv_inactive {
-        uint16_t task_id; /**< ID of the task. */
+        std::size_t task_id; /**< ID of the task. */
 };
 
 /**
  * @brief Represents a service budget exhausted event.
  */
 struct serv_budget_exhausted {
-        uint16_t task_id; /**< ID of the task. */
+        std::size_t task_id; /**< ID of the task. */
 };
 
 /**
  * @brief Represents a non-continuous service event.
  */
 struct serv_non_cont {
-        uint16_t task_id; /**< ID of the task. */
+        std::size_t task_id; /**< ID of the task. */
 };
 
 /**
  * @brief Represents a service postpone event.
  */
 struct serv_postpone {
-        uint16_t task_id; /**< ID of the task. */
-        double deadline;  /**< New deadline after postponement. */
+        std::size_t task_id; /**< ID of the task. */
+        double deadline;     /**< New deadline after postponement. */
 };
 
 /**
  * @brief Represents a service ready event.
  */
 struct serv_ready {
-        uint16_t task_id; /**< ID of the task. */
-        double deadline;  /**< Deadline of the task. */
+        std::size_t task_id; /**< ID of the task. */
+        double deadline;     /**< Deadline of the task. */
 };
 
 /**
  * @brief Represents a service running event.
  */
 struct serv_running {
-        uint16_t task_id; /**< ID of the task. */
+        std::size_t task_id; /**< ID of the task. */
 };
 
 /**
  * @brief Represents a task preempted event.
  */
 struct task_preempted {
-        uint16_t task_id; /**< ID of the task. */
+        std::size_t task_id; /**< ID of the task. */
 };
 
 /**
  * @brief Represents a task scheduled event.
  */
 struct task_scheduled {
-        uint16_t task_id; /**< ID of the task. */
-        uint16_t proc_id; /**< ID of the processor. */
+        std::size_t task_id; /**< ID of the task. */
+        std::size_t proc_id; /**< ID of the processor. */
 };
 
 /**
  * @brief Represents a task rejected event.
  */
 struct task_rejected {
-        uint16_t task_id; /**< ID of the task. */
+        std::size_t task_id; /**< ID of the task. */
 };
 
 /**
  * @brief Represents a virtual time update event.
  */
 struct virtual_time_update {
-        uint16_t task_id;    /**< ID of the task. */
+        std::size_t task_id; /**< ID of the task. */
         double virtual_time; /**< Updated virtual time. */
 };
 

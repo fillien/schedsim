@@ -131,7 +131,7 @@ auto generate_task(std::size_t tid, double utilization, std::size_t nb_jobs, dou
         const size_t index{static_cast<std::size_t>(ceil((nb_jobs - 1) * success_rate))};
         const double period{durations.at(index)};
         return task{
-            .id = static_cast<uint16_t>(tid + 1),
+            .id = static_cast<std::size_t>(tid + 1),
             .utilization = utilization,
             .period = period,
             .jobs = generate_jobs(durations, period)};
@@ -172,5 +172,5 @@ auto generate_taskset(
                 tasks.push_back(generate_task(tid, task_util, nb_jobs, success_rate));
         }
 
-        return setting{.nb_cores = static_cast<uint16_t>(nb_cores), .tasks = tasks};
+        return setting{.nb_cores = static_cast<std::size_t>(nb_cores), .tasks = tasks};
 }

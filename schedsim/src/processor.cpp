@@ -18,9 +18,7 @@ void processor::set_server(std::weak_ptr<server> server_to_execute)
 
         running_server = serv;
         serv->get_task()->attached_proc = shared_from_this();
-        sim()->add_trace(traces::task_scheduled{
-            static_cast<uint16_t>(serv->get_task()->id),
-            static_cast<uint16_t>(shared_from_this()->id)});
+        sim()->add_trace(traces::task_scheduled{serv->get_task()->id, shared_from_this()->id});
 }
 
 void processor::clear_server()
@@ -38,13 +36,12 @@ void processor::change_state(const processor::state& next_state)
         switch (next_state) {
         case state::idle: {
                 current_state = state::idle;
-                sim()->add_trace(traces::proc_idled{static_cast<uint16_t>(shared_from_this()->id)});
+                sim()->add_trace(traces::proc_idled{shared_from_this()->id});
                 break;
         }
         case state::running: {
                 current_state = state::running;
-                sim()->add_trace(
-                    traces::proc_activated{static_cast<uint16_t>(shared_from_this()->id)});
+                sim()->add_trace(traces::proc_activated{shared_from_this()->id});
                 break;
         }
         }

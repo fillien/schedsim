@@ -11,6 +11,7 @@
 #include <bits/ranges_base.h>
 #include <bits/ranges_util.h>
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
@@ -180,16 +181,13 @@ void scheduler::handle_serv_inactive(const std::shared_ptr<server>& serv)
 void scheduler::handle_job_arrival(
     const std::shared_ptr<task>& new_task, const double& job_duration)
 {
-        sim()->add_trace(traces::job_arrival{
-            static_cast<uint16_t>(new_task->id),
-            job_duration,
-            sim()->get_time() + new_task->period});
+        sim()->add_trace(
+            traces::job_arrival{new_task->id, job_duration, sim()->get_time() + new_task->period});
 
         if (!new_task->has_server()) {
                 if (!admission_test(*new_task)) {
                         // std::cout << "TID " << new_task->id << " rejected\n";
-                        sim()->add_trace(
-                            traces::task_rejected{static_cast<uint16_t>(new_task->id)});
+                        sim()->add_trace(traces::task_rejected{new_task->id});
                         return;
                 }
 
@@ -224,7 +222,7 @@ void scheduler::handle_job_finished(const std::shared_ptr<server>& serv, bool is
         using enum server::state;
 
         assert(serv->current_state != inactive);
-        sim()->add_trace(traces::job_finished{static_cast<uint16_t>(serv->id())});
+        sim()->add_trace(traces::job_finished{serv->id()});
 
         // Update virtual time and remaining execution time
         update_server_times(serv);
@@ -252,7 +250,7 @@ void scheduler::handle_job_finished(const std::shared_ptr<server>& serv, bool is
 
 void scheduler::handle_serv_budget_exhausted(const std::shared_ptr<server>& serv)
 {
-        sim()->add_trace(traces::serv_budget_exhausted{static_cast<uint16_t>(serv->id())});
+        sim()->add_trace(traces::serv_budget_exhausted{serv->id()});
         update_server_times(serv);
 
         // Check if the job as been completed at the same time
@@ -262,8 +260,7 @@ void scheduler::handle_serv_budget_exhausted(const std::shared_ptr<server>& serv
                 serv->postpone(); // If no, postpone the deadline
         }
         else {
-                sim()->add_trace(
-                    traces::job_finished{static_cast<uint16_t>(serv->id())}); // If yes, trace it
+                sim()->add_trace(traces::job_finished{serv->id()}); // If yes, trace it
         }
 
         this->need_resched = true;
@@ -280,8 +277,7 @@ void scheduler::update_server_times(const std::shared_ptr<server>& serv)
 
         serv->virtual_time = get_server_virtual_time(*serv, running_time);
         // std::cout << "S" << serv->id() << " VIRTUAL_TIME = " << serv->virtual_time << std::endl;
-        sim()->add_trace(traces::virtual_time_update{
-            static_cast<uint16_t>(serv->get_task()->id), serv->virtual_time});
+        sim()->add_trace(traces::virtual_time_update{serv->get_task()->id, serv->virtual_time});
 
         serv->get_task()->consume_time(running_time);
         serv->last_update = sim()->get_time();
@@ -314,8 +310,7 @@ void scheduler::set_alarms(const std::shared_ptr<server>& serv)
         assert(new_budget >= 0);
         assert(remaining_time >= 0);
 
-        sim()->add_trace(
-            traces::serv_budget_replenished{static_cast<uint16_t>(serv->id()), new_budget});
+        sim()->add_trace(traces::serv_budget_replenished{serv->id(), new_budget});
 
         if (new_budget < remaining_time) {
                 sim()->add_event(serv_budget_exhausted{serv}, sim()->get_time() + new_budget);
@@ -336,8 +331,7 @@ void scheduler::resched_proc(
 {
         if (proc->has_server_running()) {
                 cancel_alarms(*(proc->get_server()));
-                sim()->add_trace(traces::task_preempted{
-                    static_cast<uint16_t>(proc->get_server()->get_task()->id)});
+                sim()->add_trace(traces::task_preempted{proc->get_server()->get_task()->id});
                 proc->get_server()->change_state(server::state::ready);
                 proc->clear_server();
         }

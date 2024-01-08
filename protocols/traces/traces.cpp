@@ -121,44 +121,54 @@ auto traces::from_json(const nlohmann::json& log) -> traces::trace
             overloaded{
                 [&out, &log](virtual_time_update) {
                         out = virtual_time_update{
-                            log.at("tid").get<uint16_t>(), log.at("virtual_time").get<double>()};
+                            log.at("tid").get<std::size_t>(), log.at("virtual_time").get<double>()};
                 },
-                [&out, &log](task_rejected) { out = task_rejected{log.at("tid").get<uint16_t>()}; },
+                [&out, &log](task_rejected) {
+                        out = task_rejected{log.at("tid").get<std::size_t>()};
+                },
                 [&out, &log](task_scheduled) {
                         out = task_scheduled{
-                            log.at("tid").get<uint16_t>(), log.at("cpu").get<uint16_t>()};
+                            log.at("tid").get<std::size_t>(), log.at("cpu").get<std::size_t>()};
                 },
                 [&out, &log](task_preempted) {
-                        out = task_preempted{log.at("tid").get<uint16_t>()};
+                        out = task_preempted{log.at("tid").get<std::size_t>()};
                 },
-                [&out, &log](serv_running) { out = serv_running{log.at("tid").get<uint16_t>()}; },
+                [&out, &log](serv_running) {
+                        out = serv_running{log.at("tid").get<std::size_t>()};
+                },
                 [&out, &log](serv_ready) {
                         out = serv_ready{
-                            log.at("tid").get<uint16_t>(), log.at("deadline").get<double>()};
+                            log.at("tid").get<std::size_t>(), log.at("deadline").get<double>()};
                 },
                 [&out, &log](serv_postpone) {
                         out = serv_postpone{
-                            log.at("tid").get<uint16_t>(), log.at("deadline").get<double>()};
+                            log.at("tid").get<std::size_t>(), log.at("deadline").get<double>()};
                 },
-                [&out, &log](serv_non_cont) { out = serv_non_cont{log.at("tid").get<uint16_t>()}; },
+                [&out, &log](serv_non_cont) {
+                        out = serv_non_cont{log.at("tid").get<std::size_t>()};
+                },
                 [&out, &log](serv_budget_exhausted) {
-                        out = serv_budget_exhausted{log.at("tid").get<uint16_t>()};
+                        out = serv_budget_exhausted{log.at("tid").get<std::size_t>()};
                 },
                 [&out, &log](serv_budget_replenished) {
                         out = serv_budget_replenished{
-                            log.at("tid").get<uint16_t>(), log.at("budget").get<double>()};
+                            log.at("tid").get<std::size_t>(), log.at("budget").get<double>()};
                 },
-                [&out, &log](serv_inactive) { out = serv_inactive{log.at("tid").get<uint16_t>()}; },
+                [&out, &log](serv_inactive) {
+                        out = serv_inactive{log.at("tid").get<std::size_t>()};
+                },
                 [&out, &log](proc_idled) {
-                        out = proc_idled{.proc_id = log.at("cpu").get<uint16_t>()};
+                        out = proc_idled{.proc_id = log.at("cpu").get<std::size_t>()};
                 },
                 [&out, &log](proc_activated) {
-                        out = proc_activated{log.at("cpu").get<uint16_t>()};
+                        out = proc_activated{log.at("cpu").get<std::size_t>()};
                 },
-                [&out, &log](job_finished) { out = job_finished{log.at("tid").get<uint16_t>()}; },
+                [&out, &log](job_finished) {
+                        out = job_finished{log.at("tid").get<std::size_t>()};
+                },
                 [&out, &log](job_arrival) {
                         out = job_arrival{
-                            log.at("tid").get<uint16_t>(),
+                            log.at("tid").get<std::size_t>(),
                             log.at("duration").get<double>(),
                             log.at("deadline").get<double>()};
                 },

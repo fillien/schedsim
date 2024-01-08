@@ -4,6 +4,7 @@
 #include "entity.hpp"
 #include "task.hpp"
 #include <cassert>
+#include <cstddef>
 #include <memory>
 #include <vector>
 
@@ -48,7 +49,7 @@ class server : public entity, public std::enable_shared_from_this<server> {
          * @brief Retrieves the ID of the attached task.
          * @return ID of the attached task.
          */
-        auto id() const -> int { return get_task()->id; }
+        auto id() const -> std::size_t { return get_task()->id; }
 
         /**
          * @brief Retrieves the utilization of the attached task.

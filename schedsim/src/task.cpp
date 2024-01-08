@@ -9,7 +9,7 @@
 
 task::task(
     const std::weak_ptr<engine>& sim,
-    const int tid,
+    const std::size_t tid,
     const double& period,
     const double& utilization)
     : entity(sim), id(tid), period(period), utilization(utilization)

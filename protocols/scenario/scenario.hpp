@@ -13,14 +13,14 @@ struct job {
 };
 
 struct task {
-        uint16_t id;
+        std::size_t id;
         double utilization;    // Utilization factor
         double period;         // Period of the task
         std::vector<job> jobs; // Jobs of the task
 };
 
 struct setting {
-        uint16_t nb_cores;
+        std::size_t nb_cores;
         std::vector<task> tasks;
 };
 

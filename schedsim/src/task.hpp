@@ -2,6 +2,7 @@
 #define TASK_HPP
 
 #include "entity.hpp"
+#include <cstddef>
 #include <memory>
 #include <queue>
 
@@ -16,7 +17,7 @@ class task : public entity, public std::enable_shared_from_this<task> {
         /**
          * @brief A unique ID for the task.
          */
-        int id;
+        std::size_t id;
 
         /**
          * @brief The period of the task.
@@ -42,7 +43,7 @@ class task : public entity, public std::enable_shared_from_this<task> {
          */
         task(
             const std::weak_ptr<engine>& sim,
-            int tid,
+            std::size_t tid,
             const double& period,
             const double& utilization);
 

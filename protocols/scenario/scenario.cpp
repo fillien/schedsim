@@ -44,7 +44,7 @@ auto scenario::from_json_job(const nlohmann::json& json_job) -> scenario::job
 auto scenario::from_json_task(const nlohmann::json& json_task) -> scenario::task
 {
         scenario::task parsed_task{
-            .id = json_task.at("id").get<uint16_t>(),
+            .id = json_task.at("id").get<std::size_t>(),
             .utilization = json_task.at("utilization").get<double>(),
             .period = json_task.at("period").get<double>(),
             .jobs = {}};
@@ -59,7 +59,7 @@ auto scenario::from_json_task(const nlohmann::json& json_task) -> scenario::task
 auto scenario::from_json_setting(const nlohmann::json& json_setting) -> scenario::setting
 {
         scenario::setting setting{
-            .nb_cores = json_setting.at("cores").get<uint16_t>(), .tasks = {}};
+            .nb_cores = json_setting.at("cores").get<std::size_t>(), .tasks = {}};
         for (const auto& json_task : json_setting.at("tasks")) {
                 setting.tasks.push_back(from_json_task(json_task));
         }
