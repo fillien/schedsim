@@ -2,6 +2,8 @@
 #include <nlohmann/json.hpp>
 #include <scenario.hpp>
 
+#include <iostream>
+
 class ScenarioTest : public ::testing::Test {
       protected:
         nlohmann::json json_job, json_task, json_setting;
@@ -11,14 +13,14 @@ class ScenarioTest : public ::testing::Test {
 
         void SetUp() override
         {
-                test_job = scenario::job{.arrival = 5, .duration = 3};
-                test_task =
-                    scenario::task{.id = 2, .utilization = 10, .period = 3, .jobs = {test_job}};
-                test_setting = scenario::setting{.nb_cores = 1, .tasks = {test_task}};
+                using namespace scenario;
+                test_job = job{.arrival = 5, .duration = 3};
+                test_task = task{.id = 2, .utilization = 10, .period = 3, .jobs = {test_job}};
+                test_setting = setting{.tasks = {test_task}};
                 json_job = {{"arrival", 5.0}, {"duration", 3.0}};
                 json_task = {
                     {"id", 2}, {"utilization", 10.0}, {"period", 3.0}, {"jobs", {json_job}}};
-                json_setting = {{"cores", 1}, {"tasks", {json_task}}};
+                json_setting = {{"tasks", {json_task}}};
         }
 };
 
@@ -43,7 +45,6 @@ TEST_F(ScenarioTest, TaskToJson)
 TEST_F(ScenarioTest, SettingToJson)
 {
         nlohmann::json result = scenario::to_json(test_setting);
-        EXPECT_EQ(result["cores"], 1);
         ASSERT_EQ(result["tasks"].size(), 1);
         EXPECT_EQ(result["tasks"][0]["id"], 2);
         EXPECT_EQ(result["tasks"][0]["jobs"][0]["arrival"], 5);
@@ -71,7 +72,6 @@ TEST_F(ScenarioTest, FromJsonTask)
 TEST_F(ScenarioTest, FromJsonSetting)
 {
         auto setting = scenario::from_json_setting(json_setting);
-        EXPECT_EQ(setting.nb_cores, 1);
         ASSERT_EQ(setting.tasks.size(), 1);
         EXPECT_EQ(setting.tasks[0].id, 2);
         EXPECT_EQ(setting.tasks[0].jobs.size(), 1);
@@ -87,7 +87,6 @@ class ScenarioFileIOTest : public ::testing::Test {
         {
                 temp_file = std::filesystem::temp_directory_path() / "scenario_test.json";
                 test_setting = {
-                    .nb_cores = 1,
                     .tasks = {
                         {.id = 2,
                          .utilization = 10,
@@ -108,7 +107,6 @@ TEST_F(ScenarioFileIOTest, WriteAndReadFile)
         EXPECT_NO_THROW(scenario::write_file(temp_file, test_setting));
         EXPECT_NO_THROW(read_setting = scenario::read_file(temp_file));
 
-        ASSERT_EQ(read_setting.nb_cores, test_setting.nb_cores);
         ASSERT_EQ(read_setting.tasks.size(), test_setting.tasks.size());
         ASSERT_EQ(read_setting.tasks[0].id, test_setting.tasks[0].id);
 }

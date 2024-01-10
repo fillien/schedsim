@@ -138,11 +138,8 @@ auto generate_task(std::size_t tid, double utilization, std::size_t nb_jobs, dou
 }
 
 auto generate_taskset(
-    std::size_t nb_cores,
-    std::size_t nb_tasks,
-    std::size_t total_nb_jobs,
-    double total_utilization,
-    double success_rate) -> scenario::setting
+    std::size_t nb_tasks, std::size_t total_nb_jobs, double total_utilization, double success_rate)
+    -> scenario::setting
 {
         using namespace scenario;
         using std::round;
@@ -172,5 +169,5 @@ auto generate_taskset(
                 tasks.push_back(generate_task(tid, task_util, nb_jobs, success_rate));
         }
 
-        return setting{.nb_cores = static_cast<std::size_t>(nb_cores), .tasks = tasks};
+        return setting{.tasks = tasks};
 }

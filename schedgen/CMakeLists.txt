@@ -9,4 +9,4 @@ target_sources(schedgen PRIVATE
   src/task_generator.cpp
 )
 
-target_link_libraries(schedgen cxxopts scenario)
+target_link_libraries(schedgen cxxopts scenario platform)

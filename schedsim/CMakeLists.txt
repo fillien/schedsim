@@ -4,7 +4,7 @@ target_compile_features(schedsim PRIVATE cxx_std_23)
 target_compile_options(schedsim PRIVATE -fdiagnostics-color=always -fsanitize=address)
 target_compile_options(schedsim PRIVATE -O3)
 target_link_options(schedsim PRIVATE -fsanitize=address)
-target_link_libraries(schedsim PRIVATE scenario traces)
+target_link_libraries(schedsim PRIVATE cxxopts scenario platform traces)
 
 target_sources(schedsim PRIVATE
   src/main.cpp

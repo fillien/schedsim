@@ -49,8 +49,4 @@ void engine::simulation()
 
         // Add a simulation finished trace to the past list
         if (future_list.empty()) { add_trace(traces::sim_finished{}); }
-
-        // Write the past list to a JSON file named "out.json"
-        std::filesystem::path output{"out.json"};
-        traces::write_log_file(past_list, output);
 }

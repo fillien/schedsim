@@ -69,10 +69,7 @@ auto generate_task(
  * @note This function internally calls generate_task() for each task to be generated.
  */
 auto generate_taskset(
-    std::size_t nb_cores,
-    std::size_t nb_tasks,
-    std::size_t nb_jobs,
-    double total_utilization,
-    double success_rate) -> scenario::setting;
+    std::size_t nb_tasks, std::size_t nb_jobs, double total_utilization, double success_rate)
+    -> scenario::setting;
 
 #endif

@@ -20,7 +20,6 @@ struct task {
 };
 
 struct setting {
-        std::size_t nb_cores;
         std::vector<task> tasks;
 };
 

@@ -26,12 +26,12 @@ auto scenario::to_json(const scenario::task& task) -> nlohmann::json
 
 auto scenario::to_json(const scenario::setting& setting) -> nlohmann::json
 {
-        nlohmann::json json_setting{{"cores", setting.nb_cores}, {"tasks", {}}};
+        nlohmann::json tasks{};
         for (const auto& task : setting.tasks) {
-                json_setting["tasks"].push_back(to_json(task));
+                tasks.push_back(to_json(task));
         }
 
-        return json_setting;
+        return nlohmann::json{{"tasks", tasks}};
 }
 
 auto scenario::from_json_job(const nlohmann::json& json_job) -> scenario::job
@@ -58,12 +58,11 @@ auto scenario::from_json_task(const nlohmann::json& json_task) -> scenario::task
 
 auto scenario::from_json_setting(const nlohmann::json& json_setting) -> scenario::setting
 {
-        scenario::setting setting{
-            .nb_cores = json_setting.at("cores").get<std::size_t>(), .tasks = {}};
+        std::vector<scenario::task> tasks;
         for (const auto& json_task : json_setting.at("tasks")) {
-                setting.tasks.push_back(from_json_task(json_task));
+                tasks.push_back(from_json_task(json_task));
         }
-        return setting;
+        return scenario::setting{tasks};
 }
 
 void scenario::write_file(const std::filesystem::path& file, const scenario::setting& tasks)

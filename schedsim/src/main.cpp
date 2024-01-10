@@ -1,6 +1,8 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
+#include <cxxopts.hpp>
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -10,9 +12,11 @@
 #include <vector>
 
 #include "engine.hpp"
+#include "platform.hpp"
 #include "entity.hpp"
 #include "event.hpp"
 #include "plateform.hpp"
+
 //#include "sched_mono.hpp"
 #include "scenario.hpp"
 #include "sched_parallel.hpp"
@@ -21,53 +25,97 @@
 #include "task.hpp"
 #include "traces.hpp"
 
+namespace fs = std::filesystem;
+
+struct app_config {
+        fs::path output_file{"logs.json"};
+        fs::path scenario_file{"scenario.json"};
+        fs::path platform_file{"platform.json"};
+};
+
+auto parse_args(const int argc, const char** argv) -> app_config
+{
+        app_config config;
+
+        // clang-format off
+	cxxopts::Options options("schedsim", "Simulate the execution of the GRUB scheduler for a given taskset on given platform");
+	options.add_options()
+		("h,help", "Print this help message")
+		("s,scenario", "Specify the scenario file", cxxopts::value<std::string>())
+		("p,platform", "Specify the platform configuration file", cxxopts::value<std::string>())
+		("o,output", "Specify the output file", cxxopts::value<std::string>());
+        // clang-format on
+        const auto cli = options.parse(argc, argv);
+
+        if (cli.count("help") || cli.arguments().empty()) {
+                std::cout << options.help() << std::endl;
+                exit(cli.arguments().empty() ? EXIT_FAILURE : EXIT_SUCCESS);
+        }
+
+        if (cli.count("scenario")) { config.scenario_file = cli["scenario"].as<std::string>(); }
+        if (cli.count("platform")) { config.platform_file = cli["platform"].as<std::string>(); }
+        if (cli.count("output")) { config.output_file = cli["output"].as<std::string>(); }
+
+        return config;
+}
+
 auto main(const int argc, const char** argv) -> int
 {
         using namespace std;
 
-        // Check that there is a scenario file pass by argument
-        if (argc < 2) {
-                std::cerr << "No input scenario\n";
-                return EXIT_FAILURE;
-        }
+        try {
+                auto config = parse_args(argc, argv);
 
-        // Open the scenario
-        std::filesystem::path input_taskset{argv[1]};
-        scenario::setting taskset = scenario::read_file(input_taskset);
+                auto taskset = scenario::read_file(config.scenario_file);
+		auto platform_config = protocols::read_file(config.platform_file);
 
-        std::cout << "Coeurs: " << taskset.nb_cores
-                  << "\nNombre de tâches: " << taskset.tasks.size() << "\n";
+                std::cout << "Coeurs: " << platform_config.nb_procs << std::endl;
+                std::cout << "Nombre de tâches: " << taskset.tasks.size() << std::endl;
 
-        // Create the simulation engine and attache to it a scheduler
-        auto sim = make_shared<engine>();
+                // Create the simulation engine and attache to it a scheduler
+                auto sim = make_shared<engine>();
 
-        // Insert the plateform configured through the scenario file, in the simulation engine
-        auto config_plat = make_shared<plateform>(sim, taskset.nb_cores);
-        sim->set_plateform(config_plat);
+                // Insert the plateform configured through the scenario file, in the simulation
+                // engine
+                auto plat = make_shared<plateform>(sim, platform_config.nb_procs);
+                sim->set_plateform(plat);
 
-        std::shared_ptr<scheduler> sched = make_shared<sched_parallel>(sim);
-        sim->set_scheduler(sched);
+                std::shared_ptr<scheduler> sched = make_shared<sched_parallel>(sim);
+                sim->set_scheduler(sched);
 
-        std::vector<std::shared_ptr<task>> tasks{taskset.tasks.size()};
+                std::vector<std::shared_ptr<task>> tasks{taskset.tasks.size()};
 
-        // Create tasks and job arrival events
-        for (auto input_task : taskset.tasks) {
-                auto new_task = make_shared<task>(
-                    sim, input_task.id, input_task.period, input_task.utilization);
+                // Create tasks and job arrival events
+                for (auto input_task : taskset.tasks) {
+                        auto new_task = make_shared<task>(
+                            sim, input_task.id, input_task.period, input_task.utilization);
 
-                // For each job of tasks add a "job arrival" event in the future list
-                for (auto job : input_task.jobs) {
-                        sim->add_event(events::job_arrival{new_task, job.duration}, job.arrival);
+                        // For each job of tasks add a "job arrival" event in the future list
+                        for (auto job : input_task.jobs) {
+                                sim->add_event(
+                                    events::job_arrival{new_task, job.duration}, job.arrival);
+                        }
+                        tasks.push_back(std::move(new_task));
                 }
-                tasks.push_back(std::move(new_task));
+
+                // Simulate the system (job set + platform) with the chosen scheduler
+                sim->simulation();
+                std::cout << "Simulation ended" << std::endl;
+
+                traces::write_log_file(sim->get_traces(), config.output_file);
+                return EXIT_SUCCESS;
         }
-
-        // Simulate the system (job set + platform) with the chosen scheduler
-        sim->simulation();
-        std::cout << "Simulation ended" << std::endl;
-
-        std::filesystem::path output_logs{"out.json"};
-        traces::write_log_file(sim->get_traces(), output_logs);
-
-        return EXIT_SUCCESS;
+        catch (const cxxopts::exceptions::parsing& e) {
+                std::cerr << "Error parsing options: " << e.what() << std::endl;
+        }
+        catch (const std::bad_cast& e) {
+                std::cerr << "Error parsing casting option: " << e.what() << std::endl;
+        }
+        catch (const std::invalid_argument& e) {
+                std::cerr << "Invalid argument: " << e.what() << std::endl;
+        }
+        catch (const std::exception& e) {
+                std::cerr << "Error: " << e.what() << std::endl;
+        }
+        return EXIT_FAILURE;
 }
