@@ -4,8 +4,10 @@
 /vgcore.*
 /trace/stream
 /rtsched.sty
-/out.json
-/sce.json
+/platform.json
+/scenario.json
+/logs.json
+/index.html
 /test.log
 /test.pdf
 /test.tex
