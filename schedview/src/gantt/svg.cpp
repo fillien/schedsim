@@ -104,7 +104,7 @@ auto outputs::gantt::svg::draw(const outputs::gantt::gantt& chart) -> std::strin
         constexpr auto HTML_FOOTER{"</body></html>"};
         std::stringstream out;
 
-        out << HTML_HEADER << "<svg viewBox='0 0 " << OFFSET_X + chart.duration * TIME_UNIT << " "
+        out << HTML_HEADER << "<svg width='30000vmin' viewBox='0 0 " << OFFSET_X + chart.duration * TIME_UNIT << " "
             << static_cast<double>(chart.nb_axis) * AXIS_HEIGHT
             << "' xmlns='http://www.w3.org/2000/svg'>\n"
             << defs << style << '\n';
