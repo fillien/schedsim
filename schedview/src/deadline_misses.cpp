@@ -1,5 +1,5 @@
 #include "deadline_misses.hpp"
-#include "traces.hpp"
+#include <protocols/traces.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -38,9 +38,11 @@ using job_events = std::variant<job_finished, job_deadline>;
  * @return true if the job is accepted, false otherwise.
  */
 auto is_accepted_job(
-    const std::multimap<double, traces::trace>& logs, const double& timestamp, std::size_t tid)
-    -> bool
+    const std::multimap<double, protocols::traces::trace>& logs,
+    const double& timestamp,
+    std::size_t tid) -> bool
 {
+        namespace traces = protocols::traces;
         auto range = logs.equal_range(timestamp);
         return std::find_if(
                    range.first, range.second, [&tid](std::pair<double, traces::trace> tra) {
@@ -62,9 +64,10 @@ auto is_accepted_job(
  * @param unfiltered_logs The unfiltered trace logs containing various events.
  * @return A multimap containing filtered job events with timestamps.
  */
-auto filter_logs(std::multimap<double, traces::trace> unfiltered_logs)
+auto filter_logs(std::multimap<double, protocols::traces::trace> unfiltered_logs)
     -> std::multimap<double, job_events>
 {
+        namespace traces = protocols::traces;
         std::multimap<double, job_events> filtered_input;
 
         // Iterate through unfiltered logs and apply filtering criteria
@@ -149,7 +152,7 @@ namespace outputs::stats {
  * @return A map of task IDs with statistics: the number of total jobs and the number of missed
  * deadlines.
  */
-auto detect_deadline_misses(const std::multimap<double, traces::trace>& logs)
+auto detect_deadline_misses(const std::multimap<double, protocols::traces::trace>& logs)
     -> std::map<std::size_t, std::pair<std::size_t, std::size_t>>
 {
         // Filter input traces to only save job arrivals that are not rejected, and job finished

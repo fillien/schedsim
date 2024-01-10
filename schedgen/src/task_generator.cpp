@@ -1,5 +1,5 @@
 #include "task_generator.hpp"
-#include "scenario.hpp"
+#include <protocols/scenario.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -94,9 +94,10 @@ auto bounded_weibull(double min, double max) -> double
 }
 } // namespace
 
-auto generate_jobs(std::vector<double> durations, double period) -> std::vector<scenario::job>
+auto generate_jobs(std::vector<double> durations, double period)
+    -> std::vector<protocols::scenario::job>
 {
-        using namespace scenario;
+        using namespace protocols::scenario;
         std::vector<job> jobs;
         jobs.reserve(durations.size());
 
@@ -110,9 +111,9 @@ auto generate_jobs(std::vector<double> durations, double period) -> std::vector<
 }
 
 auto generate_task(std::size_t tid, double utilization, std::size_t nb_jobs, double success_rate)
-    -> scenario::task
+    -> protocols::scenario::task
 {
-        using namespace scenario;
+        using namespace protocols::scenario;
         using std::ceil;
 
         assert(nb_jobs > 0);
@@ -139,9 +140,9 @@ auto generate_task(std::size_t tid, double utilization, std::size_t nb_jobs, dou
 
 auto generate_taskset(
     std::size_t nb_tasks, std::size_t total_nb_jobs, double total_utilization, double success_rate)
-    -> scenario::setting
+    -> protocols::scenario::setting
 {
-        using namespace scenario;
+        using namespace protocols::scenario;
         using std::round;
 
         // TODO Fix the difference between the number of jobs generated and the number of jobs

@@ -1,17 +1,8 @@
-add_library(scenario)
-target_compile_features(scenario PUBLIC cxx_std_23)
-target_link_libraries(scenario PUBLIC json)
-target_sources(scenario PUBLIC scenario/scenario.hpp PRIVATE scenario/scenario.cpp)
-target_include_directories(scenario PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/scenario)
-
-add_library(traces)
-target_compile_features(traces PUBLIC cxx_std_23)
-target_link_libraries(traces PUBLIC json)
-target_sources(traces PUBLIC traces/traces.hpp PRIVATE traces/traces.cpp)
-target_include_directories(traces PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/traces)
-
-add_library(platform)
-target_compile_features(platform PUBLIC cxx_std_23)
-target_link_libraries(platform PUBLIC json)
-target_sources(platform PUBLIC platform/platform.hpp PRIVATE platform/platform.cpp)
-target_include_directories(platform PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/platform)
+add_library(protocols)
+target_compile_features(protocols PUBLIC cxx_std_23)
+target_link_libraries(protocols PUBLIC json)
+target_sources(protocols PUBLIC
+  src/scenario.cpp
+  src/platform.cpp
+  src/traces.cpp)
+target_include_directories(protocols PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

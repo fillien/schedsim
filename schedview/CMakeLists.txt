@@ -24,4 +24,4 @@ target_sources(schedview PRIVATE
   src/deadline_misses.cpp
 )
 
-target_link_libraries(schedview PRIVATE traces matplot cxxopts)
+target_link_libraries(schedview PRIVATE protocols matplot cxxopts)

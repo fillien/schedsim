@@ -1,8 +1,8 @@
 #include "textual.hpp"
 #include "../external/rang.hpp"
-#include "traces.hpp"
 #include <iomanip>
 #include <map>
+#include <protocols/traces.hpp>
 
 template <class... Ts> struct overloaded : Ts... {
         using Ts::operator()...;
@@ -24,8 +24,9 @@ constexpr auto color_arg = [](std::ostream& out, const std::string& name, const 
         out << rang::fg::cyan << name << rang::fg::reset << " = " << arg;
 };
 
-void serialize(std::ostream& out, const traces::trace& tra)
+void serialize(std::ostream& out, const protocols::traces::trace& tra)
 {
+        namespace traces = protocols::traces;
         std::visit(
             overloaded{
                 [&out](traces::job_arrival tra) {
@@ -113,7 +114,8 @@ void serialize(std::ostream& out, const traces::trace& tra)
 }
 }; // namespace
 
-void outputs::textual::print(std::ostream& out, const std::multimap<double, traces::trace>& in)
+void outputs::textual::print(
+    std::ostream& out, const std::multimap<double, protocols::traces::trace>& in)
 {
         double last_timestamp{0};
 

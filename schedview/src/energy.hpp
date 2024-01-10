@@ -1,9 +1,9 @@
 #ifndef ENERGY_HPP
 #define ENERGY_HPP
 
-#include "traces.hpp"
+#include <protocols/traces.hpp>
 
 namespace outputs::energy {
-void plot(const std::multimap<double, traces::trace>& input);
+void plot(const std::multimap<double, protocols::traces::trace>& input);
 }
 #endif

@@ -1,11 +1,11 @@
 #ifndef STATS_HPP
 #define STATS_HPP
 
-#include "traces.hpp"
 #include <map>
+#include <protocols/traces.hpp>
 
 namespace outputs::stats {
-void print_utilizations(const std::multimap<double, traces::trace>& input);
+void print_utilizations(const std::multimap<double, protocols::traces::trace>& input);
 } // namespace outputs::stats
 
 #endif

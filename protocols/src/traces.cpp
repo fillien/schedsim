@@ -1,10 +1,9 @@
-#include "traces.hpp"
-#include "nlohmann/json.hpp"
-
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <nlohmann/json.hpp>
 #include <ostream>
+#include <protocols/traces.hpp>
 #include <variant>
 
 template <class... Ts> struct overloaded : Ts... {
@@ -13,10 +12,10 @@ template <class... Ts> struct overloaded : Ts... {
 
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
-auto traces::to_json(const traces::trace& log) -> nlohmann::json
+namespace protocols::traces {
+auto to_json(const trace& log) -> nlohmann::json
 {
         using json = nlohmann::json;
-        using namespace traces;
         return std::visit(
             overloaded{
                 [](const job_arrival& tra) {
@@ -90,9 +89,8 @@ auto traces::to_json(const traces::trace& log) -> nlohmann::json
             log);
 }
 
-auto traces::from_json(const nlohmann::json& log) -> traces::trace
+auto from_json(const nlohmann::json& log) -> trace
 {
-        using namespace traces;
         const std::map<std::string, traces::trace> convert{
             {"sim_finished", sim_finished{}},
             {"resched", resched{}},
@@ -115,7 +113,7 @@ auto traces::from_json(const nlohmann::json& log) -> traces::trace
         auto search = convert.find(log.at("type").get<std::string>());
         if (search == std::end(convert)) { throw std::out_of_range("Unsupported event"); }
 
-        traces::trace out;
+        trace out;
 
         std::visit(
             overloaded{
@@ -178,8 +176,7 @@ auto traces::from_json(const nlohmann::json& log) -> traces::trace
         return out;
 }
 
-void traces::write_log_file(
-    const std::multimap<double, traces::trace>& logs, std::filesystem::path& file)
+void write_log_file(const std::multimap<double, trace>& logs, std::filesystem::path& file)
 {
         std::ofstream out;
         out.open(file);
@@ -198,7 +195,7 @@ void traces::write_log_file(
         out.close();
 }
 
-auto traces::read_log_file(std::filesystem::path& file) -> std::multimap<double, traces::trace>
+auto read_log_file(std::filesystem::path& file) -> std::multimap<double, trace>
 {
         std::string input{};
         {
@@ -211,7 +208,7 @@ auto traces::read_log_file(std::filesystem::path& file) -> std::multimap<double,
                 input = oss.str();
         }
 
-        std::multimap<double, traces::trace> parsed_traces{};
+        std::multimap<double, trace> parsed_traces{};
 
         auto json_input = nlohmann::json::parse(input);
 
@@ -221,3 +218,4 @@ auto traces::read_log_file(std::filesystem::path& file) -> std::multimap<double,
 
         return parsed_traces;
 }
+} // namespace protocols::traces

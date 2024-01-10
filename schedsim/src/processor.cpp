@@ -2,7 +2,7 @@
 #include "engine.hpp"
 #include "server.hpp"
 #include "task.hpp"
-#include "traces.hpp"
+#include <protocols/traces.hpp>
 
 #include <cassert>
 #include <cstdint>
@@ -13,6 +13,7 @@ processor::processor(const std::weak_ptr<engine>& sim, int cpu_id) : entity(sim)
 
 void processor::set_server(std::weak_ptr<server> server_to_execute)
 {
+        namespace traces = protocols::traces;
         assert(!server_to_execute.expired());
         auto const& serv = server_to_execute.lock();
 
@@ -29,6 +30,7 @@ void processor::clear_server()
 
 void processor::change_state(const processor::state& next_state)
 {
+        namespace traces = protocols::traces;
         // assert that a processor can't enter twice in the same state
         if (next_state == current_state) { return; }
 

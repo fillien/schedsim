@@ -181,6 +181,7 @@ void scheduler::handle_serv_inactive(const std::shared_ptr<server>& serv)
 void scheduler::handle_job_arrival(
     const std::shared_ptr<task>& new_task, const double& job_duration)
 {
+        namespace traces = protocols::traces;
         sim()->add_trace(
             traces::job_arrival{new_task->id, job_duration, sim()->get_time() + new_task->period});
 
@@ -221,7 +222,7 @@ void scheduler::handle_job_finished(const std::shared_ptr<server>& serv, bool is
         using enum server::state;
 
         assert(serv->current_state != inactive);
-        sim()->add_trace(traces::job_finished{serv->id()});
+        sim()->add_trace(protocols::traces::job_finished{serv->id()});
 
         // Update virtual time and remaining execution time
         update_server_times(serv);
@@ -249,6 +250,7 @@ void scheduler::handle_job_finished(const std::shared_ptr<server>& serv, bool is
 
 void scheduler::handle_serv_budget_exhausted(const std::shared_ptr<server>& serv)
 {
+        namespace traces = protocols::traces;
         sim()->add_trace(traces::serv_budget_exhausted{serv->id()});
         update_server_times(serv);
 
@@ -265,6 +267,7 @@ void scheduler::handle_serv_budget_exhausted(const std::shared_ptr<server>& serv
 
 void scheduler::update_server_times(const std::shared_ptr<server>& serv)
 {
+        namespace traces = protocols::traces;
         assert(serv->current_state == server::state::running);
 
         const double running_time = sim()->get_time() - serv->last_update;
@@ -298,6 +301,7 @@ void scheduler::cancel_alarms(const server& serv)
 void scheduler::set_alarms(const std::shared_ptr<server>& serv)
 {
         using namespace events;
+        namespace traces = protocols::traces;
         const double new_budget{get_server_budget(*serv)};
         const double remaining_time{serv->remaining_exec_time()};
 
@@ -316,13 +320,14 @@ void scheduler::set_alarms(const std::shared_ptr<server>& serv)
 
 void scheduler::resched()
 {
-        sim()->add_trace(traces::resched{});
+        sim()->add_trace(protocols::traces::resched{});
         custom_scheduler();
 }
 
 void scheduler::resched_proc(
     const std::shared_ptr<processor>& proc, const std::shared_ptr<server>& server_to_execute)
 {
+        namespace traces = protocols::traces;
         if (proc->has_server_running()) {
                 cancel_alarms(*(proc->get_server()));
                 sim()->add_trace(traces::task_preempted{proc->get_server()->get_task()->id});

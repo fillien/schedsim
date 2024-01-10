@@ -1,5 +1,4 @@
 #include "stats.hpp"
-#include "traces.hpp"
 #include <algorithm>
 #include <bits/ranges_util.h>
 #include <cassert>
@@ -9,6 +8,7 @@
 #include <iostream>
 #include <iterator>
 #include <map>
+#include <protocols/traces.hpp>
 #include <variant>
 
 template <class... Ts> struct overloaded : Ts... {
@@ -18,7 +18,7 @@ template <class... Ts> struct overloaded : Ts... {
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 namespace {
-auto get_per_core_utilization(std::multimap<double, traces::trace> input)
+auto get_per_core_utilization(std::multimap<double, protocols::traces::trace> input)
     -> std::map<std::size_t, double>
 {
         std::map<std::size_t, double> last_activation;
@@ -45,10 +45,10 @@ auto get_per_core_utilization(std::multimap<double, traces::trace> input)
                 const auto& event = tra.second;
                 std::visit(
                     overloaded{
-                        [&](traces::proc_activated event) {
+                        [&](protocols::traces::proc_activated event) {
                                 last_activation.insert({event.proc_id, timestamp});
                         },
-                        [&](traces::proc_idled event) {
+                        [&](protocols::traces::proc_idled event) {
                                 close_utilization_zone(timestamp, event.proc_id);
                         },
                         [](auto) {}},
@@ -93,7 +93,7 @@ void close_ready_state_zone(
 } // namespace
 
 namespace outputs::stats {
-void print_utilizations(const std::multimap<double, traces::trace>& input)
+void print_utilizations(const std::multimap<double, protocols::traces::trace>& input)
 {
         const auto utilizations = get_per_core_utilization(input);
 
@@ -104,8 +104,9 @@ void print_utilizations(const std::multimap<double, traces::trace>& input)
         }
 }
 
-void print_nb_preemption(const std::multimap<double, traces::trace>& input)
+void print_nb_preemption(const std::multimap<double, protocols::traces::trace>& input)
 {
+        namespace traces = protocols::traces;
         std::size_t nb_preemptions{0};
 
         for (const auto& [_, event] : input) {
@@ -115,7 +116,7 @@ void print_nb_preemption(const std::multimap<double, traces::trace>& input)
         std::cout << "Preemption count: " << nb_preemptions << "\n";
 }
 
-void print_average_waiting_time(const std::multimap<double, traces::trace>& input)
+void print_average_waiting_time(const std::multimap<double, protocols::traces::trace>& input)
 {
         std::map<std::size_t, double> last_zone_entry;
         std::map<std::size_t, double> waiting_times;
@@ -125,10 +126,10 @@ void print_average_waiting_time(const std::multimap<double, traces::trace>& inpu
                 const auto& event = tra.second;
                 std::visit(
                     overloaded{
-                        [&](traces::serv_ready event) {
+                        [&](protocols::traces::serv_ready event) {
                                 open_ready_state_zone(last_zone_entry, event.task_id, timestamp);
                         },
-                        [&](traces::serv_running event) {
+                        [&](protocols::traces::serv_running event) {
                                 close_ready_state_zone(
                                     last_zone_entry, waiting_times, event.task_id, timestamp);
                         },

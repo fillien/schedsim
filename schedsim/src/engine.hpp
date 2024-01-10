@@ -4,7 +4,7 @@
 #include "event.hpp"
 #include "plateform.hpp"
 #include "scheduler.hpp"
-#include "traces.hpp"
+#include <protocols/traces.hpp>
 
 #include <functional>
 #include <iostream>
@@ -63,7 +63,7 @@ class engine {
          * @brief The list of past events, a pair of the timestamp of the event and the event
          * itself.
          */
-        std::multimap<double, traces::trace> past_list{};
+        std::multimap<double, protocols::traces::trace> past_list{};
 
       public:
         static constexpr double ZERO_ROUNDED = 0.0000001;
@@ -131,7 +131,7 @@ class engine {
          * @brief Add a trace to the logs (past list).
          * @param new_trace The trace to add.
          */
-        void add_trace(const traces::trace& new_trace);
+        void add_trace(const protocols::traces::trace& new_trace);
 
         /**
          * @brief Round a double value to zero if it is within a small range.

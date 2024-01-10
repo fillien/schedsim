@@ -13,9 +13,7 @@ target_link_libraries(
   tests
   GTest::gtest
   GTest::gtest_main
-  scenario
-  traces
-  platform
+  protocols
   json
 )
 

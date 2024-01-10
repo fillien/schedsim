@@ -1,5 +1,4 @@
 #include "stats.hpp"
-#include "traces.hpp"
 #include <algorithm>
 #include <bits/ranges_util.h>
 #include <cassert>
@@ -9,6 +8,7 @@
 #include <iostream>
 #include <iterator>
 #include <map>
+#include <protocols/traces.hpp>
 #include <variant>
 
 template <class... Ts> struct overloaded : Ts... {
@@ -18,7 +18,7 @@ template <class... Ts> struct overloaded : Ts... {
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 namespace {
-auto get_per_core_utilization(std::multimap<double, traces::trace> input)
+auto get_per_core_utilization(std::multimap<double, protocols::traces::trace> input)
     -> std::map<std::size_t, double>
 {
         std::map<std::size_t, double> last_activation;
@@ -45,10 +45,10 @@ auto get_per_core_utilization(std::multimap<double, traces::trace> input)
                 const auto& event = tra.second;
                 std::visit(
                     overloaded{
-                        [&](traces::proc_activated event) {
+                        [&](protocols::traces::proc_activated event) {
                                 last_activation.insert({event.proc_id, timestamp});
                         },
-                        [&](traces::proc_idled event) {
+                        [&](protocols::traces::proc_idled event) {
                                 close_utilization_zone(timestamp, event.proc_id);
                         },
                         [](auto) {}},
@@ -67,7 +67,7 @@ auto get_per_core_utilization(std::multimap<double, traces::trace> input)
 } // namespace
 
 namespace outputs::stats {
-void print_utilizations(const std::multimap<double, traces::trace>& input)
+void print_utilizations(const std::multimap<double, protocols::traces::trace>& input)
 {
         const auto utilizations = get_per_core_utilization(input);
 

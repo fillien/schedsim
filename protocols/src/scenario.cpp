@@ -1,18 +1,19 @@
-#include "scenario.hpp"
-#include "nlohmann/json.hpp"
 #include <algorithm>
 #include <cstdint>
 #include <fstream>
 #include <map>
+#include <nlohmann/json.hpp>
+#include <protocols/scenario.hpp>
 #include <sstream>
 #include <string>
 
-auto scenario::to_json(const scenario::job& job) -> nlohmann::json
+namespace protocols::scenario {
+auto to_json(const job& job) -> nlohmann::json
 {
         return {{"arrival", job.arrival}, {"duration", job.duration}};
 }
 
-auto scenario::to_json(const scenario::task& task) -> nlohmann::json
+auto to_json(const task& task) -> nlohmann::json
 {
         nlohmann::json json_task{
             {"id", task.id}, {"period", task.period}, {"utilization", task.utilization}};
@@ -24,7 +25,7 @@ auto scenario::to_json(const scenario::task& task) -> nlohmann::json
         return json_task;
 }
 
-auto scenario::to_json(const scenario::setting& setting) -> nlohmann::json
+auto to_json(const setting& setting) -> nlohmann::json
 {
         nlohmann::json tasks{};
         for (const auto& task : setting.tasks) {
@@ -34,16 +35,16 @@ auto scenario::to_json(const scenario::setting& setting) -> nlohmann::json
         return nlohmann::json{{"tasks", tasks}};
 }
 
-auto scenario::from_json_job(const nlohmann::json& json_job) -> scenario::job
+auto from_json_job(const nlohmann::json& json_job) -> job
 {
-        return scenario::job{
+        return job{
             .arrival = json_job["arrival"].get<double>(),
             .duration = json_job["duration"].get<double>()};
 }
 
-auto scenario::from_json_task(const nlohmann::json& json_task) -> scenario::task
+auto from_json_task(const nlohmann::json& json_task) -> task
 {
-        scenario::task parsed_task{
+        task parsed_task{
             .id = json_task.at("id").get<std::size_t>(),
             .utilization = json_task.at("utilization").get<double>(),
             .period = json_task.at("period").get<double>(),
@@ -56,16 +57,16 @@ auto scenario::from_json_task(const nlohmann::json& json_task) -> scenario::task
         return parsed_task;
 }
 
-auto scenario::from_json_setting(const nlohmann::json& json_setting) -> scenario::setting
+auto from_json_setting(const nlohmann::json& json_setting) -> setting
 {
-        std::vector<scenario::task> tasks;
+        std::vector<task> tasks;
         for (const auto& json_task : json_setting.at("tasks")) {
                 tasks.push_back(from_json_task(json_task));
         }
         return scenario::setting{tasks};
 }
 
-void scenario::write_file(const std::filesystem::path& file, const scenario::setting& tasks)
+void write_file(const std::filesystem::path& file, const setting& tasks)
 {
         std::ofstream out(file);
         if (!out) { throw std::runtime_error("Unable to open file: " + file.string()); }
@@ -73,7 +74,7 @@ void scenario::write_file(const std::filesystem::path& file, const scenario::set
         out << to_json(tasks).dump();
 }
 
-auto scenario::read_file(const std::filesystem::path& file) -> scenario::setting
+auto read_file(const std::filesystem::path& file) -> setting
 {
         std::ifstream input_file(file);
         if (!input_file) { throw std::runtime_error("Failed to open file: " + file.string()); }
@@ -91,3 +92,4 @@ auto scenario::read_file(const std::filesystem::path& file) -> scenario::setting
                     "JSON parsing error in file " + file.string() + ": " + e.what());
         }
 }
+} // namespace protocols::scenario

@@ -1,12 +1,12 @@
 #ifndef SCENARIO_HPP
 #define SCENARIO_HPP
 
-#include "nlohmann/json_fwd.hpp"
 #include <cstdint>
 #include <filesystem>
+#include <nlohmann/json_fwd.hpp>
 #include <vector>
 
-namespace scenario {
+namespace protocols::scenario {
 struct job {
         double arrival;
         double duration;
@@ -32,6 +32,6 @@ auto from_json_setting(const nlohmann::json& json_setting) -> setting;
 
 void write_file(const std::filesystem::path& file, const setting& tasks);
 auto read_file(const std::filesystem::path& file) -> setting;
-} // namespace scenario
+} // namespace protocols::scenario
 
 #endif

@@ -23,6 +23,7 @@ void server::unset_task() { attached_task.reset(); }
 
 void server::change_state(const state& new_state)
 {
+        namespace traces = protocols::traces;
         assert(new_state != current_state);
 
         if (last_call != sim()->get_time()) {
@@ -95,6 +96,7 @@ void server::change_state(const state& new_state)
 
 void server::postpone()
 {
+        namespace traces = protocols::traces;
         relative_deadline += period();
         sim()->add_trace(traces::serv_postpone{shared_from_this()->id(), relative_deadline});
 }

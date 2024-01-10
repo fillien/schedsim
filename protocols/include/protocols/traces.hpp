@@ -7,7 +7,7 @@
 #include <map>
 #include <variant>
 
-namespace traces {
+namespace protocols::traces {
 
 /**
  * @brief Represents a rescheduling event.
@@ -181,6 +181,6 @@ void write_log_file(const std::multimap<double, trace>& logs, std::filesystem::p
  */
 auto read_log_file(std::filesystem::path& file) -> std::multimap<double, trace>;
 
-} // namespace traces
+} // namespace protocols::traces
 
 #endif

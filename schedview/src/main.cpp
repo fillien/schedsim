@@ -1,3 +1,4 @@
+
 #include "deadline_misses.hpp"
 #include "energy.hpp"
 #include "gantt/gantt.hpp"
@@ -5,11 +6,11 @@
 #include "gantt/svg.hpp"
 #include "stats.hpp"
 #include "textual.hpp"
-#include "traces.hpp"
+#include <protocols/traces.hpp>
 
-#include "cxxopts.hpp"
 #include <cstddef>
 #include <cstdlib>
+#include <cxxopts.hpp>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -65,7 +66,7 @@ auto main(int argc, char* argv[]) -> int
                         std::cerr << input_filepath << " no such file" << std::endl;
                         return EXIT_FAILURE;
                 }
-                auto parsed = traces::read_log_file(input_filepath);
+                auto parsed = protocols::traces::read_log_file(input_filepath);
 
                 if (cli.count("print")) { outputs::textual::print(std::cout, parsed); }
 

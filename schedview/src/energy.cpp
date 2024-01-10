@@ -1,5 +1,5 @@
 #include "energy.hpp"
-#include "traces.hpp"
+#include <protocols/traces.hpp>
 
 #include <map>
 #include <matplot/matplot.h>
@@ -35,7 +35,7 @@ auto plot_energy(const std::vector<std::pair<double, double>>& measures)
             energy_timestamps, energy_timestamps};
 }
 
-auto get_power_consumption(const std::multimap<double, traces::trace>& input)
+auto get_power_consumption(const std::multimap<double, protocols::traces::trace>& input)
     -> std::vector<std::pair<double, double>>
 {
         constexpr double CORE_CONSUMPTION_PER_TIME_UNIT = 1;
@@ -54,10 +54,10 @@ auto get_power_consumption(const std::multimap<double, traces::trace>& input)
 
                 std::visit(
                     overloaded{
-                        [&current_power](traces::proc_activated) {
+                        [&current_power](protocols::traces::proc_activated) {
                                 current_power += CORE_CONSUMPTION_PER_TIME_UNIT;
                         },
-                        [&current_power](traces::proc_idled) {
+                        [&current_power](protocols::traces::proc_idled) {
                                 current_power -= CORE_CONSUMPTION_PER_TIME_UNIT;
                         },
                         [](auto) {}},
@@ -67,7 +67,7 @@ auto get_power_consumption(const std::multimap<double, traces::trace>& input)
         return power_consumption;
 }
 
-void outputs::energy::plot(const std::multimap<double, traces::trace>& input)
+void outputs::energy::plot(const std::multimap<double, protocols::traces::trace>& input)
 {
         const auto power_consumption = get_power_consumption(input);
 

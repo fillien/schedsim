@@ -1,9 +1,9 @@
 #ifndef GANTT_HPP
 #define GANTT_HPP
 
-#include "traces.hpp"
 #include <array>
 #include <map>
+#include <protocols/traces.hpp>
 #include <variant>
 #include <vector>
 
@@ -65,7 +65,7 @@ struct gantt {
         std::vector<command> commands;
 };
 
-auto generate_gantt(const std::multimap<double, traces::trace>& logs) -> gantt;
+auto generate_gantt(const std::multimap<double, protocols::traces::trace>& logs) -> gantt;
 }; // namespace outputs::gantt
 
 #endif

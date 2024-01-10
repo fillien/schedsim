@@ -2,8 +2,6 @@
 #include "event.hpp"
 #include "plateform.hpp"
 #include "scheduler.hpp"
-#include "traces.hpp"
-
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -14,13 +12,14 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <protocols/traces.hpp>
 
 void engine::add_event(const events::event& new_event, const double& timestamp)
 {
         future_list.insert({timestamp, std::move(new_event)});
 }
 
-void engine::add_trace(const traces::trace& new_trace)
+void engine::add_trace(const protocols::traces::trace& new_trace)
 {
         past_list.insert({current_timestamp, std::move(new_trace)});
 }
@@ -48,5 +47,5 @@ void engine::simulation()
         }
 
         // Add a simulation finished trace to the past list
-        if (future_list.empty()) { add_trace(traces::sim_finished{}); }
+        if (future_list.empty()) { add_trace(protocols::traces::sim_finished{}); }
 }

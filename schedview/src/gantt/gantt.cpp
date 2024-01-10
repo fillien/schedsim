@@ -1,5 +1,5 @@
 #include "gantt.hpp"
-#include "traces.hpp"
+#include <protocols/traces.hpp>
 
 #include <cmath>
 #include <map>
@@ -16,9 +16,9 @@ template <class... Ts> struct overloaded : Ts... {
 
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
-auto count_tasks(const std::multimap<double, traces::trace>& traces) -> std::size_t
+auto count_tasks(const std::multimap<double, protocols::traces::trace>& traces) -> std::size_t
 {
-        using namespace traces;
+        using namespace protocols::traces;
 
         std::set<std::size_t> cpt;
 
@@ -31,7 +31,7 @@ auto count_tasks(const std::multimap<double, traces::trace>& traces) -> std::siz
         return cpt.size();
 }
 
-auto get_last_timestamp(const std::multimap<double, traces::trace>& traces) -> double
+auto get_last_timestamp(const std::multimap<double, protocols::traces::trace>& traces) -> double
 {
         double last_timestamp{0};
         if (traces.rbegin() != traces.rend()) { last_timestamp = std::prev(traces.end())->first; }
@@ -94,8 +94,9 @@ void new_deadline(gantt& chart, double time, std::size_t tid)
 }; // namespace
 
 namespace outputs::gantt {
-auto generate_gantt(const std::multimap<double, traces::trace>& logs) -> gantt
+auto generate_gantt(const std::multimap<double, protocols::traces::trace>& logs) -> gantt
 {
+        namespace traces = protocols::traces;
         gantt chart;
 
         chart.nb_axis = count_tasks(logs);

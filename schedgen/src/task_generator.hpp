@@ -1,8 +1,8 @@
 #ifndef TASK_GENERATOR_HPP
 #define TASK_GENERATOR_HPP
 
-#include "scenario.hpp"
 #include <cstddef>
+#include <protocols/scenario.hpp>
 #include <vector>
 
 /**
@@ -18,7 +18,8 @@
  * @return A std::vector of 'job' from the 'scenario' namespace, each containing the scheduled time
  * of arrival and the duration for the job.
  */
-auto generate_jobs(std::vector<double> durations, double period) -> std::vector<scenario::job>;
+auto generate_jobs(std::vector<double> durations, double period)
+    -> std::vector<protocols::scenario::job>;
 
 /**
  * @brief Generates a task with a set of jobs based on utilization and success rate.
@@ -42,7 +43,7 @@ auto generate_jobs(std::vector<double> durations, double period) -> std::vector<
  */
 auto generate_task(
     std::size_t nb_tasks, std::size_t nb_jobs, double total_utilization, double success_rate)
-    -> scenario::task;
+    -> protocols::scenario::task;
 
 /**
  * @brief Generates a set of tasks (taskset) for a given scenario, each with a specific utilization
@@ -70,6 +71,6 @@ auto generate_task(
  */
 auto generate_taskset(
     std::size_t nb_tasks, std::size_t nb_jobs, double total_utilization, double success_rate)
-    -> scenario::setting;
+    -> protocols::scenario::setting;
 
 #endif

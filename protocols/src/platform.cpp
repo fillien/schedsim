@@ -1,10 +1,9 @@
-#include "platform.hpp"
-#include "nlohmann/json.hpp"
-
 #include <fstream>
+#include <nlohmann/json.hpp>
+#include <protocols/platform.hpp>
 #include <vector>
 
-namespace protocols {
+namespace protocols::platform {
 auto to_json(const platform& plat) -> nlohmann::json
 {
         return {{"procs", plat.nb_procs}, {"frequencies", plat.frequencies}};
@@ -43,4 +42,4 @@ auto read_file(const std::filesystem::path& file) -> platform
                     "JSON parsing error in file " + file.string() + ": " + e.what());
         }
 }
-} // namespace protocols
+} // namespace protocols::platform

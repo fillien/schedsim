@@ -1,13 +1,12 @@
-#include "platform.hpp"
-#include "scenario.hpp"
 #include "task_generator.hpp"
-
 #include <cstddef>
 #include <cstdlib>
 #include <cxxopts.hpp>
 #include <exception>
 #include <filesystem>
 #include <iostream>
+#include <protocols/platform.hpp>
+#include <protocols/scenario.hpp>
 #include <stdexcept>
 #include <string>
 #include <typeinfo>
@@ -106,11 +105,11 @@ auto main(const int argc, const char** argv) -> int
                             config.total_utilization,
                             config.success_rate);
                         // Write the scenario to output file
-                        scenario::write_file(config.output_filepath, taskset);
+                        protocols::scenario::write_file(config.output_filepath, taskset);
                 }
                 else if (command == "platform") {
                         auto config = parse_args_platform(argc - 1, argv + 1);
-                        protocols::write_file(
+                        protocols::platform::write_file(
                             config.output_filepath, {config.nb_procs, config.frequencies});
                 }
                 else {

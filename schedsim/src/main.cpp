@@ -9,21 +9,19 @@
 #include <iostream>
 #include <iterator>
 #include <memory>
+#include <protocols/platform.hpp>
+#include <protocols/scenario.hpp>
+#include <protocols/traces.hpp>
 #include <vector>
 
 #include "engine.hpp"
-#include "platform.hpp"
 #include "entity.hpp"
 #include "event.hpp"
 #include "plateform.hpp"
-
-//#include "sched_mono.hpp"
-#include "scenario.hpp"
 #include "sched_parallel.hpp"
 #include "scheduler.hpp"
 #include "server.hpp"
 #include "task.hpp"
-#include "traces.hpp"
 
 namespace fs = std::filesystem;
 
@@ -66,8 +64,8 @@ auto main(const int argc, const char** argv) -> int
         try {
                 auto config = parse_args(argc, argv);
 
-                auto taskset = scenario::read_file(config.scenario_file);
-		auto platform_config = protocols::read_file(config.platform_file);
+                auto taskset = protocols::scenario::read_file(config.scenario_file);
+                auto platform_config = protocols::platform::read_file(config.platform_file);
 
                 std::cout << "Coeurs: " << platform_config.nb_procs << std::endl;
                 std::cout << "Nombre de tâches: " << taskset.tasks.size() << std::endl;
@@ -102,7 +100,7 @@ auto main(const int argc, const char** argv) -> int
                 sim->simulation();
                 std::cout << "Simulation ended" << std::endl;
 
-                traces::write_log_file(sim->get_traces(), config.output_file);
+                protocols::traces::write_log_file(sim->get_traces(), config.output_file);
                 return EXIT_SUCCESS;
         }
         catch (const cxxopts::exceptions::parsing& e) {

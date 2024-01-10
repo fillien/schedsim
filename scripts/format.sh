@@ -1,9 +1,9 @@
 #!/bin/sh
 
 clang-format -i \
-	     protocols/scenario/scenario.cpp \
-	     protocols/traces/traces.cpp \
-	     protocols/platform/platform.cpp \
+	     protocols/src/scenario.cpp \
+	     protocols/src/traces.cpp \
+	     protocols/src/platform.cpp \
 	     schedgen/src/main.cpp \
 	     schedgen/src/task_generator.cpp \
 	     schedsim/src/engine.cpp \
@@ -28,9 +28,9 @@ clang-format -i \
 	     tests/scenario.cpp \
 	     tests/traces.cpp \
 	     tests/platform.cpp \
-	     protocols/scenario/scenario.hpp \
-	     protocols/traces/traces.hpp \
-	     protocols/platform/platform.hpp \
+	     protocols/include/protocols/scenario.hpp \
+	     protocols/include/protocols/traces.hpp \
+	     protocols/include/protocols/platform.hpp \
 	     schedgen/src/task_generator.hpp \
 	     schedsim/src/engine.hpp \
 	     schedsim/src/entity.hpp \
