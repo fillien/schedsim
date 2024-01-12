@@ -5,7 +5,7 @@
 #include <exception>
 #include <filesystem>
 #include <iostream>
-#include <protocols/platform.hpp>
+#include <protocols/hardware.hpp>
 #include <protocols/scenario.hpp>
 #include <stdexcept>
 #include <string>
@@ -109,7 +109,7 @@ auto main(const int argc, const char** argv) -> int
                 }
                 else if (command == "platform") {
                         auto config = parse_args_platform(argc - 1, argv + 1);
-                        protocols::platform::write_file(
+                        protocols::hardware::write_file(
                             config.output_filepath, {config.nb_procs, config.frequencies});
                 }
                 else {

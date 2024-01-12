@@ -9,7 +9,7 @@
 #include <iostream>
 #include <iterator>
 #include <memory>
-#include <protocols/platform.hpp>
+#include <protocols/hardware.hpp>
 #include <protocols/scenario.hpp>
 #include <protocols/traces.hpp>
 #include <vector>
@@ -17,7 +17,7 @@
 #include "engine.hpp"
 #include "entity.hpp"
 #include "event.hpp"
-#include "plateform.hpp"
+#include "platform.hpp"
 #include "sched_parallel.hpp"
 #include "scheduler.hpp"
 #include "server.hpp"
@@ -65,7 +65,7 @@ auto main(const int argc, const char** argv) -> int
                 auto config = parse_args(argc, argv);
 
                 auto taskset = protocols::scenario::read_file(config.scenario_file);
-                auto platform_config = protocols::platform::read_file(config.platform_file);
+                auto platform_config = protocols::hardware::read_file(config.platform_file);
 
                 std::cout << "Coeurs: " << platform_config.nb_procs << std::endl;
                 std::cout << "Nombre de tâches: " << taskset.tasks.size() << std::endl;
@@ -73,10 +73,10 @@ auto main(const int argc, const char** argv) -> int
                 // Create the simulation engine and attache to it a scheduler
                 auto sim = make_shared<engine>();
 
-                // Insert the plateform configured through the scenario file, in the simulation
+                // Insert the platform configured through the scenario file, in the simulation
                 // engine
-                auto plat = make_shared<plateform>(sim, platform_config.nb_procs);
-                sim->set_plateform(plat);
+                auto plat = make_shared<platform>(sim, platform_config.nb_procs);
+                sim->set_platform(plat);
 
                 std::shared_ptr<scheduler> sched = make_shared<sched_parallel>(sim);
                 sim->set_scheduler(sched);

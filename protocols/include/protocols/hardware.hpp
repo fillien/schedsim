@@ -1,0 +1,21 @@
+#ifndef HARDWARE_HPP
+#define HARDWARE_HPP
+
+#include <cstddef>
+#include <filesystem>
+#include <nlohmann/json_fwd.hpp>
+#include <vector>
+
+namespace protocols::hardware {
+struct hardware {
+        std::size_t nb_procs;
+        std::vector<double> frequencies;
+};
+
+auto to_json(const hardware& plat) -> nlohmann::json;
+auto from_json_hardware(const nlohmann::json& json_hardware) -> hardware;
+void write_file(const std::filesystem::path& file, const hardware& plat);
+auto read_file(const std::filesystem::path& file) -> hardware;
+} // namespace protocols::hardware
+
+#endif

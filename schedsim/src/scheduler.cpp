@@ -40,7 +40,7 @@ auto compare_events(const events::event& ev1, const events::event& ev2) -> bool
 
 void scheduler::update_running_servers()
 {
-        for (const auto& proc : sim()->get_plateform()->processors) {
+        for (const auto& proc : sim()->get_platform()->processors) {
                 if (proc->has_server_running()) { update_server_times(proc->get_server()); }
         }
 };
@@ -155,8 +155,8 @@ void scheduler::handle(std::vector<events::event> evts)
 
         if (this->need_resched) { resched(); }
 
-        // Update plateform state
-        for (auto const& proc : sim()->get_plateform()->processors) {
+        // Update platform state
+        for (auto const& proc : sim()->get_platform()->processors) {
                 proc->update_state();
         }
 }

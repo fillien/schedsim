@@ -6,7 +6,7 @@ target_sources(tests PRIVATE
   "main.cpp"
   "scenario.cpp"
   "traces.cpp"
-  "platform.cpp"
+  "hardware.cpp"
 )
 
 target_link_libraries(

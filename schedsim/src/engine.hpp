@@ -2,14 +2,13 @@
 #define ENGINE_HPP
 
 #include "event.hpp"
-#include "plateform.hpp"
+#include "platform.hpp"
 #include "scheduler.hpp"
-#include <protocols/traces.hpp>
-
 #include <functional>
 #include <iostream>
 #include <map>
 #include <memory>
+#include <protocols/traces.hpp>
 #include <sstream>
 #include <variant>
 
@@ -57,7 +56,7 @@ class engine {
          * @brief A model of the platform on which the scheduler will operate.
          * @TODO Maybe refactor this as a unique_ptr, as it will be alone all the running time
          */
-        std::shared_ptr<plateform> current_plateform;
+        std::shared_ptr<platform> current_platform;
 
         /**
          * @brief The list of past events, a pair of the timestamp of the event and the event
@@ -87,11 +86,11 @@ class engine {
 
         /**
          * @brief Setter to attach a platform.
-         * @param new_plateform The new platform to attach.
+         * @param new_platform The new platform to attach.
          */
-        void set_plateform(const std::shared_ptr<plateform>& new_plateform)
+        void set_platform(const std::shared_ptr<platform>& new_platform)
         {
-                current_plateform = new_plateform;
+                current_platform = new_platform;
         };
 
         /**
@@ -102,9 +101,9 @@ class engine {
         /**
          * @return The current platform attached to the engine.
          */
-        [[nodiscard]] auto get_plateform() const -> std::shared_ptr<plateform>
+        [[nodiscard]] auto get_platform() const -> std::shared_ptr<platform>
         {
-                return current_plateform;
+                return current_platform;
         };
 
         /**

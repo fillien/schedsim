@@ -1,5 +1,5 @@
-#ifndef PLATEFORM_HPP
-#define PLATEFORM_HPP
+#ifndef PLATFORM_HPP
+#define PLATFORM_HPP
 
 #include "entity.hpp"
 #include "processor.hpp"
@@ -10,18 +10,18 @@
 /**
  * @brief A platform is a component that contains processors, for example an SoC.
  */
-class plateform : public entity {
+class platform : public entity {
       public:
         /**
-         * @brief Processors of the plateform.
+         * @brief Processors of the platform.
          */
         std::vector<std::shared_ptr<processor>> processors;
 
         /**
          * @brief A constructor who create the number of processors set in parameters
-         * @param nb_proc Number of processors for the plateform
+         * @param nb_proc Number of processors for the platform
          */
-        explicit plateform(const std::weak_ptr<engine>& sim, std::size_t nb_proc);
+        explicit platform(const std::weak_ptr<engine>& sim, std::size_t nb_proc);
 };
 
 #endif

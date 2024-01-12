@@ -1,7 +1,7 @@
 #include "sched_parallel.hpp"
 #include "engine.hpp"
 #include "event.hpp"
-#include "plateform.hpp"
+#include "platform.hpp"
 #include "processor.hpp"
 #include "server.hpp"
 
@@ -53,7 +53,7 @@ auto sched_parallel::get_inactive_bandwidth() const -> double
 auto sched_parallel::get_nb_active_procs(const double& new_utilization) const -> std::size_t
 {
         constexpr double MIN_NB_PROCS{1};
-        const auto MAX_NB_PROCS{static_cast<double>(sim()->get_plateform()->processors.size())};
+        const auto MAX_NB_PROCS{static_cast<double>(sim()->get_platform()->processors.size())};
         const auto TOTAL_UTILIZATION{get_total_utilization() + new_utilization};
         const auto MAX_UTILIZATION{get_max_utilization(servers, new_utilization)};
         double nb_procs{std::ceil((TOTAL_UTILIZATION - MAX_UTILIZATION) / (1 - MAX_UTILIZATION))};
@@ -104,7 +104,7 @@ void sched_parallel::custom_scheduler()
                 auto highest_priority_server =
                     std::ranges::min(ready_servers, from_shared<server>(deadline_order));
                 auto leastest_priority_processor = std::ranges::max(
-                    sim()->get_plateform()->processors, from_shared<processor>(processor_order));
+                    sim()->get_platform()->processors, from_shared<processor>(processor_order));
 
                 if (!leastest_priority_processor->has_server_running() ||
                     deadline_order(
@@ -117,7 +117,7 @@ void sched_parallel::custom_scheduler()
         }
 
         // Set next job finish or budget exhausted event for each proc with a task
-        for (auto proc : sim()->get_plateform()->processors) {
+        for (auto proc : sim()->get_platform()->processors) {
                 if (proc->has_server_running()) {
                         cancel_alarms(*proc->get_server());
                         set_alarms(proc->get_server());

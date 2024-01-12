@@ -9,7 +9,7 @@ target_link_libraries(schedsim PRIVATE cxxopts protocols)
 target_sources(schedsim PRIVATE
   src/main.cpp
   src/engine.cpp
-  src/plateform.cpp
+  src/platform.cpp
   src/processor.cpp
   src/scheduler.cpp
 #  sched_mono.cpp

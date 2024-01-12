@@ -1,6 +1,6 @@
 #include "engine.hpp"
 #include "event.hpp"
-#include "plateform.hpp"
+#include "platform.hpp"
 #include "scheduler.hpp"
 #include <algorithm>
 #include <cassert>

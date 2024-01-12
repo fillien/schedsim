@@ -1,4 +1,4 @@
-#include "plateform.hpp"
+#include "platform.hpp"
 #include "processor.hpp"
 
 #include <cassert>
@@ -6,7 +6,7 @@
 #include <iostream>
 #include <vector>
 
-plateform::plateform(const std::weak_ptr<engine>& sim, size_t nb_proc) : entity(sim)
+platform::platform(const std::weak_ptr<engine>& sim, size_t nb_proc) : entity(sim)
 {
         assert(nb_proc > 0);
         for (size_t i = 1; i <= nb_proc; ++i) {

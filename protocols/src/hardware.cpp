@@ -1,22 +1,22 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
-#include <protocols/platform.hpp>
+#include <protocols/hardware.hpp>
 #include <vector>
 
-namespace protocols::platform {
-auto to_json(const platform& plat) -> nlohmann::json
+namespace protocols::hardware {
+auto to_json(const hardware& plat) -> nlohmann::json
 {
         return {{"procs", plat.nb_procs}, {"frequencies", plat.frequencies}};
 }
 
-auto from_json_platform(const nlohmann::json& json_platform) -> platform
+auto from_json_hardware(const nlohmann::json& json_hardware) -> hardware
 {
-        return platform{
-            .nb_procs = json_platform.at("procs").get<std::size_t>(),
-            .frequencies = json_platform.at("frequencies").get<std::vector<double>>()};
+        return hardware{
+            .nb_procs = json_hardware.at("procs").get<std::size_t>(),
+            .frequencies = json_hardware.at("frequencies").get<std::vector<double>>()};
 }
 
-void write_file(const std::filesystem::path& file, const platform& plat)
+void write_file(const std::filesystem::path& file, const hardware& plat)
 {
         std::ofstream out(file);
         if (!out) { throw std::runtime_error("Unable to open file: " + file.string()); }
@@ -24,7 +24,7 @@ void write_file(const std::filesystem::path& file, const platform& plat)
         out << to_json(plat).dump();
 }
 
-auto read_file(const std::filesystem::path& file) -> platform
+auto read_file(const std::filesystem::path& file) -> hardware
 {
         std::ifstream input_file(file);
         if (!input_file) { throw std::runtime_error("Failed to open file: " + file.string()); }
@@ -35,11 +35,11 @@ auto read_file(const std::filesystem::path& file) -> platform
 
         try {
                 auto json_input = nlohmann::json::parse(input);
-                return from_json_platform(json_input);
+                return from_json_hardware(json_input);
         }
         catch (const nlohmann::json::parse_error& e) {
                 throw std::runtime_error(
                     "JSON parsing error in file " + file.string() + ": " + e.what());
         }
 }
-} // namespace protocols::platform
+} // namespace protocols::hardware
