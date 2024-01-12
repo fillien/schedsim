@@ -75,7 +75,8 @@ auto main(const int argc, const char** argv) -> int
 
                 // Insert the platform configured through the scenario file, in the simulation
                 // engine
-                auto plat = make_shared<platform>(sim, platform_config.nb_procs);
+                auto plat = make_shared<platform>(
+                    sim, platform_config.nb_procs, platform_config.frequencies, true);
                 sim->set_platform(plat);
 
                 std::shared_ptr<scheduler> sched = make_shared<sched_parallel>(sim);
