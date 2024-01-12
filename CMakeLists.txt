@@ -30,3 +30,12 @@ install(
   EXPORT ${PROJECT_NAME}_Targets
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUEDIR}
 )
+
+file(GLOB_RECURSE ALL_SOURCE_FILES "*.cpp" "*.hpp")
+list(FILTER ALL_SOURCE_FILES EXCLUDE REGEX "external/")
+list(FILTER ALL_SOURCE_FILES EXCLUDE REGEX "build/")
+
+add_custom_target(
+        clang-format
+        COMMAND clang-format -i ${ALL_SOURCE_FILES}
+)
