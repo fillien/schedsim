@@ -19,8 +19,8 @@ platform::platform(
         assert(nb_proc > 0);
         assert(std::all_of(frequencies.begin(), frequencies.end(), [](double f) { return f > 0; }));
 
-        std::sort(this->frequencies.begin(), this->frequencies.end(), std::greater<>());
-        assert(this->frequencies.begin() > this->frequencies.end());
+        std::sort(this->frequencies.begin(), this->frequencies.end(), std::less<>());
+        assert(*this->frequencies.begin() >= *this->frequencies.end());
 
         current_freq = *frequencies.begin();
 
