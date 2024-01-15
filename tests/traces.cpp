@@ -150,6 +150,14 @@ TEST_F(TraceEventTest, VirtualTimeUpdateJsonTest)
         EXPECT_DOUBLE_EQ(converted.virtual_time, original.virtual_time);
 }
 
+TEST_F(TraceEventTest, FrequencyUpdateJsonTest)
+{
+        frequency_update original{120};
+        auto json = to_json(original);
+        auto converted = std::get<frequency_update>(from_json(json));
+        EXPECT_DOUBLE_EQ(converted.frequency, original.frequency);
+}
+
 TEST_F(TraceEventTest, LogFileWriteRead)
 {
         std::multimap<double, trace> logs;

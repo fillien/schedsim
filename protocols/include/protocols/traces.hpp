@@ -132,12 +132,20 @@ struct virtual_time_update {
 };
 
 /**
+ * @brief Represents a frequency scaling of the platform
+ */
+struct frequency_update {
+        double frequency; /**< New frequency. */
+};
+
+/**
  * @brief Type representing various trace events.
  */
 using trace = std::variant<
     resched,
     sim_finished,
     virtual_time_update,
+    frequency_update,
     job_arrival,
     job_finished,
     proc_activated,

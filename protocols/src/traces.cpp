@@ -83,6 +83,9 @@ auto to_json(const trace& log) -> nlohmann::json
                             {"tid", tra.task_id},
                             {"virtual_time", tra.virtual_time}};
                 },
+                [](const frequency_update& tra) {
+                        return json{{"type", "frequency_update"}, {"frequency", tra.frequency}};
+                },
                 []([[maybe_unused]] const sim_finished& tra) {
                         return json{{"type", "sim_finished"}};
                 }},
@@ -108,7 +111,8 @@ auto from_json(const nlohmann::json& log) -> trace
             {"task_preempted", task_preempted{}},
             {"task_scheduled", task_scheduled{}},
             {"task_rejected", task_rejected{}},
-            {"virtual_time_update", virtual_time_update{}}};
+            {"virtual_time_update", virtual_time_update{}},
+            {"frequency_update", frequency_update{}}};
 
         auto search = convert.find(log.at("type").get<std::string>());
         if (search == std::end(convert)) { throw std::out_of_range("Unsupported event"); }
@@ -117,6 +121,9 @@ auto from_json(const nlohmann::json& log) -> trace
 
         std::visit(
             overloaded{
+                [&out, &log](frequency_update) {
+                        out = frequency_update{log.at("frequency").get<double>()};
+                },
                 [&out, &log](virtual_time_update) {
                         out = virtual_time_update{
                             log.at("tid").get<std::size_t>(), log.at("virtual_time").get<double>()};
