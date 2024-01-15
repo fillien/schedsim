@@ -64,6 +64,8 @@ class sched_power_aware : public scheduler {
          * @brief Implements the custom scheduling logic for the parallel scheduler.
          */
         void custom_scheduler() override;
+
+        void on_active_utilization_updated() override;
 };
 
 #endif

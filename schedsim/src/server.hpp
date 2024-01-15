@@ -67,7 +67,7 @@ class server : public entity, public std::enable_shared_from_this<server> {
          * @brief Retrieves the remaining execution time of the attached task.
          * @return Remaining execution time of the attached task.
          */
-        auto remaining_exec_time() const -> double { return get_task()->get_remaining_time(); }
+        auto remaining_exec_time() const -> double;
 
         /**
          * @brief Changes the state of the server.

@@ -8,6 +8,7 @@
 
 class processor;
 class server;
+class engine;
 
 /**
  * @brief Represents a model of a user code that is executed by a processor.
@@ -72,10 +73,7 @@ class task : public entity, public std::enable_shared_from_this<task> {
         /**
          * @brief Returns the remaining execution time.
          */
-        [[nodiscard]] auto get_remaining_time() const -> double
-        {
-                return remaining_execution_time;
-        };
+        [[nodiscard]] auto get_remaining_time() const -> double;
 
         /**
          * @brief Returns true if the task has a pending job.

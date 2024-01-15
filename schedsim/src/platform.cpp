@@ -20,9 +20,9 @@ platform::platform(
         assert(std::all_of(frequencies.begin(), frequencies.end(), [](double f) { return f > 0; }));
 
         std::sort(this->frequencies.begin(), this->frequencies.end(), std::less<>());
-        assert(*this->frequencies.begin() >= *this->frequencies.end());
 
-        current_freq = *frequencies.begin();
+        current_freq = *(frequencies.begin());
+        std::cout << "current freq: " << current_freq << '\n';
 
         for (size_t i = 1; i <= nb_proc; ++i) {
                 auto new_proc = std::make_shared<processor>(sim, i);

@@ -169,6 +169,8 @@ class scheduler : public entity {
          */
         virtual void custom_scheduler() = 0;
 
+        virtual void on_active_utilization_updated() = 0;
+
       public:
         /**
          * @brief Constructs a scheduler with a weak pointer to the engine.

@@ -18,6 +18,7 @@
 #include <ranges>
 #include <vector>
 
+namespace {
 auto get_max_utilization(
     const std::vector<std::shared_ptr<server>>& servers, const double& new_utilization = 0)
     -> double
@@ -34,6 +35,7 @@ auto get_max_utilization(
         }
         return new_utilization;
 }
+} // namespace
 
 auto sched_power_aware::processor_order(const processor& first, const processor& second) -> bool
 {
@@ -123,4 +125,12 @@ void sched_power_aware::custom_scheduler()
                         set_alarms(proc->get_server());
                 }
         }
+}
+
+void sched_power_aware::on_active_utilization_updated()
+{
+        sim()->get_platform()->set_freq(
+            sim()->get_platform()->get_f_max() * get_active_bandwidth());
+        std::cout << sim()->get_time() << " New frequency: " << sim()->get_platform()->get_freq()
+                  << '\n';
 }

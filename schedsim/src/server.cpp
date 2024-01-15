@@ -21,6 +21,8 @@ void server::set_task(const std::shared_ptr<task>& task_to_attach)
 
 void server::unset_task() { attached_task.reset(); }
 
+auto server::remaining_exec_time() const -> double { return get_task()->get_remaining_time(); }
+
 void server::change_state(const state& new_state)
 {
         namespace traces = protocols::traces;

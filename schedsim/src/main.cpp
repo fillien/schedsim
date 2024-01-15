@@ -19,6 +19,7 @@
 #include "event.hpp"
 #include "platform.hpp"
 #include "sched_parallel.hpp"
+#include "sched_power_aware.hpp"
 #include "scheduler.hpp"
 #include "server.hpp"
 #include "task.hpp"
@@ -79,7 +80,8 @@ auto main(const int argc, const char** argv) -> int
                     sim, platform_config.nb_procs, platform_config.frequencies, true);
                 sim->set_platform(plat);
 
-                std::shared_ptr<scheduler> sched = make_shared<sched_parallel>(sim);
+                // std::shared_ptr<scheduler> sched = make_shared<sched_parallel>(sim);
+                std::shared_ptr<scheduler> sched = make_shared<sched_power_aware>(sim);
                 sim->set_scheduler(sched);
 
                 std::vector<std::shared_ptr<task>> tasks{taskset.tasks.size()};

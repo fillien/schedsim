@@ -18,6 +18,7 @@
 #include <ranges>
 #include <vector>
 
+namespace {
 auto get_max_utilization(
     const std::vector<std::shared_ptr<server>>& servers, const double& new_utilization = 0)
     -> double
@@ -34,6 +35,7 @@ auto get_max_utilization(
         }
         return new_utilization;
 }
+} // namespace
 
 auto sched_parallel::processor_order(const processor& first, const processor& second) -> bool
 {

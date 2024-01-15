@@ -38,6 +38,7 @@ class platform : public entity {
 
         [[nodiscard]] auto get_f_max() const { return *frequencies.begin(); }
         [[nodiscard]] auto get_freq() const { return current_freq; };
+        [[nodiscard]] auto get_speed() const { return current_freq / get_f_max(); }
         void set_freq(const double& new_freq);
 };
 
