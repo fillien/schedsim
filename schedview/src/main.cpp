@@ -84,6 +84,11 @@ auto main(int argc, char* argv[]) -> int
                         std::cout << outputs::gantt::svg::draw(hello);
                 }
 
+                if (cli.count("html")) {
+                        outputs::gantt::gantt hello = outputs::gantt::generate_gantt(parsed);
+                        std::cout << outputs::gantt::html::draw(hello);
+                }
+
                 if (cli.count("utilizations")) { outputs::stats::print_utilizations(parsed); }
 
                 if (cli.count("preemptions")) { outputs::stats::print_nb_preemption(parsed); }

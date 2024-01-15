@@ -100,13 +100,10 @@ template <typename T> auto operator<<(std::ostream& out, const std::vector<T>& v
 
 auto outputs::gantt::svg::draw(const outputs::gantt::gantt& chart) -> std::string
 {
-        constexpr auto HTML_HEADER{"<!DOCTYPE html><html><head></head><body>"};
-        constexpr auto HTML_FOOTER{"</body></html>"};
         std::stringstream out;
 
-        out << HTML_HEADER << "<svg width='30000vmin' viewBox='0 0 "
-            << OFFSET_X + chart.duration * TIME_UNIT << " "
-            << static_cast<double>(chart.nb_axis) * AXIS_HEIGHT
+        out << "<svg width='30000vmin' viewBox='0 0 " << OFFSET_X + chart.duration * TIME_UNIT
+            << " " << static_cast<double>(chart.nb_axis) * AXIS_HEIGHT
             << "' xmlns='http://www.w3.org/2000/svg'>\n"
             << defs << style << '\n';
         for (std::size_t i = 1; i <= chart.nb_axis; ++i) {
@@ -118,6 +115,15 @@ auto outputs::gantt::svg::draw(const outputs::gantt::gantt& chart) -> std::strin
                     << OFFSET_X + chart.duration * TIME_UNIT << "' y2='" << BASELINE
                     << "' stroke='black' stroke-width='1'/>\n";
         }
-        out << chart.commands << "</svg>\n" << HTML_FOOTER;
+        out << chart.commands << "</svg>\n";
+        return out.str();
+}
+
+auto outputs::gantt::html::draw(const outputs::gantt::gantt& chart) -> std::string
+{
+        constexpr auto HTML_HEADER{"<!DOCTYPE html><html><head></head><body>"};
+        constexpr auto HTML_FOOTER{"</body></html>"};
+        std::stringstream out;
+        out << HTML_HEADER << outputs::gantt::svg::draw(chart) << HTML_FOOTER;
         return out.str();
 }

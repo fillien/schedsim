@@ -7,4 +7,8 @@
 namespace outputs::gantt::svg {
 auto draw(const outputs::gantt::gantt& chart) -> std::string;
 };
+
+namespace outputs::gantt::html {
+auto draw(const outputs::gantt::gantt& chart) -> std::string;
+};
 #endif
