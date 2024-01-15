@@ -1,5 +1,7 @@
 #include "platform.hpp"
+#include "engine.hpp"
 #include "processor.hpp"
+#include "protocols/traces.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -22,7 +24,7 @@ platform::platform(
         std::sort(this->frequencies.begin(), this->frequencies.end(), std::less<>());
 
         current_freq = *(frequencies.begin());
-        std::cout << "current freq: " << current_freq << '\n';
+        set_freq(*(frequencies.begin()));
 
         for (size_t i = 1; i <= nb_proc; ++i) {
                 auto new_proc = std::make_shared<processor>(sim, i);
@@ -34,9 +36,11 @@ void platform::set_freq(const double& new_freq)
 {
         if (freescaling && new_freq <= *frequencies.begin() && new_freq >= 0) {
                 current_freq = new_freq;
+                sim()->add_trace(protocols::traces::frequency_update{current_freq});
         }
         else if (std::find(frequencies.begin(), frequencies.end(), new_freq) != frequencies.end()) {
                 current_freq = new_freq;
+                sim()->add_trace(protocols::traces::frequency_update{current_freq});
         }
         else {
                 throw std::domain_error("This frequency is not available");

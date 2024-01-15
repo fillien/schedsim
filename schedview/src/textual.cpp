@@ -103,6 +103,10 @@ void serialize(std::ostream& out, const protocols::traces::trace& tra)
                         out << ", ";
                         color_arg(out, "virtual_time", tra.virtual_time);
                 },
+                [&out](traces::frequency_update tra) {
+                        color_name(out, "frequency_update");
+                        color_arg(out, "frequency", tra.frequency);
+                },
                 [&out]([[maybe_unused]] traces::resched tra) { color_name(out, "resched"); },
                 [&out]([[maybe_unused]] traces::sim_finished tra) {
                         color_name(out, "sim_finished");
