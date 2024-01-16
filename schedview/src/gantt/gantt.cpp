@@ -139,6 +139,15 @@ auto generate_gantt(
                         },
                         [&](traces::serv_ready evt) {
                                 new_deadline(chart, evt.deadline, evt.task_id);
+                                close_extra_budget_zone(
+                                    extra_budget_times, timestamp, evt.task_id, chart);
+                                close_execution_zone(
+                                    execution_times,
+                                    timestamp,
+                                    evt.task_id,
+                                    chart,
+                                    current_freq,
+                                    f_max);
                         },
                         [&](traces::task_scheduled evt) {
                                 open_execution_zone(
