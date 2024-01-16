@@ -1,12 +1,19 @@
 #include "svg.hpp"
 #include "gantt.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <ostream>
 #include <sstream>
 #include <string>
+#include <variant>
 
 namespace {
+template <class... Ts> struct overload : Ts... {
+        using Ts::operator()...;
+};
+template <class... Ts> overload(Ts...) -> overload<Ts...>;
+
 constexpr double AXIS_HEIGHT{64};
 constexpr double TIME_UNIT{100};
 constexpr double OFFSET_X{30};
@@ -28,10 +35,22 @@ std::string defs{"<defs>"
                  "</defs>"};
 std::string style{"<style>"
                   ".event { stroke: black; stroke-width: 1.5px; marker-end: url(#arrow); }"
-                  ".task { stroke: black; stroke-width: 1px; }"
+                  ".task { stroke: black; stroke-width: 0.5px; }"
                   ".anc { stroke: black; stroke-width: 1px; fill: url(#bars); }"
                   ".timestamp { font-size: 10px; text-anchor: middle; }"
                   "</style>"};
+
+auto print_order(const outputs::gantt::command& first, const outputs::gantt::command& second)
+    -> bool
+{
+        using namespace outputs::gantt;
+        constexpr auto get_z_index = overload{
+            [](const arrival&) { return 1; },
+            [](const deadline&) { return 1; },
+            [](const auto&) { return 0; }};
+
+        return std::visit(get_z_index, first) < std::visit(get_z_index, second);
+}
 
 auto operator<<(std::ostream& out, const outputs::gantt::arrival& evt) -> std::ostream&
 {
@@ -56,14 +75,17 @@ auto operator<<(std::ostream& out, const outputs::gantt::deadline& evt) -> std::
 auto operator<<(std::ostream& out, const outputs::gantt::execution& evt) -> std::ostream&
 {
         constexpr double TASK_HEIGHT_MAX{30};
+        const double TASK_HEIGHT{TASK_HEIGHT_MAX * (evt.frequency / evt.f_max)};
         const double TASK_OFFSET_Y{static_cast<double>(evt.index - 1) * AXIS_HEIGHT + 33};
         const double DURATION{evt.stop - evt.start};
+
         out << "<rect class='task' x='" << OFFSET_X + TIME_UNIT * evt.start << "' y='"
-            << TASK_OFFSET_Y << "' width='" << TIME_UNIT * DURATION << "' height='"
-            << TASK_HEIGHT_MAX << "' fill='" << outputs::gantt::get_color_hex(evt.cpu) << "'>"
+            << TASK_OFFSET_Y + TASK_HEIGHT_MAX - TASK_HEIGHT << "' width='" << TIME_UNIT * DURATION
+            << "' height='" << TASK_HEIGHT << "' fill='" << outputs::gantt::get_color_hex(evt.cpu)
+            << "'>"
             << "<title>"
             << "start: " << evt.start << NEWLINE << "stop: " << evt.stop << NEWLINE
-            << "duration: " << DURATION << "</title>"
+            << "duration: " << DURATION << NEWLINE << "freq: " << evt.frequency << "</title>"
             << "</rect>";
         return out;
 }
@@ -98,14 +120,31 @@ template <typename T> auto operator<<(std::ostream& out, const std::vector<T>& v
 }
 }; // namespace
 
-auto outputs::gantt::svg::draw(const outputs::gantt::gantt& chart) -> std::string
+auto outputs::gantt::svg::draw(const outputs::gantt::gantt& input) -> std::string
 {
         std::stringstream out;
 
-        out << "<svg width='30000vmin' viewBox='0 0 " << OFFSET_X + chart.duration * TIME_UNIT
-            << " " << static_cast<double>(chart.nb_axis) * AXIS_HEIGHT
-            << "' xmlns='http://www.w3.org/2000/svg'>\n"
+        outputs::gantt::gantt chart = input;
+
+        std::sort(chart.commands.begin(), chart.commands.end(), print_order);
+
+        const auto NB_AXIS{static_cast<double>(chart.nb_axis)};
+        const auto CHART_WIDTH{OFFSET_X + chart.duration * TIME_UNIT};
+
+        out << "<svg width='" << CHART_WIDTH << "' viewBox='0 0 " << CHART_WIDTH << " "
+            << 35 + NB_AXIS * AXIS_HEIGHT << "' xmlns='http://www.w3.org/2000/svg'>\n"
             << defs << style << '\n';
+
+        const double GANTT_HEIGHT{10 + NB_AXIS * AXIS_HEIGHT};
+
+        for (auto i = 0; i <= chart.duration; ++i) {
+                out << "<line x1='" << OFFSET_X + TIME_UNIT * i << "' y1='0' x2='"
+                    << OFFSET_X + TIME_UNIT * i << "' y2='" << GANTT_HEIGHT
+                    << "' stroke='grey'/>\n";
+                out << "<text text-anchor='middle' x='" << OFFSET_X + TIME_UNIT * i << "' y='"
+                    << GANTT_HEIGHT + 15 << "'>" << i << "</text>\n";
+        }
+
         for (std::size_t i = 1; i <= chart.nb_axis; ++i) {
                 auto axis = static_cast<double>(i);
                 auto BASELINE{AXIS_HEIGHT * axis};

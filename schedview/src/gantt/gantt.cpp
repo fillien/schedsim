@@ -1,9 +1,12 @@
 #include "gantt.hpp"
+#include <protocols/hardware.hpp>
 #include <protocols/traces.hpp>
 
+#include <algorithm>
 #include <cmath>
 #include <map>
 #include <set>
+#include <stdexcept>
 #include <variant>
 
 namespace {
@@ -54,12 +57,14 @@ void close_execution_zone(
     std::map<std::size_t, std::pair<double, std::size_t>>& start_times,
     double stop,
     std::size_t tid,
-    gantt& chart)
+    gantt& chart,
+    double freq,
+    double f_max)
 {
         if (auto search = start_times.find(tid); search != std::end(start_times)) {
                 const auto start = search->second.first;
                 const auto cpu = search->second.second;
-                chart.commands.emplace_back(execution{tid, cpu, start, stop});
+                chart.commands.emplace_back(execution{tid, cpu, start, stop, freq, f_max});
                 start_times.erase(tid);
         }
 }
@@ -91,12 +96,28 @@ void new_deadline(gantt& chart, double time, std::size_t tid)
 {
         chart.commands.emplace_back(deadline{tid, time});
 }
+
+auto get_proc_id(
+    const std::map<std::size_t, std::pair<double, std::size_t>> executions, std::size_t tid)
+    -> std::size_t
+{
+        if (auto search = executions.find(tid); search != std::end(executions)) {
+                return search->second.second;
+        }
+        throw std::out_of_range("Task not found");
+}
+
 }; // namespace
 
 namespace outputs::gantt {
-auto generate_gantt(const std::multimap<double, protocols::traces::trace>& logs) -> gantt
+auto generate_gantt(
+    const std::multimap<double, protocols::traces::trace>& logs,
+    const protocols::hardware::hardware& platform) -> gantt
 {
         namespace traces = protocols::traces;
+        const auto f_max = *platform.frequencies.begin();
+        auto current_freq{f_max};
+
         gantt chart;
 
         chart.nb_axis = count_tasks(logs);
@@ -106,8 +127,8 @@ auto generate_gantt(const std::multimap<double, protocols::traces::trace>& logs)
         std::map<std::size_t, double> extra_budget_times;
 
         for (const auto& tra : logs) {
-                const auto timestamp = tra.first;
-                const auto event = tra.second;
+                const auto& timestamp = tra.first;
+                const auto& event = tra.second;
                 std::visit(
                     overloaded{
                         [&](traces::job_arrival evt) {
@@ -125,18 +146,55 @@ auto generate_gantt(const std::multimap<double, protocols::traces::trace>& logs)
                         },
                         [&](traces::task_preempted evt) {
                                 close_execution_zone(
-                                    execution_times, timestamp, evt.task_id, chart);
+                                    execution_times,
+                                    timestamp,
+                                    evt.task_id,
+                                    chart,
+                                    current_freq,
+                                    f_max);
                         },
                         [&](traces::serv_non_cont evt) {
                                 close_execution_zone(
-                                    execution_times, timestamp, evt.task_id, chart);
+                                    execution_times,
+                                    timestamp,
+                                    evt.task_id,
+                                    chart,
+                                    current_freq,
+                                    f_max);
                                 open_extra_budget_zone(extra_budget_times, timestamp, evt.task_id);
                         },
                         [&](traces::serv_inactive evt) {
                                 close_execution_zone(
-                                    execution_times, timestamp, evt.task_id, chart);
+                                    execution_times,
+                                    timestamp,
+                                    evt.task_id,
+                                    chart,
+                                    current_freq,
+                                    f_max);
                                 close_extra_budget_zone(
                                     extra_budget_times, timestamp, evt.task_id, chart);
+                        },
+                        [&](traces::frequency_update evt) {
+                                std::set<std::size_t> tasks;
+                                std::transform(
+                                    execution_times.begin(),
+                                    execution_times.end(),
+                                    std::inserter(tasks, tasks.end()),
+                                    [](auto pair) { return pair.first; });
+
+                                for (auto tid : tasks) {
+                                        auto cpu = get_proc_id(execution_times, tid);
+                                        close_execution_zone(
+                                            execution_times,
+                                            timestamp,
+                                            tid,
+                                            chart,
+                                            current_freq,
+                                            f_max);
+                                        open_execution_zone(execution_times, timestamp, tid, cpu);
+                                }
+
+                                current_freq = evt.frequency;
                         },
                         [](auto) {}},
                     event);
