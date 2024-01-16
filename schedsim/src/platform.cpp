@@ -34,6 +34,8 @@ platform::platform(
 
 void platform::set_freq(const double& new_freq)
 {
+        if (current_freq == new_freq) { return; }
+
         if (freescaling && new_freq <= *frequencies.begin() && new_freq >= 0) {
                 current_freq = new_freq;
                 sim()->add_trace(protocols::traces::frequency_update{current_freq});
