@@ -139,7 +139,7 @@ class engine {
          */
         static auto round_zero(const double& value) -> double
         {
-                if (value >= -ZERO_ROUNDED || value <= ZERO_ROUNDED) { return 0; }
+                if (value >= -ZERO_ROUNDED && value <= ZERO_ROUNDED) { return 0; }
                 return value;
         }
 
