@@ -79,17 +79,18 @@ auto bounded_weibull(double min, double max) -> double
         assert(max > min);
         constexpr double SHAPE{1};
         constexpr double SCALE{2};
-        constexpr double UPPER_BOUND_QUANT{0.9999};
+        constexpr double UPPER_BOUND_QUANT{0.99};
 
         // Need a constexpr std::exp function to be evaluated at compile time
         const double UPPER_BOUND{inversed_weibull_cdf(SHAPE, SCALE, UPPER_BOUND_QUANT)};
         std::weibull_distribution<> dist(SHAPE, SCALE);
 
-        const auto distri = dist(random_gen);
+        double res;
+        do {
+                auto distri = dist(random_gen);
+                res = distri * ((max - min) / UPPER_BOUND) + min;
+        } while (res < min || res > max);
 
-        auto res = distri * ((max - min) / UPPER_BOUND) + min;
-        assert(res > min);
-        assert(res < max);
         return res;
 }
 } // namespace
