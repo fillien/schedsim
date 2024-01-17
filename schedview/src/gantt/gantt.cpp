@@ -81,8 +81,7 @@ void close_extra_budget_zone(
     std::map<std::size_t, double>& extra_budget_times, double time, std::size_t tid, gantt& chart)
 {
         if (auto search = extra_budget_times.find(tid); search != std::end(extra_budget_times)) {
-                chart.commands.emplace_back(
-                    active_non_cont{tid, search->second, time - search->second});
+                chart.commands.emplace_back(active_non_cont{tid, search->second, time});
                 extra_budget_times.erase(tid);
         }
 }
