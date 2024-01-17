@@ -9,6 +9,7 @@
 #include <bits/ranges_algo.h>
 #include <bits/ranges_base.h>
 #include <bits/ranges_util.h>
+#include <cassert>
 #include <cmath>
 #include <iostream>
 #include <iterator>
@@ -129,8 +130,14 @@ void sched_power_aware::custom_scheduler()
 
 void sched_power_aware::on_active_utilization_updated()
 {
-        sim()->get_platform()->set_freq(
-            sim()->get_platform()->get_f_max() * get_active_bandwidth());
+        const auto U_MAX{get_max_utilization(servers)};
+        const auto NB_PROCS{static_cast<double>(sim()->get_platform()->processors.size())};
+        const auto SPEED{(get_active_bandwidth() + ((NB_PROCS - 1) * U_MAX)) / NB_PROCS};
+
+        assert(SPEED <= 1);
+
+        sim()->get_platform()->set_freq(SPEED);
+
         std::cout << sim()->get_time() << " New frequency: " << sim()->get_platform()->get_freq()
                   << '\n';
 }
