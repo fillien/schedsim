@@ -321,8 +321,8 @@ void scheduler::set_alarms(const std::shared_ptr<server>& serv)
 {
         using namespace events;
         namespace traces = protocols::traces;
-        const double new_budget{get_server_budget(*serv)};
-        const double remaining_time{serv->remaining_exec_time()};
+        const double new_budget{sim()->round_zero(get_server_budget(*serv))};
+        const double remaining_time{sim()->round_zero(serv->remaining_exec_time())};
 
         std::cout << sim()->get_time() << " S" << serv->id() << " new_budget: " << new_budget
                   << '\n';
