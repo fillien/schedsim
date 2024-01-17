@@ -21,6 +21,7 @@
         graphviz
         ninja
         gtest
+        gdb
       ];
     };
 
