@@ -49,25 +49,13 @@ auto sched_power_aware::get_inactive_bandwidth() const -> double
 {
         const auto TOTAL_UTILIZATION{get_total_utilization()};
         const auto MAX_UTILIZATION{get_max_utilization(servers)};
-        const auto NB_PROCS{static_cast<double>(get_nb_active_procs())};
+        const auto NB_PROCS{static_cast<double>(sim()->get_platform()->processors.size())};
         return NB_PROCS - (NB_PROCS - 1) * MAX_UTILIZATION - TOTAL_UTILIZATION;
-}
-
-auto sched_power_aware::get_nb_active_procs(const double& new_utilization) const -> std::size_t
-{
-        constexpr double MIN_NB_PROCS{1};
-        const auto MAX_NB_PROCS{static_cast<double>(sim()->get_platform()->processors.size())};
-        const auto TOTAL_UTILIZATION{get_total_utilization() + new_utilization};
-        const auto MAX_UTILIZATION{get_max_utilization(servers, new_utilization)};
-        double nb_procs{std::ceil((TOTAL_UTILIZATION - MAX_UTILIZATION) / (1 - MAX_UTILIZATION))};
-
-        nb_procs = std::clamp(nb_procs, MIN_NB_PROCS, MAX_NB_PROCS);
-        return static_cast<std::size_t>(nb_procs);
 }
 
 auto sched_power_aware::get_server_budget(const server& serv) const -> double
 {
-        const double NB_ACTIVE_PROCS{static_cast<double>(get_nb_active_procs())};
+        const double NB_ACTIVE_PROCS{static_cast<double>(sim()->get_platform()->processors.size())};
         const auto bandwidth{1 - (get_inactive_bandwidth() / NB_ACTIVE_PROCS)};
         return serv.utilization() / bandwidth * (serv.relative_deadline - serv.virtual_time);
 }
@@ -75,14 +63,14 @@ auto sched_power_aware::get_server_budget(const server& serv) const -> double
 auto sched_power_aware::get_server_virtual_time(const server& serv, const double& running_time)
     -> double
 {
-        const double NB_ACTIVE_PROCS{static_cast<double>(get_nb_active_procs())};
+        const double NB_ACTIVE_PROCS{static_cast<double>(sim()->get_platform()->processors.size())};
         const auto bandwidth{1 - (get_inactive_bandwidth() / NB_ACTIVE_PROCS)};
         return serv.virtual_time + bandwidth / serv.utilization() * running_time;
 }
 
 auto sched_power_aware::admission_test(const task& new_task) const -> bool
 {
-        const auto NB_PROCS{static_cast<double>(get_nb_active_procs(new_task.utilization))};
+        const auto NB_PROCS{static_cast<double>(sim()->get_platform()->processors.size())};
         const auto U_MAX{get_max_utilization(servers, new_task.utilization)};
         const auto NEW_TOTAL_UTILIZATION{get_total_utilization() + new_task.utilization};
         return (NEW_TOTAL_UTILIZATION <= (NB_PROCS - (NB_PROCS - 1) * U_MAX));

@@ -15,13 +15,6 @@ class sched_power_aware : public scheduler {
         auto get_inactive_bandwidth() const -> double;
 
         /**
-         * @brief Retrieves the number of active processors in the system.
-         * @param new_utilization The additional utilization to consider (default is 0).
-         * @return Number of active processors.
-         */
-        auto get_nb_active_procs(const double& new_utilization = 0) const -> std::size_t;
-
-        /**
          * @brief Compares two processors based on their order.
          * @param first The first processor.
          * @param second The second processor.
