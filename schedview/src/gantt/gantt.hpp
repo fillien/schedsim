@@ -58,8 +58,6 @@ struct active_non_cont {
         std::size_t index;
         double start;
         double stop;
-        double frequency;
-        double f_max;
 };
 
 using command = std::variant<arrival, deadline, execution, active_non_cont>;
