@@ -120,23 +120,26 @@ auto generate_task(std::size_t tid, double utilization, std::size_t nb_jobs, dou
         assert(nb_jobs > 0);
         assert(success_rate >= 0 && success_rate <= 1);
 
-        constexpr double PERIOD_MIN{20};
-        constexpr double PERIOD_MAX{60};
+        constexpr double DURATION_MIN{0.5};
+        constexpr double DURATION_MAX{10};
         std::vector<double> durations(nb_jobs);
 
         std::ranges::generate(durations.begin(), durations.end(), []() {
-                return bounded_weibull(PERIOD_MIN, PERIOD_MAX);
+                return bounded_weibull(DURATION_MIN, DURATION_MAX);
         });
 
         std::sort(durations.begin(), durations.end());
 
         const size_t index{static_cast<std::size_t>(ceil((nb_jobs - 1) * success_rate))};
         const double period{durations.at(index)};
+
+        std::shuffle(durations.begin(), durations.end(), random_gen);
+        auto jobs{generate_jobs(durations, period / utilization)};
         return task{
             .id = static_cast<std::size_t>(tid + 1),
             .utilization = utilization,
-            .period = period,
-            .jobs = generate_jobs(durations, period)};
+            .period = period / utilization,
+            .jobs = jobs};
 }
 
 auto generate_taskset(
