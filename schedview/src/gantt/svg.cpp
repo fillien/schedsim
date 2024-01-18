@@ -72,6 +72,15 @@ auto operator<<(std::ostream& out, const outputs::gantt::deadline& evt) -> std::
         return out;
 }
 
+auto operator<<(std::ostream& out, const outputs::gantt::finished& evt) -> std::ostream&
+{
+        const double TIMESTAMP{OFFSET_X + TIME_UNIT * evt.timestamp};
+        const double INDEX{AXIS_HEIGHT * static_cast<double>(evt.index)};
+        out << "<circle cx='" << TIMESTAMP << "' cy='" << INDEX
+            << "' r='5' fill='white' stroke='black' stroke-width='2'/>";
+        return out;
+}
+
 auto operator<<(std::ostream& out, const outputs::gantt::execution& evt) -> std::ostream&
 {
         constexpr double TASK_HEIGHT_MAX{30};

@@ -45,6 +45,11 @@ struct deadline {
         double timestamp;
 };
 
+struct finished {
+        std::size_t index;
+        double timestamp;
+};
+
 struct execution {
         std::size_t index;
         std::size_t cpu;
@@ -60,7 +65,7 @@ struct active_non_cont {
         double stop;
 };
 
-using command = std::variant<arrival, deadline, execution, active_non_cont>;
+using command = std::variant<arrival, deadline, finished, execution, active_non_cont>;
 
 struct gantt {
         std::size_t nb_axis;

@@ -25,6 +25,7 @@ auto count_tasks(const std::multimap<double, protocols::traces::trace>& traces) 
 
         std::set<std::size_t> cpt;
 
+        /// @TODO If the task has no jobs she is not counted in the number of tasks
         for (const auto& tra : traces) {
                 if (std::holds_alternative<job_arrival>(tra.second)) {
                         cpt.insert(std::get<job_arrival>(tra.second).task_id);
@@ -96,6 +97,11 @@ void new_deadline(gantt& chart, double time, std::size_t tid)
         chart.commands.emplace_back(deadline{tid, time});
 }
 
+void new_finished(gantt& chart, double time, std::size_t tid)
+{
+        chart.commands.emplace_back(finished{tid, time});
+}
+
 auto get_proc_id(
     const std::map<std::size_t, std::pair<double, std::size_t>> executions, std::size_t tid)
     -> std::size_t
@@ -135,6 +141,9 @@ auto generate_gantt(
                         },
                         [&](traces::serv_postpone evt) {
                                 new_deadline(chart, evt.deadline, evt.task_id);
+                        },
+                        [&](traces::job_finished evt) {
+                                new_finished(chart, timestamp, evt.task_id);
                         },
                         [&](traces::serv_ready evt) {
                                 new_deadline(chart, evt.deadline, evt.task_id);
