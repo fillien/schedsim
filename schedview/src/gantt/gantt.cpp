@@ -23,16 +23,16 @@ auto count_tasks(const std::multimap<double, protocols::traces::trace>& traces) 
 {
         using namespace protocols::traces;
 
-        std::set<std::size_t> cpt;
+        std::size_t max_tid{0};
 
         /// @TODO If the task has no jobs she is not counted in the number of tasks
         for (const auto& tra : traces) {
                 if (std::holds_alternative<job_arrival>(tra.second)) {
-                        cpt.insert(std::get<job_arrival>(tra.second).task_id);
+                        max_tid = std::max(max_tid, std::get<job_arrival>(tra.second).task_id);
                 }
         }
 
-        return cpt.size();
+        return max_tid;
 }
 
 auto get_last_timestamp(const std::multimap<double, protocols::traces::trace>& traces) -> double
