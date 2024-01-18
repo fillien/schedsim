@@ -45,6 +45,7 @@ auto print_order(const outputs::gantt::command& first, const outputs::gantt::com
 {
         using namespace outputs::gantt;
         constexpr auto get_z_index = overload{
+            [](const finished&) { return 2; },
             [](const arrival&) { return 1; },
             [](const deadline&) { return 1; },
             [](const auto&) { return 0; }};
