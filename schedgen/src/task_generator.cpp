@@ -102,10 +102,12 @@ auto generate_jobs(std::vector<double> durations, double period)
         std::vector<job> jobs;
         jobs.reserve(durations.size());
 
-        double next_arrival = 0;
+        std::uniform_real_distribution<> uni(0, period / 4);
+
+        double next_arrival = uni(random_gen);
         for (const auto& duration : durations) {
                 jobs.push_back(job{next_arrival, duration});
-                next_arrival += period;
+                next_arrival += period + uni(random_gen);
         }
 
         return jobs;
