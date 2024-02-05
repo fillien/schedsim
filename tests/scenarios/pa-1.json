@@ -1,0 +1,15 @@
+{"tasks":
+ [
+     {
+	 "id":1,
+	 "jobs":[
+	     {
+		 "arrival":1,
+		 "duration": 4
+	     }
+	 ],
+	 "period":8,
+	 "utilization":0.5
+     }
+ ]
+}
