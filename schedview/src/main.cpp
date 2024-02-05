@@ -41,7 +41,7 @@ auto main(int argc, char* argv[]) -> int
                 ("waiting", "Print average waiting time")
                 ("deadlines-rates", "Print deadline missed rates", cxxopts::value<std::size_t>()->implicit_value("0"))
                 ("deadlines-counts", "Print deadline missed counts", cxxopts::value<std::size_t>()->implicit_value("0"))
-                ("platform", "Hardware description source file", cxxopts::value<std::string>()->implicit_value("platform.json"))
+                ("platform", "Hardware description source file", cxxopts::value<std::string>()->default_value("platform.json"))
                 ("traces", "Traces from simulator", cxxopts::value<std::string>());
         // clang-format on
 
