@@ -87,6 +87,11 @@ auto sched_parallel::admission_test(const task& new_task) const -> bool
         return (NEW_TOTAL_UTILIZATION <= (NB_PROCS - (NB_PROCS - 1) * U_MAX));
 }
 
+void sched_parallel::on_active_utilization_updated()
+{
+
+}
+
 void sched_parallel::custom_scheduler()
 {
         update_running_servers();
