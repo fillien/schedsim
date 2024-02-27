@@ -13,6 +13,7 @@
       inherit system;
     };
   in {
+  formatter.x86_64-linux = nixpkgs.legacyPackages.x86_64-linux.nixpkgs-fmt;
     devShells.default = pkgs.mkShell rec {
       name = "schesim";
       packages = with pkgs; [
@@ -22,6 +23,7 @@
         ninja
         gtest
         gdb
+	shellcheck
       ];
     };
 

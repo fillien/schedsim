@@ -2,6 +2,7 @@
 /doc/html
 /build
 /build_*
+/build_*.json
 /vgcore.*
 /trace/stream
 /rtsched.sty

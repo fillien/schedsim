@@ -1,11 +1,12 @@
 #ifndef SCHED_PARALLEL_HPP
 #define SCHED_PARALLEL_HPP
 
-#include "entity.hpp"
-#include "processor.hpp"
-#include "scheduler.hpp"
+#include "../entity.hpp"
+#include "../processor.hpp"
+#include "../scheduler.hpp"
 #include <iostream>
 #include <memory>
+#include <vector>
 
 /**
  * @brief A class implementing a parallel scheduler, derived from the base scheduler class.
@@ -18,13 +19,6 @@ class sched_parallel : public scheduler {
         auto get_inactive_bandwidth() const -> double;
 
         /**
-         * @brief Retrieves the number of active processors in the system.
-         * @param new_utilization The additional utilization to consider (default is 0).
-         * @return Number of active processors.
-         */
-        auto get_nb_active_procs(const double& new_utilization = 0) const -> std::size_t;
-
-        /**
          * @brief Compares two processors based on their order.
          * @param first The first processor.
          * @param second The second processor.
@@ -32,6 +26,18 @@ class sched_parallel : public scheduler {
          * otherwise.
          */
         static auto processor_order(const processor& first, const processor& second) -> bool;
+
+      protected:
+        auto get_max_utilization(
+            const std::vector<std::shared_ptr<server>>& servers,
+            const double& new_utilization = 0) const -> double;
+
+        /**
+         * @brief Retrieves the number of active processors in the system.
+         * @param new_utilization The additional utilization to consider (default is 0).
+         * @return Number of active processors.
+         */
+        virtual auto get_nb_active_procs(const double& new_utilization = 0) const -> std::size_t;
 
       public:
         /**
@@ -68,7 +74,7 @@ class sched_parallel : public scheduler {
          */
         void on_resched() override;
 
-        void on_active_utilization_updated() override;
+        void on_active_utilization_updated() override{};
 };
 
 #endif

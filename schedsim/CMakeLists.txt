@@ -12,8 +12,8 @@ target_sources(schedsim PRIVATE
   src/platform.cpp
   src/processor.cpp
   src/scheduler.cpp
-  src/sched_parallel.cpp
-  src/sched_power_aware.cpp
+  src/schedulers/parallel.cpp
+  src/schedulers/power_aware.cpp
   src/server.cpp
   src/task.cpp
 )

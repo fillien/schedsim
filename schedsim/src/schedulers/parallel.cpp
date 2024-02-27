@@ -1,9 +1,9 @@
-#include "sched_parallel.hpp"
-#include "engine.hpp"
-#include "event.hpp"
-#include "platform.hpp"
-#include "processor.hpp"
-#include "server.hpp"
+#include "parallel.hpp"
+#include "../engine.hpp"
+#include "../event.hpp"
+#include "../platform.hpp"
+#include "../processor.hpp"
+#include "../server.hpp"
 
 #include <algorithm>
 #include <bits/ranges_algo.h>
@@ -18,9 +18,8 @@
 #include <ranges>
 #include <vector>
 
-namespace {
-auto get_max_utilization(
-    const std::vector<std::shared_ptr<server>>& servers, const double& new_utilization = 0)
+auto sched_parallel::get_max_utilization(
+    const std::vector<std::shared_ptr<server>>& servers, const double& new_utilization) const
     -> double
 {
         if (std::distance(std::begin(servers), std::end(servers)) > 0) {
@@ -35,7 +34,6 @@ auto get_max_utilization(
         }
         return new_utilization;
 }
-} // namespace
 
 auto sched_parallel::processor_order(const processor& first, const processor& second) -> bool
 {
@@ -85,11 +83,6 @@ auto sched_parallel::admission_test(const task& new_task) const -> bool
         const auto U_MAX{get_max_utilization(servers, new_task.utilization)};
         const auto NEW_TOTAL_UTILIZATION{get_total_utilization() + new_task.utilization};
         return (NEW_TOTAL_UTILIZATION <= (NB_PROCS - (NB_PROCS - 1) * U_MAX));
-}
-
-void sched_parallel::on_active_utilization_updated()
-{
-
 }
 
 void sched_parallel::on_resched()

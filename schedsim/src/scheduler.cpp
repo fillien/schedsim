@@ -134,26 +134,29 @@ void scheduler::handle(std::vector<events::event> evts)
                                             (job_evt->task_of_job == serv->get_task());
                                 }
                         }
-                        handle_job_finished(serv, is_there_new_job);
+                        on_job_finished(serv, is_there_new_job);
                 }
                 else if (std::holds_alternative<events::serv_budget_exhausted>(evt)) {
                         const auto& [serv] = std::get<events::serv_budget_exhausted>(evt);
-                        handle_serv_budget_exhausted(serv);
+                        on_serv_budget_exhausted(serv);
                 }
                 else if (std::holds_alternative<events::serv_inactive>(evt)) {
                         const auto& [serv] = std::get<events::serv_inactive>(evt);
-                        handle_serv_inactive(serv);
+                        on_serv_inactive(serv);
                 }
                 else if (std::holds_alternative<events::job_arrival>(evt)) {
                         const auto& [serv, job_duration] = std::get<events::job_arrival>(evt);
-                        handle_job_arrival(serv, job_duration);
+                        on_job_arrival(serv, job_duration);
                 }
                 else {
                         std::cerr << "Unknowned event" << std::endl;
                 }
         }
 
-        if (this->need_resched) { resched(); }
+        if (this->need_resched) {
+                sim()->add_trace(protocols::traces::resched{});
+                on_resched();
+        }
 
         // Update platform state
         for (auto const& proc : sim()->get_platform()->processors) {
@@ -161,7 +164,7 @@ void scheduler::handle(std::vector<events::event> evts)
         }
 }
 
-void scheduler::handle_serv_inactive(const std::shared_ptr<server>& serv)
+void scheduler::on_serv_inactive(const std::shared_ptr<server>& serv)
 {
         // If a job arrived during this turn, do not change state to inactive
         if (serv->cant_be_inactive) { return; }
@@ -180,8 +183,7 @@ void scheduler::handle_serv_inactive(const std::shared_ptr<server>& serv)
         need_resched = true;
 }
 
-void scheduler::handle_job_arrival(
-    const std::shared_ptr<task>& new_task, const double& job_duration)
+void scheduler::on_job_arrival(const std::shared_ptr<task>& new_task, const double& job_duration)
 {
         namespace traces = protocols::traces;
         sim()->add_trace(
@@ -223,7 +225,7 @@ void scheduler::handle_job_arrival(
         }
 }
 
-void scheduler::handle_job_finished(const std::shared_ptr<server>& serv, bool is_there_new_job)
+void scheduler::on_job_finished(const std::shared_ptr<server>& serv, bool is_there_new_job)
 {
         using enum server::state;
 
@@ -264,7 +266,7 @@ void scheduler::handle_job_finished(const std::shared_ptr<server>& serv, bool is
         this->need_resched = true;
 }
 
-void scheduler::handle_serv_budget_exhausted(const std::shared_ptr<server>& serv)
+void scheduler::on_serv_budget_exhausted(const std::shared_ptr<server>& serv)
 {
         namespace traces = protocols::traces;
         sim()->add_trace(traces::serv_budget_exhausted{serv->id()});
@@ -342,12 +344,6 @@ void scheduler::set_alarms(const std::shared_ptr<server>& serv)
         }
 }
 
-void scheduler::resched()
-{
-        sim()->add_trace(protocols::traces::resched{});
-        on_resched();
-}
-
 void scheduler::resched_proc(
     const std::shared_ptr<processor>& proc, const std::shared_ptr<server>& server_to_execute)
 {
@@ -360,8 +356,7 @@ void scheduler::resched_proc(
                 on_active_utilization_updated();
         }
 
-        if (server_to_execute->current_state == server::state::running) {}
-        else {
+        if (server_to_execute->current_state != server::state::running) {
                 server_to_execute->change_state(server::state::running);
         }
 

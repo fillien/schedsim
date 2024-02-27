@@ -12,15 +12,16 @@
 #include <protocols/hardware.hpp>
 #include <protocols/scenario.hpp>
 #include <protocols/traces.hpp>
+#include <stdexcept>
 #include <vector>
 
 #include "engine.hpp"
 #include "entity.hpp"
 #include "event.hpp"
 #include "platform.hpp"
-#include "sched_parallel.hpp"
-#include "sched_power_aware.hpp"
 #include "scheduler.hpp"
+#include "schedulers/parallel.hpp"
+#include "schedulers/power_aware.hpp"
 #include "server.hpp"
 #include "task.hpp"
 
@@ -33,6 +34,9 @@ struct app_config {
         std::string policy;
 };
 
+constexpr std::array<const char*, 2> policies{
+    "grub - M-GRUB with global reclaiming", "pa   - M-GRUB-PA with global reclaiming"};
+
 auto parse_args(const int argc, const char** argv) -> app_config
 {
         app_config config;
@@ -42,8 +46,9 @@ auto parse_args(const int argc, const char** argv) -> app_config
 	options.add_options()
 		("h,help", "Print this help message")
 		("s,scenario", "Specify the scenario file", cxxopts::value<std::string>())
-		("p,platform", "Specify the platform configuration file", cxxopts::value<std::string>()->default_value("platform.json"))
-		("policy", "Specify the scheduling policy", cxxopts::value<std::string>())
+		("platform", "Specify the platform configuration file", cxxopts::value<std::string>()->default_value("platform.json"))
+		("p,policy", "Specify the scheduling policy", cxxopts::value<std::string>())
+		("policies", "List the available schedulers", cxxopts::value<bool>()->default_value("false"))
 		("o,output", "Specify the output file", cxxopts::value<std::string>());
         // clang-format on
         const auto cli = options.parse(argc, argv);
@@ -53,6 +58,12 @@ auto parse_args(const int argc, const char** argv) -> app_config
                 exit(cli.arguments().empty() ? EXIT_FAILURE : EXIT_SUCCESS);
         }
 
+        if (cli.count("policies")) {
+                std::cout << "Available schedulers:\n";
+                for (const auto& policy : policies) {
+                        std::cout << '\t' << policy << '\n';
+                }
+        }
         if (cli.count("scenario")) { config.scenario_file = cli["scenario"].as<std::string>(); }
         if (cli.count("platform")) { config.platform_file = cli["platform"].as<std::string>(); }
         if (cli.count("policy")) { config.policy = cli["policy"].as<std::string>(); }
@@ -83,14 +94,18 @@ auto main(const int argc, const char** argv) -> int
                     sim, platform_config.nb_procs, platform_config.frequencies, true);
                 sim->set_platform(plat);
 
+                std::cout << "Policie: ";
                 std::shared_ptr<scheduler> sched;
-                if (config.policy == "grub") { sched = make_shared<sched_parallel>(sim); }
+                if (config.policy == "grub") {
+                        std::cout << "GRUB\n";
+                        sched = make_shared<sched_parallel>(sim);
+                }
                 else if (config.policy == "pa") {
+                        std::cout << "GRUB-PA\n";
                         sched = make_shared<sched_power_aware>(sim);
                 }
                 else {
-                        std::cerr << "Undefined scheduling policy !" << std::endl;
-                        return -1;
+                        throw std::invalid_argument("Undefined scheduling policy");
                 }
                 sim->set_scheduler(sched);
 

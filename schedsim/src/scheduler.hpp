@@ -29,31 +29,26 @@ class scheduler : public entity {
          * @param new_task The newly arrived task.
          * @param job_duration The duration of the job.
          */
-        void handle_job_arrival(const std::shared_ptr<task>& new_task, const double& job_duration);
+        void on_job_arrival(const std::shared_ptr<task>& new_task, const double& job_duration);
 
         /**
          * @brief Handles the completion of a job on a server.
          * @param serv The server where the job is completed.
          * @param is_there_new_job Flag indicating if there is a new job to be scheduled.
          */
-        void handle_job_finished(const std::shared_ptr<server>& serv, bool is_there_new_job);
+        void on_job_finished(const std::shared_ptr<server>& serv, bool is_there_new_job);
 
         /**
          * @brief Handles the exhaustion of the budget on a server.
          * @param serv The server with an exhausted budget.
          */
-        void handle_serv_budget_exhausted(const std::shared_ptr<server>& serv);
+        void on_serv_budget_exhausted(const std::shared_ptr<server>& serv);
 
         /**
          * @brief Handles the inactivity of a server.
          * @param serv The inactive server.
          */
-        void handle_serv_inactive(const std::shared_ptr<server>& serv);
-
-        /**
-         * @brief Initiates a rescheduling process.
-         */
-        void resched();
+        void on_serv_inactive(const std::shared_ptr<server>& serv);
 
         /**
          * @brief Detaches a server if needed, i.e., if its attached task is inactive.
