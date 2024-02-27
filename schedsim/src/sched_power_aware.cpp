@@ -76,7 +76,7 @@ auto sched_power_aware::admission_test(const task& new_task) const -> bool
         return (NEW_TOTAL_UTILIZATION <= (NB_PROCS - (NB_PROCS - 1) * U_MAX));
 }
 
-void sched_power_aware::custom_scheduler()
+void sched_power_aware::on_resched()
 {
         update_running_servers();
 

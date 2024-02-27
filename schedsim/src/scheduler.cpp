@@ -345,7 +345,7 @@ void scheduler::set_alarms(const std::shared_ptr<server>& serv)
 void scheduler::resched()
 {
         sim()->add_trace(protocols::traces::resched{});
-        custom_scheduler();
+        on_resched();
 }
 
 void scheduler::resched_proc(

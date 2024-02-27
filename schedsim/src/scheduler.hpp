@@ -167,7 +167,7 @@ class scheduler : public entity {
         /**
          * @brief Custom scheduling logic to be implemented by derived classes.
          */
-        virtual void custom_scheduler() = 0;
+        virtual void on_resched() = 0;
 
         virtual void on_active_utilization_updated() = 0;
 

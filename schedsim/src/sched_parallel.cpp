@@ -92,7 +92,7 @@ void sched_parallel::on_active_utilization_updated()
 
 }
 
-void sched_parallel::custom_scheduler()
+void sched_parallel::on_resched()
 {
         update_running_servers();
 
