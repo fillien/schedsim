@@ -1,6 +1,7 @@
 .cache/
 /doc/html
 /build
+/build_*
 /vgcore.*
 /trace/stream
 /rtsched.sty
