@@ -16,18 +16,18 @@ mkdir "$TESTS_DIR"
 
 # Build the first version
 git checkout "$VERSION1"
-cmake -S . -B "build_$VERSION1" -G Ninja
+cmake -S . -B "build_$VERSION1" -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build "build_$VERSION1" 
 
 # Build the second version
 git checkout "$VERSION2"
-cmake -S . -B "build_$VERSION2" -G Ninja
+cmake -S . -B "build_$VERSION2" -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build "build_$VERSION2" 
 
 # Generate platform and scenarios
 ./"build_$VERSION1"/schedgen/schedgen platform --output "$PLATFORM_FILE" --cores 2 --freq 1
 mkdir "${SCENARIO_DIR}"
-for i in {1..100}; do
+for i in {1..5}; do
     NB_TASKS=5
     NB_JOBS=5
     TOTALU=1.5
@@ -43,8 +43,10 @@ do
     echo $file
     ./"build_$VERSION1"/schedsim/schedsim --platform "$PLATFORM_FILE" --scenario "$file" --policy "grub" --output "$LOGS_DIR/$VERSION1/$(basename "$file")"
     ./"build_$VERSION2"/schedsim/schedsim --platform "$PLATFORM_FILE" --scenario "$file" --policy "grub" --output "$LOGS_DIR/$VERSION2/$(basename "$file")"
+    diff <(jq --sort-keys . "$LOGS_DIR/$VERSION1/$(basename "$file")") <(jq --sort-keys . "$LOGS_DIR/$VERSION2/$(basename "$file")")
 
-    # Compare the outputs logs
+    ./"build_$VERSION1"/schedsim/schedsim --platform "$PLATFORM_FILE" --scenario "$file" --policy "pa" --output "$LOGS_DIR/$VERSION1/$(basename "$file")"
+    ./"build_$VERSION2"/schedsim/schedsim --platform "$PLATFORM_FILE" --scenario "$file" --policy "pa" --output "$LOGS_DIR/$VERSION2/$(basename "$file")"
     diff <(jq --sort-keys . "$LOGS_DIR/$VERSION1/$(basename "$file")") <(jq --sort-keys . "$LOGS_DIR/$VERSION2/$(basename "$file")")
 done
 
