@@ -19,25 +19,6 @@
 #include <ranges>
 #include <vector>
 
-namespace {
-auto get_max_utilization(
-    const std::vector<std::shared_ptr<server>>& servers, const double& new_utilization = 0)
-    -> double
-{
-        if (std::distance(std::begin(servers), std::end(servers)) > 0) {
-                auto u_max = std::max_element(
-                    std::begin(servers),
-                    std::end(servers),
-                    [](const std::shared_ptr<server>& first,
-                       const std::shared_ptr<server>& second) {
-                            return (first->utilization() < second->utilization());
-                    });
-                return std::max((*u_max)->utilization(), new_utilization);
-        }
-        return new_utilization;
-}
-} // namespace
-
 auto sched_power_aware::get_nb_active_procs(const double& new_utilization) const -> std::size_t
 {
         return sim()->get_platform()->processors.size();
