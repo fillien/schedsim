@@ -35,30 +35,38 @@ auto plot_energy(const std::vector<std::pair<double, double>>& measures)
             energy_timestamps, energy_timestamps};
 }
 
-auto get_power_consumption(const std::multimap<double, protocols::traces::trace>& input)
+auto compute_power(const std::size_t& nb_active_cores, const double& frequency) -> double
+{
+        constexpr double POLYNUM{0.000056};
+        constexpr double PACKAGE_CONSUMPTION{0.000001};
+        /// TODO : Fix the power model
+        return POLYNUM * frequency * static_cast<double>(nb_active_cores) + PACKAGE_CONSUMPTION;
+}
+
+auto parse_power_consumption(const std::multimap<double, protocols::traces::trace>& input)
     -> std::vector<std::pair<double, double>>
 {
-        constexpr double CORE_CONSUMPTION_PER_TIME_UNIT = 1;
-
         std::vector<std::pair<double, double>> power_consumption;
 
+        std::size_t current_active_cores{0};
+        double current_freq{0};
         double current_power{0};
         double last_timestamp{0};
 
         for (const auto& [timestamp, tra] : input) {
                 if (timestamp > last_timestamp) {
                         power_consumption.push_back({last_timestamp, current_power});
-                        last_timestamp = timestamp;
+                        current_power = compute_power(current_active_cores, current_freq);
                         power_consumption.push_back({last_timestamp, current_power});
+                        last_timestamp = timestamp;
                 }
 
                 std::visit(
                     overloaded{
-                        [&current_power](protocols::traces::proc_activated) {
-                                current_power += CORE_CONSUMPTION_PER_TIME_UNIT;
-                        },
-                        [&current_power](protocols::traces::proc_idled) {
-                                current_power -= CORE_CONSUMPTION_PER_TIME_UNIT;
+                        [&](protocols::traces::proc_activated) { current_active_cores++; },
+                        [&](protocols::traces::proc_idled) { current_active_cores--; },
+                        [&](protocols::traces::frequency_update evt) {
+                                current_freq = evt.frequency;
                         },
                         [](auto) {}},
                     tra);
@@ -69,7 +77,7 @@ auto get_power_consumption(const std::multimap<double, protocols::traces::trace>
 
 void outputs::energy::plot(const std::multimap<double, protocols::traces::trace>& input)
 {
-        const auto power_consumption = get_power_consumption(input);
+        const auto power_consumption = parse_power_consumption(input);
 
         std::vector<double> power_timestamps;
         std::vector<double> power_measures;
