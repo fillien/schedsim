@@ -37,8 +37,8 @@ auto plot_energy(const std::vector<std::pair<double, double>>& measures)
 
 auto compute_power(const std::size_t& nb_active_cores, const double& frequency) -> double
 {
-        constexpr double POLYNUM{0.000056};
-        constexpr double PACKAGE_CONSUMPTION{0.000001};
+        constexpr double POLYNUM{2};
+        constexpr double PACKAGE_CONSUMPTION{1};
         /// TODO : Fix the power model
         return POLYNUM * frequency * static_cast<double>(nb_active_cores) + PACKAGE_CONSUMPTION;
 }
@@ -103,6 +103,8 @@ void outputs::energy::plot(const std::multimap<double, protocols::traces::trace>
                 }
         }
 
+        std::cout << "Total energy consumption: " << cumulative_energy << std::endl;
+
         namespace plt = matplot;
 
         plt::plot(power_timestamps, power_measures);
@@ -114,5 +116,5 @@ void outputs::energy::plot(const std::multimap<double, protocols::traces::trace>
         plt::y2label("Cumulative Energy Consumption");
         plt::title("Power and Cumulative Energy Consumption Over Time");
 
-        plt::show();
+        plt::save("energy.svg");
 }
