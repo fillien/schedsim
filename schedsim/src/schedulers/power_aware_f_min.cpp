@@ -1,9 +1,9 @@
-#include "power_aware.hpp"
 #include "../engine.hpp"
 #include "../event.hpp"
 #include "../platform.hpp"
 #include "../processor.hpp"
 #include "../server.hpp"
+#include "power_aware.hpp"
 
 #include <algorithm>
 #include <bits/ranges_algo.h>

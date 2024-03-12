@@ -31,6 +31,7 @@ auto main(int argc, char* argv[]) -> int
         // clang-format off
         options.add_options()
                 ("h,help", "Helper")
+		("cli", "Print CLI friendly outputs")
                 ("p,print", "Print trace logs")
                 ("e,energy", "Plot power & cumulative energy comsumption")
                 ("r,rtsched", "Generate RTSched latex file", cxxopts::value<std::string>())
@@ -80,7 +81,15 @@ auto main(int argc, char* argv[]) -> int
 
                 if (cli.count("print")) { outputs::textual::print(std::cout, parsed); }
 
-                if (cli.count("energy")) { outputs::energy::plot(parsed); }
+                if (cli.count("energy")) {
+                        if (cli.count("cli")) {
+                                // Only print the total energy consumption if CLI output wanted
+                                outputs::energy::print_energy_consumption(parsed);
+                        }
+                        else {
+                                outputs::energy::plot(parsed);
+                        }
+                }
 
                 if (cli.count("rtsched")) {
                         outputs::gantt::gantt chart{

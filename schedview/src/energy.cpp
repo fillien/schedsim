@@ -118,3 +118,35 @@ void outputs::energy::plot(const std::multimap<double, protocols::traces::trace>
 
         plt::save("energy.svg");
 }
+
+void outputs::energy::print_energy_consumption(
+    const std::multimap<double, protocols::traces::trace>& input)
+{
+        const auto power_consumption = parse_power_consumption(input);
+
+        std::vector<double> power_timestamps;
+        std::vector<double> power_measures;
+
+        for (const auto& point : power_consumption) {
+                power_timestamps.push_back(point.first);
+                power_measures.push_back(point.second);
+        }
+
+        std::vector<double> energy_timestamps;
+        std::vector<double> energy_measures;
+
+        double last_timestamp{0};
+        double cumulative_energy{0};
+
+        for (const auto& [timestamp, value] : power_consumption) {
+                if (timestamp > last_timestamp) {
+                        double delta{timestamp - last_timestamp};
+                        energy_timestamps.push_back(timestamp);
+                        cumulative_energy += delta * value;
+                        energy_measures.push_back(cumulative_energy);
+                        last_timestamp = timestamp;
+                }
+        }
+
+        std::cout << cumulative_energy << std::endl;
+}
