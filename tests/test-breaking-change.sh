@@ -4,7 +4,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-if [ "$#" -ne 3 ]; then
+if [ "$#" -ne 2 ]; then
     echo "Usage: $0 <commit_hash_version1> <commit_hash_version2>"
     exit 1
 fi
