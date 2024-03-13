@@ -176,7 +176,6 @@ void scheduler::on_serv_inactive(const std::shared_ptr<server>& serv)
         // Update running server if there is one
         auto running_servers = servers | std::views::filter(from_shared<server>(is_running_server));
         for (auto& serv : running_servers) {
-                std::cout << "Update running servers\n";
                 update_server_times(serv);
         }
 
@@ -196,8 +195,6 @@ void scheduler::on_job_arrival(const std::shared_ptr<task>& new_task, const doub
                 }
 
                 // Total utilization increased -> updates running servers
-                std::cout << sim()->get_time()
-                          << " Total U as increased, the running servers are updated\n";
                 update_running_servers();
 
                 auto new_server = std::make_shared<server>(sim());
@@ -212,7 +209,6 @@ void scheduler::on_job_arrival(const std::shared_ptr<task>& new_task, const doub
         new_task->add_job(job_duration);
 
         if (new_task->get_server()->current_state == server::state::inactive) {
-                std::cout << sim()->get_time() << " The server was inactive\n";
                 update_running_servers();
                 new_task->get_server()->virtual_time = sim()->get_time();
         }
@@ -233,7 +229,6 @@ void scheduler::on_job_finished(const std::shared_ptr<server>& serv, bool is_the
         sim()->add_trace(protocols::traces::job_finished{serv->id()});
 
         // Update virtual time and remaining execution time
-        std::cout << "A job finisched from task " << serv->id() << '\n';
         update_server_times(serv);
 
         if (serv->get_task()->has_job()) {
@@ -246,11 +241,6 @@ void scheduler::on_job_finished(const std::shared_ptr<server>& serv, bool is_the
         }
         else {
                 serv->get_task()->attached_proc->clear_server();
-
-                std::cout << sim()->get_time() << " vi : " << serv->virtual_time
-                          << " vi - t = " << (serv->virtual_time - sim()->get_time()) << "\n";
-                std::cout << "D " << serv->relative_deadline << " Vi " << serv->virtual_time
-                          << "\n";
 
                 if ((serv->virtual_time - sim()->get_time()) > 0 &&
                     serv->virtual_time < serv->relative_deadline) {
@@ -270,7 +260,6 @@ void scheduler::on_serv_budget_exhausted(const std::shared_ptr<server>& serv)
 {
         namespace traces = protocols::traces;
         sim()->add_trace(traces::serv_budget_exhausted{serv->id()});
-        std::cout << "Budget of task " << serv->id() << " exhausted\n";
         update_server_times(serv);
 
         // Check if the job as been completed at the same time
@@ -292,8 +281,6 @@ void scheduler::update_server_times(const std::shared_ptr<server>& serv)
         const double running_time = sim()->get_time() - serv->last_update;
 
         // Be careful about floating point computation near 0
-        std::cout << sim()->get_time() << " remaining time - running_time: "
-                  << (serv->get_task()->get_remaining_time() - running_time) << std::endl;
         assert((serv->get_task()->get_remaining_time() - running_time) >= -engine::ZERO_ROUNDED);
 
         serv->virtual_time = get_server_virtual_time(*serv, running_time);
@@ -325,11 +312,6 @@ void scheduler::set_alarms(const std::shared_ptr<server>& serv)
         namespace traces = protocols::traces;
         const double new_budget{sim()->round_zero(get_server_budget(*serv))};
         const double remaining_time{sim()->round_zero(serv->remaining_exec_time())};
-
-        std::cout << sim()->get_time() << " S" << serv->id() << " new_budget: " << new_budget
-                  << '\n';
-        std::cout << sim()->get_time() << " S" << serv->id() << " remaining: " << remaining_time
-                  << '\n';
 
         assert(new_budget >= 0);
         assert(remaining_time >= 0);

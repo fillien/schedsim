@@ -82,9 +82,6 @@ auto main(const int argc, const char** argv) -> int
                 auto taskset = protocols::scenario::read_file(config.scenario_file);
                 auto platform_config = protocols::hardware::read_file(config.platform_file);
 
-                std::cout << "Coeurs: " << platform_config.nb_procs << std::endl;
-                std::cout << "Nombre de tâches: " << taskset.tasks.size() << std::endl;
-
                 // Create the simulation engine and attache to it a scheduler
                 auto sim = make_shared<engine>();
 
@@ -94,14 +91,9 @@ auto main(const int argc, const char** argv) -> int
                     sim, platform_config.nb_procs, platform_config.frequencies, true);
                 sim->set_platform(plat);
 
-                std::cout << "Policie: ";
                 std::shared_ptr<scheduler> sched;
-                if (config.policy == "grub") {
-                        std::cout << "GRUB\n";
-                        sched = make_shared<sched_parallel>(sim);
-                }
+                if (config.policy == "grub") { sched = make_shared<sched_parallel>(sim); }
                 else if (config.policy == "pa") {
-                        std::cout << "GRUB-PA\n";
                         sched = make_shared<sched_power_aware>(sim);
                 }
                 else {
@@ -126,7 +118,6 @@ auto main(const int argc, const char** argv) -> int
 
                 // Simulate the system (job set + platform) with the chosen scheduler
                 sim->simulation();
-                std::cout << "Simulation ended" << std::endl;
 
                 protocols::traces::write_log_file(sim->get_traces(), config.output_file);
                 return EXIT_SUCCESS;
