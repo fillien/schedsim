@@ -5,7 +5,7 @@ set -o nounset
 set -o pipefail
 
 if [ "$#" -ne 3 ]; then
-    echo "Usage: $0 <commit_hash_version1> <commit_hash_version2> <nb_test_tasks>"
+    echo "Usage: $0 <commit_hash_version1> <commit_hash_version2>"
     exit 1
 fi
 
@@ -27,7 +27,7 @@ function ami_commit() {
 
 VERSION1=$(git rev-parse "$1")
 VERSION2=$(git rev-parse "$2")
-NB_TASKS=$3
+NB_TASKS=10
 
 TESTS_DIR=./build_sce
 PLATFORM_FILE=$TESTS_DIR/platform.json
@@ -55,7 +55,7 @@ cmake --build "build_${VERSION2}"
 ./"build_${VERSION1}"/schedgen/schedgen platform --output "${PLATFORM_FILE}" --cores 2 --freq 1
 mkdir -p "${SCENARIO_DIR}"
 for i in {1..20}; do
-    NB_JOBS=5
+    NB_JOBS=40
     TOTALU=1.5
     ./"build_${VERSION1}"/schedgen/schedgen taskset -o "${SCENARIO_DIR}/${i}.json" --tasks "${NB_TASKS}" --jobs "${NB_JOBS}" --totalu "${TOTALU}" --success 1
 done
