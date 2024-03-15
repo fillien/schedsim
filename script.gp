@@ -1,9 +1,16 @@
-# Create a script to plot the data
-set term pngcairo
-set output 'plot_data.png'
+# Set the output file format and name
+set terminal pngcairo enhanced font 'arial,10'
+set output 'data_plot.png'
 
-# Plot the data points
-plot 'data' using 1:2 with lines title 'Data Points'
+# Set the title and labels for the axes
+set title "Energy Consumption vs. Utilization"
+set xlabel "Utilization"
+set ylabel "Energy"
 
-set output
+# Set the range for the axes
+set xrange [0:3.1]
+set yrange [0:4500]
 
+# Plot the first line graph (energy_x)
+plot 'data.csv' every ::1 using 1:2 with lines title 'energy_x', \
+     'data.csv' every ::1 using 1:3 with lines title 'energy_y'
