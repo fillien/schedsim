@@ -29,9 +29,8 @@ for i in range(1, 31):
             "-u", str(utilization), "-o", os.path.join(current_sce, f"{j}.json")
             ])
 
-utils = []
-grub = []
-pa = []
+
+print(f"util energy")
 utilisation = 0
 for directory in os.listdir(DATASET_DIR):
     sum_energy = 0
@@ -42,11 +41,9 @@ for directory in os.listdir(DATASET_DIR):
         for scenario in os.listdir(current_dir):
             count += 1
             logs_path = os.path.join(DATASET_DIR, "logs.json")
-            subprocess.run([SCHEDSIM, "-s", os.path.join(current_dir, scenario), "-p", "pa", "-o", logs_path])
+            subprocess.run([SCHEDSIM, "-s", os.path.join(current_dir, scenario), "-p", "grub", "-o", logs_path])
             result = subprocess.run([SCHEDVIEW, logs_path, "--cli", "--energy"], capture_output=True, text=True)
             sum_energy += float(result.stdout.strip())
 
-    utils.append(utilisation)
-    grub.append(round(sum_energy / count, 3))
     print(f"{utilisation} {round(sum_energy / count, 3)}")
 

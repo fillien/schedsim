@@ -12,5 +12,5 @@ set xrange [0:3.1]
 set yrange [0:4500]
 
 # Plot the first line graph (energy_x)
-plot 'data.csv' every ::1 using 1:2 with lines title 'energy_x', \
-     'data.csv' every ::1 using 1:3 with lines title 'energy_y'
+plot 'data_merged.csv' every ::1 using 1:2 with lines title 'energy_x', \
+     'data_merged.csv' every ::1 using 1:3 with lines title 'energy_y'
