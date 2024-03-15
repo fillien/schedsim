@@ -76,7 +76,4 @@ do
     diff <(jq --sort-keys . "${LOGS_DIR}/${VERSION1}/$(basename "$file")") <(jq --sort-keys . "${LOGS_DIR}/${VERSION2}/$(basename "$file")")
 done
 
-# Clean up (optional)
-#rm -rf "build_$VERSION1" "build_$VERSION2" output_version1.txt output_version2.txt
-
 finish 0
