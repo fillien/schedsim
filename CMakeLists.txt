@@ -39,3 +39,20 @@ add_custom_target(
         clang-format
         COMMAND clang-format -i ${ALL_SOURCE_FILES}
 )
+
+# Clang-Tidy configuration
+find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
+
+if(NOT CLANG_TIDY_EXE)
+    message(WARNING "Clang-Tidy not found!")
+else()
+    set(CLANG_TIDY_COMMAND "${CLANG_TIDY_EXE}")
+
+    add_custom_target(
+        clang-tidy
+        COMMAND ${CLANG_TIDY_COMMAND}
+        -p ${CMAKE_BINARY_DIR}
+        ${ALL_SOURCE_FILES}
+        COMMENT "Running clang-tidy checks"
+    )
+endif()

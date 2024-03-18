@@ -5,12 +5,9 @@
 #include "platform.hpp"
 #include "scheduler.hpp"
 #include <functional>
-#include <iostream>
 #include <map>
 #include <memory>
 #include <protocols/traces.hpp>
-#include <sstream>
-#include <variant>
 
 template <class... Ts> struct overloaded : Ts... {
         using Ts::operator()...;
@@ -101,15 +98,12 @@ class engine {
         /**
          * @return The current platform attached to the engine.
          */
-        [[nodiscard]] auto get_platform() const -> std::shared_ptr<platform>
-        {
-                return current_platform;
-        };
+        [[nodiscard]] auto chip() const -> std::shared_ptr<platform> { return current_platform; };
 
         /**
          * @return The current simulation time.
          */
-        [[nodiscard]] auto get_time() const -> double { return current_timestamp; };
+        [[nodiscard]] auto time() const -> double { return current_timestamp; };
 
         /**
          * @return The future list of events.
@@ -146,7 +140,7 @@ class engine {
         /**
          * @return The traces (past events) recorded by the engine.
          */
-        auto get_traces() { return past_list; };
+        auto traces() { return past_list; };
 };
 
 #endif

@@ -31,6 +31,9 @@
             gtest
             gdb
             shellcheck
+            black
+            tracy
+            (python311.withPackages (ps: with ps; [ pandas ]))
           ];
         };
 

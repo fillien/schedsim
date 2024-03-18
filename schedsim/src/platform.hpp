@@ -4,11 +4,8 @@
 #include "entity.hpp"
 #include "processor.hpp"
 
-#include <algorithm>
 #include <cstddef>
 #include <memory>
-#include <set>
-#include <stdexcept>
 #include <vector>
 
 /**
@@ -17,6 +14,7 @@
 class platform : public entity {
       private:
         std::vector<double> frequencies;
+        double effective_freq;
         double current_freq;
         bool freescaling;
 
@@ -34,12 +32,17 @@ class platform : public entity {
             const std::weak_ptr<engine>& sim,
             std::size_t nb_proc,
             const std::vector<double>& frequencies,
+            const double& effective_freq,
             bool freescaling_allowed);
 
-        [[nodiscard]] auto get_f_max() const { return *frequencies.begin(); }
-        [[nodiscard]] auto get_freq() const { return current_freq; };
-        [[nodiscard]] auto get_speed() const { return current_freq / get_f_max(); }
+        [[nodiscard]] auto freq_max() const { return *frequencies.begin(); }
+        [[nodiscard]] auto freq_min() const { return *frequencies.rbegin(); }
+        [[nodiscard]] auto freq_eff() const { return effective_freq; }
+        [[nodiscard]] auto freq() const { return current_freq; };
+        [[nodiscard]] auto speed() const { return current_freq / freq_max(); }
         void set_freq(const double& new_freq);
+
+        auto ceil_to_mode(const double& freq) -> double;
 };
 
 #endif

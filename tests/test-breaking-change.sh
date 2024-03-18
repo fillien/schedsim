@@ -27,7 +27,7 @@ function ami_commit() {
 
 VERSION1=$(git rev-parse "$1")
 VERSION2=$(git rev-parse "$2")
-NB_TASKS=10
+NB_TASKS=20
 
 TESTS_DIR=./build_sce
 PLATFORM_FILE=$TESTS_DIR/platform.json
@@ -52,15 +52,14 @@ cmake -S . -B "build_${VERSION2}" -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build "build_${VERSION2}" 
 
 # Generate platform and scenarios
-./"build_${VERSION1}"/schedgen/schedgen platform --output "${PLATFORM_FILE}" --cores 2 --freq 1
+./"build_${VERSION1}"/schedgen/schedgen platform --output "${PLATFORM_FILE}" --cores 2 --freq 1,2,3,4,5,6,7,8,9,10 --eff 3
 mkdir -p "${SCENARIO_DIR}"
 for i in {1..20}; do
-    NB_JOBS=40
+    NB_JOBS=80
     TOTALU=1.5
     ./"build_${VERSION1}"/schedgen/schedgen taskset -o "${SCENARIO_DIR}/${i}.json" --tasks "${NB_TASKS}" --jobs "${NB_JOBS}" --totalu "${TOTALU}" --success 1
 done
-
-ls -l "${TESTS_DIR}"
+echo "Generate 20 tasksets, with ${NB_TASKS} tasks, ${NB_JOBS} jobs and a total utilization of ${TOTALU}"
 
 # Run the CLI program for both versions and compare the outputs
 mkdir -p "${LOGS_DIR}/${VERSION1}" "${LOGS_DIR}/${VERSION2}"
@@ -73,6 +72,14 @@ do
 
     ./"build_${VERSION1}"/schedsim/schedsim --platform "${PLATFORM_FILE}" --scenario "${file}" --policy "pa" --output "${LOGS_DIR}/${VERSION1}/$(basename "$file")"
     ./"build_${VERSION2}"/schedsim/schedsim --platform "${PLATFORM_FILE}" --scenario "${file}" --policy "pa" --output "${LOGS_DIR}/${VERSION2}/$(basename "$file")"
+    diff <(jq --sort-keys . "${LOGS_DIR}/${VERSION1}/$(basename "$file")") <(jq --sort-keys . "${LOGS_DIR}/${VERSION2}/$(basename "$file")")
+
+    ./"build_${VERSION1}"/schedsim/schedsim --platform "${PLATFORM_FILE}" --scenario "${file}" --policy "pa_f_min" --output "${LOGS_DIR}/${VERSION1}/$(basename "$file")"
+    ./"build_${VERSION2}"/schedsim/schedsim --platform "${PLATFORM_FILE}" --scenario "${file}" --policy "pa_f_min" --output "${LOGS_DIR}/${VERSION2}/$(basename "$file")"
+    diff <(jq --sort-keys . "${LOGS_DIR}/${VERSION1}/$(basename "$file")") <(jq --sort-keys . "${LOGS_DIR}/${VERSION2}/$(basename "$file")")
+
+    ./"build_${VERSION1}"/schedsim/schedsim --platform "${PLATFORM_FILE}" --scenario "${file}" --policy "pa_m_min" --output "${LOGS_DIR}/${VERSION1}/$(basename "$file")"
+    ./"build_${VERSION2}"/schedsim/schedsim --platform "${PLATFORM_FILE}" --scenario "${file}" --policy "pa_m_min" --output "${LOGS_DIR}/${VERSION2}/$(basename "$file")"
     diff <(jq --sort-keys . "${LOGS_DIR}/${VERSION1}/$(basename "$file")") <(jq --sort-keys . "${LOGS_DIR}/${VERSION2}/$(basename "$file")")
 done
 

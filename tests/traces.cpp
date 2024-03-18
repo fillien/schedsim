@@ -57,6 +57,14 @@ TEST_F(TraceEventTest, ProcIdledJsonTest)
         EXPECT_EQ(converted.proc_id, original.proc_id);
 }
 
+TEST_F(TraceEventTest, ProcSleepJsonTest)
+{
+        proc_sleep original{5};
+        auto json = to_json(original);
+        auto converted = std::get<proc_sleep>(from_json(json));
+        EXPECT_EQ(converted.proc_id, original.proc_id);
+}
+
 TEST_F(TraceEventTest, ServBudgetReplenishedJsonTest)
 {
         serv_budget_replenished original{5, 50.0};

@@ -1,8 +1,4 @@
 #include "stats.hpp"
-#include <algorithm>
-#include <bits/ranges_util.h>
-#include <cassert>
-#include <cmath>
 #include <cstddef>
 #include <iomanip>
 #include <iostream>

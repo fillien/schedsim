@@ -1,9 +1,11 @@
 #include "gantt.hpp"
+#include <iterator>
 #include <protocols/hardware.hpp>
 #include <protocols/traces.hpp>
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <map>
 #include <set>
 #include <stdexcept>
@@ -59,13 +61,12 @@ void close_execution_zone(
     double stop,
     std::size_t tid,
     gantt& chart,
-    double freq,
-    double f_max)
+    double freq)
 {
         if (auto search = start_times.find(tid); search != std::end(start_times)) {
                 const auto start = search->second.first;
                 const auto cpu = search->second.second;
-                chart.commands.emplace_back(execution{tid, cpu, start, stop, freq, f_max});
+                chart.commands.emplace_back(execution{tid, cpu, start, stop, freq});
                 start_times.erase(tid);
         }
 }
@@ -120,8 +121,13 @@ auto generate_gantt(
     const protocols::hardware::hardware& platform) -> gantt
 {
         namespace traces = protocols::traces;
-        const auto f_max = *platform.frequencies.begin();
+        auto [plat_f_min, plat_f_max] =
+            std::minmax_element(std::begin(platform.frequencies), std::end(platform.frequencies));
+
+        const auto f_max{*plat_f_max};
+        const auto f_min{(*plat_f_min == *plat_f_max ? 0 : *plat_f_min)};
         auto current_freq{f_max};
+        auto normalize = [&](double freq) -> double { return (freq - f_min) / (f_max - f_min); };
 
         gantt chart;
 
@@ -154,8 +160,7 @@ auto generate_gantt(
                                     timestamp,
                                     evt.task_id,
                                     chart,
-                                    current_freq,
-                                    f_max);
+                                    normalize(current_freq));
                         },
                         [&](traces::task_scheduled evt) {
                                 open_execution_zone(
@@ -167,8 +172,7 @@ auto generate_gantt(
                                     timestamp,
                                     evt.task_id,
                                     chart,
-                                    current_freq,
-                                    f_max);
+                                    normalize(current_freq));
                         },
                         [&](traces::serv_non_cont evt) {
                                 close_execution_zone(
@@ -176,8 +180,7 @@ auto generate_gantt(
                                     timestamp,
                                     evt.task_id,
                                     chart,
-                                    current_freq,
-                                    f_max);
+                                    normalize(current_freq));
                                 open_extra_budget_zone(extra_budget_times, timestamp, evt.task_id);
                         },
                         [&](traces::serv_inactive evt) {
@@ -186,8 +189,7 @@ auto generate_gantt(
                                     timestamp,
                                     evt.task_id,
                                     chart,
-                                    current_freq,
-                                    f_max);
+                                    normalize(current_freq));
                                 close_extra_budget_zone(
                                     extra_budget_times, timestamp, evt.task_id, chart);
                         },
@@ -206,8 +208,7 @@ auto generate_gantt(
                                             timestamp,
                                             tid,
                                             chart,
-                                            current_freq,
-                                            f_max);
+                                            normalize(current_freq));
                                         open_execution_zone(execution_times, timestamp, tid, cpu);
                                 }
 

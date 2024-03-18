@@ -1,10 +1,10 @@
 #ifndef SCHED_PARALLEL_HPP
 #define SCHED_PARALLEL_HPP
 
+#include "../engine.hpp"
 #include "../entity.hpp"
 #include "../processor.hpp"
 #include "../scheduler.hpp"
-#include <iostream>
 #include <memory>
 #include <vector>
 
@@ -75,6 +75,8 @@ class sched_parallel : public scheduler {
         void on_resched() override;
 
         void on_active_utilization_updated() override{};
+
+        void update_platform() override;
 };
 
 #endif

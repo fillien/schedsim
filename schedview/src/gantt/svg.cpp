@@ -85,7 +85,7 @@ auto operator<<(std::ostream& out, const outputs::gantt::finished& evt) -> std::
 auto operator<<(std::ostream& out, const outputs::gantt::execution& evt) -> std::ostream&
 {
         constexpr double TASK_HEIGHT_MAX{30};
-        const double TASK_HEIGHT{TASK_HEIGHT_MAX * (evt.frequency / evt.f_max)};
+        const double TASK_HEIGHT{TASK_HEIGHT_MAX * (evt.frequency / 1)};
         const double TASK_OFFSET_Y{static_cast<double>(evt.index - 1) * AXIS_HEIGHT + 33};
         const double DURATION{evt.stop - evt.start};
 

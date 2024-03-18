@@ -137,6 +137,13 @@ class scheduler : public entity {
         void set_alarms(const std::shared_ptr<server>& serv);
 
         /**
+         * @brief Clamp the number of processor between 1 and the maximum number of procs available
+         * @param nb_procs Asked number of active processors.
+         * @return number of active processors clamped.
+         */
+        auto clamp(const double& nb_procs) -> double;
+
+        /**
          * @brief Retrieves the virtual time of a server given its running time.
          * @param serv The server for which to calculate virtual time.
          * @param running_time The running time of the server.
@@ -165,6 +172,8 @@ class scheduler : public entity {
         virtual void on_resched() = 0;
 
         virtual void on_active_utilization_updated() = 0;
+
+        virtual void update_platform() = 0;
 
       public:
         /**

@@ -1,26 +1,22 @@
-#ifndef SCHED_POWER_AWARE_HPP
-#define SCHED_POWER_AWARE_HPP
+#ifndef SCHED_F_MIN_HPP
+#define SCHED_F_MIN_HPP
 
+#include "../engine.hpp"
 #include "../entity.hpp"
-#include "../processor.hpp"
-#include "../scheduler.hpp"
 #include "parallel.hpp"
-
-#include <iostream>
 #include <memory>
 
-class sched_power_aware : public sched_parallel {
+class pa_f_min : public sched_parallel {
+      private:
+        std::size_t nb_active_procs{1};
+
       protected:
         auto get_nb_active_procs(const double& new_utilization) const -> std::size_t override;
 
       public:
-        /**
-         * @brief Constructs a parallel scheduler with a weak pointer to the engine.
-         * @param sim Weak pointer to the engine.
-         */
-        explicit sched_power_aware(const std::weak_ptr<engine> sim) : sched_parallel(sim){};
+        explicit pa_f_min(const std::weak_ptr<engine> sim) : sched_parallel(sim){};
 
-        void on_active_utilization_updated() override;
+        void update_platform() override;
 };
 
 #endif

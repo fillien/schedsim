@@ -1,7 +1,6 @@
 #ifndef SCENARIO_HPP
 #define SCENARIO_HPP
 
-#include <cstdint>
 #include <filesystem>
 #include <nlohmann/json_fwd.hpp>
 #include <vector>

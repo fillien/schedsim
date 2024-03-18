@@ -9,17 +9,18 @@ class HardwareTest : public ::testing::Test {};
 
 TEST_F(HardwareTest, ConvertToJsonTest)
 {
-        hardware original{5, {1.3, 2.5, 3.2}};
+        hardware original{5, {1.3, 2.5, 3.2}, 1.3};
 
         auto json = to_json(original);
         auto converted = from_json_hardware(json);
         EXPECT_EQ(converted.nb_procs, original.nb_procs);
         EXPECT_THAT(converted.frequencies, ::testing::ElementsAre(1.3, 2.5, 3.2));
+        EXPECT_EQ(converted.effective_freq, original.effective_freq);
 }
 
 TEST_F(HardwareTest, FileWriteRead)
 {
-        hardware original{5, {1.3, 2.5, 3.2}};
+        hardware original{5, {1.3, 2.5, 3.2}, 1.3};
         hardware converted;
 
         std::filesystem::path temp_file =
@@ -29,6 +30,7 @@ TEST_F(HardwareTest, FileWriteRead)
 
         EXPECT_EQ(converted.nb_procs, original.nb_procs);
         EXPECT_THAT(converted.frequencies, ::testing::ElementsAre(1.3, 2.5, 3.2));
+        EXPECT_EQ(converted.effective_freq, original.effective_freq);
 
         // Clean up: remove the temporary file
         if (std::filesystem::exists(temp_file)) { std::filesystem::remove(temp_file); }

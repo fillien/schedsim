@@ -1,8 +1,4 @@
 #include "stats.hpp"
-#include <algorithm>
-#include <bits/ranges_util.h>
-#include <cassert>
-#include <cmath>
 #include <cstddef>
 #include <iomanip>
 #include <iostream>
@@ -143,7 +139,7 @@ void print_average_waiting_time(const std::multimap<double, protocols::traces::t
                 waiting_sum += waiting;
         }
 
-        double average_waiting_time = waiting_sum / static_cast<double>(waiting_times.size());
+        const double average_waiting_time{waiting_sum / static_cast<double>(waiting_times.size())};
         std::cout << "Average Waiting Time: " << average_waiting_time << "\n";
 }
 

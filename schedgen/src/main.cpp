@@ -26,6 +26,7 @@ struct platform_config {
         fs::path output_filepath{"platform.json"};
         std::size_t nb_procs{0};
         std::vector<double> frequencies{0};
+        double effective_freq{0};
 };
 
 auto parse_args_taskset(const int argc, const char** argv) -> taskset_config
@@ -68,6 +69,7 @@ auto parse_args_platform(const int argc, const char** argv) -> platform_config
                 ("h,help", "Helper")
 		("c,cores", "Number of cores", cxxopts::value<std::size_t>())
 		("f,freq", "Allowed operating frequencies", cxxopts::value<std::vector<double>>())
+		("e,eff", "Add a effective frequency", cxxopts::value<double>())
 		("o,output", "Output file to write the scenario", cxxopts::value<std::string>());
         // clang-format on
 
@@ -80,6 +82,7 @@ auto parse_args_platform(const int argc, const char** argv) -> platform_config
 
         config.nb_procs = cli["cores"].as<std::size_t>();
         config.frequencies = cli["freq"].as<std::vector<double>>();
+        config.effective_freq = cli["eff"].as<double>();
         if (cli.count("output")) { config.output_filepath = cli["output"].as<std::string>(); }
         return config;
 }
@@ -110,7 +113,8 @@ auto main(const int argc, const char** argv) -> int
                 else if (command == "platform") {
                         auto config = parse_args_platform(argc - 1, argv + 1);
                         protocols::hardware::write_file(
-                            config.output_filepath, {config.nb_procs, config.frequencies});
+                            config.output_filepath,
+                            {config.nb_procs, config.frequencies, config.effective_freq});
                 }
                 else {
                         std::cerr << helper << std::endl;

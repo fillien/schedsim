@@ -2,7 +2,9 @@
 #include "../external/rang.hpp"
 #include <iomanip>
 #include <map>
+#include <ostream>
 #include <protocols/traces.hpp>
+#include <string>
 
 template <class... Ts> struct overloaded : Ts... {
         using Ts::operator()...;

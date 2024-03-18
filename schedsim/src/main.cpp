@@ -1,18 +1,14 @@
-#include <algorithm>
-#include <cassert>
 #include <cstdlib>
 #include <cxxopts.hpp>
 #include <exception>
 #include <filesystem>
-#include <fstream>
-#include <iomanip>
 #include <iostream>
-#include <iterator>
 #include <memory>
 #include <protocols/hardware.hpp>
 #include <protocols/scenario.hpp>
 #include <protocols/traces.hpp>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 #include "engine.hpp"
@@ -22,7 +18,8 @@
 #include "scheduler.hpp"
 #include "schedulers/parallel.hpp"
 #include "schedulers/power_aware.hpp"
-#include "server.hpp"
+#include "schedulers/power_aware_f_min.hpp"
+#include "schedulers/power_aware_m_min.hpp"
 #include "task.hpp"
 
 namespace fs = std::filesystem;
@@ -34,8 +31,11 @@ struct app_config {
         std::string policy;
 };
 
-constexpr std::array<const char*, 2> policies{
-    "grub - M-GRUB with global reclaiming", "pa   - M-GRUB-PA with global reclaiming"};
+constexpr std::array<const char*, 4> policies{
+    "grub     - M-GRUB with global reclaiming",
+    "pa       - M-GRUB-PA with global reclaiming",
+    "pa_f_min - M-GRUB with minimum frequency",
+    "pa_m_min - M-GRUB with minimum active processor"};
 
 auto parse_args(const int argc, const char** argv) -> app_config
 {
@@ -76,6 +76,8 @@ auto main(const int argc, const char** argv) -> int
 {
         using namespace std;
 
+        const bool FREESCALING_ALLOWED{true};
+
         try {
                 auto config = parse_args(argc, argv);
 
@@ -88,13 +90,23 @@ auto main(const int argc, const char** argv) -> int
                 // Insert the platform configured through the scenario file, in the simulation
                 // engine
                 auto plat = make_shared<platform>(
-                    sim, platform_config.nb_procs, platform_config.frequencies, true);
+                    sim,
+                    platform_config.nb_procs,
+                    platform_config.frequencies,
+                    platform_config.effective_freq,
+                    FREESCALING_ALLOWED);
                 sim->set_platform(plat);
 
                 std::shared_ptr<scheduler> sched;
                 if (config.policy == "grub") { sched = make_shared<sched_parallel>(sim); }
                 else if (config.policy == "pa") {
                         sched = make_shared<sched_power_aware>(sim);
+                }
+                else if (config.policy == "pa_f_min") {
+                        sched = make_shared<pa_f_min>(sim);
+                }
+                else if (config.policy == "pa_m_min") {
+                        sched = make_shared<pa_m_min>(sim);
                 }
                 else {
                         throw std::invalid_argument("Undefined scheduling policy");
@@ -119,7 +131,7 @@ auto main(const int argc, const char** argv) -> int
                 // Simulate the system (job set + platform) with the chosen scheduler
                 sim->simulation();
 
-                protocols::traces::write_log_file(sim->get_traces(), config.output_file);
+                protocols::traces::write_log_file(sim->traces(), config.output_file);
                 return EXIT_SUCCESS;
         }
         catch (const cxxopts::exceptions::parsing& e) {

@@ -34,6 +34,9 @@ auto to_json(const trace& log) -> nlohmann::json
                 [](const proc_activated& tra) {
                         return json{{"type", "proc_activated"}, {"cpu", tra.proc_id}};
                 },
+                [](const proc_sleep& tra) {
+                        return json{{"type", "proc_sleep"}, {"cpu", tra.proc_id}};
+                },
                 []([[maybe_unused]] const resched& tra) {
                         return json{{"type", "resched"}};
                 },
@@ -100,6 +103,7 @@ auto from_json(const nlohmann::json& log) -> trace
             {"job_arrival", job_arrival{}},
             {"job_finished", job_finished{}},
             {"proc_activated", proc_activated{}},
+            {"proc_sleep", proc_sleep{}},
             {"proc_idled", proc_idled{}},
             {"serv_budget_replenished", serv_budget_replenished{}},
             {"serv_inactive", serv_inactive{}},
@@ -164,6 +168,9 @@ auto from_json(const nlohmann::json& log) -> trace
                 },
                 [&out, &log](proc_idled) {
                         out = proc_idled{.proc_id = log.at("cpu").get<std::size_t>()};
+                },
+                [&out, &log](proc_sleep) {
+                        out = proc_sleep{.proc_id = log.at("cpu").get<std::size_t>()};
                 },
                 [&out, &log](proc_activated) {
                         out = proc_activated{log.at("cpu").get<std::size_t>()};

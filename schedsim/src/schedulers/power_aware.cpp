@@ -1,36 +1,20 @@
 #include "power_aware.hpp"
-#include "../engine.hpp"
-#include "../event.hpp"
-#include "../platform.hpp"
-#include "../processor.hpp"
-#include "../server.hpp"
 
-#include <algorithm>
-#include <bits/ranges_algo.h>
-#include <bits/ranges_base.h>
-#include <bits/ranges_util.h>
 #include <cassert>
-#include <cmath>
-#include <iostream>
-#include <iterator>
-#include <memory>
-#include <numeric>
-#include <ostream>
-#include <ranges>
-#include <vector>
 
 auto sched_power_aware::get_nb_active_procs(const double& new_utilization) const -> std::size_t
 {
-        return sim()->get_platform()->processors.size();
+        return sim()->chip()->processors.size();
 }
 
-void sched_power_aware::on_active_utilization_updated()
+void sched_power_aware::update_platform()
 {
         const auto U_MAX{get_max_utilization(servers)};
-        const auto NB_PROCS{static_cast<double>(sim()->get_platform()->processors.size())};
-        const auto SPEED = (get_active_bandwidth() + ((NB_PROCS - 1) * U_MAX)) / NB_PROCS;
+        const auto NB_PROCS{static_cast<double>(sim()->chip()->processors.size())};
+        const auto TOTAL_U{get_total_utilization()};
+        const auto F_MAX{sim()->chip()->freq_max()};
+        const auto new_freq{(F_MAX * ((NB_PROCS - 1) * U_MAX + TOTAL_U)) / NB_PROCS};
 
-        assert(SPEED <= 1);
-
-        sim()->get_platform()->set_freq(SPEED);
+        assert(new_freq <= sim()->chip()->freq_max());
+        sim()->chip()->set_freq(new_freq);
 }

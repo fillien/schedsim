@@ -10,6 +10,7 @@ namespace protocols::hardware {
 struct hardware {
         std::size_t nb_procs;
         std::vector<double> frequencies;
+        double effective_freq;
 };
 
 auto to_json(const hardware& plat) -> nlohmann::json;

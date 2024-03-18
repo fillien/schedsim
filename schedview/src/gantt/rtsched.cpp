@@ -5,7 +5,6 @@
 #include <sstream>
 #include <string>
 #include <variant>
-#include <vector>
 
 namespace {
 auto operator<<(std::ostream& out, const outputs::gantt::arrival& evt) -> std::ostream&

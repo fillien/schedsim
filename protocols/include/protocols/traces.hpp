@@ -2,7 +2,6 @@
 #define TRACES_HPP
 
 #include "nlohmann/json_fwd.hpp"
-#include <cstdint>
 #include <filesystem>
 #include <map>
 #include <variant>
@@ -46,6 +45,13 @@ struct proc_activated {
  * @brief Represents a processor idled event.
  */
 struct proc_idled {
+        std::size_t proc_id; /**< ID of the processor. */
+};
+
+/**
+ * @brief Represents a processor activated event.
+ */
+struct proc_sleep {
         std::size_t proc_id; /**< ID of the processor. */
 };
 
@@ -150,6 +156,7 @@ using trace = std::variant<
     job_finished,
     proc_activated,
     proc_idled,
+    proc_sleep,
     serv_budget_exhausted,
     serv_inactive,
     serv_budget_replenished,

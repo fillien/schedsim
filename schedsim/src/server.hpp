@@ -3,10 +3,9 @@
 
 #include "entity.hpp"
 #include "task.hpp"
-#include <cassert>
 #include <cstddef>
 #include <memory>
-#include <vector>
+#include <ostream>
 
 class processor;
 
@@ -79,7 +78,7 @@ class server : public entity, public std::enable_shared_from_this<server> {
          * @brief Retrieves the budget of the attached task.
          * @return Budget of the attached task.
          */
-        auto get_budget() -> double;
+        auto budget() -> double;
 
         /**
          * @brief Postpones the attached task.

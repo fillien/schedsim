@@ -2,11 +2,8 @@
 #define SCHED_POWER_AWARE_HPP
 
 #include "../entity.hpp"
-#include "../processor.hpp"
-#include "../scheduler.hpp"
 #include "parallel.hpp"
 
-#include <iostream>
 #include <memory>
 
 class sched_power_aware : public sched_parallel {
@@ -20,7 +17,7 @@ class sched_power_aware : public sched_parallel {
          */
         explicit sched_power_aware(const std::weak_ptr<engine> sim) : sched_parallel(sim){};
 
-        void on_active_utilization_updated() override;
+        void update_platform() override;
 };
 
 #endif

@@ -1,18 +1,10 @@
 #include "engine.hpp"
 #include "event.hpp"
-#include "platform.hpp"
 #include "scheduler.hpp"
-#include <algorithm>
-#include <cassert>
-#include <cstddef>
-#include <filesystem>
-#include <fstream>
-#include <ios>
-#include <iostream>
-#include <iterator>
 #include <map>
-#include <memory>
 #include <protocols/traces.hpp>
+
+#include <tracy/Tracy.hpp>
 
 void engine::add_event(const events::event& new_event, const double& timestamp)
 {
@@ -26,6 +18,8 @@ void engine::add_trace(const protocols::traces::trace& new_trace)
 
 void engine::simulation()
 {
+        ZoneScoped;
+
         // Loop until all events have been executed
         while (!future_list.empty()) {
                 // A vector to store all the event of the current timestamp

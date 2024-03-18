@@ -2,9 +2,7 @@
 #define PROCESSOR_HPP
 
 #include "entity.hpp"
-#include <cstddef>
 #include <memory>
-#include <vector>
 
 class server;
 
@@ -16,14 +14,14 @@ class processor : public entity, public std::enable_shared_from_this<processor> 
         /**
          * @brief Possible states of a processor.
          */
-        enum class state { idle, running };
+        enum class state { sleep, idle, running };
 
         /**
          * @brief Class constructor.
          * @param sim Weak pointer to the engine.
          * @param cpu_id The unique ID of the processor.
          */
-        explicit processor(const std::weak_ptr<engine>& sim, int cpu_id);
+        explicit processor(const std::weak_ptr<engine>& sim, std::size_t cpu_id);
 
         /**
          * @brief Sets the server to be executed on the processor.

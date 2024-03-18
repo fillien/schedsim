@@ -5,12 +5,10 @@
 #include "task.hpp"
 
 #include <cassert>
-#include <cstdint>
 #include <iostream>
 #include <memory>
-#include <typeinfo>
-#include <unordered_map>
-#include <variant>
+
+#include <tracy/Tracy.hpp>
 
 server::server(const std::weak_ptr<engine>& sim) : entity(sim){};
 
@@ -25,11 +23,12 @@ auto server::remaining_exec_time() const -> double { return get_task()->get_rema
 
 void server::change_state(const state& new_state)
 {
+        ZoneScoped;
         namespace traces = protocols::traces;
         assert(new_state != current_state);
 
-        if (last_call != sim()->get_time()) {
-                last_call = sim()->get_time();
+        if (last_call != sim()->time()) {
+                last_call = sim()->time();
                 cant_be_inactive = false;
         }
 
@@ -38,7 +37,7 @@ void server::change_state(const state& new_state)
                 switch (current_state) {
                 case state::inactive: {
                         // Job arrival
-                        relative_deadline = sim()->get_time() + period();
+                        relative_deadline = sim()->time() + period();
                         sim()->add_trace(
                             traces::serv_ready{shared_from_this()->id(), relative_deadline});
                         break;
@@ -72,7 +71,7 @@ void server::change_state(const state& new_state)
                 assert(current_state == state::ready || current_state == state::running);
                 // Dispatch
                 sim()->add_trace(traces::serv_running{shared_from_this()->id()});
-                last_update = sim()->get_time();
+                last_update = sim()->time();
                 current_state = state::running;
                 break;
         }
@@ -82,7 +81,7 @@ void server::change_state(const state& new_state)
 
                 // Insert a event to pass in IDLE state when the time will be equal to the
                 // virtual time. Deleting this event is necessery if a job arrive.
-                assert(virtual_time > sim()->get_time());
+                assert(virtual_time > sim()->time());
                 sim()->add_event(events::serv_inactive{shared_from_this()}, virtual_time);
                 current_state = state::non_cont;
                 break;
@@ -98,6 +97,7 @@ void server::change_state(const state& new_state)
 
 void server::postpone()
 {
+        ZoneScoped;
         namespace traces = protocols::traces;
         relative_deadline += period();
         sim()->add_trace(traces::serv_postpone{shared_from_this()->id(), relative_deadline});

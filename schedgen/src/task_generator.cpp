@@ -6,10 +6,9 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
-#include <cstdint>
-#include <iostream>
 #include <random>
 #include <stdexcept>
+#include <vector>
 
 namespace {
 using hr_clk = std::chrono::high_resolution_clock;
@@ -46,7 +45,7 @@ auto uunifast_discard(std::size_t nb_tasks, double total_utilization) -> std::ve
 
         for (std::size_t i{1}; i < nb_tasks; ++i) {
                 double new_rand{distribution(random_gen)};
-                double next_sum_utilization{
+                const double next_sum_utilization{
                     sum_utilization * std::pow(new_rand, 1.0 / static_cast<double>(nb_tasks - i))};
 
                 if ((sum_utilization - next_sum_utilization) > 1) {

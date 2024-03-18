@@ -1,11 +1,18 @@
 #include "energy.hpp"
+#include "energy_model.hpp"
+#include <cstddef>
+#include <fstream>
 #include <protocols/traces.hpp>
 
+#include <iostream>
 #include <map>
-#include <matplot/matplot.h>
+#include <set>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 #include <vector>
+
+#include <filesystem>
 
 template <class... Ts> struct overloaded : Ts... {
         using Ts::operator()...;
@@ -35,19 +42,12 @@ auto plot_energy(const std::vector<std::pair<double, double>>& measures)
             energy_timestamps, energy_timestamps};
 }
 
-auto compute_power(const std::size_t& nb_active_cores, const double& frequency) -> double
-{
-        constexpr double POLYNUM{2};
-        constexpr double PACKAGE_CONSUMPTION{1};
-        /// TODO : Fix the power model
-        return POLYNUM * frequency * static_cast<double>(nb_active_cores) + PACKAGE_CONSUMPTION;
-}
-
 auto parse_power_consumption(const std::multimap<double, protocols::traces::trace>& input)
     -> std::vector<std::pair<double, double>>
 {
         std::vector<std::pair<double, double>> power_consumption;
 
+        std::set<std::size_t> active_cores;
         std::size_t current_active_cores{0};
         double current_freq{0};
         double current_power{0};
@@ -56,15 +56,32 @@ auto parse_power_consumption(const std::multimap<double, protocols::traces::trac
         for (const auto& [timestamp, tra] : input) {
                 if (timestamp > last_timestamp) {
                         power_consumption.push_back({last_timestamp, current_power});
-                        current_power = compute_power(current_active_cores, current_freq);
+                        current_power = energy::compute_power(current_freq) *
+                                        static_cast<double>(current_active_cores);
                         power_consumption.push_back({last_timestamp, current_power});
                         last_timestamp = timestamp;
                 }
 
                 std::visit(
                     overloaded{
-                        [&](protocols::traces::proc_activated) { current_active_cores++; },
-                        [&](protocols::traces::proc_idled) { current_active_cores--; },
+                        [&](protocols::traces::proc_activated evt) {
+                                if (!active_cores.contains(evt.proc_id)) {
+                                        active_cores.insert(evt.proc_id);
+                                        current_active_cores++;
+                                }
+                        },
+                        [&](protocols::traces::proc_idled evt) {
+                                if (!active_cores.contains(evt.proc_id)) {
+                                        active_cores.insert(evt.proc_id);
+                                        current_active_cores++;
+                                }
+                        },
+                        [&](protocols::traces::proc_sleep evt) {
+                                if (active_cores.contains(evt.proc_id)) {
+                                        active_cores.erase(evt.proc_id);
+                                        current_active_cores--;
+                                }
+                        },
                         [&](protocols::traces::frequency_update evt) {
                                 current_freq = evt.frequency;
                         },
@@ -95,7 +112,7 @@ void outputs::energy::plot(const std::multimap<double, protocols::traces::trace>
 
         for (const auto& [timestamp, value] : power_consumption) {
                 if (timestamp > last_timestamp) {
-                        double delta{timestamp - last_timestamp};
+                        const double delta{timestamp - last_timestamp};
                         energy_timestamps.push_back(timestamp);
                         cumulative_energy += delta * value;
                         energy_measures.push_back(cumulative_energy);
@@ -103,20 +120,14 @@ void outputs::energy::plot(const std::multimap<double, protocols::traces::trace>
                 }
         }
 
-        std::cout << "Total energy consumption: " << cumulative_energy << std::endl;
-
-        namespace plt = matplot;
-
-        plt::plot(power_timestamps, power_measures);
-        plt::title("Power Consumption Over Time");
-        plt::xlabel("Time");
-        plt::ylabel("Power Consumption");
-        plt::hold(plt::on);
-        plt::plot(energy_timestamps, energy_measures)->use_y2(true);
-        plt::y2label("Cumulative Energy Consumption");
-        plt::title("Power and Cumulative Energy Consumption Over Time");
-
-        plt::save("energy.svg");
+        const std::filesystem::path& file{""};
+        std::ofstream out(file);
+        if (!out) { throw std::runtime_error("Unable to open file: " + file.string()); }
+        out << "time power\n";
+        for (const auto& [timestamp, value] : power_consumption) {
+                out << timestamp << ' ' << value << '\n';
+        }
+        out.close();
 }
 
 void outputs::energy::print_energy_consumption(

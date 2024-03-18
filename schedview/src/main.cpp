@@ -17,7 +17,6 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
-#include <string_view>
 #include <typeinfo>
 #include <vector>
 
@@ -100,15 +99,15 @@ auto main(int argc, char* argv[]) -> int
                 }
 
                 if (cli.count("svg")) {
-                        outputs::gantt::gantt hello =
+                        const outputs::gantt::gantt gen_gantt =
                             outputs::gantt::generate_gantt(parsed, hardware);
-                        std::cout << outputs::gantt::svg::draw(hello);
+                        std::cout << outputs::gantt::svg::draw(gen_gantt);
                 }
 
                 if (cli.count("html")) {
-                        outputs::gantt::gantt hello =
+                        const outputs::gantt::gantt gen_gantt =
                             outputs::gantt::generate_gantt(parsed, hardware);
-                        std::cout << outputs::gantt::html::draw(hello);
+                        std::cout << outputs::gantt::html::draw(gen_gantt);
                 }
 
                 if (cli.count("utilizations")) { outputs::stats::print_utilizations(parsed); }

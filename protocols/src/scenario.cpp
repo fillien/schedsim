@@ -1,10 +1,7 @@
-#include <algorithm>
-#include <cstdint>
+#include <filesystem>
 #include <fstream>
-#include <map>
 #include <nlohmann/json.hpp>
 #include <protocols/scenario.hpp>
-#include <sstream>
 #include <string>
 
 namespace protocols::scenario {
@@ -79,7 +76,7 @@ auto read_file(const std::filesystem::path& file) -> setting
         std::ifstream input_file(file);
         if (!input_file) { throw std::runtime_error("Failed to open file: " + file.string()); }
 
-        std::string input(
+        const std::string input(
             (std::istreambuf_iterator<char>(input_file)), std::istreambuf_iterator<char>());
         input_file.close();
 

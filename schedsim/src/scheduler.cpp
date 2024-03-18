@@ -7,23 +7,19 @@
 #include "task.hpp"
 
 #include <algorithm>
-#include <bits/ranges_algo.h>
 #include <bits/ranges_base.h>
 #include <bits/ranges_util.h>
 #include <cassert>
-#include <cstddef>
-#include <cstdint>
-#include <cstdlib>
-#include <exception>
 #include <iostream>
 #include <iterator>
 #include <map>
 #include <memory>
-#include <numeric>
 #include <ostream>
 #include <ranges>
 #include <variant>
 #include <vector>
+
+#include <tracy/Tracy.hpp>
 
 auto compare_events(const events::event& ev1, const events::event& ev2) -> bool
 {
@@ -40,7 +36,7 @@ auto compare_events(const events::event& ev1, const events::event& ev2) -> bool
 
 void scheduler::update_running_servers()
 {
-        for (const auto& proc : sim()->get_platform()->processors) {
+        for (const auto& proc : sim()->chip()->processors) {
                 if (proc->has_server_running()) { update_server_times(proc->get_server()); }
         }
 };
@@ -70,7 +66,7 @@ auto scheduler::get_total_utilization() const -> double
 {
         double total_u{0};
         for (const auto& serv : servers) {
-                if (is_active_server(*serv)) { total_u += serv->utilization(); }
+                total_u += serv->utilization();
         }
         return total_u;
 }
@@ -88,6 +84,7 @@ auto scheduler::deadline_order(const server& first, const server& second) -> boo
 
 auto scheduler::get_active_bandwidth() const -> double
 {
+        ZoneScoped;
         double active_bandwidth{0};
         for (const auto& serv : servers) {
                 if (is_active_server(*serv)) { active_bandwidth += serv->utilization(); }
@@ -97,6 +94,7 @@ auto scheduler::get_active_bandwidth() const -> double
 
 void scheduler::detach_server_if_needed(const std::shared_ptr<task>& inactive_task)
 {
+        ZoneScoped;
         // Check if there is a future job arrival
         auto search = std::ranges::find_if(sim()->future_list, [inactive_task](auto& evt) {
                 if (const auto& new_task = std::get_if<events::job_arrival>(&evt.second)) {
@@ -115,6 +113,7 @@ void scheduler::detach_server_if_needed(const std::shared_ptr<task>& inactive_ta
 
 void scheduler::handle(std::vector<events::event> evts)
 {
+        ZoneScoped;
         // Sort events according to event priority cf:get_priority function
         std::sort(std::begin(evts), std::end(evts), compare_events);
 
@@ -159,13 +158,14 @@ void scheduler::handle(std::vector<events::event> evts)
         }
 
         // Update platform state
-        for (auto const& proc : sim()->get_platform()->processors) {
+        for (auto const& proc : sim()->chip()->processors) {
                 proc->update_state();
         }
 }
 
 void scheduler::on_serv_inactive(const std::shared_ptr<server>& serv)
 {
+        ZoneScoped;
         // If a job arrived during this turn, do not change state to inactive
         if (serv->cant_be_inactive) { return; }
 
@@ -184,9 +184,10 @@ void scheduler::on_serv_inactive(const std::shared_ptr<server>& serv)
 
 void scheduler::on_job_arrival(const std::shared_ptr<task>& new_task, const double& job_duration)
 {
+        ZoneScoped;
         namespace traces = protocols::traces;
         sim()->add_trace(
-            traces::job_arrival{new_task->id, job_duration, sim()->get_time() + new_task->period});
+            traces::job_arrival{new_task->id, job_duration, sim()->time() + new_task->period});
 
         if (!new_task->has_server()) {
                 if (!admission_test(*new_task)) {
@@ -210,7 +211,7 @@ void scheduler::on_job_arrival(const std::shared_ptr<task>& new_task, const doub
 
         if (new_task->get_server()->current_state == server::state::inactive) {
                 update_running_servers();
-                new_task->get_server()->virtual_time = sim()->get_time();
+                new_task->get_server()->virtual_time = sim()->time();
         }
 
         if (new_task->get_server()->current_state != server::state::ready &&
@@ -223,6 +224,7 @@ void scheduler::on_job_arrival(const std::shared_ptr<task>& new_task, const doub
 
 void scheduler::on_job_finished(const std::shared_ptr<server>& serv, bool is_there_new_job)
 {
+        ZoneScoped;
         using enum server::state;
 
         assert(serv->current_state != inactive);
@@ -242,13 +244,12 @@ void scheduler::on_job_finished(const std::shared_ptr<server>& serv, bool is_the
         else {
                 serv->get_task()->attached_proc->clear_server();
 
-                if ((serv->virtual_time - sim()->get_time()) > 0 &&
+                if ((serv->virtual_time - sim()->time()) > 0 &&
                     serv->virtual_time < serv->relative_deadline) {
                         serv->change_state(non_cont);
                 }
                 else {
                         serv->change_state(inactive);
-                        // TODO Manage server detach
                         detach_server_if_needed(serv->get_task());
                         on_active_utilization_updated();
                 }
@@ -258,6 +259,7 @@ void scheduler::on_job_finished(const std::shared_ptr<server>& serv, bool is_the
 
 void scheduler::on_serv_budget_exhausted(const std::shared_ptr<server>& serv)
 {
+        ZoneScoped;
         namespace traces = protocols::traces;
         sim()->add_trace(traces::serv_budget_exhausted{serv->id()});
         update_server_times(serv);
@@ -275,10 +277,11 @@ void scheduler::on_serv_budget_exhausted(const std::shared_ptr<server>& serv)
 
 void scheduler::update_server_times(const std::shared_ptr<server>& serv)
 {
+        ZoneScoped;
         namespace traces = protocols::traces;
         assert(serv->current_state == server::state::running);
 
-        const double running_time = sim()->get_time() - serv->last_update;
+        const double running_time = sim()->time() - serv->last_update;
 
         // Be careful about floating point computation near 0
         assert((serv->get_task()->get_remaining_time() - running_time) >= -engine::ZERO_ROUNDED);
@@ -287,11 +290,12 @@ void scheduler::update_server_times(const std::shared_ptr<server>& serv)
         sim()->add_trace(traces::virtual_time_update{serv->get_task()->id, serv->virtual_time});
 
         serv->get_task()->consume_time(running_time);
-        serv->last_update = sim()->get_time();
+        serv->last_update = sim()->time();
 }
 
 void scheduler::cancel_alarms(const server& serv)
 {
+        ZoneScoped;
         /// @TODO replace with iterator inside server and/or server if performance needed.
         using namespace events;
         const auto tid = serv.id();
@@ -308,27 +312,32 @@ void scheduler::cancel_alarms(const server& serv)
 
 void scheduler::set_alarms(const std::shared_ptr<server>& serv)
 {
+        ZoneScoped;
         using namespace events;
         namespace traces = protocols::traces;
         const double new_budget{sim()->round_zero(get_server_budget(*serv))};
         const double remaining_time{sim()->round_zero(serv->remaining_exec_time())};
 
+        TracyPlot("budget", new_budget);
+        if (remaining_time < 0) { std::cout << remaining_time << std::endl; }
+        if (new_budget < 0) { std::cout << new_budget << std::endl; }
         assert(new_budget >= 0);
         assert(remaining_time >= 0);
 
         sim()->add_trace(traces::serv_budget_replenished{serv->id(), new_budget});
 
         if (new_budget < remaining_time) {
-                sim()->add_event(serv_budget_exhausted{serv}, sim()->get_time() + new_budget);
+                sim()->add_event(serv_budget_exhausted{serv}, sim()->time() + new_budget);
         }
         else {
-                sim()->add_event(job_finished{serv}, sim()->get_time() + remaining_time);
+                sim()->add_event(job_finished{serv}, sim()->time() + remaining_time);
         }
 }
 
 void scheduler::resched_proc(
     const std::shared_ptr<processor>& proc, const std::shared_ptr<server>& server_to_execute)
 {
+        ZoneScoped;
         namespace traces = protocols::traces;
         if (proc->has_server_running()) {
                 cancel_alarms(*(proc->get_server()));
@@ -343,4 +352,9 @@ void scheduler::resched_proc(
         }
 
         proc->set_server(server_to_execute);
+}
+
+auto scheduler::clamp(const double& nb_procs) -> double
+{
+        return std::clamp(nb_procs, 1.0, static_cast<double>(sim()->chip()->processors.size()));
 }
