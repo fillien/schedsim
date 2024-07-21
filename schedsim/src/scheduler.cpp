@@ -19,7 +19,9 @@
 #include <variant>
 #include <vector>
 
+#ifdef TRACY_ENABLE
 #include <tracy/Tracy.hpp>
+#endif
 
 auto compare_events(const events::event& ev1, const events::event& ev2) -> bool
 {
@@ -84,7 +86,9 @@ auto scheduler::deadline_order(const server& first, const server& second) -> boo
 
 auto scheduler::get_active_bandwidth() const -> double
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         double active_bandwidth{0};
         for (const auto& serv : servers) {
                 if (is_active_server(*serv)) { active_bandwidth += serv->utilization(); }
@@ -94,7 +98,9 @@ auto scheduler::get_active_bandwidth() const -> double
 
 void scheduler::detach_server_if_needed(const std::shared_ptr<task>& inactive_task)
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         // Check if there is a future job arrival
         auto search = std::ranges::find_if(sim()->future_list, [inactive_task](auto& evt) {
                 if (const auto& new_task = std::get_if<events::job_arrival>(&evt.second)) {
@@ -113,7 +119,9 @@ void scheduler::detach_server_if_needed(const std::shared_ptr<task>& inactive_ta
 
 void scheduler::handle(std::vector<events::event> evts)
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         // Sort events according to event priority cf:get_priority function
         std::sort(std::begin(evts), std::end(evts), compare_events);
 
@@ -165,7 +173,10 @@ void scheduler::handle(std::vector<events::event> evts)
 
 void scheduler::on_serv_inactive(const std::shared_ptr<server>& serv)
 {
+
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         // If a job arrived during this turn, do not change state to inactive
         if (serv->cant_be_inactive) { return; }
 
@@ -184,7 +195,9 @@ void scheduler::on_serv_inactive(const std::shared_ptr<server>& serv)
 
 void scheduler::on_job_arrival(const std::shared_ptr<task>& new_task, const double& job_duration)
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         namespace traces = protocols::traces;
         sim()->add_trace(
             traces::job_arrival{new_task->id, job_duration, sim()->time() + new_task->period});
@@ -224,7 +237,9 @@ void scheduler::on_job_arrival(const std::shared_ptr<task>& new_task, const doub
 
 void scheduler::on_job_finished(const std::shared_ptr<server>& serv, bool is_there_new_job)
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         using enum server::state;
 
         assert(serv->current_state != inactive);
@@ -259,7 +274,9 @@ void scheduler::on_job_finished(const std::shared_ptr<server>& serv, bool is_the
 
 void scheduler::on_serv_budget_exhausted(const std::shared_ptr<server>& serv)
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         namespace traces = protocols::traces;
         sim()->add_trace(traces::serv_budget_exhausted{serv->id()});
         update_server_times(serv);
@@ -277,7 +294,9 @@ void scheduler::on_serv_budget_exhausted(const std::shared_ptr<server>& serv)
 
 void scheduler::update_server_times(const std::shared_ptr<server>& serv)
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         namespace traces = protocols::traces;
         assert(serv->current_state == server::state::running);
 
@@ -295,7 +314,9 @@ void scheduler::update_server_times(const std::shared_ptr<server>& serv)
 
 void scheduler::cancel_alarms(const server& serv)
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         /// @TODO replace with iterator inside server and/or server if performance needed.
         using namespace events;
         const auto tid = serv.id();
@@ -312,13 +333,17 @@ void scheduler::cancel_alarms(const server& serv)
 
 void scheduler::set_alarms(const std::shared_ptr<server>& serv)
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         using namespace events;
         namespace traces = protocols::traces;
         const double new_budget{sim()->round_zero(get_server_budget(*serv))};
         const double remaining_time{sim()->round_zero(serv->remaining_exec_time())};
 
+#ifdef TRACY_ENABLE
         TracyPlot("budget", new_budget);
+#endif
         if (remaining_time < 0) { std::cout << remaining_time << std::endl; }
         if (new_budget < 0) { std::cout << new_budget << std::endl; }
         assert(new_budget >= 0);
@@ -337,7 +362,9 @@ void scheduler::set_alarms(const std::shared_ptr<server>& serv)
 void scheduler::resched_proc(
     const std::shared_ptr<processor>& proc, const std::shared_ptr<server>& server_to_execute)
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         namespace traces = protocols::traces;
         if (proc->has_server_running()) {
                 cancel_alarms(*(proc->get_server()));

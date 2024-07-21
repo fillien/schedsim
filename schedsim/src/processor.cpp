@@ -7,7 +7,9 @@
 #include <cassert>
 #include <memory>
 
+#ifdef TRACY_ENABLE
 #include <tracy/Tracy.hpp>
+#endif
 
 processor::processor(const std::weak_ptr<engine>& sim, std::size_t cpu_id) : entity(sim), id(cpu_id)
 {
@@ -30,7 +32,9 @@ processor::processor(const std::weak_ptr<engine>& sim, std::size_t cpu_id) : ent
 
 void processor::set_server(std::weak_ptr<server> server_to_execute)
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         namespace traces = protocols::traces;
         assert(!server_to_execute.expired());
         auto const& serv = server_to_execute.lock();
@@ -42,14 +46,18 @@ void processor::set_server(std::weak_ptr<server> server_to_execute)
 
 void processor::clear_server()
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         running_server.lock()->get_task()->attached_proc = nullptr;
         this->running_server.reset();
 }
 
 void processor::change_state(const processor::state& next_state)
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         namespace traces = protocols::traces;
         // assert that a processor can't enter twice in the same state
         if (next_state == current_state) { return; }
@@ -75,7 +83,9 @@ void processor::change_state(const processor::state& next_state)
 
 void processor::update_state()
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         if (has_server_running()) { change_state(state::running); }
         else {
                 change_state(state::idle);

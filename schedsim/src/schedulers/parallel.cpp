@@ -11,13 +11,17 @@
 #include <ranges>
 #include <vector>
 
+#ifdef TRACY_ENABLE
 #include <tracy/Tracy.hpp>
+#endif
 
 auto sched_parallel::get_max_utilization(
     const std::vector<std::shared_ptr<server>>& servers, const double& new_utilization) const
     -> double
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         if (std::distance(std::begin(servers), std::end(servers)) > 0) {
                 auto u_max = std::max_element(
                     std::begin(servers),
@@ -33,7 +37,9 @@ auto sched_parallel::get_max_utilization(
 
 auto sched_parallel::processor_order(const processor& first, const processor& second) -> bool
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         if (!first.has_server_running()) { return false; }
         if (!second.has_server_running()) { return true; }
         return deadline_order(*(first.get_server()), *(second.get_server()));
@@ -41,7 +47,9 @@ auto sched_parallel::processor_order(const processor& first, const processor& se
 
 auto sched_parallel::get_inactive_bandwidth() const -> double
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         const auto TOTAL_UTILIZATION{get_total_utilization()};
         const auto MAX_UTILIZATION{get_max_utilization(servers)};
         const auto NB_PROCS{static_cast<double>(get_nb_active_procs())};
@@ -50,13 +58,17 @@ auto sched_parallel::get_inactive_bandwidth() const -> double
 
 auto sched_parallel::get_nb_active_procs(const double& new_utilization) const -> std::size_t
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         return sim()->chip()->processors.size();
 }
 
 auto sched_parallel::get_server_budget(const server& serv) const -> double
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         const double NB_ACTIVE_PROCS{static_cast<double>(get_nb_active_procs())};
         const auto bandwidth{1 - (get_inactive_bandwidth() / NB_ACTIVE_PROCS)};
         return serv.utilization() / bandwidth * (serv.relative_deadline - serv.virtual_time);
@@ -65,7 +77,9 @@ auto sched_parallel::get_server_budget(const server& serv) const -> double
 auto sched_parallel::get_server_virtual_time(const server& serv, const double& running_time)
     -> double
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         const double NB_ACTIVE_PROCS{static_cast<double>(get_nb_active_procs())};
         const auto bandwidth{1 - (get_inactive_bandwidth() / NB_ACTIVE_PROCS)};
         return serv.virtual_time + bandwidth / serv.utilization() * running_time;
@@ -73,7 +87,9 @@ auto sched_parallel::get_server_virtual_time(const server& serv, const double& r
 
 auto sched_parallel::admission_test(const task& new_task) const -> bool
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         const auto NB_PROCS{static_cast<double>(sim()->chip()->processors.size())};
         const auto U_MAX{get_max_utilization(servers, new_task.utilization)};
         const auto NEW_TOTAL_UTILIZATION{get_total_utilization() + new_task.utilization};
@@ -82,7 +98,9 @@ auto sched_parallel::admission_test(const task& new_task) const -> bool
 
 void sched_parallel::on_resched()
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         update_running_servers();
 
         update_platform();

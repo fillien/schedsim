@@ -8,7 +8,9 @@
 #include <iostream>
 #include <memory>
 
+#ifdef TRACY_ENABLE
 #include <tracy/Tracy.hpp>
+#endif
 
 server::server(const std::weak_ptr<engine>& sim) : entity(sim){};
 
@@ -23,7 +25,9 @@ auto server::remaining_exec_time() const -> double { return get_task()->get_rema
 
 void server::change_state(const state& new_state)
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         namespace traces = protocols::traces;
         assert(new_state != current_state);
 
@@ -97,7 +101,9 @@ void server::change_state(const state& new_state)
 
 void server::postpone()
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         namespace traces = protocols::traces;
         relative_deadline += period();
         sim()->add_trace(traces::serv_postpone{shared_from_this()->id(), relative_deadline});

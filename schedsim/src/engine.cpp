@@ -4,7 +4,9 @@
 #include <map>
 #include <protocols/traces.hpp>
 
+#ifdef TRACY_ENABLE
 #include <tracy/Tracy.hpp>
+#endif
 
 void engine::add_event(const events::event& new_event, const double& timestamp)
 {
@@ -18,7 +20,9 @@ void engine::add_trace(const protocols::traces::trace& new_trace)
 
 void engine::simulation()
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
 
         // Loop until all events have been executed
         while (!future_list.empty()) {

@@ -5,18 +5,20 @@ project("Schedsim"
 
 include(CTest)
 
-set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wpedantic -Wno-unused -Wno-maybe-uninitialized")
 
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(ENABLE_TRACY OFF)
+else()
+    set(ENABLE_TRACY ON)
+endif()
+
 add_subdirectory(external/cxxopts)
 add_subdirectory(external/json)
-
-set(MATPLOTPP_BUILD_TESTS OFF)
-set(MATPLOTPP_BUILD_EXAMPLES OFF)
 
 add_subdirectory(doc)
 add_subdirectory(protocols)
