@@ -16,7 +16,7 @@ auto pa_m_min::get_nb_active_procs(const double& new_utilization) const -> std::
         return nb_active_procs;
 }
 
-void pa_m_min::on_active_utilization_updated()
+void pa_m_min::update_platform()
 {
         double next_active_procs{0};
 

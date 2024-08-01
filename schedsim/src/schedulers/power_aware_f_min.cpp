@@ -1,6 +1,5 @@
 #include "power_aware_f_min.hpp"
 
-#include <algorithm>
 #include <cassert>
 #include <cmath>
 
