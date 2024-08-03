@@ -36,3 +36,4 @@ target_sources(schedsim PRIVATE
     src/server.cpp
     src/task.cpp
 )
+target_include_directories(schedsim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
