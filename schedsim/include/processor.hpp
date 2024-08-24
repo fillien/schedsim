@@ -67,6 +67,12 @@ class processor : public entity, public std::enable_shared_from_this<processor> 
          */
         auto get_id() const -> std::size_t { return id; };
 
+        /**
+         * @brief Changes the state of the processor to the specified next state.
+         * @param next_state The state to transition to.
+         */
+        void change_state(const state& next_state);
+
       private:
         /**
          * @brief Unique ID of the processor.
@@ -82,12 +88,6 @@ class processor : public entity, public std::enable_shared_from_this<processor> 
          * @brief Current state of the processor, initialized as idle by default.
          */
         state current_state{state::idle};
-
-        /**
-         * @brief Changes the state of the processor to the specified next state.
-         * @param next_state The state to transition to.
-         */
-        void change_state(const state& next_state);
 };
 
 #endif // PROCESSOR_HPP

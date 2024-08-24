@@ -42,8 +42,10 @@ auto generate_jobs(std::vector<double> durations, double period)
  * @note Assumes nb_jobs is greater than 0 and that the success_rate is a valid percentage.
  */
 auto generate_task(
-    std::size_t nb_tasks, std::size_t nb_jobs, double total_utilization, double success_rate)
-    -> protocols::scenario::task;
+    std::size_t nb_tasks,
+    std::size_t nb_jobs,
+    double total_utilization,
+    double success_rate) -> protocols::scenario::task;
 
 /**
  * @brief Generates a set of tasks (taskset) for a given scenario, each with a specific utilization
@@ -70,7 +72,9 @@ auto generate_task(
  * @note This function internally calls generate_task() for each task to be generated.
  */
 auto generate_taskset(
-    std::size_t nb_tasks, std::size_t nb_jobs, double total_utilization, double success_rate)
-    -> protocols::scenario::setting;
+    std::size_t nb_tasks,
+    std::size_t nb_jobs,
+    double total_utilization,
+    double success_rate) -> protocols::scenario::setting;
 
 #endif

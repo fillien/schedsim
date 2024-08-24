@@ -51,6 +51,10 @@ void serialize(std::ostream& out, const protocols::traces::trace& tra)
                         color_name(out, "proc_idled");
                         color_arg(out, "cpu", tra.proc_id);
                 },
+                [&out](traces::proc_sleep tra) {
+                        color_name(out, "proc_sleep");
+                        color_arg(out, "cpu", tra.proc_id);
+                },
                 [&out](traces::serv_budget_replenished tra) {
                         color_name(out, "serv_budget_replenished");
                         color_arg(out, "tid", tra.task_id);

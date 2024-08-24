@@ -1,6 +1,5 @@
-#include "power_aware.hpp"
-
 #include <cassert>
+#include <schedulers/power_aware.hpp>
 
 auto sched_power_aware::get_nb_active_procs(const double& new_utilization) const -> std::size_t
 {

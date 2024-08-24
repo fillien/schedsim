@@ -56,8 +56,8 @@ struct execution {
         double start;
         double stop;
         double frequency;
-	double frequency_max;
-	double frequency_min;
+        double frequency_max;
+        double frequency_min;
 };
 
 struct active_non_cont {

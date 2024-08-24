@@ -37,9 +37,7 @@ auto to_json(const trace& log) -> nlohmann::json
                 [](const proc_sleep& tra) {
                         return json{{"type", "proc_sleep"}, {"cpu", tra.proc_id}};
                 },
-                []([[maybe_unused]] const resched& tra) {
-                        return json{{"type", "resched"}};
-                },
+                []([[maybe_unused]] const resched& tra) { return json{{"type", "resched"}}; },
                 [](const serv_non_cont& tra) {
                         return json{{"type", "serv_non_cont"}, {"tid", tra.task_id}};
                 },

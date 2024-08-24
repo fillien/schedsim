@@ -1,7 +1,9 @@
-#include "parallel.hpp"
-#include "../engine.hpp"
-#include "../processor.hpp"
-#include "../server.hpp"
+#include <engine.hpp>
+#include <event.hpp>
+#include <processor.hpp>
+#include <protocols/traces.hpp>
+#include <schedulers/parallel.hpp>
+#include <server.hpp>
 
 #include <algorithm>
 #include <bits/ranges_algo.h>
@@ -9,6 +11,7 @@
 #include <iterator>
 #include <memory>
 #include <ranges>
+#include <stdexcept>
 #include <vector>
 
 #ifdef TRACY_ENABLE
@@ -16,9 +19,10 @@
 #endif
 
 auto sched_parallel::get_max_utilization(
-    const std::vector<std::shared_ptr<server>>& servers, const double& new_utilization) const
-    -> double
+    const std::vector<std::shared_ptr<server>>& servers,
+    const double& new_utilization) const -> double
 {
+
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
@@ -37,11 +41,16 @@ auto sched_parallel::get_max_utilization(
 
 auto sched_parallel::processor_order(const processor& first, const processor& second) -> bool
 {
+        using enum processor::state;
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
+
         if (!first.has_server_running()) { return false; }
-        if (!second.has_server_running()) { return true; }
+        if (!second.has_server_running()) {
+                if (second.get_state() == sleep) { return false; }
+                return true;
+        }
         return deadline_order(*(first.get_server()), *(second.get_server()));
 }
 
@@ -96,8 +105,25 @@ auto sched_parallel::admission_test(const task& new_task) const -> bool
         return (NEW_TOTAL_UTILIZATION <= (NB_PROCS - (NB_PROCS - 1) * U_MAX));
 }
 
+void sched_parallel::remove_task_from_cpu(const std::shared_ptr<processor>& proc)
+{
+        using protocols::traces::task_preempted;
+        if (proc->has_server_running()) {
+                cancel_alarms(*(proc->get_server()));
+
+                sim()->add_trace(task_preempted{proc->get_server()->get_task()->id});
+                proc->get_server()->change_state(server::state::ready);
+                proc->clear_server();
+        }
+}
+
 void sched_parallel::on_resched()
 {
+        using std::ranges::empty;
+        using std::ranges::max;
+        using std::ranges::min;
+        using std::views::filter;
+        using enum processor::state;
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
@@ -105,28 +131,40 @@ void sched_parallel::on_resched()
 
         update_platform();
 
+        // Keep active procs and put to sleep others
+        std::vector<std::shared_ptr<processor>> copy_chip = sim()->chip()->processors;
+        std::sort(copy_chip.begin(), copy_chip.end(), from_shared<processor>(processor_order));
+        auto cow = copy_chip | std::views::drop(get_nb_active_procs());
+
+        // Remove the task that were running on procs that have been put to sleep
+        for (const auto& cop_proc : cow) {
+                remove_task_from_cpu(cop_proc);
+                cop_proc->change_state(sleep);
+        }
+
         // Place task using global EDF
-        while (true) {
+        std::size_t cpt_scheduled_proc{0};
+        while (cpt_scheduled_proc < get_nb_active_procs()) {
                 // refresh active servers list
-                auto ready_servers =
-                    servers | std::views::filter(from_shared<server>(is_ready_server));
+                auto ready_servers = servers | filter(from_shared<server>(is_ready_server));
 
                 // Check if there are servers in ready or running state
-                if (std::distance(std::begin(ready_servers), std::end(ready_servers)) == 0) {
-                        break;
-                }
+                if (empty(ready_servers)) { break; }
 
                 // Get the server with the earliest deadline
                 // Get the processeur that is idle or with the maximum deadline
                 auto highest_priority_server =
-                    std::ranges::min(ready_servers, from_shared<server>(deadline_order));
-                auto leastest_priority_processor = std::ranges::max(
-                    sim()->chip()->processors, from_shared<processor>(processor_order));
+                    min(ready_servers, from_shared<server>(deadline_order));
+                auto leastest_priority_processor =
+                    max(sim()->chip()->processors, from_shared<processor>(processor_order));
 
                 if (!leastest_priority_processor->has_server_running() ||
                     deadline_order(
                         *highest_priority_server, *leastest_priority_processor->get_server())) {
+                        assert(leastest_priority_processor->get_state() != sleep);
                         resched_proc(leastest_priority_processor, highest_priority_server);
+
+                        cpt_scheduled_proc++;
                 }
                 else {
                         break;
@@ -135,9 +173,14 @@ void sched_parallel::on_resched()
 
         // Set next job finish or budget exhausted event for each proc with a task
         for (auto proc : sim()->chip()->processors) {
-                if (proc->has_server_running()) {
+                if (proc->get_state() == sleep) { continue; }
+                else if (proc->has_server_running()) {
                         cancel_alarms(*proc->get_server());
                         set_alarms(proc->get_server());
+                        proc->change_state(running);
+                }
+                else {
+                        proc->change_state(idle);
                 }
         }
 }

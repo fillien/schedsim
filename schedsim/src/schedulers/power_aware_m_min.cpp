@@ -1,6 +1,6 @@
-#include "power_aware_m_min.hpp"
 #include <cassert>
 #include <cmath>
+#include <schedulers/power_aware_m_min.hpp>
 
 constexpr auto compute_freq_min(
     const double& freq_max,

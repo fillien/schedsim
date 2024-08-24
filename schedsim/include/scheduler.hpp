@@ -89,6 +89,7 @@ class scheduler : public entity {
          * @return True if the server has a job, false otherwise.
          */
         static auto has_job_server(const server& serv) -> bool;
+
         /**
          * @brief Compares two servers based on their deadlines.
          * @param first The first server.
@@ -149,8 +150,8 @@ class scheduler : public entity {
          * @param running_time The running time of the server.
          * @return Calculated virtual time.
          */
-        virtual auto get_server_virtual_time(const server& serv, const double& running_time)
-            -> double = 0;
+        virtual auto
+        get_server_virtual_time(const server& serv, const double& running_time) -> double = 0;
 
         /**
          * @brief Retrieves the budget of a server.
@@ -180,7 +181,7 @@ class scheduler : public entity {
          * @brief Constructs a scheduler with a weak pointer to the engine.
          * @param sim Weak pointer to the engine.
          */
-        explicit scheduler(const std::weak_ptr<engine> sim) : entity(sim){};
+        explicit scheduler(const std::weak_ptr<engine> sim) : entity(sim) {};
 
         /**
          * @brief Virtual destructor for the scheduler class.

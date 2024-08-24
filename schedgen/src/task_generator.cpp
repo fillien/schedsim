@@ -144,8 +144,10 @@ auto generate_task(std::size_t tid, double utilization, std::size_t nb_jobs, dou
 }
 
 auto generate_taskset(
-    std::size_t nb_tasks, std::size_t total_nb_jobs, double total_utilization, double success_rate)
-    -> protocols::scenario::setting
+    std::size_t nb_tasks,
+    std::size_t total_nb_jobs,
+    double total_utilization,
+    double success_rate) -> protocols::scenario::setting
 {
         using namespace protocols::scenario;
         using std::round;

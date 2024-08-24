@@ -14,7 +14,7 @@ class pa_f_min : public sched_parallel {
         auto get_nb_active_procs(const double& new_utilization) const -> std::size_t override;
 
       public:
-        explicit pa_f_min(const std::weak_ptr<engine> sim) : sched_parallel(sim){};
+        explicit pa_f_min(const std::weak_ptr<engine> sim) : sched_parallel(sim) {};
 
         void update_platform() override;
 };

@@ -37,3 +37,32 @@ target_sources(schedsim PRIVATE
     src/task.cpp
 )
 target_include_directories(schedsim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+enable_testing()
+find_package(GTest REQUIRED)
+
+add_executable(schedsim_tests)
+target_sources(schedsim_tests PRIVATE
+    tests/main.cpp
+    src/engine.cpp
+    src/platform.cpp
+    src/processor.cpp
+    src/scheduler.cpp
+    src/schedulers/parallel.cpp
+    src/schedulers/power_aware.cpp
+    src/schedulers/power_aware_f_min.cpp
+    src/schedulers/power_aware_m_min.cpp
+    src/server.cpp
+    src/task.cpp
+)
+
+target_include_directories(schedsim_tests PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+target_link_libraries(
+    schedsim_tests
+    protocols
+    GTest::gtest
+    GTest::gtest_main
+)
+
+gtest_discover_tests(schedsim_tests)

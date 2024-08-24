@@ -164,11 +164,6 @@ void scheduler::handle(std::vector<events::event> evts)
                 sim()->add_trace(protocols::traces::resched{});
                 on_resched();
         }
-
-        // Update platform state
-        for (auto const& proc : sim()->chip()->processors) {
-                proc->update_state();
-        }
 }
 
 void scheduler::on_serv_inactive(const std::shared_ptr<server>& serv)
@@ -371,7 +366,6 @@ void scheduler::resched_proc(
                 sim()->add_trace(traces::task_preempted{proc->get_server()->get_task()->id});
                 proc->get_server()->change_state(server::state::ready);
                 proc->clear_server();
-                on_active_utilization_updated();
         }
 
         if (server_to_execute->current_state != server::state::running) {

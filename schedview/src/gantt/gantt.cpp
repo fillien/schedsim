@@ -7,11 +7,11 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <iostream>
 #include <map>
 #include <set>
 #include <stdexcept>
 #include <variant>
-#include <iostream>
 
 namespace {
 
@@ -70,7 +70,8 @@ void close_execution_zone(
         if (auto search = start_times.find(tid); search != std::end(start_times)) {
                 const auto start = search->second.first;
                 const auto cpu = search->second.second;
-                chart.commands.emplace_back(execution{tid, cpu, start, stop, freq, freq_max, freq_min});
+                chart.commands.emplace_back(
+                    execution{tid, cpu, start, stop, freq, freq_max, freq_min});
                 start_times.erase(tid);
         }
 }
@@ -108,8 +109,8 @@ void new_finished(gantt& chart, double time, std::size_t tid)
 }
 
 auto get_proc_id(
-    const std::map<std::size_t, std::pair<double, std::size_t>> executions, std::size_t tid)
-    -> std::size_t
+    const std::map<std::size_t, std::pair<double, std::size_t>> executions,
+    std::size_t tid) -> std::size_t
 {
         if (auto search = executions.find(tid); search != std::end(executions)) {
                 return search->second.second;
@@ -164,7 +165,8 @@ auto generate_gantt(
                                     evt.task_id,
                                     chart,
                                     current_freq,
-				    f_max, f_min);
+                                    f_max,
+                                    f_min);
                         },
                         [&](traces::task_scheduled evt) {
                                 open_execution_zone(
@@ -177,7 +179,8 @@ auto generate_gantt(
                                     evt.task_id,
                                     chart,
                                     current_freq,
-				    f_max, f_min);
+                                    f_max,
+                                    f_min);
                         },
                         [&](traces::serv_non_cont evt) {
                                 close_execution_zone(
@@ -185,7 +188,9 @@ auto generate_gantt(
                                     timestamp,
                                     evt.task_id,
                                     chart,
-                                    current_freq, f_max, f_min);
+                                    current_freq,
+                                    f_max,
+                                    f_min);
                                 open_extra_budget_zone(extra_budget_times, timestamp, evt.task_id);
                         },
                         [&](traces::serv_inactive evt) {
@@ -194,7 +199,9 @@ auto generate_gantt(
                                     timestamp,
                                     evt.task_id,
                                     chart,
-                                    current_freq, f_max, f_min);
+                                    current_freq,
+                                    f_max,
+                                    f_min);
                                 close_extra_budget_zone(
                                     extra_budget_times, timestamp, evt.task_id, chart);
                         },
@@ -213,7 +220,9 @@ auto generate_gantt(
                                             timestamp,
                                             tid,
                                             chart,
-                                            current_freq, f_max, f_min);
+                                            current_freq,
+                                            f_max,
+                                            f_min);
                                         open_execution_zone(execution_times, timestamp, tid, cpu);
                                 }
 
