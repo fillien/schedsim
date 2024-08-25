@@ -51,7 +51,10 @@ auto to_json(const trace& log) -> nlohmann::json
                             {"budget", tra.budget}};
                 },
                 [](const serv_inactive& tra) {
-                        return json{{"type", "serv_inactive"}, {"tid", tra.task_id}, {"utilization", tra.utilization}};
+                        return json{
+                            {"type", "serv_inactive"},
+                            {"tid", tra.task_id},
+                            {"utilization", tra.utilization}};
                 },
                 [](const serv_postpone& tra) {
                         return json{
@@ -64,8 +67,7 @@ auto to_json(const trace& log) -> nlohmann::json
                             {"type", "serv_ready"},
                             {"tid", tra.task_id},
                             {"deadline", tra.deadline},
-                            {"utilization", tra.utilization}
-			};
+                            {"utilization", tra.utilization}};
                 },
                 [](const serv_running& tra) {
                         return json{{"type", "serv_running"}, {"tid", tra.task_id}};
@@ -147,7 +149,9 @@ auto from_json(const nlohmann::json& log) -> trace
                 },
                 [&out, &log](serv_ready) {
                         out = serv_ready{
-                            log.at("tid").get<std::size_t>(), log.at("deadline").get<double>(), log.at("utilization").get<double>()};
+                            log.at("tid").get<std::size_t>(),
+                            log.at("deadline").get<double>(),
+                            log.at("utilization").get<double>()};
                 },
                 [&out, &log](serv_postpone) {
                         out = serv_postpone{
@@ -164,7 +168,8 @@ auto from_json(const nlohmann::json& log) -> trace
                             log.at("tid").get<std::size_t>(), log.at("budget").get<double>()};
                 },
                 [&out, &log](serv_inactive) {
-                        out = serv_inactive{log.at("tid").get<std::size_t>(), log.at("utilization").get<double>()};
+                        out = serv_inactive{
+                            log.at("tid").get<std::size_t>(), log.at("utilization").get<double>()};
                 },
                 [&out, &log](proc_idled) {
                         out = proc_idled{.proc_id = log.at("cpu").get<std::size_t>()};

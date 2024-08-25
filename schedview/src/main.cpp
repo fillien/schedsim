@@ -95,9 +95,7 @@ auto main(int argc, char* argv[]) -> int
                         }
                 }
 
-                if (cli.count("frequency")) {
-		    outputs::frequency::print_frequency_changes(parsed);
-		}
+                if (cli.count("frequency")) { outputs::frequency::print_frequency_changes(parsed); }
 
                 if (cli.count("rtsched")) {
                         outputs::gantt::gantt chart{
@@ -127,7 +125,7 @@ auto main(int argc, char* argv[]) -> int
 
                 if (cli.count("utilizations")) { outputs::stats::print_utilizations(parsed); }
 
-		if (cli.count("ua")) { outputs::sys_util::print_active_utilization(parsed); }
+                if (cli.count("ua")) { outputs::sys_util::print_active_utilization(parsed); }
 
                 if (cli.count("preemptions")) { outputs::stats::print_nb_preemption(parsed); }
 

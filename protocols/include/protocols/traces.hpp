@@ -68,7 +68,7 @@ struct serv_budget_replenished {
  */
 struct serv_inactive {
         std::size_t task_id; /**< ID of the task. */
-	double utilization;  /**< Utilization of the task. */
+        double utilization;  /**< Utilization of the task. */
 };
 
 /**
@@ -99,7 +99,7 @@ struct serv_postpone {
 struct serv_ready {
         std::size_t task_id; /**< ID of the task. */
         double deadline;     /**< Deadline of the task. */
-	double utilization;  /**< Utilization of the task. */
+        double utilization;  /**< Utilization of the task. */
 };
 
 /**

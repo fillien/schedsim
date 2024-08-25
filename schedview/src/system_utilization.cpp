@@ -64,30 +64,28 @@ auto get_per_core_utilization(std::multimap<double, protocols::traces::trace> in
 
 namespace outputs::sys_util {
 
-
-
 void print_active_utilization(const std::multimap<double, protocols::traces::trace>& input)
 {
-	double current_active_utilization{0};
-	// timestamp, active utilization
-	//std::vector<std::pair<double, double>> utilization_over_time;
+        double current_active_utilization{0};
+        // timestamp, active utilization
+        // std::vector<std::pair<double, double>> utilization_over_time;
 
-	std::cout << "0.0 0.0\n";
+        std::cout << "0.0 0.0\n";
         for (const auto& tra : input) {
-		const auto& [timestamp, event] = tra;
+                const auto& [timestamp, event] = tra;
 
                 std::visit(
                     overloaded{
                         [&](protocols::traces::serv_ready evt) {
-				current_active_utilization += evt.utilization;
-				std::cout << timestamp << ' ' << current_active_utilization << '\n';
+                                current_active_utilization += evt.utilization;
+                                std::cout << timestamp << ' ' << current_active_utilization << '\n';
                         },
                         [&](protocols::traces::serv_inactive evt) {
-				current_active_utilization -= evt.utilization;
-				std::cout << timestamp << ' ' << current_active_utilization << '\n';
+                                current_active_utilization -= evt.utilization;
+                                std::cout << timestamp << ' ' << current_active_utilization << '\n';
                         },
                         [](auto) {}},
                     event);
         }
 }
-} // namespace outputs::stats
+} // namespace outputs::sys_util
