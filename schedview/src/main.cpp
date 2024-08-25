@@ -34,6 +34,7 @@ auto main(int argc, char* argv[]) -> int
                 ("p,print", "Print trace logs")
                 ("e,energy", "Plot power & cumulative energy comsumption")
                 ("r,rtsched", "Generate RTSched latex file", cxxopts::value<std::string>())
+                ("procmode", "Generate RTSched latex file", cxxopts::value<std::string>())
                 ("s,svg", "Generate GANTT chart in SVG file")
                 ("html", "Generate GANTT chart in HTML file")
                 ("u,utilizations", "Print per core utilization")
@@ -96,6 +97,12 @@ auto main(int argc, char* argv[]) -> int
                         std::filesystem::path output_file(cli["rtsched"].as<std::string>());
                         std::ofstream fd(output_file);
                         fd << outputs::gantt::rtsched::draw(chart);
+                }
+
+                if (cli.count("procmode")) {
+                        outputs::gantt::gantt chart{
+                            outputs::gantt::generate_proc_mode(parsed, hardware)};
+                        std::cout << outputs::gantt::svg::draw(chart);
                 }
 
                 if (cli.count("svg")) {

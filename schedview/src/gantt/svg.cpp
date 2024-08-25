@@ -8,6 +8,8 @@
 #include <string>
 #include <variant>
 
+#include <iostream>
+
 namespace {
 template <class... Ts> struct overload : Ts... {
         using Ts::operator()...;
@@ -111,6 +113,51 @@ auto operator<<(std::ostream& out, const outputs::gantt::active_non_cont& evt) -
         out << "<rect class='anc' x='" << OFFSET_X + TIME_UNIT * evt.start << "' y='"
             << TASK_OFFSET_Y << "' width='" << TIME_UNIT * DURATION << "' height='"
             << TASK_HEIGHT_MAX << "'>"
+            << "<title>"
+            << "start: " << evt.start << NEWLINE << "stop: " << evt.start + DURATION << NEWLINE
+            << "duration: " << DURATION << "</title>"
+            << "</rect>";
+        return out;
+}
+
+auto operator<<(std::ostream& out, const outputs::gantt::proc_mode_idle& evt) -> std::ostream&
+{
+        constexpr double TASK_HEIGHT_MAX{30};
+        const double TASK_OFFSET_Y{static_cast<double>(evt.index - 1) * AXIS_HEIGHT + 33};
+        const double DURATION{evt.stop - evt.start};
+        out << "<rect class='task' x='" << OFFSET_X + TIME_UNIT * evt.start << "' y='"
+            << TASK_OFFSET_Y << "' width='" << TIME_UNIT * DURATION << "' height='"
+            << TASK_HEIGHT_MAX << "' fill='" << outputs::gantt::get_color_hex(5) << "'>"
+            << "<title>"
+            << "start: " << evt.start << NEWLINE << "stop: " << evt.start + DURATION << NEWLINE
+            << "duration: " << DURATION << "</title>"
+            << "</rect>";
+        return out;
+}
+
+auto operator<<(std::ostream& out, const outputs::gantt::proc_mode_running& evt) -> std::ostream&
+{
+        constexpr double TASK_HEIGHT_MAX{30};
+        const double TASK_OFFSET_Y{static_cast<double>(evt.index - 1) * AXIS_HEIGHT + 33};
+        const double DURATION{evt.stop - evt.start};
+        out << "<rect class='task' x='" << OFFSET_X + TIME_UNIT * evt.start << "' y='"
+            << TASK_OFFSET_Y << "' width='" << TIME_UNIT * DURATION << "' height='"
+            << TASK_HEIGHT_MAX << "' fill='" << outputs::gantt::get_color_hex(1) << "'>"
+            << "<title>"
+            << "start: " << evt.start << NEWLINE << "stop: " << evt.start + DURATION << NEWLINE
+            << "duration: " << DURATION << "</title>"
+            << "</rect>";
+        return out;
+}
+
+auto operator<<(std::ostream& out, const outputs::gantt::proc_mode_sleep& evt) -> std::ostream&
+{
+        constexpr double TASK_HEIGHT_MAX{30};
+        const double TASK_OFFSET_Y{static_cast<double>(evt.index - 1) * AXIS_HEIGHT + 33};
+        const double DURATION{evt.stop - evt.start};
+        out << "<rect class='task' x='" << OFFSET_X + TIME_UNIT * evt.start << "' y='"
+            << TASK_OFFSET_Y << "' width='" << TIME_UNIT * DURATION << "' height='"
+            << TASK_HEIGHT_MAX << "' fill='" << outputs::gantt::get_color_hex(2) << "'>"
             << "<title>"
             << "start: " << evt.start << NEWLINE << "stop: " << evt.start + DURATION << NEWLINE
             << "duration: " << DURATION << "</title>"

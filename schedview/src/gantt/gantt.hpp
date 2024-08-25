@@ -2,6 +2,7 @@
 #define GANTT_HPP
 
 #include <array>
+#include <cstddef>
 #include <map>
 #include <protocols/hardware.hpp>
 #include <protocols/traces.hpp>
@@ -66,7 +67,33 @@ struct active_non_cont {
         double stop;
 };
 
-using command = std::variant<arrival, deadline, finished, execution, active_non_cont>;
+struct proc_mode_idle {
+        std::size_t index;
+        double start;
+        double stop;
+};
+
+struct proc_mode_running {
+        std::size_t index;
+        double start;
+        double stop;
+};
+
+struct proc_mode_sleep {
+        std::size_t index;
+        double start;
+        double stop;
+};
+
+using command = std::variant<
+    arrival,
+    deadline,
+    finished,
+    execution,
+    active_non_cont,
+    proc_mode_idle,
+    proc_mode_running,
+    proc_mode_sleep>;
 
 struct gantt {
         std::size_t nb_axis;
@@ -75,6 +102,10 @@ struct gantt {
 };
 
 auto generate_gantt(
+    const std::multimap<double, protocols::traces::trace>& logs,
+    const protocols::hardware::hardware& platform) -> gantt;
+
+auto generate_proc_mode(
     const std::multimap<double, protocols::traces::trace>& logs,
     const protocols::hardware::hardware& platform) -> gantt;
 }; // namespace outputs::gantt

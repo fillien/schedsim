@@ -1,10 +1,12 @@
 #include "gantt.hpp"
+#include <exception>
 #include <iterator>
 #include <ostream>
 #include <protocols/hardware.hpp>
 #include <protocols/traces.hpp>
 
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <iostream>
@@ -227,6 +229,80 @@ auto generate_gantt(
                                 }
 
                                 current_freq = evt.frequency;
+                        },
+                        [](auto) {}},
+                    event);
+        }
+
+        return chart;
+}
+
+void close_proc_mode_zone(
+    std::size_t mode, double start, double stop, std::size_t proc_id, gantt& chart)
+{
+        if (mode == 0) { chart.commands.emplace_back(proc_mode_idle{proc_id, start, stop}); }
+        else if (mode == 1) {
+                chart.commands.emplace_back(proc_mode_running{proc_id, start, stop});
+        }
+        else if (mode == 2) {
+                chart.commands.emplace_back(proc_mode_sleep{proc_id, start, stop});
+        }
+}
+
+auto generate_proc_mode(
+    const std::multimap<double, protocols::traces::trace>& logs,
+    const protocols::hardware::hardware& platform) -> gantt
+{
+        namespace traces = protocols::traces;
+        gantt chart;
+
+        chart.nb_axis = platform.nb_procs;
+        chart.duration = std::ceil(get_last_timestamp(logs));
+
+        // proc_id, pair<mode, timestamp>
+        std::map<std::size_t, std::pair<std::size_t, double>> last_state_times;
+
+        for (const auto& tra : logs) {
+                const double& timestamp = tra.first;
+                const auto& event = tra.second;
+                std::visit(
+                    overloaded{
+                        [&](traces::proc_idled evt) {
+                                if (auto search = last_state_times.find(evt.proc_id);
+                                    search != std::end(last_state_times)) {
+                                        const auto& [mode, last_time] = search->second;
+                                        close_proc_mode_zone(
+                                            mode, last_time, timestamp, evt.proc_id, chart);
+                                        last_state_times.erase(evt.proc_id);
+                                }
+                                last_state_times.insert({evt.proc_id, {0, timestamp}});
+                        },
+                        [&](traces::proc_activated evt) {
+                                if (auto search = last_state_times.find(evt.proc_id);
+                                    search != std::end(last_state_times)) {
+                                        const auto& [mode, last_time] = search->second;
+                                        close_proc_mode_zone(
+                                            mode, last_time, timestamp, evt.proc_id, chart);
+                                        last_state_times.erase(evt.proc_id);
+                                }
+                                last_state_times.insert({evt.proc_id, {1, timestamp}});
+                        },
+                        [&](traces::proc_sleep evt) {
+                                if (auto search = last_state_times.find(evt.proc_id);
+                                    search != std::end(last_state_times)) {
+                                        const auto& [mode, last_time] = search->second;
+                                        close_proc_mode_zone(
+                                            mode, last_time, timestamp, evt.proc_id, chart);
+                                        last_state_times.erase(evt.proc_id);
+                                }
+                                last_state_times.insert({evt.proc_id, {2, timestamp}});
+                        },
+                        [&](traces::sim_finished) {
+                                for (auto const& last_state : last_state_times) {
+                                        const auto& id = last_state.first;
+                                        const auto& [mode, last_time] = last_state.second;
+                                        close_proc_mode_zone(mode, last_time, timestamp, id, chart);
+                                }
                         },
                         [](auto) {}},
                     event);
