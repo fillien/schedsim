@@ -64,6 +64,8 @@ void serialize(std::ostream& out, const protocols::traces::trace& tra)
                 [&out](traces::serv_inactive tra) {
                         color_name(out, "serv_inactive");
                         color_arg(out, "tid", tra.task_id);
+                        out << ", ";
+                        color_arg(out, "utilization", tra.utilization);
                 },
                 [&out](traces::serv_budget_exhausted tra) {
                         color_name(out, "serv_budget_exhausted");
@@ -84,6 +86,8 @@ void serialize(std::ostream& out, const protocols::traces::trace& tra)
                         color_arg(out, "tid", tra.task_id);
                         out << ", ";
                         color_arg(out, "deadline", tra.deadline);
+                        out << ", ";
+                        color_arg(out, "utilization", tra.utilization);
                 },
                 [&out](traces::serv_running tra) {
                         color_name(out, "serv_running");

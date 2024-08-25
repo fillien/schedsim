@@ -24,6 +24,8 @@ target_sources(schedview PRIVATE
   src/stats.cpp
   src/deadline_misses.hpp
   src/deadline_misses.cpp
+  src/system_utilization.hpp
+  src/system_utilization.cpp
 )
 
 target_link_libraries(schedview PRIVATE protocols cxxopts)
