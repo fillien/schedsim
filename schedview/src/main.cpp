@@ -1,6 +1,7 @@
 
 #include "deadline_misses.hpp"
 #include "energy.hpp"
+#include "frequency.hpp"
 #include "gantt/gantt.hpp"
 #include "gantt/rtsched.hpp"
 #include "gantt/svg.hpp"
@@ -33,6 +34,7 @@ auto main(int argc, char* argv[]) -> int
 		("cli", "Print CLI friendly outputs")
                 ("p,print", "Print trace logs")
                 ("e,energy", "Plot power & cumulative energy comsumption")
+                ("f,frequency", "Print frequency changes")
                 ("r,rtsched", "Generate RTSched latex file", cxxopts::value<std::string>())
                 ("procmode", "Generate RTSched latex file", cxxopts::value<std::string>())
                 ("s,svg", "Generate GANTT chart in SVG file")
@@ -90,6 +92,10 @@ auto main(int argc, char* argv[]) -> int
                                 outputs::energy::plot(parsed);
                         }
                 }
+
+                if (cli.count("frequency")) {
+		    outputs::frequency::print_frequency_changes(parsed);
+		}
 
                 if (cli.count("rtsched")) {
                         outputs::gantt::gantt chart{
