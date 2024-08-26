@@ -76,7 +76,7 @@ TEST_F(TraceEventTest, ServBudgetReplenishedJsonTest)
 
 TEST_F(TraceEventTest, ServInactiveJsonTest)
 {
-        serv_inactive original{6};
+        serv_inactive original{6, 0.2};
         auto json = to_json(original);
         auto converted = std::get<serv_inactive>(from_json(json));
         EXPECT_EQ(converted.task_id, original.task_id);
@@ -109,7 +109,7 @@ TEST_F(TraceEventTest, ServPostponeJsonTest)
 
 TEST_F(TraceEventTest, ServReadyJsonTest)
 {
-        serv_ready original{10, 70.0};
+        serv_ready original{10, 70.0, 0.2};
         auto json = to_json(original);
         auto converted = std::get<serv_ready>(from_json(json));
         EXPECT_EQ(converted.task_id, original.task_id);
