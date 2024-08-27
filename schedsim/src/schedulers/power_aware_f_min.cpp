@@ -20,8 +20,8 @@ void pa_f_min::update_platform()
 {
         double next_active_procs{0};
 
-        const double total_util{0};
-        const double max_util{0};
+        const double total_util{get_active_bandwidth()};
+        const double max_util{get_max_utilization(servers)};
         const double max_nb_procs{static_cast<double>(sim()->chip()->processors.size())};
         const auto freq_eff{sim()->chip()->freq_eff()};
         const auto freq_max{sim()->chip()->freq_max()};

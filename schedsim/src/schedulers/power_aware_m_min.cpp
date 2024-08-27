@@ -20,13 +20,14 @@ void pa_m_min::update_platform()
 {
         double next_active_procs{0};
 
-        const double total_util{0};
-        const double max_util{0};
+        const double total_util{get_active_bandwidth()};
+        const double max_util{get_max_utilization(servers)};
         const double max_nb_procs{static_cast<double>(sim()->chip()->processors.size())};
         const auto freq_eff{sim()->chip()->freq_eff()};
         const auto freq_max{sim()->chip()->freq_max()};
 
         const auto m_min{clamp(std::ceil((total_util - max_util) / (1 - max_util)))};
+
         const auto freq_min{compute_freq_min(freq_max, total_util, max_util, m_min)};
 
         if (freq_min < freq_eff) {

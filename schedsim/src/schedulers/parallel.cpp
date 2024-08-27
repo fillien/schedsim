@@ -11,7 +11,6 @@
 #include <iterator>
 #include <memory>
 #include <ranges>
-#include <stdexcept>
 #include <vector>
 
 #ifdef TRACY_ENABLE
@@ -46,11 +45,8 @@ auto sched_parallel::processor_order(const processor& first, const processor& se
         ZoneScoped;
 #endif
 
-        if (!first.has_server_running()) { return false; }
-        if (!second.has_server_running()) {
-                if (second.get_state() == sleep) { return false; }
-                return true;
-        }
+        if (!first.has_server_running()) { return (first.get_state() == idle); }
+        if (!second.has_server_running()) { return (second.get_state() == sleep); }
         return deadline_order(*(first.get_server()), *(second.get_server()));
 }
 
@@ -134,12 +130,17 @@ void sched_parallel::on_resched()
         // Keep active procs and put to sleep others
         std::vector<std::shared_ptr<processor>> copy_chip = sim()->chip()->processors;
         std::sort(copy_chip.begin(), copy_chip.end(), from_shared<processor>(processor_order));
-        auto cow = copy_chip | std::views::drop(get_nb_active_procs());
+        auto middle = copy_chip.begin();
+        std::advance(middle, get_nb_active_procs());
 
-        // Remove the task that were running on procs that have been put to sleep
-        for (const auto& cop_proc : cow) {
-                remove_task_from_cpu(cop_proc);
-                cop_proc->change_state(sleep);
+        auto it = copy_chip.begin();
+        for (it; it != middle; ++it) {
+                if ((*it)->get_state() == sleep) { (*it)->change_state(idle); }
+        }
+
+        for (it; it != copy_chip.end(); ++it) {
+                remove_task_from_cpu((*it));
+                (*it)->change_state(sleep);
         }
 
         // Place task using global EDF
@@ -156,7 +157,7 @@ void sched_parallel::on_resched()
                 auto highest_priority_server =
                     min(ready_servers, from_shared<server>(deadline_order));
                 auto leastest_priority_processor =
-                    max(sim()->chip()->processors, from_shared<processor>(processor_order));
+                    min(sim()->chip()->processors, from_shared<processor>(processor_order));
 
                 if (!leastest_priority_processor->has_server_running() ||
                     deadline_order(
