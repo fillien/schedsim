@@ -6,6 +6,9 @@ set title "Active Utilization change over time"
 set xlabel "Time"
 set ylabel "Active Utilization"
 set grid
+set offsets graph 0, 0, 1, 0
+show offsets
+
 
 set datafile separator whitespace
 stats filename using 0 nooutput
