@@ -17,3 +17,10 @@
 /test.aux
 /mydessin.tex
 /result
+
+/*.tex
+/*.pdf
+/*.eps
+/*.aux
+/*.log
+/*.dat
