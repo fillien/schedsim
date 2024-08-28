@@ -36,12 +36,11 @@ auto main(int argc, char* argv[]) -> int
                 ("p,print", "Print trace logs")
                 ("e,energy", "Plot power & cumulative energy comsumption")
                 ("f,frequency", "Print frequency changes")
-                ("r,rtsched", "Generate RTSched latex file", cxxopts::value<std::string>())
-                ("procmode", "Generate RTSched latex file", cxxopts::value<std::string>())
+                ("r,rtsched", "Generate RTSched latex file")
+                ("procmode", "Generate RTSched latex file")
                 ("s,svg", "Generate GANTT chart in SVG file")
                 ("html", "Generate GANTT chart in HTML file")
-                ("u,utilizations", "Print per core utilization")
-                ("ua", "Print active utilization")
+                ("au", "Print active utilization")
                 ("preemptions", "Print number of preemption")
                 ("waiting", "Print average waiting time")
                 ("deadlines-rates", "Print deadline missed rates", cxxopts::value<std::size_t>()->implicit_value("0"))
@@ -123,9 +122,7 @@ auto main(int argc, char* argv[]) -> int
                         std::cout << outputs::gantt::html::draw(gen_gantt);
                 }
 
-                if (cli.count("utilizations")) { outputs::stats::print_utilizations(parsed); }
-
-                if (cli.count("ua")) { outputs::sys_util::print_active_utilization(parsed); }
+                if (cli.count("au")) { outputs::sys_util::print_active_utilization(parsed); }
 
                 if (cli.count("preemptions")) { outputs::stats::print_nb_preemption(parsed); }
 

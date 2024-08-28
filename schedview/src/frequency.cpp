@@ -18,6 +18,8 @@ void outputs::frequency::print_frequency_changes(
 
         double last_freq{0};
 
+        std::cout << "timestamp freq\n";
+
         for (const auto& [timestamp, tra] : input) {
                 std::visit(
                     overloaded{

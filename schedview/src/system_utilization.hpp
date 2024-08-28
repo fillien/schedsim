@@ -1,5 +1,5 @@
-#ifndef SYS_UTIL_HPP
-#define SYS_UTIL_HPP
+#ifndef ACTIVE_UTIL_HPP
+#define ACTIVE_UTIL_HPP
 
 #include <map>
 #include <protocols/traces.hpp>
