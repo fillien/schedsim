@@ -76,7 +76,7 @@ auto main(const int argc, const char** argv) -> int
 {
         using namespace std;
 
-        const bool FREESCALING_ALLOWED{true};
+        const bool FREESCALING_ALLOWED{false};
 
         try {
                 auto config = parse_args(argc, argv);

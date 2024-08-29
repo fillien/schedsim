@@ -46,7 +46,6 @@ def main():
     results.to_csv("data.csv", index=False, sep=" ")
     # subprocess.run(["gnuplot", "./script/plot.gp"])
 
-
 def generate_tasksets(datadir, nb_taskset, nb_task, nb_jobs):
     if os.path.exists(datadir):
         shutil.rmtree(datadir)
