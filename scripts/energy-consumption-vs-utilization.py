@@ -21,10 +21,11 @@ def main():
 
     # Create a directory to store taskset
     datadir = f"data_{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
+    datadir = "data_2024-08-29-13-53-00"
 
     sys.stdout.write("Generate tasksets...")
     sys.stdout.flush()
-    generate_tasksets(datadir, nb_taskset=15, nb_task=10, nb_jobs=100)
+    #generate_tasksets(datadir, nb_taskset=15, nb_task=10, nb_jobs=100)
     print("OK")
 
     results = pd.DataFrame()
@@ -93,8 +94,13 @@ def run_scenario(schedsim, schedview, current_dir, scenario, sched_policy, datad
         [schedview, logs_path, "--cli", "--energy"],
         capture_output=True,
         text=True,
-    )
-    return float(result.stdout.strip())
+    ).stdout.strip()
+    duration = subprocess.run(
+        [schedview, logs_path, "--cli", "--duration"],
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    return float(result)/float(duration)
 
 def simulate(datadir, sched_policy):
     utilization_results = []
