@@ -143,4 +143,19 @@ void print_average_waiting_time(const std::multimap<double, protocols::traces::t
         std::cout << "Average Waiting Time: " << average_waiting_time << "\n";
 }
 
+void print_duration(const std::multimap<double, protocols::traces::trace>& input)
+{
+        for (const auto& tra : input) {
+                const auto& timestamp = tra.first;
+                const auto& event = tra.second;
+                std::visit(
+                    overloaded{
+                        [&](protocols::traces::sim_finished event) {
+                                std::cout << timestamp << std::endl;
+                        },
+                        [](auto) {}},
+                    event);
+        }
+}
+
 } // namespace outputs::stats

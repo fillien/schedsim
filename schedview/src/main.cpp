@@ -41,6 +41,7 @@ auto main(int argc, char* argv[]) -> int
                 ("s,svg", "Generate GANTT chart in SVG file")
                 ("html", "Generate GANTT chart in HTML file")
                 ("au", "Print active utilization")
+                ("duration", "Print taskset execution duration")
                 ("preemptions", "Print number of preemption")
                 ("waiting", "Print average waiting time")
                 ("deadlines-rates", "Print deadline missed rates", cxxopts::value<std::size_t>()->implicit_value("0"))
@@ -96,30 +97,31 @@ auto main(int argc, char* argv[]) -> int
 
                 if (cli.count("frequency")) { outputs::frequency::print_frequency_changes(parsed); }
 
-                if (cli.count("rtsched")) {
-                        outputs::gantt::gantt chart{
-                            outputs::gantt::generate_gantt(parsed, hardware)};
-                        std::filesystem::path output_file(cli["rtsched"].as<std::string>());
-                        std::ofstream fd(output_file);
-                        fd << outputs::gantt::rtsched::draw(chart);
-                }
+                if (cli.count("duration")) { outputs::stats::print_duration(parsed); }
 
-                if (cli.count("procmode")) {
-                        outputs::gantt::gantt chart{
-                            outputs::gantt::generate_proc_mode(parsed, hardware)};
-                        std::cout << outputs::gantt::svg::draw(chart);
-                }
+                {
+                        using namespace outputs::gantt;
+                        if (cli.count("rtsched")) {
+                                gantt chart{generate_gantt(parsed, hardware)};
+                                std::filesystem::path output_file(cli["rtsched"].as<std::string>());
+                                std::ofstream fd(output_file);
+                                fd << rtsched::draw(chart);
+                        }
 
-                if (cli.count("svg")) {
-                        const outputs::gantt::gantt gen_gantt =
-                            outputs::gantt::generate_gantt(parsed, hardware);
-                        std::cout << outputs::gantt::svg::draw(gen_gantt);
-                }
+                        if (cli.count("procmode")) {
+                                gantt chart{generate_proc_mode(parsed, hardware)};
+                                std::cout << svg::draw(chart);
+                        }
 
-                if (cli.count("html")) {
-                        const outputs::gantt::gantt gen_gantt =
-                            outputs::gantt::generate_gantt(parsed, hardware);
-                        std::cout << outputs::gantt::html::draw(gen_gantt);
+                        if (cli.count("svg")) {
+                                const gantt gen_gantt = generate_gantt(parsed, hardware);
+                                std::cout << svg::draw(gen_gantt);
+                        }
+
+                        if (cli.count("html")) {
+                                const gantt gen_gantt = generate_gantt(parsed, hardware);
+                                std::cout << html::draw(gen_gantt);
+                        }
                 }
 
                 if (cli.count("au")) { outputs::sys_util::print_active_utilization(parsed); }
