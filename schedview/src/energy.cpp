@@ -96,14 +96,6 @@ void outputs::energy::plot(const std::multimap<double, protocols::traces::trace>
 {
         const auto power_consumption = parse_power_consumption(input);
 
-        std::vector<double> power_timestamps;
-        std::vector<double> power_measures;
-
-        for (const auto& point : power_consumption) {
-                power_timestamps.push_back(point.first);
-                power_measures.push_back(point.second);
-        }
-
         std::vector<double> energy_timestamps;
         std::vector<double> energy_measures;
 
@@ -134,14 +126,6 @@ void outputs::energy::print_energy_consumption(
     const std::multimap<double, protocols::traces::trace>& input)
 {
         const auto power_consumption = parse_power_consumption(input);
-
-        std::vector<double> power_timestamps;
-        std::vector<double> power_measures;
-
-        for (const auto& point : power_consumption) {
-                power_timestamps.push_back(point.first);
-                power_measures.push_back(point.second);
-        }
 
         std::vector<double> energy_timestamps;
         std::vector<double> energy_measures;
