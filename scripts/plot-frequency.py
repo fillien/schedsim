@@ -6,64 +6,75 @@ import os
 import sys
 import io
 
-SCHEDSIM = "./build/schedsim/schedsim"
 SCHEDVIEW = "./build/schedview/schedview"
 
+
 def main():
-    if len(sys.argv) < 3:
+    if len(sys.argv) == 2:
+        results = onefile(sys.argv[1])
+
+    elif len(sys.argv) == 4:
+        results = multiplefile(sys.argv[1], sys.argv[2], sys.argv[3])
+
+    else:
         usage()
         sys.exit(1)
 
-    # Check that the scenario is a valid file
-    if not os.path.isfile(sys.argv[2]):
-        sys.stdout.write("error: " + sys.argv[2] + " is not valid filepath\n")
-        sys.stdout.flush()
-
-    policies = sys.argv[1].split(',')
-    
-    results = pd.DataFrame()
-    first = True
-
-    for policy in policies:
-        if first:
-            results = run_scenario(SCHEDSIM, SCHEDVIEW, policy, sys.argv[2])
-            first = False
-        else:
-            results_simu = run_scenario(SCHEDSIM, SCHEDVIEW, policy, sys.argv[2])
-            results = merge(results, results_simu)
-    
-    results = results.drop_duplicates(ignore_index=True).ffill()
     results.to_csv("frequency.dat", index=False, sep=" ")
+    call_gnuplot()
 
-def usage():
-    sys.stdout.write("Usage: " + sys.argv[0] + ": <policies> <scenario>\n")
-    sys.stdout.flush()
 
-def run_scenario(schedsim, schedview, sched_policy, scenario):
-    logs_path = "logs.json"
-    subprocess.run(
-        [
-            schedsim,
-            "-s",
-            scenario,
-            "-p",
-            str(sched_policy),
-            "-o",
-            logs_path,
-        ],
-        check=True,
-    )
+def onefile(log_file):
+    if not os.path.isfile(log_file):
+        sys.stdout.write("error: " + log_file + " is not valid filepath\n")
+        sys.stdout.flush()
+        sys.exit(1)
+
     output = subprocess.run(
-        [schedview, logs_path, "--frequency"],
+        [SCHEDVIEW, log_file, "--frequency"],
         capture_output=True,
         text=True,
     )
-    result = pd.read_csv(io.StringIO(output.stdout.strip()), sep=' ')
-    result.rename(columns={"freq": sched_policy}, inplace=True)
-    return result
+
+    return pd.read_csv(io.StringIO(output.stdout.strip()), sep=" ")
+
+
+def multiplefile(logs, utilisation, scenario):
+    log_paths = {}
+    log_paths["grub"] = f"{logs}_logs_grub/{utilisation}/{scenario}"
+    log_paths["pa"] = f"{logs}_logs_pa/{utilisation}/{scenario}"
+    log_paths["pa_f_min"] = f"{logs}_logs_pa_f_min/{utilisation}/{scenario}"
+    log_paths["pa_m_min"] = f"{logs}_logs_pa_m_min/{utilisation}/{scenario}"
+
+    results = pd.DataFrame()
+    first = True
+    for path in log_paths.items():
+        if first:
+            results = onefile(path[1])
+            results.rename(columns={"freq": path[0]}, inplace=True)
+            first = False
+        else:
+            result = onefile(path[1])
+            result.rename(columns={"freq": path[0]}, inplace=True)
+            results = merge(results, result)
+
+        results = results.drop_duplicates(ignore_index=True).ffill()
+
+    return results
+
 
 def merge(df1, df2):
-    return pd.merge(df1, df2, on='timestamp', how='outer')
+    return pd.merge(df1, df2, on="timestamp", how="outer")
+
+
+def call_gnuplot():
+    output = subprocess.run(["gnuplot", "scripts/plot-frequency.gp"])
+
+
+def usage():
+    sys.stdout.write("Usage: " + sys.argv[0] + ": <scenario>\n")
+    sys.stdout.flush()
+
 
 if __name__ == "__main__":
     main()
