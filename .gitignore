@@ -18,9 +18,12 @@
 /mydessin.tex
 /result
 
+/*.png
 /*.tex
 /*.pdf
 /*.eps
 /*.aux
 /*.log
 /*.dat
+/*.svg
+/*.csv
