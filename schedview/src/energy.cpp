@@ -11,6 +11,7 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#include <cassert>
 
 #include <filesystem>
 
@@ -19,28 +20,6 @@ template <class... Ts> struct overloaded : Ts... {
 };
 
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
-
-auto plot_energy(const std::vector<std::pair<double, double>>& measures)
-    -> std::pair<std::vector<double>, std::vector<double>>
-{
-        double last_timestamp{0};
-        double cumulative_energy{0};
-
-        std::vector<double> energy_timestamps;
-        std::vector<double> energy_measures;
-
-        for (const auto& [timestamp, value] : measures) {
-                if (timestamp > last_timestamp) {
-                        double delta{timestamp - last_timestamp};
-                        energy_timestamps.push_back(timestamp);
-                        cumulative_energy += delta * value;
-                        energy_measures.push_back(cumulative_energy);
-                        last_timestamp = timestamp;
-                }
-        }
-        return std::pair<std::vector<double>, std::vector<double>>{
-            energy_timestamps, energy_timestamps};
-}
 
 auto parse_power_consumption(const std::multimap<double, protocols::traces::trace>& input)
     -> std::vector<std::pair<double, double>>
@@ -53,9 +32,15 @@ auto parse_power_consumption(const std::multimap<double, protocols::traces::trac
         double current_power{0};
         double last_timestamp{0};
 
+        bool first {true};
+
         for (const auto& [timestamp, tra] : input) {
+                assert(timestamp >= last_timestamp);
                 if (timestamp > last_timestamp) {
-                        power_consumption.push_back({last_timestamp, current_power});
+                        if (!first) {
+                            first = false;
+                            power_consumption.push_back({last_timestamp, current_power});
+                        }
                         current_power = energy::compute_power(current_freq) *
                                         static_cast<double>(current_active_cores);
                         power_consumption.push_back({last_timestamp, current_power});
@@ -85,6 +70,13 @@ auto parse_power_consumption(const std::multimap<double, protocols::traces::trac
                         [&](protocols::traces::frequency_update evt) {
                                 current_freq = evt.frequency;
                         },
+                        [&](protocols::traces::sim_finished) {
+                            power_consumption.push_back({last_timestamp, current_power});
+                            current_power = energy::compute_power(current_freq) *
+                                static_cast<double>(current_active_cores);
+                            power_consumption.push_back({last_timestamp, current_power});
+                            last_timestamp = timestamp;
+                        },
                         [](auto) {}},
                     tra);
         }
@@ -103,6 +95,7 @@ void outputs::energy::plot(const std::multimap<double, protocols::traces::trace>
         double cumulative_energy{0};
 
         for (const auto& [timestamp, value] : power_consumption) {
+                std::cout << timestamp << std::endl;
                 if (timestamp > last_timestamp) {
                         const double delta{timestamp - last_timestamp};
                         energy_timestamps.push_back(timestamp);
@@ -112,7 +105,8 @@ void outputs::energy::plot(const std::multimap<double, protocols::traces::trace>
                 }
         }
 
-        const std::filesystem::path& file{""};
+        const std::filesystem::path& file{"power.csv"};
+
         std::ofstream out(file);
         if (!out) { throw std::runtime_error("Unable to open file: " + file.string()); }
         out << "time power\n";
