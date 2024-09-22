@@ -26,7 +26,7 @@ def main():
         shutil.rmtree(datadir)
     os.mkdir(datadir)
 
-    for i in range(1, 61):
+    for i in range(1, 41):
         utilization = i / 10.0
         name = str(utilization).replace(".", "_")
         current_sce = os.path.join(datadir, f"util_{name}")

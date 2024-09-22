@@ -43,6 +43,7 @@ auto main(int argc, char* argv[]) -> int
                 ("au", "Print active utilization")
                 ("duration", "Print taskset execution duration")
                 ("preemptions", "Print number of preemption")
+                ("contextswitch", "Print number of context switch")
                 ("waiting", "Print average waiting time")
                 ("deadlines-rates", "Print deadline missed rates", cxxopts::value<std::size_t>()->implicit_value("0"))
                 ("deadlines-counts", "Print deadline missed counts", cxxopts::value<std::size_t>()->implicit_value("0"))
@@ -127,6 +128,8 @@ auto main(int argc, char* argv[]) -> int
                 if (cli.count("au")) { outputs::sys_util::print_active_utilization(parsed); }
 
                 if (cli.count("preemptions")) { outputs::stats::print_nb_preemption(parsed); }
+
+                if (cli.count("contextswitch")) { outputs::stats::print_nb_contextswitch(parsed); }
 
                 if (cli.count("waiting")) { outputs::stats::print_average_waiting_time(parsed); }
 

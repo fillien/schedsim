@@ -103,13 +103,26 @@ void print_utilizations(const std::multimap<double, protocols::traces::trace>& i
 void print_nb_preemption(const std::multimap<double, protocols::traces::trace>& input)
 {
         namespace traces = protocols::traces;
-        std::size_t nb_preemptions{0};
+        std::size_t cpt_preemptions{0};
 
         for (const auto& [_, event] : input) {
-                if (std::holds_alternative<traces::task_preempted>(event)) { nb_preemptions++; }
+                if (std::holds_alternative<traces::task_preempted>(event)) { cpt_preemptions++; }
         }
 
-        std::cout << "Preemption count: " << nb_preemptions << "\n";
+        std::cout << cpt_preemptions << std::endl;
+}
+
+void print_nb_contextswitch(const std::multimap<double, protocols::traces::trace>& input)
+{
+        namespace traces = protocols::traces;
+        std::size_t cpt_contextswitch{0};
+
+        for (const auto& [_, event] : input) {
+                if (std::holds_alternative<traces::task_preempted>(event)) { cpt_contextswitch++; }
+                if (std::holds_alternative<traces::job_finished>(event)) { cpt_contextswitch++; }
+        }
+
+        std::cout << cpt_contextswitch << std::endl;
 }
 
 void print_average_waiting_time(const std::multimap<double, protocols::traces::trace>& input)
@@ -157,5 +170,6 @@ void print_duration(const std::multimap<double, protocols::traces::trace>& input
                     event);
         }
 }
+
 
 } // namespace outputs::stats

@@ -7,6 +7,7 @@
 namespace outputs::stats {
 void print_utilizations(const std::multimap<double, protocols::traces::trace>& input);
 void print_nb_preemption(const std::multimap<double, protocols::traces::trace>& input);
+void print_nb_contextswitch(const std::multimap<double, protocols::traces::trace>& input);
 void print_average_waiting_time(const std::multimap<double, protocols::traces::trace>& input);
 void print_duration(const std::multimap<double, protocols::traces::trace>& input);
 } // namespace outputs::stats

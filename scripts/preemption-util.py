@@ -36,8 +36,8 @@ def main():
             results_simu = simulate(path[1], path[0])
             results = merge(results, results_simu)
 
-    results.to_csv("data-energy.csv", index=False, sep=" ")
-    subprocess.run(["gnuplot", "./scripts/plot.gp"])
+    results.to_csv("data-preempt.csv", index=False, sep=" ")
+    # subprocess.run(["gnuplot", "./scripts/plot.gp"])
 
 
 def simulate(logsdir, sched_policy):
@@ -95,12 +95,9 @@ def simulate(logsdir, sched_policy):
 
 def run_scenario(schedview, log_path):
     energy = subprocess.run(
-        [schedview, log_path, "--cli", "--energy"], capture_output=True, text=True
+        [schedview, log_path, "--cli", "--preemptions"], capture_output=True, text=True
     ).stdout.strip()
-    duration = subprocess.run(
-        [schedview, log_path, "--cli", "--duration"], capture_output=True, text=True
-    ).stdout.strip()
-    return float(energy) / float(duration)
+    return float(energy)
 
 
 def merge(df1, df2):
