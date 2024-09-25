@@ -1,7 +1,8 @@
 filename = "active_utilization.dat"
 
-set terminal epslatex standalone color colortext 10
-set output "active_utilization.tex"
+# set terminal epslatex standalone color colortext 10
+set terminal png
+set output "active_utilization.png"
 set title "Active Utilization change over time"
 set xlabel "Time"
 set ylabel "Active Utilization"

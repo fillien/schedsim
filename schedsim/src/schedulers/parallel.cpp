@@ -103,11 +103,9 @@ auto sched_parallel::admission_test(const task& new_task) const -> bool
 
 void sched_parallel::remove_task_from_cpu(const std::shared_ptr<processor>& proc)
 {
-        using protocols::traces::task_preempted;
         if (proc->has_server_running()) {
                 cancel_alarms(*(proc->get_server()));
 
-                sim()->add_trace(task_preempted{proc->get_server()->get_task()->id});
                 proc->get_server()->change_state(server::state::ready);
                 proc->clear_server();
         }

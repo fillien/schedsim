@@ -1,14 +1,16 @@
 # Set the output file format and name
 set terminal png enhanced font 'source sans 3,10'
 set output 'energy_util.png'
-#set terminal epslatex standalone color colortext 10
+#set terminal cairolatex eps colortext color transparent size 3.45,2.3
 #set output 'energy_util.tex'
 
 # Set the title and labels for the axes
-set title "Energy Consumption by duration vs. Utilization"
 set xlabel "Utilization"
-set ylabel "Total Energy Consumption divided by duration"
+set ylabel "Power Consumption [W]"
 set grid
+set key box
+set key outside top center
+set key horizontal
 
 set style fill transparent solid 0.25
 set style fill noborder

@@ -4,6 +4,7 @@
 #include <fstream>
 #include <protocols/traces.hpp>
 
+#include <cassert>
 #include <iostream>
 #include <map>
 #include <set>
@@ -11,7 +12,6 @@
 #include <utility>
 #include <variant>
 #include <vector>
-#include <cassert>
 
 #include <filesystem>
 
@@ -32,14 +32,14 @@ auto parse_power_consumption(const std::multimap<double, protocols::traces::trac
         double current_power{0};
         double last_timestamp{0};
 
-        bool first {true};
+        bool first{true};
 
         for (const auto& [timestamp, tra] : input) {
                 assert(timestamp >= last_timestamp);
                 if (timestamp > last_timestamp) {
                         if (!first) {
-                            first = false;
-                            power_consumption.push_back({last_timestamp, current_power});
+                                first = false;
+                                power_consumption.push_back({last_timestamp, current_power});
                         }
                         current_power = energy::compute_power(current_freq) *
                                         static_cast<double>(current_active_cores);
@@ -71,11 +71,11 @@ auto parse_power_consumption(const std::multimap<double, protocols::traces::trac
                                 current_freq = evt.frequency;
                         },
                         [&](protocols::traces::sim_finished) {
-                            power_consumption.push_back({last_timestamp, current_power});
-                            current_power = energy::compute_power(current_freq) *
-                                static_cast<double>(current_active_cores);
-                            power_consumption.push_back({last_timestamp, current_power});
-                            last_timestamp = timestamp;
+                                power_consumption.push_back({last_timestamp, current_power});
+                                current_power = energy::compute_power(current_freq) *
+                                                static_cast<double>(current_active_cores);
+                                power_consumption.push_back({last_timestamp, current_power});
+                                last_timestamp = timestamp;
                         },
                         [](auto) {}},
                     tra);

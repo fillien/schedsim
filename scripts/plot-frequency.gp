@@ -1,7 +1,7 @@
 filename = "frequency.dat"
 
-set terminal epslatex standalone color colortext 10
-set output "frequency.tex"
+set terminal png 
+set output "frequency.png"
 set title "Frequency change over time"
 set xlabel "Time"
 set ylabel "Frequency"
