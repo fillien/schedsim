@@ -12,14 +12,22 @@
 #include <typeinfo>
 #include <vector>
 
+#include <nlohmann/json.hpp>
+
+#include <fstream>
+
 namespace fs = std::filesystem;
 
 struct taskset_config {
         fs::path output_filepath{"scenario.json"};
         std::size_t nb_tasks{0};
-        std::size_t nb_jobs{0};
         double total_utilization{1};
         double success_rate{1};
+};
+
+struct convert_config {
+        fs::path file_to_convert{"taskset.txt"};
+        fs::path output_filepath{"scenario.json"};
 };
 
 struct platform_config {
@@ -38,7 +46,6 @@ auto parse_args_taskset(const int argc, const char** argv) -> taskset_config
         options.add_options()
                 ("h,help", "Helper")
                 ("t,tasks", "Number of tasks to generate", cxxopts::value<int>())
-                ("j,jobs", "Number of jobs", cxxopts::value<int>())
                 ("u,totalu", "Total utilization of the taskset", cxxopts::value<double>())
                 ("s,success", "Rate of deadlines met (0..1)", cxxopts::value<double>())
                 ("o,output", "Output file to write the scenario", cxxopts::value<std::string>());
@@ -51,9 +58,32 @@ auto parse_args_taskset(const int argc, const char** argv) -> taskset_config
         }
 
         config.nb_tasks = cli["tasks"].as<int>();
-        config.nb_jobs = cli["jobs"].as<int>();
         config.total_utilization = cli["totalu"].as<double>();
         config.success_rate = cli["success"].as<double>();
+        if (cli.count("output")) { config.output_filepath = cli["output"].as<std::string>(); }
+
+        return config;
+}
+
+auto parse_args_convert(const int argc, const char** argv) -> convert_config
+{
+        convert_config config;
+
+        // clang-format off
+        cxxopts::Options options("schedgen taskset", "Generate task for monocore and multicore systems");
+        options.add_options()
+                ("h,help", "Helper")
+                ("i,input", "The taskset to convert", cxxopts::value<std::string>())
+                ("o,output", "Output file to write the scenario", cxxopts::value<std::string>());
+        // clang-format on
+        const auto cli = options.parse(argc, argv);
+
+        if (cli.count("help") || cli.arguments().empty()) {
+                std::cout << options.help() << std::endl;
+                exit(cli.arguments().empty() ? EXIT_FAILURE : EXIT_SUCCESS);
+        }
+
+        if (cli.count("input")) { config.file_to_convert = cli["input"].as<std::string>(); }
         if (cli.count("output")) { config.output_filepath = cli["output"].as<std::string>(); }
 
         return config;
@@ -87,6 +117,82 @@ auto parse_args_platform(const int argc, const char** argv) -> platform_config
         return config;
 }
 
+std::vector<std::string> splitByLine(const std::string& str)
+{
+        std::vector<std::string> lines;
+        std::istringstream stream(str);
+        std::string line;
+
+        // Use std::getline to split by newline characters
+        while (std::getline(stream, line)) {
+                lines.push_back(line);
+        }
+
+        return lines;
+}
+
+std::vector<std::string> splitBySpace(const std::string& str)
+{
+        std::vector<std::string> words;
+        std::istringstream stream(str);
+        std::string word;
+
+        // Use the >> operator to split by spaces
+        while (stream >> word) {
+                words.push_back(word);
+        }
+
+        return words;
+}
+
+auto gen_jobs(protocols::scenario::task& new_task, const double& duration) -> void
+{
+        const double WALL_TIME{5000};
+        double time{0};
+
+        while (time <= WALL_TIME) {
+                new_task.jobs.push_back({.arrival = time, .duration = duration});
+                time += new_task.period;
+        }
+}
+
+auto convert(const convert_config& config) -> protocols::scenario::setting
+{
+        using namespace protocols::scenario;
+
+        std::ifstream input_file(config.file_to_convert);
+        if (!input_file) {
+                throw std::runtime_error("Failed to open file: " + config.file_to_convert.string());
+        }
+
+        const std::string input(
+            (std::istreambuf_iterator<char>(input_file)), std::istreambuf_iterator<char>());
+        input_file.close();
+
+        const auto lines = splitByLine(input);
+
+        protocols::scenario::setting sce;
+
+        std::size_t cpt_id{1};
+
+        for (const auto& line : lines) {
+                const auto words{splitBySpace(line)};
+                double utilization{std::stod(words.at(1))};
+                double wcet{std::stod(words.at(2))};
+                double period{std::stod(words.at(3))};
+                task t{
+                    .id = cpt_id,
+                    .utilization = utilization,
+                    .period = period,
+                    .jobs = std::vector<job>{}};
+                gen_jobs(t, wcet);
+                sce.tasks.push_back(t);
+                cpt_id++;
+        }
+
+        return sce;
+}
+
 auto main(const int argc, const char** argv) -> int
 {
         constexpr auto helper{
@@ -101,20 +207,22 @@ auto main(const int argc, const char** argv) -> int
 
                 std::string command{argv[1]};
                 if (command == "taskset") {
-                        auto config = parse_args_taskset(argc - 1, argv + 1);
-                        auto taskset = generate_taskset(
-                            config.nb_tasks,
-                            config.nb_jobs,
-                            config.total_utilization,
-                            config.success_rate);
+                        const auto config = parse_args_taskset(argc - 1, argv + 1);
+                        const auto taskset = generate_taskset(
+                            config.nb_tasks, config.total_utilization, config.success_rate);
                         // Write the scenario to output file
                         protocols::scenario::write_file(config.output_filepath, taskset);
                 }
                 else if (command == "platform") {
-                        auto config = parse_args_platform(argc - 1, argv + 1);
+                        const auto config = parse_args_platform(argc - 1, argv + 1);
                         protocols::hardware::write_file(
                             config.output_filepath,
                             {config.nb_procs, config.frequencies, config.effective_freq});
+                }
+                else if (command == "convert") {
+                        const auto config{parse_args_convert(argc - 1, argv + 1)};
+                        const auto taskset{convert(config)};
+                        protocols::scenario::write_file(config.output_filepath, taskset);
                 }
                 else {
                         std::cerr << helper << std::endl;

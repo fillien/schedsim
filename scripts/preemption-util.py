@@ -37,7 +37,7 @@ def main():
             results = merge(results, results_simu)
 
     results.to_csv("data-preempt.csv", index=False, sep=" ")
-    # subprocess.run(["gnuplot", "./scripts/plot.gp"])
+    subprocess.run(["gnuplot", "./scripts/plot-preemptions.gp"])
 
 
 def simulate(logsdir, sched_policy):

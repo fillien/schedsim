@@ -95,12 +95,12 @@ def simulate(logsdir, sched_policy):
 
 def run_scenario(schedview, log_path):
     energy = subprocess.run(
-        [schedview, log_path, "--cli", "--energy"], capture_output=True, text=True
-    ).stdout.strip()
+        [schedview, log_path, "--cli", "--energy"], capture_output=True, text=True, check=True
+    )
     duration = subprocess.run(
-        [schedview, log_path, "--cli", "--duration"], capture_output=True, text=True
-    ).stdout.strip()
-    return float(energy) / float(duration)
+        [schedview, log_path, "--cli", "--duration"], capture_output=True, text=True, check=True
+    )
+    return float(energy.stdout.strip()) / float(duration.stdout.strip())
 
 
 def merge(df1, df2):

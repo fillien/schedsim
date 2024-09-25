@@ -171,7 +171,7 @@ void print_duration(const std::multimap<double, protocols::traces::trace>& input
         }
 }
 
- void print_rejected(const std::multimap<double, protocols::traces::trace>& input)
+void print_rejected(const std::multimap<double, protocols::traces::trace>& input)
 {
         namespace traces = protocols::traces;
         std::size_t cpt{0};
@@ -182,7 +182,5 @@ void print_duration(const std::multimap<double, protocols::traces::trace>& input
 
         std::cout << cpt << std::endl;
 }
-
-
 
 } // namespace outputs::stats
