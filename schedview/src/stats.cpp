@@ -5,6 +5,7 @@
 #include <iterator>
 #include <map>
 #include <protocols/traces.hpp>
+#include <set>
 #include <variant>
 
 template <class... Ts> struct overloaded : Ts... {
@@ -180,6 +181,38 @@ void print_rejected(const std::multimap<double, protocols::traces::trace>& input
                 if (std::holds_alternative<traces::task_rejected>(event)) { cpt++; }
         }
 
+        std::cout << cpt << std::endl;
+}
+
+void print_core_state_request_count(const std::multimap<double, protocols::traces::trace>& input)
+{
+        std::set<std::size_t> active_cores;
+        int cpt{0};
+
+        for (const auto& [timestamp, tra] : input) {
+                std::visit(
+                    overloaded{
+                        [&](protocols::traces::proc_activated evt) {
+                                if (!active_cores.contains(evt.proc_id)) {
+                                        active_cores.insert(evt.proc_id);
+                                        cpt++;
+                                }
+                        },
+                        [&](protocols::traces::proc_idled evt) {
+                                if (!active_cores.contains(evt.proc_id)) {
+                                        active_cores.insert(evt.proc_id);
+                                        cpt++;
+                                }
+                        },
+                        [&](protocols::traces::proc_sleep evt) {
+                                if (active_cores.contains(evt.proc_id)) {
+                                        active_cores.erase(evt.proc_id);
+                                        cpt++;
+                                }
+                        },
+                        [](auto) {}},
+                    tra);
+        }
         std::cout << cpt << std::endl;
 }
 

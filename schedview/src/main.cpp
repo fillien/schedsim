@@ -46,6 +46,7 @@ auto main(int argc, char* argv[]) -> int
                 ("contextswitch", "Print number of context switch")
                 ("rejected", "Print number of rejected task")
                 ("waiting", "Print average waiting time")
+                ("dpm-request", "Print the number of requests to change the cores C-state")
                 ("deadlines-rates", "Print deadline missed rates", cxxopts::value<std::size_t>()->implicit_value("0"))
                 ("deadlines-counts", "Print deadline missed counts", cxxopts::value<std::size_t>()->implicit_value("0"))
                 ("platform", "Hardware description source file", cxxopts::value<std::string>()->default_value("platform.json"))
@@ -156,6 +157,10 @@ auto main(int argc, char* argv[]) -> int
                         else {
                                 outputs::stats::print_deadline_missed_count(deadlines);
                         }
+                }
+
+                if (cli.count("dpm-request")) {
+                        outputs::stats::print_core_state_request_count(parsed);
                 }
         }
         catch (cxxopts::exceptions::parsing& e) {
