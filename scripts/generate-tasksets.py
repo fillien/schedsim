@@ -11,12 +11,16 @@ SCHEDGEN = "./build/schedgen/schedgen"
 
 
 def main():
-    if len(sys.argv) <= 2:
-        print("error: " + sys.argv[0] + " <nb_taskset> <nb_task>")
+    if len(sys.argv) <= 4:
+        print(
+            "error: " + sys.argv[0] + " <nb_taskset> <nb_task> <success> <compression>"
+        )
         return
 
     nb_taskset = int(sys.argv[1])
     nb_task = int(sys.argv[2])
+    success_rate = float(sys.argv[3])
+    compression_rate = float(sys.argv[4])
 
     # Create a directory to store taskset
     datadir = f"data_{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
@@ -32,18 +36,25 @@ def main():
         os.mkdir(current_sce)
 
         for j in range(1, nb_taskset + 1):
-            result = subprocess.run([
-                SCHEDGEN,
-                "taskset",
-                "-s",
-                "1",
-                "-t",
-                str(nb_task),
-                "-u",
-                str(utilization),
-                "-o",
-                os.path.join(current_sce, f"{j}.json")
-                ], capture_output=True, text=True, check=True)
+            result = subprocess.run(
+                [
+                    SCHEDGEN,
+                    "taskset",
+                    "-s",
+                    str(success_rate),
+                    "-c",
+                    str(compression_rate),
+                    "-t",
+                    str(nb_task),
+                    "-u",
+                    str(utilization),
+                    "-o",
+                    os.path.join(current_sce, f"{j}.json"),
+                ],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
 
 
 if __name__ == "__main__":

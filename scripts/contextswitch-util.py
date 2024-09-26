@@ -95,7 +95,9 @@ def simulate(logsdir, sched_policy):
 
 def run_scenario(schedview, log_path):
     energy = subprocess.run(
-        [schedview, log_path, "--cli", "--contextswitch"], capture_output=True, text=True
+        [schedview, log_path, "--cli", "--contextswitch"],
+        capture_output=True,
+        text=True,
     ).stdout.strip()
     return float(energy)
 
