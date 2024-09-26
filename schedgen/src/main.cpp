@@ -23,6 +23,7 @@ struct taskset_config {
         std::size_t nb_tasks{0};
         double total_utilization{1};
         double success_rate{1};
+        double compression_rate{1};
 };
 
 struct convert_config {
@@ -48,6 +49,7 @@ auto parse_args_taskset(const int argc, const char** argv) -> taskset_config
                 ("t,tasks", "Number of tasks to generate", cxxopts::value<int>())
                 ("u,totalu", "Total utilization of the taskset", cxxopts::value<double>())
                 ("s,success", "Rate of deadlines met (0..1)", cxxopts::value<double>())
+                ("c,compression", "Compression ratio (0..1)", cxxopts::value<double>())
                 ("o,output", "Output file to write the scenario", cxxopts::value<std::string>());
         // clang-format on
         const auto cli = options.parse(argc, argv);
@@ -60,6 +62,7 @@ auto parse_args_taskset(const int argc, const char** argv) -> taskset_config
         config.nb_tasks = cli["tasks"].as<int>();
         config.total_utilization = cli["totalu"].as<double>();
         config.success_rate = cli["success"].as<double>();
+        config.compression_rate = cli["compression"].as<double>();
         if (cli.count("output")) { config.output_filepath = cli["output"].as<std::string>(); }
 
         return config;
@@ -209,7 +212,10 @@ auto main(const int argc, const char** argv) -> int
                 if (command == "taskset") {
                         const auto config = parse_args_taskset(argc - 1, argv + 1);
                         const auto taskset = generate_taskset(
-                            config.nb_tasks, config.total_utilization, config.success_rate);
+                            config.nb_tasks,
+                            config.total_utilization,
+                            config.success_rate,
+                            config.compression_rate);
                         // Write the scenario to output file
                         protocols::scenario::write_file(config.output_filepath, taskset);
                 }

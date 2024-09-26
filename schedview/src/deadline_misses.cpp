@@ -216,7 +216,7 @@ void print_task_deadline_missed_rate(
         if (!deadline_stats.contains(tid)) { throw std::out_of_range("Unknown task"); }
 
         auto [jobs_count, deadline_missed_count] = deadline_stats.at(tid);
-        std::cout << std::setprecision(4) << (deadline_missed_count / jobs_count) * 100
+        std::cout << std::setprecision(4) << (static_cast<double>(deadline_missed_count) / static_cast<double>(jobs_count)) * 100
                   << "% deadlines missed" << std::endl;
 }
 
@@ -266,8 +266,7 @@ void print_deadline_missed_rate(
                 sum_of_deadline_missed += deadline_missed_count;
         }
 
-        std::cout << std::setprecision(4) << (sum_of_deadline_missed / sum_of_jobs) * 100
-                  << "% deadlines missed" << std::endl;
+        std::cout << std::setprecision(4) << (static_cast<double>(sum_of_deadline_missed) / static_cast<double>(sum_of_jobs)) * 100 << std::endl;
 }
 
 } // namespace outputs::stats

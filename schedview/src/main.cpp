@@ -148,9 +148,8 @@ auto main(int argc, char* argv[]) -> int
                 }
 
                 if (cli.count("deadlines-counts")) {
-                        std::size_t tid{cli["deadlines-counts"].as<std::size_t>()};
+                        auto tid{cli["deadlines-counts"].as<std::size_t>()};
                         auto deadlines{outputs::stats::detect_deadline_misses(parsed)};
-                        std::cout << tid << std::endl;
                         if (tid > 0) {
                                 outputs::stats::print_task_deadline_missed_count(deadlines, tid);
                         }

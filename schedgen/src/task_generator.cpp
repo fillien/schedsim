@@ -1,4 +1,5 @@
 #include "task_generator.hpp"
+#include <iterator>
 #include <protocols/scenario.hpp>
 
 #include <algorithm>
@@ -6,6 +7,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <iostream>
 #include <random>
 #include <stdexcept>
 #include <vector>
@@ -35,7 +37,8 @@ static std::mt19937_64 random_gen(hr_clk::now().time_since_epoch().count());
  * @note The function will iterate and attempt to generate a uniform distribution of utilizations.
  * It may discard the current set and retry if the generated values are not realistic or feasible.
  */
-auto uunifast_discard(std::size_t nb_tasks, double total_utilization) -> std::vector<double>
+auto uunifast_discard(std::size_t nb_tasks, double total_utilization, double umax)
+    -> std::vector<double>
 {
         constexpr std::size_t DISCARD_LIMIT{1000};
         std::size_t discard_counter{0};
@@ -48,7 +51,7 @@ auto uunifast_discard(std::size_t nb_tasks, double total_utilization) -> std::ve
                 const double next_sum_utilization{
                     sum_utilization * std::pow(new_rand, 1.0 / static_cast<double>(nb_tasks - i))};
 
-                if ((sum_utilization - next_sum_utilization) > 1) {
+                if ((sum_utilization - next_sum_utilization) > umax) {
                         if (discard_counter > DISCARD_LIMIT) {
                                 throw std::runtime_error("The utilization generation has exceeded "
                                                          "the limit of rejected task sets");
@@ -94,26 +97,30 @@ auto bounded_weibull(double min, double max) -> double
 }
 } // namespace
 
-auto generate_jobs(std::vector<double> durations, double period)
+auto generate_jobs(std::vector<double>& durations, double period)
     -> std::vector<protocols::scenario::job>
 {
         using namespace protocols::scenario;
+
+        double time{0};
         std::vector<job> jobs;
         jobs.reserve(durations.size());
 
-        std::uniform_real_distribution<> uni(0, period / 4);
-
-        double next_arrival = uni(random_gen);
         for (const auto& duration : durations) {
-                jobs.push_back(job{next_arrival, duration});
-                next_arrival += period + uni(random_gen);
+                jobs.push_back(job{.arrival = time, .duration = duration});
+                time += period;
         }
 
         return jobs;
 }
 
-auto generate_task(std::size_t tid, double utilization, std::size_t nb_jobs, double success_rate)
-    -> protocols::scenario::task
+auto generate_task(
+    std::size_t tid,
+    std::size_t nb_jobs,
+    double success_rate,
+    double compression_rate,
+    double wcet,
+    double task_period) -> protocols::scenario::task
 {
         using namespace protocols::scenario;
         using std::ceil;
@@ -121,39 +128,41 @@ auto generate_task(std::size_t tid, double utilization, std::size_t nb_jobs, dou
         assert(nb_jobs > 0);
         assert(success_rate >= 0 && success_rate <= 1);
 
-        constexpr double DURATION_MIN{0.5};
-        constexpr double DURATION_MAX{10};
         std::vector<double> durations(nb_jobs);
 
-        std::ranges::generate(durations.begin(), durations.end(), []() {
-                return bounded_weibull(DURATION_MIN, DURATION_MAX);
+        std::ranges::generate(durations.begin(), durations.end(), [&]() {
+                if (compression_rate == 1) { return wcet; }
+                return bounded_weibull(compression_rate * wcet, wcet);
         });
 
         std::sort(durations.begin(), durations.end());
 
-        const size_t index{static_cast<std::size_t>(ceil((nb_jobs - 1) * success_rate))};
-        const double period{durations.at(index)};
+        const std::size_t index{static_cast<std::size_t>(ceil((nb_jobs - 1) * success_rate))};
+        const double budget{durations.at(index)};
 
         std::shuffle(durations.begin(), durations.end(), random_gen);
-        auto jobs{generate_jobs(durations, period / utilization)};
         return task{
             .id = static_cast<std::size_t>(tid + 1),
-            .utilization = utilization,
-            .period = period / utilization,
-            .jobs = jobs};
+            .utilization = budget / task_period,
+            .period = task_period,
+            .jobs = generate_jobs(durations, task_period)};
+}
+
+auto lcm(const std::vector<int>& nums) -> int
+{
+        return std::accumulate(nums.begin(), nums.end(), 1, std::lcm<int, int>);
 }
 
 auto generate_taskset(
     std::size_t nb_tasks,
-    std::size_t total_nb_jobs,
     double total_utilization,
-    double success_rate) -> protocols::scenario::setting
+    double success_rate,
+    double compression_rate) -> protocols::scenario::setting
 {
         using namespace protocols::scenario;
         using std::round;
 
-        // TODO Fix the difference between the number of jobs generated and the number of jobs
-        // asked.
+        constexpr double UMAX{1};
 
         if (total_utilization <= 0) {
                 throw std::invalid_argument("Total utilization must be greater than 0");
@@ -163,18 +172,26 @@ auto generate_taskset(
                 throw std::invalid_argument("Success rate is not between 0 and 1");
         }
 
-        auto utilizations = uunifast_discard(nb_tasks, total_utilization);
+        // Step 1
+        auto utilizations = uunifast_discard(nb_tasks, total_utilization, UMAX);
+        /*std::vector<int> periods{25200, 12600, 8400, 6300, 5040, 4200, 3600, 3150, 2800, 2520};*/
+        std::vector<int> periods{1, 2, 5, 10, 20, 50, 100, 200, 500, 1000};
+        /*double hyperperiod{25200};*/
+        double hyperperiod{1000};
 
+        // Step 2
         std::vector<task> tasks;
         tasks.reserve(nb_tasks);
+
         for (size_t tid = 0; tid < nb_tasks; ++tid) {
-                const double task_util = utilizations.at(tid);
-                const auto nb_jobs = static_cast<std::size_t>(
-                    round(static_cast<double>(total_nb_jobs) * task_util / total_utilization));
+                std::shuffle(std::begin(periods), std::end(periods), random_gen);
+                const double util = utilizations.at(tid);
+                const double period = static_cast<double>(periods.at(tid));
+                const auto nb_jobs = hyperperiod / period;
+                const double wcet = period * util;
 
-                if (nb_jobs == 0) { continue; }
-
-                tasks.push_back(generate_task(tid, task_util, nb_jobs, success_rate));
+                tasks.push_back(
+                    generate_task(tid, nb_jobs, success_rate, compression_rate, wcet, period));
         }
 
         return setting{.tasks = tasks};

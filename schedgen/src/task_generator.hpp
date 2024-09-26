@@ -18,7 +18,7 @@
  * @return A std::vector of 'job' from the 'scenario' namespace, each containing the scheduled time
  * of arrival and the duration for the job.
  */
-auto generate_jobs(std::vector<double> durations, double period)
+auto generate_jobs(std::vector<double>& durations, double period)
     -> std::vector<protocols::scenario::job>;
 
 /**
@@ -42,10 +42,12 @@ auto generate_jobs(std::vector<double> durations, double period)
  * @note Assumes nb_jobs is greater than 0 and that the success_rate is a valid percentage.
  */
 auto generate_task(
-    std::size_t nb_tasks,
+    std::size_t tid,
     std::size_t nb_jobs,
-    double total_utilization,
-    double success_rate) -> protocols::scenario::task;
+    double success_rate,
+    double compression_rate,
+    double wcet,
+    double task_period) -> protocols::scenario::task;
 
 /**
  * @brief Generates a set of tasks (taskset) for a given scenario, each with a specific utilization
@@ -73,8 +75,8 @@ auto generate_task(
  */
 auto generate_taskset(
     std::size_t nb_tasks,
-    std::size_t nb_jobs,
     double total_utilization,
-    double success_rate) -> protocols::scenario::setting;
+    double success_rate,
+    double compression_rate) -> protocols::scenario::setting;
 
 #endif
