@@ -76,6 +76,7 @@ auto generate_task(
 auto generate_taskset(
     std::size_t nb_tasks,
     double total_utilization,
+    double umax,
     double success_rate,
     double compression_rate) -> protocols::scenario::setting;
 

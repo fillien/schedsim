@@ -156,13 +156,14 @@ auto lcm(const std::vector<int>& nums) -> int
 auto generate_taskset(
     std::size_t nb_tasks,
     double total_utilization,
+    double umax,
     double success_rate,
     double compression_rate) -> protocols::scenario::setting
 {
         using namespace protocols::scenario;
         using std::round;
 
-        constexpr double UMAX{1};
+        assert(umax <= 1);
 
         if (total_utilization <= 0) {
                 throw std::invalid_argument("Total utilization must be greater than 0");
@@ -172,14 +173,12 @@ auto generate_taskset(
                 throw std::invalid_argument("Success rate is not between 0 and 1");
         }
 
-        // Step 1
-        auto utilizations = uunifast_discard(nb_tasks, total_utilization, UMAX);
+        auto utilizations = uunifast_discard(nb_tasks, total_utilization, umax);
         std::vector<int> periods{25200, 12600, 8400, 6300, 5040, 4200, 3600, 3150, 2800, 2520};
         // std::vector<int> periods{1, 2, 5, 10, 20, 50, 100, 200, 500, 1000};
         double hyperperiod{25200};
         //double hyperperiod{1000};
 
-        // Step 2
         std::vector<task> tasks;
         tasks.reserve(nb_tasks);
 

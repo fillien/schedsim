@@ -22,6 +22,7 @@ struct taskset_config {
         fs::path output_filepath{"scenario.json"};
         std::size_t nb_tasks{0};
         double total_utilization{1};
+        double umax{1};
         double success_rate{1};
         double compression_rate{1};
 };
@@ -48,6 +49,7 @@ auto parse_args_taskset(const int argc, const char** argv) -> taskset_config
                 ("h,help", "Helper")
                 ("t,tasks", "Number of tasks to generate", cxxopts::value<int>())
                 ("u,totalu", "Total utilization of the taskset", cxxopts::value<double>())
+                ("m,umax", "The maximum utilization of a task (0..1)", cxxopts::value<double>())
                 ("s,success", "Rate of deadlines met (0..1)", cxxopts::value<double>())
                 ("c,compression", "Compression ratio (0..1)", cxxopts::value<double>())
                 ("o,output", "Output file to write the scenario", cxxopts::value<std::string>());
@@ -62,6 +64,7 @@ auto parse_args_taskset(const int argc, const char** argv) -> taskset_config
         config.nb_tasks = cli["tasks"].as<int>();
         config.total_utilization = cli["totalu"].as<double>();
         config.success_rate = cli["success"].as<double>();
+        config.umax = cli["umax"].as<double>();
         config.compression_rate = cli["compression"].as<double>();
         if (cli.count("output")) { config.output_filepath = cli["output"].as<std::string>(); }
 
@@ -214,6 +217,7 @@ auto main(const int argc, const char** argv) -> int
                         const auto taskset = generate_taskset(
                             config.nb_tasks,
                             config.total_utilization,
+                            config.umax,
                             config.success_rate,
                             config.compression_rate);
                         // Write the scenario to output file
