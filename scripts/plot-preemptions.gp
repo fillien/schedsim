@@ -15,7 +15,7 @@ set key horizontal
 set style fill transparent solid 0.25
 set style fill noborder
 
-plot 'data-preempt.csv' every ::1 using 1:2 with lines lw 2 lc "purple" title 'grub', \
-     'data-preempt.csv' every ::1 using 1:5 with lines lw 2 lc "blue" title 'pa', \
-     'data-preempt.csv' every ::1 using 1:8 with lines lw 2 lc "green" title 'pa\_f\_min', \
-     'data-preempt.csv' every ::1 using 1:11 with lines lw 2 lc "red" title 'pa\_m\_min'
+plot 'data-preempt.csv' every ::1 using 1:2 with lines lw 2 lc "purple" title 'GRUB', \
+     'data-preempt.csv' every ::1 using 1:5 with lines lw 2 lc "blue" title 'PA', \
+     'data-preempt.csv' every ::1 using 1:8 with lines lw 2 lc "green" title 'FFA', \
+     'data-preempt.csv' every ::1 using 1:11 with lines lw 2 lc "red" title 'CSF'
