@@ -219,7 +219,8 @@ void print_task_deadline_missed_rate(
         std::cout << std::setprecision(4)
                   << (static_cast<double>(deadline_missed_count) /
                       static_cast<double>(jobs_count)) *
-                         100 << std::endl;
+                         100
+                  << std::endl;
 }
 
 /**

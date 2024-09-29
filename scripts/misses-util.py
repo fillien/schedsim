@@ -92,7 +92,7 @@ def main():
             )
 
     output = pd.DataFrame(results)
-    output = output.sort_values(by=['utilization'])
+    output = output.sort_values(by=["utilization"])
     print(output)
 
     output.to_csv("data-misses.csv", index=False, sep=" ")

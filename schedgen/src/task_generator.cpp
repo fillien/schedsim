@@ -177,7 +177,7 @@ auto generate_taskset(
         std::vector<int> periods{25200, 12600, 8400, 6300, 5040, 4200, 3600, 3150, 2800, 2520};
         // std::vector<int> periods{1, 2, 5, 10, 20, 50, 100, 200, 500, 1000};
         double hyperperiod{25200};
-        //double hyperperiod{1000};
+        // double hyperperiod{1000};
 
         std::vector<task> tasks;
         tasks.reserve(nb_tasks);
