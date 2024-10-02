@@ -32,7 +32,7 @@ void pa_m_min::update_platform()
 
         if (freq_min < freq_eff) {
                 sim()->chip()->set_freq(freq_eff);
-                next_active_procs = std::ceil(max_nb_procs * (freq_min / freq_eff));
+                next_active_procs = std::ceil(m_min * (freq_min / freq_eff));
         }
         else {
                 assert(freq_min <= sim()->chip()->freq_max());
