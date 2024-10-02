@@ -2,7 +2,7 @@
 
 auto energy::compute_power(const double& freq) -> double
 {
-        constexpr double MHZ_TO_HZ{1000000};
+        constexpr double MHZ_TO_HZ{1};
 
         const double frequency = freq * MHZ_TO_HZ; // Convert MHz to Hz
         const double coef3 = power_constants::F3C * frequency * frequency * frequency;

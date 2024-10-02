@@ -11,9 +11,9 @@ SCHEDGEN = "./build/schedgen/schedgen"
 
 
 def main():
-    if len(sys.argv) <= 4:
+    if len(sys.argv) <= 5:
         print(
-            "error: " + sys.argv[0] + " <nb_taskset> <nb_task> <success> <compression>"
+            "error: " + sys.argv[0] + " <nb_taskset> <nb_task> <success> <compression> <umax>"
         )
         return
 
@@ -21,6 +21,7 @@ def main():
     nb_task = int(sys.argv[2])
     success_rate = float(sys.argv[3])
     compression_rate = float(sys.argv[4])
+    umax = float(sys.argv[5])
 
     # Create a directory to store taskset
     datadir = f"data_{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
@@ -48,6 +49,8 @@ def main():
                     str(nb_task),
                     "-u",
                     str(utilization),
+                    "--umax",
+                    str(umax),
                     "-o",
                     os.path.join(current_sce, f"{j}.json"),
                 ],

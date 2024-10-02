@@ -7,6 +7,7 @@ set output 'misses_util.png'
 # Set the title and labels for the axes
 set xlabel "Utilization"
 set ylabel "Deadlines misses ratio [\\%]"
+set yrange [0:100]
 set grid
 set key box
 set key outside top center
