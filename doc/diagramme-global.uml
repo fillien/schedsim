@@ -1,0 +1,139 @@
+@startuml
+
+package "Statique" {
+class Plateform {
+      processors: list<processor>
+}
+
+class Processor {
+      runqueue: list<task>
+      running_task: task
+}
+
+class Task {
+      remaining_execution_time: double
+}
+}
+
+package "Simulation" {
+class engine {
+      sched: scheduler*
+      event_store: std::multimap<double, const event>
+      current_timestamp: double
+      logging_system: tracer
+
+      simulation(): void
+      set_scheduler(const scheduler* new_sched): void
+      insert_event(const event): void;
+}
+
+enum types {
+        TASK_MIGRATED
+        JOB_ARRIVAL
+        JOB_FINISHED
+        PLAT_SPEED_CHANGED
+        PROC_ACTIVATED
+        PROC_IDLED
+        PROC_STOPPED
+        PROC_STOPPING
+        RESCHED
+        SERV_ACT_CONT
+        SERV_ACT_NON_CONT
+        SERV_BUDGET_EXHAUSTED
+        SERV_BUDGET_REPLENISHED
+        SERV_IDLE
+        SERV_RUNNING
+        SIM_FINISHED
+        TASK_BLOCKED
+        TASK_KILLED
+        TASK_PREEMPTED
+        TASK_SCHEDULED
+        TASK_UNBLOCKED
+        TT_MODE
+}
+
+class event {
+      {static} id: int
+      type: types
+      target: entity*
+      payload: double
+      priority: int
+}
+
+class tracer {
+      trace_store: list<trace>
+}
+
+class trace {
+      timestamp: double
+      event: types
+}
+}
+
+package "Scheduling" {
+enum state {
+     IDLE
+     RUNNING
+     ACTIVE
+     ACTIVE_NON_CONTENDING
+}
+
+class server {
+      current state: state
+      relative_deadline: double
+      period: double
+      bandwidth: double
+      virtual_time: double
+}
+
+abstract scheduler {
+      attached_engine: engine
+
+      {abstract} handle_job_arrival(const event): void
+      {abstract} handle_server_active_contending(const event): void
+      {abstract} handle_server_inactive(const event): void
+}
+
+class grub_mono {
+      servers_active_cont: list<server>
+      servers_active_non_cont: list<server>
+      servers_inactive: list<server>
+      active_bandwidth: double
+      
+      handle_job_arrival(const event): void
+      handle_server_active_contending(const event): void
+      handle_server_inactive(const event): void
+}
+
+class another_sched {
+      handle_job_arrival(const event): void
+      handle_server_active_contending(const event): void
+      handle_server_inactive(const event): void
+}
+}
+
+entity <-- Plateform
+entity <-- Processor
+entity <-- Task
+
+Plateform "1" *-- "*" Processor
+Processor "1" *-- "*" Task
+
+scheduler <-- grub_mono
+scheduler <-- another_sched
+
+engine <|--|> scheduler
+engine *-- tracer
+
+tracer *-- trace
+trace *-- types
+event *-- types
+engine *-- event
+
+event <|-- entity
+
+server *-- state
+server <|-- Task
+grub_mono *-- server
+
+@enduml

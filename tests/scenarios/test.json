@@ -1,0 +1,38 @@
+{"tasks":
+ [
+    {
+	"id":1,
+	"jobs":[
+	    {
+		"arrival":0,
+		"duration":4
+	    },
+	    {
+		"arrival":9,
+		"duration":5
+	    },
+	    {
+		"arrival":18,
+		"duration":6
+	    }
+	],
+	"period":10,
+	"utilization":0.5
+    },
+     {
+	"id":2,
+	"jobs":[
+	    {
+		"arrival":1,
+		"duration":2
+	    },
+	    {
+		"arrival":9,
+		"duration":3
+	    }
+	],
+	"period":8,
+	"utilization":0.25
+     }
+]
+}

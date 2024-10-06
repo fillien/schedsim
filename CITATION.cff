@@ -1,0 +1,17 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Schedsim
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: François
+    family-names: Illien
+    email: francois.illien@univ-nantes.fr
+    affiliation: Nantes Université
+    orcid: 'https://orcid.org/0009-0007-6138-4086'
+repository-code: 'https://github.com/fillien/schedsim'
+license: MIT
