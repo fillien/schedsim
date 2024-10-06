@@ -47,6 +47,7 @@ auto main(int argc, char* argv[]) -> int
                 ("rejected", "Print number of rejected task")
                 ("waiting", "Print average waiting time")
                 ("dpm-request", "Print the number of requests to change the cores C-state")
+                ("freq-request", "Print the number of requests to change the frequency")
                 ("deadlines-rates", "Print deadline missed rates", cxxopts::value<std::size_t>()->implicit_value("0"))
                 ("deadlines-counts", "Print deadline missed counts", cxxopts::value<std::size_t>()->implicit_value("0"))
                 ("platform", "Hardware description source file", cxxopts::value<std::string>()->default_value("platform.json"))
@@ -161,6 +162,9 @@ auto main(int argc, char* argv[]) -> int
 
                 if (cli.count("dpm-request")) {
                         outputs::stats::print_core_state_request_count(parsed);
+                }
+                if (cli.count("freq-request")) {
+                        outputs::stats::print_frequency_request_count(parsed);
                 }
         }
         catch (cxxopts::exceptions::parsing& e) {

@@ -216,4 +216,21 @@ void print_core_state_request_count(const std::multimap<double, protocols::trace
         std::cout << cpt << std::endl;
 }
 
+void print_frequency_request_count(const std::multimap<double, protocols::traces::trace>& input)
+{
+        namespace traces = protocols::traces;
+        std::size_t cpt{0};
+        double last_timestamp{-1};
+
+        for (const auto& [timestamp, event] : input) {
+                if (std::holds_alternative<traces::frequency_update>(event) &&
+                    timestamp > last_timestamp) {
+                        last_timestamp = timestamp;
+                        cpt++;
+                }
+
+                std::cout << cpt << std::endl;
+        }
+}
+
 } // namespace outputs::stats
