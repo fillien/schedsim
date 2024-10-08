@@ -28,14 +28,14 @@ struct app_config {
         fs::path output_file{"logs.json"};
         fs::path scenario_file{"scenario.json"};
         fs::path platform_file{"platform.json"};
-        std::string policy;
+        std::string sched;
 };
 
 constexpr std::array<const char*, 4> policies{
-    "grub     - M-GRUB with global reclaiming",
-    "pa       - M-GRUB-PA with global reclaiming",
-    "pa_f_min - M-GRUB with minimum frequency",
-    "pa_m_min - M-GRUB with minimum active processor"};
+    "grub - M-GRUB with global reclaiming",
+    "pa   - M-GRUB-PA with global reclaiming",
+    "ffa  - M-GRUB with minimum frequency",
+    "csf  - M-GRUB with minimum active processor"};
 
 auto parse_args(const int argc, const char** argv) -> app_config
 {
@@ -46,10 +46,10 @@ auto parse_args(const int argc, const char** argv) -> app_config
 	options.add_options()
 		("h,help", "Print this help message")
 		("s,scenario", "Specify the scenario file", cxxopts::value<std::string>())
-		("platform", "Specify the platform configuration file", cxxopts::value<std::string>()->default_value("platform.json"))
-		("p,policy", "Specify the scheduling policy", cxxopts::value<std::string>())
-		("policies", "List the available schedulers", cxxopts::value<bool>()->default_value("false"))
-		("o,output", "Specify the output file", cxxopts::value<std::string>());
+		        ("p,platform", "Specify the platform configuration file", cxxopts::value<std::string>())
+		        ("sched", "Specify the scheduling policy", cxxopts::value<std::string>())
+		        ("scheds", "List the available schedulers", cxxopts::value<bool>()->default_value("false"))
+		        ("o,output", "Specify the output file", cxxopts::value<std::string>());
         // clang-format on
         const auto cli = options.parse(argc, argv);
 
@@ -58,7 +58,7 @@ auto parse_args(const int argc, const char** argv) -> app_config
                 exit(cli.arguments().empty() ? EXIT_FAILURE : EXIT_SUCCESS);
         }
 
-        if (cli.count("policies")) {
+        if (cli.count("scheds")) {
                 std::cout << "Available schedulers:\n";
                 for (const auto& policy : policies) {
                         std::cout << '\t' << policy << '\n';
@@ -66,7 +66,7 @@ auto parse_args(const int argc, const char** argv) -> app_config
         }
         if (cli.count("scenario")) { config.scenario_file = cli["scenario"].as<std::string>(); }
         if (cli.count("platform")) { config.platform_file = cli["platform"].as<std::string>(); }
-        if (cli.count("policy")) { config.policy = cli["policy"].as<std::string>(); }
+        if (cli.count("sched")) { config.sched = cli["sched"].as<std::string>(); }
         if (cli.count("output")) { config.output_file = cli["output"].as<std::string>(); }
 
         return config;
@@ -98,14 +98,14 @@ auto main(const int argc, const char** argv) -> int
                 sim->set_platform(plat);
 
                 std::shared_ptr<scheduler> sched;
-                if (config.policy == "grub") { sched = make_shared<sched_parallel>(sim); }
-                else if (config.policy == "pa") {
+                if (config.sched == "grub") { sched = make_shared<sched_parallel>(sim); }
+                else if (config.sched == "pa") {
                         sched = make_shared<sched_power_aware>(sim);
                 }
-                else if (config.policy == "pa_f_min") {
+                else if (config.sched == "ffa") {
                         sched = make_shared<pa_f_min>(sim);
                 }
-                else if (config.policy == "pa_m_min") {
+                else if (config.sched == "csf") {
                         sched = make_shared<pa_m_min>(sim);
                 }
                 else {
