@@ -72,7 +72,7 @@ auto parse_args_platform(const int argc, const char** argv) -> platform_config
         // clang-format off
         cxxopts::Options options("schedgen platform", "Generate platform configuration file");
         options.add_options()
-                ("h,help", "Helper")
+                ("h,help", "Print this help message")
 		        ("c,cores", "Number of cores", cxxopts::value<std::size_t>())
 		        ("f,freq", "Allowed operating frequencies", cxxopts::value<std::vector<double>>())
 		        ("e,eff", "Add a effective frequency", cxxopts::value<double>())
@@ -123,7 +123,10 @@ auto main(const int argc, const char** argv) -> int
                         const auto config = parse_args_platform(argc - 1, argv + 1);
                         protocols::hardware::write_file(
                             config.output_filepath,
-                            {config.nb_procs, config.frequencies, config.effective_freq, config.power_model});
+                            {config.nb_procs,
+                             config.frequencies,
+                             config.effective_freq,
+                             config.power_model});
                 }
                 else {
                         std::cerr << helper << std::endl;
