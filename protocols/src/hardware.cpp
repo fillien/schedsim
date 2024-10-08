@@ -10,7 +10,8 @@ auto to_json(const hardware& plat) -> nlohmann::json
         return {
             {"procs", plat.nb_procs},
             {"frequencies", plat.frequencies},
-            {"effective_freq", plat.effective_freq}};
+            {"effective_freq", plat.effective_freq},
+            {"power_model", plat.power_model}};
 }
 
 auto from_json_hardware(const nlohmann::json& json_hardware) -> hardware
@@ -18,7 +19,8 @@ auto from_json_hardware(const nlohmann::json& json_hardware) -> hardware
         return hardware{
             .nb_procs = json_hardware.at("procs").get<std::size_t>(),
             .frequencies = json_hardware.at("frequencies").get<std::vector<double>>(),
-            .effective_freq = json_hardware.at("effective_freq").get<double>()};
+            .effective_freq = json_hardware.at("effective_freq").get<double>(),
+            .power_model = json_hardware.at("power_model").get<std::vector<double>>()};
 }
 
 void write_file(const std::filesystem::path& file, const hardware& plat)

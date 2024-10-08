@@ -30,6 +30,7 @@ struct platform_config {
         std::size_t nb_procs{0};
         std::vector<double> frequencies{0};
         double effective_freq{0};
+        std::vector<double> power_model{0};
 };
 
 auto parse_args_taskset(const int argc, const char** argv) -> taskset_config
@@ -72,10 +73,11 @@ auto parse_args_platform(const int argc, const char** argv) -> platform_config
         cxxopts::Options options("schedgen platform", "Generate platform configuration file");
         options.add_options()
                 ("h,help", "Helper")
-		("c,cores", "Number of cores", cxxopts::value<std::size_t>())
-		("f,freq", "Allowed operating frequencies", cxxopts::value<std::vector<double>>())
-		("e,eff", "Add a effective frequency", cxxopts::value<double>())
-		("o,output", "Output file to write the scenario", cxxopts::value<std::string>());
+		        ("c,cores", "Number of cores", cxxopts::value<std::size_t>())
+		        ("f,freq", "Allowed operating frequencies", cxxopts::value<std::vector<double>>())
+		        ("e,eff", "Add a effective frequency", cxxopts::value<double>())
+                ("p,power", "Set the power model", cxxopts::value<std::vector<double>>())
+		        ("o,output", "Output file to write the scenario", cxxopts::value<std::string>());
         // clang-format on
 
         const auto cli = options.parse(argc, argv);
@@ -88,6 +90,7 @@ auto parse_args_platform(const int argc, const char** argv) -> platform_config
         config.nb_procs = cli["cores"].as<std::size_t>();
         config.frequencies = cli["freq"].as<std::vector<double>>();
         config.effective_freq = cli["eff"].as<double>();
+        config.power_model = cli["power"].as<std::vector<double>>();
         if (cli.count("output")) { config.output_filepath = cli["output"].as<std::string>(); }
         return config;
 }
@@ -120,7 +123,7 @@ auto main(const int argc, const char** argv) -> int
                         const auto config = parse_args_platform(argc - 1, argv + 1);
                         protocols::hardware::write_file(
                             config.output_filepath,
-                            {config.nb_procs, config.frequencies, config.effective_freq});
+                            {config.nb_procs, config.frequencies, config.effective_freq, config.power_model});
                 }
                 else {
                         std::cerr << helper << std::endl;

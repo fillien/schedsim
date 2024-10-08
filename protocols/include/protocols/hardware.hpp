@@ -11,6 +11,7 @@ struct hardware {
         std::size_t nb_procs;
         std::vector<double> frequencies;
         double effective_freq;
+        std::vector<double> power_model;
 };
 
 auto to_json(const hardware& plat) -> nlohmann::json;

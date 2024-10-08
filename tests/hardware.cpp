@@ -9,7 +9,7 @@ class HardwareTest : public ::testing::Test {};
 
 TEST_F(HardwareTest, ConvertToJsonTest)
 {
-        hardware original{5, {1.3, 2.5, 3.2}, 1.3};
+        hardware original{5, {1.3, 2.5, 3.2}, 1.3, {0.04433100178, 0.000003410453667, 0.00000002193142733, 0.00000000004609381282}};
 
         auto json = to_json(original);
         auto converted = from_json_hardware(json);
