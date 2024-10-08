@@ -7,7 +7,6 @@
 #include "gantt/svg.hpp"
 #include "protocols/hardware.hpp"
 #include "stats.hpp"
-#include "system_utilization.hpp"
 #include "textual.hpp"
 #include <protocols/traces.hpp>
 
@@ -22,17 +21,81 @@
 #include <typeinfo>
 #include <vector>
 
-auto main(int argc, char* argv[]) -> int
+void handle_plots(const cxxopts::ParseResult& cli, const auto& parsed, const auto& hw)
+{
+        using namespace outputs::gantt;
+        if (cli.count("frequency")) { outputs::frequency::print_frequency_changes(parsed); }
+
+        if (cli.count("rtsched")) {
+                gantt chart{generate_gantt(parsed, hw)};
+                std::filesystem::path output_file(cli["rtsched"].as<std::string>());
+                std::ofstream fd(output_file);
+                fd << rtsched::draw(chart);
+        }
+
+        if (cli.count("procmode")) {
+                gantt chart{generate_proc_mode(parsed, hw)};
+                std::cout << svg::draw(chart);
+        }
+
+        if (cli.count("svg")) {
+                const gantt gen_gantt = generate_gantt(parsed, hw);
+                std::cout << svg::draw(gen_gantt);
+        }
+
+        if (cli.count("html")) {
+                const gantt gen_gantt = generate_gantt(parsed, hw);
+                std::cout << html::draw(gen_gantt);
+        }
+}
+
+void handle_stats(const cxxopts::ParseResult& cli, const auto& parsed)
+{
+        using namespace outputs::stats;
+
+        if (cli.count("preemptions")) { print_nb_preemption(parsed); }
+        if (cli.count("contextswitch")) { print_nb_contextswitch(parsed); }
+        if (cli.count("rejected")) { print_rejected(parsed); }
+        if (cli.count("waiting")) { print_average_waiting_time(parsed); }
+        if (cli.count("duration")) { print_duration(parsed); }
+        if (cli.count("deadlines-rates")) {
+                auto tid{cli["deadlines-rates"].as<std::size_t>()};
+                auto deadlines{detect_deadline_misses(parsed)};
+                if (tid > 0) { print_task_deadline_missed_rate(deadlines, tid); }
+                else {
+                        print_deadline_missed_rate(deadlines);
+                }
+        }
+        if (cli.count("deadlines-counts")) {
+                auto tid{cli["deadlines-counts"].as<std::size_t>()};
+                auto deadlines{detect_deadline_misses(parsed)};
+                if (tid > 0) { print_task_deadline_missed_count(deadlines, tid); }
+                else {
+                        print_deadline_missed_count(deadlines);
+                }
+        }
+        if (cli.count("dpm-request")) { print_core_state_request_count(parsed); }
+        if (cli.count("freq-request")) { print_frequency_request_count(parsed); }
+        if (cli.count("energy")) { outputs::energy::print_energy_consumption(parsed); }
+}
+
+void handle_outputs(const cxxopts::ParseResult& cli, const auto& parsed, const auto& hw)
+{
+        if (cli.count("print")) { outputs::textual::print(std::cout, parsed); }
+        handle_stats(cli, parsed);
+        handle_plots(cli, parsed, hw);
+}
+
+auto main(const int argc, const char** argv) -> int
 {
         using namespace std::filesystem;
 
-        const path DEFAULT_INPUT_FILE{"out.json"};
-
         cxxopts::Options options("viewer", "Analyze simulation trace and produce stats and plots");
+        options.positional_help("infile");
         // clang-format off
         options.add_options()
                 ("h,help", "Helper")
-		("cli", "Print CLI friendly outputs")
+		        ("cli", "Print CLI friendly outputs")
                 ("p,print", "Print trace logs")
                 ("e,energy", "Plot power & cumulative energy comsumption")
                 ("f,frequency", "Print frequency changes")
@@ -58,123 +121,38 @@ auto main(int argc, char* argv[]) -> int
                 options.parse_positional({"traces"});
                 const auto cli = options.parse(argc, argv);
 
-                if (cli.arguments().empty()) {
-                        std::cerr << options.help() << std::endl;
-                        return EXIT_FAILURE;
-                }
-
-                if (cli.count("help")) {
+                if (cli.count("help") || cli.arguments().empty()) {
                         std::cout << options.help() << std::endl;
-                        return EXIT_SUCCESS;
-                }
-
-                if (!cli.count("traces")) {
-                        std::cerr << "No input trace file" << std::endl;
-                        return EXIT_FAILURE;
+                        exit(cli.arguments().empty() ? EXIT_FAILURE : EXIT_SUCCESS);
                 }
 
                 path input_filepath = cli["traces"].as<std::string>();
-                if (!exists(input_filepath)) {
-                        std::cerr << input_filepath << " no such file" << std::endl;
-                        return EXIT_FAILURE;
-                }
-                auto parsed = protocols::traces::read_log_file(input_filepath);
-
                 path platform_config = cli["platform"].as<std::string>();
-                if (!exists(platform_config)) {
-                        std::cerr << platform_config << " no such file" << std::endl;
-                        return EXIT_FAILURE;
+
+                if (!exists(input_filepath)) {
+                        throw std::runtime_error(input_filepath.string() + " file missing");
                 }
+
+                if (!exists(platform_config)) {
+                        throw std::runtime_error(platform_config.string() + " file missing");
+                }
+
+                auto parsed = protocols::traces::read_log_file(input_filepath);
                 auto hardware = protocols::hardware::read_file(platform_config);
 
-                if (cli.count("print")) { outputs::textual::print(std::cout, parsed); }
+                handle_outputs(cli, parsed, hardware);
 
-                if (cli.count("energy")) {
-                        if (cli.count("cli")) {
-                                // Only print the total energy consumption if CLI output wanted
-                                outputs::energy::print_energy_consumption(parsed);
-                        }
-                        else {
-                                outputs::energy::plot(parsed);
-                        }
-                }
-
-                if (cli.count("frequency")) { outputs::frequency::print_frequency_changes(parsed); }
-
-                if (cli.count("duration")) { outputs::stats::print_duration(parsed); }
-
-                {
-                        using namespace outputs::gantt;
-                        if (cli.count("rtsched")) {
-                                gantt chart{generate_gantt(parsed, hardware)};
-                                std::filesystem::path output_file(cli["rtsched"].as<std::string>());
-                                std::ofstream fd(output_file);
-                                fd << rtsched::draw(chart);
-                        }
-
-                        if (cli.count("procmode")) {
-                                gantt chart{generate_proc_mode(parsed, hardware)};
-                                std::cout << svg::draw(chart);
-                        }
-
-                        if (cli.count("svg")) {
-                                const gantt gen_gantt = generate_gantt(parsed, hardware);
-                                std::cout << svg::draw(gen_gantt);
-                        }
-
-                        if (cli.count("html")) {
-                                const gantt gen_gantt = generate_gantt(parsed, hardware);
-                                std::cout << html::draw(gen_gantt);
-                        }
-                }
-
-                if (cli.count("au")) { outputs::sys_util::print_active_utilization(parsed); }
-
-                if (cli.count("preemptions")) { outputs::stats::print_nb_preemption(parsed); }
-
-                if (cli.count("contextswitch")) { outputs::stats::print_nb_contextswitch(parsed); }
-
-                if (cli.count("rejected")) { outputs::stats::print_rejected(parsed); }
-
-                if (cli.count("waiting")) { outputs::stats::print_average_waiting_time(parsed); }
-
-                if (cli.count("deadlines-rates")) {
-                        auto tid{cli["deadlines-rates"].as<std::size_t>()};
-                        auto deadlines{outputs::stats::detect_deadline_misses(parsed)};
-                        if (tid > 0) {
-                                outputs::stats::print_task_deadline_missed_rate(deadlines, tid);
-                        }
-                        else {
-                                outputs::stats::print_deadline_missed_rate(deadlines);
-                        }
-                }
-
-                if (cli.count("deadlines-counts")) {
-                        auto tid{cli["deadlines-counts"].as<std::size_t>()};
-                        auto deadlines{outputs::stats::detect_deadline_misses(parsed)};
-                        if (tid > 0) {
-                                outputs::stats::print_task_deadline_missed_count(deadlines, tid);
-                        }
-                        else {
-                                outputs::stats::print_deadline_missed_count(deadlines);
-                        }
-                }
-
-                if (cli.count("dpm-request")) {
-                        outputs::stats::print_core_state_request_count(parsed);
-                }
-                if (cli.count("freq-request")) {
-                        outputs::stats::print_frequency_request_count(parsed);
-                }
+                return EXIT_SUCCESS;
         }
         catch (cxxopts::exceptions::parsing& e) {
                 std::cerr << "Error parsing casting option: " << e.what() << std::endl;
-                return EXIT_FAILURE;
         }
         catch (std::bad_cast& e) {
                 std::cerr << "Error parsing casting option: " << e.what() << std::endl;
-                return EXIT_FAILURE;
+        }
+        catch (const std::exception& e) {
+                std::cerr << "Error: " << e.what() << std::endl;
         }
 
-        return EXIT_SUCCESS;
+        return EXIT_FAILURE;
 }
