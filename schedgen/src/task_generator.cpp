@@ -148,11 +148,6 @@ auto generate_task(
             .jobs = generate_jobs(durations, task_period)};
 }
 
-auto lcm(const std::vector<int>& nums) -> int
-{
-        return std::accumulate(nums.begin(), nums.end(), 1, std::lcm<int, int>);
-}
-
 auto generate_taskset(
     std::size_t nb_tasks,
     double total_utilization,
