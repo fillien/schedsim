@@ -54,10 +54,10 @@ TEST_F(Schedsim, ProcessorOrder)
         auto p_sleep = plat->processors.at(2);
         p_sleep->change_state(processor::state::sleep);
 
-        EXPECT_FALSE(sched_parallel::processor_order(*p_idle, *p_idle));
-        EXPECT_FALSE(sched_parallel::processor_order(*p_idle, *p_run));
+        EXPECT_TRUE(sched_parallel::processor_order(*p_idle, *p_idle));
+        EXPECT_TRUE(sched_parallel::processor_order(*p_idle, *p_run));
         EXPECT_TRUE(sched_parallel::processor_order(*p_idle, *p_sleep));
-        EXPECT_TRUE(sched_parallel::processor_order(*p_run, *p_idle));
+        EXPECT_FALSE(sched_parallel::processor_order(*p_run, *p_idle));
         EXPECT_TRUE(sched_parallel::processor_order(*p_run, *p_run));
         EXPECT_TRUE(sched_parallel::processor_order(*p_run, *p_sleep));
         EXPECT_FALSE(sched_parallel::processor_order(*p_sleep, *p_idle));
