@@ -88,10 +88,11 @@ void handle_outputs(const cxxopts::ParseResult& cli, const auto& parsed, const a
 
 auto main(const int argc, const char** argv) -> int
 {
-        using namespace std::filesystem;
+        namespace fs = std::filesystem;
 
         cxxopts::Options options("viewer", "Analyze simulation trace and produce stats and plots");
         options.positional_help("infile");
+        options.set_tab_expansion();
         // clang-format off
         options.add_options()
                 ("h,help", "Helper")
@@ -114,7 +115,7 @@ auto main(const int argc, const char** argv) -> int
                 ("deadlines-rates", "Print deadline missed rates", cxxopts::value<std::size_t>()->implicit_value("0"))
                 ("deadlines-counts", "Print deadline missed counts", cxxopts::value<std::size_t>()->implicit_value("0"))
                 ("platform", "Hardware description source file", cxxopts::value<std::string>()->default_value("platform.json"))
-                ("traces", "Traces from simulator", cxxopts::value<std::string>());
+                ("infile", "Traces from simulator", cxxopts::value<std::string>());
         // clang-format on
 
         try {
@@ -126,14 +127,14 @@ auto main(const int argc, const char** argv) -> int
                         exit(cli.arguments().empty() ? EXIT_FAILURE : EXIT_SUCCESS);
                 }
 
-                path input_filepath = cli["traces"].as<std::string>();
-                path platform_config = cli["platform"].as<std::string>();
+                fs::path input_filepath = cli["traces"].as<std::string>();
+                fs::path platform_config = cli["platform"].as<std::string>();
 
-                if (!exists(input_filepath)) {
+                if (!fs::exists(input_filepath)) {
                         throw std::runtime_error(input_filepath.string() + " file missing");
                 }
 
-                if (!exists(platform_config)) {
+                if (!fs::exists(platform_config)) {
                         throw std::runtime_error(platform_config.string() + " file missing");
                 }
 

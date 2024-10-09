@@ -1,8 +1,8 @@
+#include <filesystem>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <nlohmann/json.hpp>
 #include <protocols/hardware.hpp>
-#include <filesystem>
 
 using namespace protocols::hardware;
 
