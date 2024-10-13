@@ -32,7 +32,6 @@
             shellcheck
             black
             tracy
-            black
             (python311.withPackages (ps: with ps; [ pandas ]))
           ];
         };
