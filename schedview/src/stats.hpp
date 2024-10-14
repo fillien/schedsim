@@ -1,21 +1,19 @@
 #ifndef STATS_HPP
 #define STATS_HPP
 
+#include <cstddef>
 #include <protocols/traces.hpp>
 #include <vector>
 
 namespace outputs::stats {
-void print_utilizations(const std::vector<std::pair<double, protocols::traces::trace>>& input);
-void print_nb_preemption(const std::vector<std::pair<double, protocols::traces::trace>>& input);
-void print_nb_contextswitch(const std::vector<std::pair<double, protocols::traces::trace>>& input);
-void print_average_waiting_time(
-    const std::vector<std::pair<double, protocols::traces::trace>>& input);
-void print_duration(const std::vector<std::pair<double, protocols::traces::trace>>& input);
-void print_rejected(const std::vector<std::pair<double, protocols::traces::trace>>& input);
-void print_core_state_request_count(
-    const std::vector<std::pair<double, protocols::traces::trace>>& input);
-void print_frequency_request_count(
-    const std::vector<std::pair<double, protocols::traces::trace>>& input);
+using logs_type = std::vector<std::pair<double, protocols::traces::trace>>;
+auto count_nb_preemption(const logs_type& input) -> std::size_t;
+auto count_nb_contextswitch(const logs_type& input) -> std::size_t;
+auto count_average_waiting_time(const logs_type& input) -> double;
+auto count_duration(const logs_type& input) -> double;
+auto count_rejected(const logs_type& input) -> std::size_t;
+auto count_core_state_request(const logs_type& input) -> std::size_t;
+auto count_frequency_request(const logs_type& input) -> std::size_t;
 } // namespace outputs::stats
 
 #endif

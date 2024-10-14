@@ -1,19 +1,15 @@
 #include "energy.hpp"
 #include "energy_model.hpp"
+#include "protocols/hardware.hpp"
 #include <cstddef>
-#include <fstream>
 #include <protocols/traces.hpp>
 
 #include <cassert>
 #include <iostream>
-#include <map>
 #include <set>
-#include <stdexcept>
 #include <utility>
 #include <variant>
 #include <vector>
-
-#include <filesystem>
 
 template <class... Ts> struct overloaded : Ts... {
         using Ts::operator()...;
@@ -84,40 +80,9 @@ auto parse_power_consumption(const std::vector<std::pair<double, protocols::trac
         return power_consumption;
 }
 
-void outputs::energy::plot(const std::vector<std::pair<double, protocols::traces::trace>>& input)
-{
-        const auto power_consumption = parse_power_consumption(input);
-
-        std::vector<double> energy_timestamps;
-        std::vector<double> energy_measures;
-
-        double last_timestamp{0};
-        double cumulative_energy{0};
-
-        for (const auto& [timestamp, value] : power_consumption) {
-                std::cout << timestamp << std::endl;
-                if (timestamp > last_timestamp) {
-                        const double delta{timestamp - last_timestamp};
-                        energy_timestamps.push_back(timestamp);
-                        cumulative_energy += delta * value;
-                        energy_measures.push_back(cumulative_energy);
-                        last_timestamp = timestamp;
-                }
-        }
-
-        const std::filesystem::path& file{"power.csv"};
-
-        std::ofstream out(file);
-        if (!out) { throw std::runtime_error("Unable to open file: " + file.string()); }
-        out << "time power\n";
-        for (const auto& [timestamp, value] : power_consumption) {
-                out << timestamp << ' ' << value << '\n';
-        }
-        out.close();
-}
-
-void outputs::energy::print_energy_consumption(
-    const std::vector<std::pair<double, protocols::traces::trace>>& input)
+auto outputs::energy::compute_energy_consumption(
+    const std::vector<std::pair<double, protocols::traces::trace>>& input,
+    const protocols::hardware::hardware& hw) -> double
 {
         const auto power_consumption = parse_power_consumption(input);
 
@@ -137,5 +102,5 @@ void outputs::energy::print_energy_consumption(
                 }
         }
 
-        std::cout << cumulative_energy << std::endl;
+        return cumulative_energy;
 }

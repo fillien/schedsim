@@ -39,9 +39,7 @@ using job_events = std::variant<job_finished, job_deadline>;
  * @return true if the job is accepted, false otherwise.
  */
 auto is_accepted_job(
-    const std::vector<std::pair<double, protocols::traces::trace>>& logs,
-    const double& timestamp,
-    std::size_t tid) -> bool
+    const outputs::stats::logs_type& logs, const double& timestamp, std::size_t tid) -> bool
 {
         namespace traces = protocols::traces;
 
@@ -69,7 +67,7 @@ auto is_accepted_job(
  * @param unfiltered_logs The unfiltered trace logs containing various events.
  * @return A multimap containing filtered job events with timestamps.
  */
-auto filter_logs(const std::vector<std::pair<double, protocols::traces::trace>>& unfiltered_logs)
+auto filter_logs(const outputs::stats::logs_type& unfiltered_logs)
     -> std::multimap<double, job_events>
 {
         namespace traces = protocols::traces;
@@ -136,9 +134,7 @@ void remove_next_event(
  * @param deadline_missed A boolean indicating whether the deadline for the task was missed.
  */
 void increase_deadline_stats(
-    std::size_t tid,
-    std::map<std::size_t, std::pair<std::size_t, std::size_t>>& stats,
-    bool deadline_missed)
+    std::size_t tid, outputs::stats::deadline_type& stats, bool deadline_missed)
 {
         std::pair<std::size_t, std::size_t> updated_value{0, 0};
         if (stats.contains(tid)) { updated_value = stats.at(tid); }
@@ -157,8 +153,7 @@ namespace outputs::stats {
  * @return A map of task IDs with statistics: the number of total jobs and the number of missed
  * deadlines.
  */
-auto detect_deadline_misses(const std::vector<std::pair<double, protocols::traces::trace>>& logs)
-    -> std::map<std::size_t, std::pair<std::size_t, std::size_t>>
+auto detect_deadline_misses(const outputs::stats::logs_type& logs) -> deadline_type
 {
         // Filter input traces to only save job arrivals that are not rejected, and job finished
         auto filtered_logs = filter_logs(logs);
@@ -192,14 +187,12 @@ auto detect_deadline_misses(const std::vector<std::pair<double, protocols::trace
  * @param tid The task ID for which to print the deadline statistics.
  * @throws std::out_of_range If the specified task ID is not found in the deadline statistics.
  */
-void print_task_deadline_missed_count(
-    const std::map<std::size_t, std::pair<std::size_t, std::size_t>>& deadline_stats,
-    std::size_t tid)
+auto count_task_deadline_missed(const deadline_type& deadline_stats, std::size_t tid) -> std::size_t
 {
         if (!deadline_stats.contains(tid)) { throw std::out_of_range("Unknown task"); }
 
-        auto [jobs_count, deadline_missed_count] = deadline_stats.at(tid);
-        std::cout << deadline_missed_count << std::endl;
+        const auto& [_, deadline_missed_count] = deadline_stats.at(tid);
+        return deadline_missed_count;
 }
 
 /**
@@ -213,18 +206,11 @@ void print_task_deadline_missed_count(
  * @param tid The task ID for which to print the deadline miss rate.
  * @throws std::out_of_range If the specified task ID is not found in the deadline statistics.
  */
-void print_task_deadline_missed_rate(
-    const std::map<std::size_t, std::pair<std::size_t, std::size_t>>& deadline_stats,
-    std::size_t tid)
+auto count_task_deadline_missed_rate(const deadline_type& deadline_stats, std::size_t tid) -> double
 {
         if (!deadline_stats.contains(tid)) { throw std::out_of_range("Unknown task"); }
-
-        auto [jobs_count, deadline_missed_count] = deadline_stats.at(tid);
-        std::cout << std::setprecision(4)
-                  << (static_cast<double>(deadline_missed_count) /
-                      static_cast<double>(jobs_count)) *
-                         100
-                  << std::endl;
+        const auto& [jobs_count, deadline_missed_count] = deadline_stats.at(tid);
+        return (static_cast<double>(deadline_missed_count) / static_cast<double>(jobs_count));
 }
 
 /**
@@ -235,8 +221,7 @@ void print_task_deadline_missed_rate(
  *
  * @param deadline_stats The map containing task IDs with associated statistics.
  */
-void print_deadline_missed_count(
-    const std::map<std::size_t, std::pair<std::size_t, std::size_t>>& deadline_stats)
+auto count_deadline_missed(const deadline_type& deadline_stats) -> std::size_t
 {
         std::size_t sum_of_jobs{0};
         std::size_t sum_of_deadline_missed{0};
@@ -248,7 +233,7 @@ void print_deadline_missed_count(
                 sum_of_deadline_missed += deadline_missed_count;
         }
 
-        std::cout << sum_of_deadline_missed << std::endl;
+        return sum_of_deadline_missed;
 }
 
 /**
@@ -259,8 +244,7 @@ void print_deadline_missed_count(
  *
  * @param deadline_stats The map containing task IDs with associated statistics.
  */
-void print_deadline_missed_rate(
-    const std::map<std::size_t, std::pair<std::size_t, std::size_t>>& deadline_stats)
+auto count_deadline_missed_rate(const deadline_type& deadline_stats) -> double
 {
         std::size_t sum_of_jobs{0};
         std::size_t sum_of_deadline_missed{0};
@@ -272,11 +256,7 @@ void print_deadline_missed_rate(
                 sum_of_deadline_missed += deadline_missed_count;
         }
 
-        std::cout << std::setprecision(4)
-                  << (static_cast<double>(sum_of_deadline_missed) /
-                      static_cast<double>(sum_of_jobs)) *
-                         100
-                  << std::endl;
+        return (static_cast<double>(sum_of_deadline_missed) / static_cast<double>(sum_of_jobs));
 }
 
 } // namespace outputs::stats

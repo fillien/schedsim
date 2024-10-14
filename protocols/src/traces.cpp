@@ -1,5 +1,4 @@
 #include <fstream>
-#include <iostream>
 #include <iterator>
 #include <map>
 #include <nlohmann/json.hpp>
@@ -246,7 +245,9 @@ auto read_log_file(std::filesystem::path& file) -> std::vector<std::pair<double,
         parsed_traces.reserve(logs_array.Size());
 
         for (const auto& json_trace : logs_array) {
+#ifdef TRACY_ENABLE
                 ZoneScoped;
+#endif
                 if (!json_trace.HasMember("time") || !json_trace["time"].IsDouble()) [[unlikely]] {
                         throw std::runtime_error("Missing or invalid 'time' field");
                 }

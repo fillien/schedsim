@@ -1,4 +1,3 @@
-
 #include "deadline_misses.hpp"
 #include "energy.hpp"
 #include "frequency.hpp"
@@ -8,7 +7,7 @@
 #include "protocols/hardware.hpp"
 #include "stats.hpp"
 #include "textual.hpp"
-#include <iterator>
+#include <any>
 #include <protocols/traces.hpp>
 
 #include <cstddef>
@@ -35,6 +34,7 @@ template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 void handle_plots(const cxxopts::ParseResult& cli, const auto& parsed, const auto& hw)
 {
         using namespace outputs::gantt;
+
         if (cli.count("frequency")) { outputs::frequency::print_frequency_changes(parsed); }
 
         if (cli.count("rtsched")) {
@@ -60,97 +60,90 @@ void handle_plots(const cxxopts::ParseResult& cli, const auto& parsed, const aut
         }
 }
 
-void handle_stats(const cxxopts::ParseResult& cli, const auto& parsed)
+auto any_to_string(const std::any& a) -> std::string
 {
-        using namespace outputs::stats;
-
-        if (cli.count("preemptions")) { print_nb_preemption(parsed); }
-        if (cli.count("contextswitch")) { print_nb_contextswitch(parsed); }
-        if (cli.count("rejected")) { print_rejected(parsed); }
-        if (cli.count("waiting")) { print_average_waiting_time(parsed); }
-        if (cli.count("duration")) { print_duration(parsed); }
-        if (cli.count("deadlines-rates")) {
-                auto tid{cli["deadlines-rates"].as<std::size_t>()};
-                auto deadlines{detect_deadline_misses(parsed)};
-                if (tid > 0) { print_task_deadline_missed_rate(deadlines, tid); }
-                else {
-                        print_deadline_missed_rate(deadlines);
-                }
+#ifdef TRACY_ENABLE
+        ZoneScoped;
+#endif
+        if (a.type() == typeid(double)) { return std::to_string(std::any_cast<double>(a)); }
+        else if (a.type() == typeid(std::size_t)) {
+                return std::to_string(std::any_cast<std::size_t>(a));
         }
-        if (cli.count("deadlines-counts")) {
-                auto tid{cli["deadlines-counts"].as<std::size_t>()};
-                auto deadlines{detect_deadline_misses(parsed)};
-                if (tid > 0) { print_task_deadline_missed_count(deadlines, tid); }
-                else {
-                        print_deadline_missed_count(deadlines);
-                }
-        }
-        if (cli.count("dpm-request")) { print_core_state_request_count(parsed); }
-        if (cli.count("freq-request")) { print_frequency_request_count(parsed); }
-        if (cli.count("energy")) { outputs::energy::print_energy_consumption(parsed); }
+        std::cout << "Unknown type" << std::endl;
+        return "";
 }
 
-#include <set>
+void print_table(const auto& table)
+{
+#ifdef TRACY_ENABLE
+        ZoneScoped;
+#endif
+        for (auto it = table.begin(); it != table.end(); ++it) {
+                std::cout << it->first;
+                if (std::next(it) != table.end()) { std::cout << '\t'; }
+        }
+        std::cout << '\n';
 
-struct core_state_request_handler {
-        std::set<std::size_t> active_cores;
-        int cpt;
+        for (auto it = table.begin(); it != table.end(); ++it) {
+                std::cout << any_to_string(it->second);
+                if (std::next(it) != table.end()) { std::cout << '\t'; }
+        }
+        std::cout << '\n';
+}
 
-        void on_proc_activated(std::size_t proc_id)
-        {
-                if (!active_cores.contains(proc_id)) {
-                        active_cores.insert(proc_id);
-                        cpt++;
-                }
+void handle_table_args(const cxxopts::ParseResult& cli, const auto& parsed, const auto& hw)
+{
+#ifdef TRACY_ENABLE
+        ZoneScoped;
+#endif
+        using namespace outputs::stats;
+        using namespace outputs::energy;
+
+        std::map<std::string, std::any> table;
+
+        if (cli.count("energy")) { table["energy"] = compute_energy_consumption(parsed, hw); }
+        if (cli.count("preemptions")) { table["preemptions"] = count_nb_preemption(parsed); }
+        if (cli.count("contextswitch")) { table["contextswitch"] = count_nb_contextswitch(parsed); }
+        if (cli.count("rejected")) { table["rejected"] = count_rejected(parsed); }
+        if (cli.count("waiting")) { table["waiting"] = count_average_waiting_time(parsed); }
+        if (cli.count("duration")) { table["duration"] = count_duration(parsed); }
+        if (cli.count("dpm-request")) { table["dpm-request"] = count_core_state_request(parsed); }
+        if (cli.count("freq-request")) { table["freq-request"] = count_frequency_request(parsed); }
+        if (cli.count("deadlines-rates")) {
+                auto deadlines{detect_deadline_misses(parsed)};
+                table["deadlines-rates"] = count_deadline_missed_rate(deadlines);
+        }
+        if (cli.count("deadlines-counts")) {
+                auto deadlines{detect_deadline_misses(parsed)};
+                table["deadlines-counts"] = count_deadline_missed(deadlines);
         }
 
-        void on_proc_idled(std::size_t proc_id)
-        {
-                if (!active_cores.contains(proc_id)) {
-                        active_cores.insert(proc_id);
-                        cpt++;
-                }
-        }
-
-        void on_proc_sleep(std::size_t proc_id)
-        {
-                if (active_cores.contains(proc_id)) {
-                        active_cores.erase(proc_id);
-                        cpt++;
-                }
-        }
-};
+        print_table(table);
+}
 
 void handle_outputs(const cxxopts::ParseResult& cli, const auto& parsed, const auto& hw)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        if (cli.count("print")) { outputs::textual::print(std::cout, parsed); }
-        handle_stats(cli, parsed);
-        handle_plots(cli, parsed, hw);
-        //
-        // namespace tr = protocols::traces;
-        //
-        // const bool cse_enabled = cli.count("dpm-request");
-        //
-        // core_state_request_handler csr;
-        //
-        // for (const auto& [timestamp, evt] : parsed) {
-        //         std::visit(
-        //             overloaded{
-        //                 [&](tr::proc_activated evt) {
-        //                         csr.on_proc_activated(evt.proc_id);
-        //                 },
-        //                 [&](tr::proc_idled evt) {
-        //                         csr.on_proc_idled(evt.proc_id);
-        //                 },
-        //                 [&](tr::proc_sleep evt) {
-        //                         csr.on_proc_sleep(evt.proc_id);
-        //                 },
-        //                 [](auto) {}},
-        //             evt);
-        // }
+        handle_table_args(cli, parsed, hw);
+        // handle_plots(cli, parsed, hw);
+}
+
+auto is_args_ask_table_result(const cxxopts::ParseResult& cli) -> bool
+{
+        return (
+            cli.count("energy") || cli.count("duration") || cli.count("preemptions") ||
+            cli.count("contextswitch") || cli.count("rejected") || cli.count("waiting") ||
+            cli.count("dpm-request") || cli.count("freq-request") || cli.count("deadlines-rates") ||
+            cli.count("deadlines-counts"));
+}
+
+auto is_args_ask_graph_result(const cxxopts::ParseResult& cli) -> bool
+{
+        return (
+            cli.count("rtsched") || cli.count("frequency") || cli.count("svg") ||
+            cli.count("html") || cli.count("procmode") || cli.count("au"));
 }
 
 auto main(const int argc, const char** argv) -> int
@@ -166,15 +159,14 @@ auto main(const int argc, const char** argv) -> int
         // clang-format off
         options.add_options()
                 ("h,help", "Helper")
-		        ("cli", "Print CLI friendly outputs")
                 ("p,print", "Print trace logs")
-                ("e,energy", "Plot power & cumulative energy comsumption")
                 ("f,frequency", "Print frequency changes")
                 ("r,rtsched", "Generate RTSched latex file")
                 ("procmode", "Generate RTSched latex file")
                 ("s,svg", "Generate GANTT chart in SVG file")
                 ("html", "Generate GANTT chart in HTML file")
                 ("au", "Print active utilization")
+                ("e,energy", "Plot power & cumulative energy comsumption")
                 ("duration", "Print taskset execution duration")
                 ("preemptions", "Print number of preemption")
                 ("contextswitch", "Print number of context switch")
@@ -209,10 +201,18 @@ auto main(const int argc, const char** argv) -> int
                 }
 
                 auto parsed = protocols::traces::read_log_file(input_filepath);
-                auto hardware = protocols::hardware::read_file(platform_config);
 
-                handle_outputs(cli, parsed, hardware);
-
+                if ((is_args_ask_graph_result(cli) || is_args_ask_table_result(cli)) &&
+                    cli.count("print")) {
+                        throw std::runtime_error("cannot output graphs or table result, and logs");
+                }
+                else if (cli.count("print")) {
+                        outputs::textual::print(std::cout, parsed);
+                }
+                else {
+                        auto hardware = protocols::hardware::read_file(platform_config);
+                        handle_outputs(cli, parsed, hardware);
+                }
                 return EXIT_SUCCESS;
         }
         catch (const cxxopts::exceptions::parsing& e) {
