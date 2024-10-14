@@ -9,7 +9,8 @@ import concurrent.futures
 from datetime import datetime
 
 SCHEDVIEW = "./build/schedview/schedview"
-
+PLATFORM = "./platforms/exynos5422LITTLE.json"
+LOG_PATH = "logs.json"
 
 def main():
     if len(sys.argv) <= 1:
@@ -21,8 +22,8 @@ def main():
     log_paths = {}
     log_paths["grub"] = f"{logs}_logs_grub"
     log_paths["pa"] = f"{logs}_logs_pa"
-    log_paths["pa_f_min"] = f"{logs}_logs_pa_f_min"
-    log_paths["pa_m_min"] = f"{logs}_logs_pa_m_min"
+    log_paths["ffa"] = f"{logs}_logs_ffa"
+    log_paths["csf"] = f"{logs}_logs_csf"
 
     results = pd.DataFrame()
     first = True
@@ -37,7 +38,7 @@ def main():
             results = merge(results, results_simu)
 
     results.to_csv("data-energy.csv", index=False, sep=" ")
-    subprocess.run(["gnuplot", "./scripts/plot.gp"])
+    # subprocess.run(["gnuplot", "./scripts/plot.gp"])
 
 
 def simulate(logsdir, sched_policy):
@@ -94,19 +95,25 @@ def simulate(logsdir, sched_policy):
 
 
 def run_scenario(schedview, log_path):
-    energy = subprocess.run(
-        [schedview, log_path, "--cli", "--energy"],
+    output = subprocess.run(
+        [SCHEDVIEW, "--platform", PLATFORM, log_path, "--energy", "--duration"],
         capture_output=True,
         text=True,
         check=True,
     )
-    duration = subprocess.run(
-        [schedview, log_path, "--cli", "--duration"],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    return float(energy.stdout.strip()) / float(duration.stdout.strip())
+    df = parse_output(output)
+    return df.loc[0, "energy"] / df.loc[0, "duration"]
+
+
+def parse_output(output):
+    lines = output.stdout.strip().split("\n")
+    headers = lines[0].split()
+    data_lines = lines[1:]
+    parsed_output = [
+        {headers[i]: float(values[i]) for i in range(len(headers))}
+        for values in (line.split() for line in data_lines)
+    ]
+    return pd.DataFrame(parsed_output)
 
 
 def merge(df1, df2):
