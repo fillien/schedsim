@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <filesystem>
 #include <nlohmann/json_fwd.hpp>
+#include <rapidjson/rapidjson.h>
 #include <vector>
 
 namespace protocols::hardware {

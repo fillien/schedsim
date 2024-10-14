@@ -14,7 +14,7 @@ template <class... Ts> struct overloaded : Ts... {
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 namespace {
-auto get_per_core_utilization(std::multimap<double, protocols::traces::trace> input)
+auto get_per_core_utilization(const std::vector<std::pair<double, protocols::traces::trace>>& input)
     -> std::map<std::size_t, double>
 {
         std::map<std::size_t, double> last_activation;
@@ -63,7 +63,7 @@ auto get_per_core_utilization(std::multimap<double, protocols::traces::trace> in
 } // namespace
 
 namespace outputs::stats {
-void print_utilizations(const std::multimap<double, protocols::traces::trace>& input)
+void print_utilizations(const std::vector<std::pair<double, protocols::traces::trace>>& input)
 {
         const auto utilizations = get_per_core_utilization(input);
 

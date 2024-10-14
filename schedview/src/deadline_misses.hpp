@@ -7,7 +7,7 @@
 
 namespace outputs::stats {
 
-auto detect_deadline_misses(const std::multimap<double, protocols::traces::trace>& logs)
+auto detect_deadline_misses(const std::vector<std::pair<double, protocols::traces::trace>>& logs)
     -> std::map<std::size_t, std::pair<std::size_t, std::size_t>>;
 
 void print_task_deadline_missed_count(

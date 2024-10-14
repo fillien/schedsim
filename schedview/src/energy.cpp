@@ -21,7 +21,7 @@ template <class... Ts> struct overloaded : Ts... {
 
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
-auto parse_power_consumption(const std::multimap<double, protocols::traces::trace>& input)
+auto parse_power_consumption(const std::vector<std::pair<double, protocols::traces::trace>>& input)
     -> std::vector<std::pair<double, double>>
 {
         std::vector<std::pair<double, double>> power_consumption;
@@ -84,7 +84,7 @@ auto parse_power_consumption(const std::multimap<double, protocols::traces::trac
         return power_consumption;
 }
 
-void outputs::energy::plot(const std::multimap<double, protocols::traces::trace>& input)
+void outputs::energy::plot(const std::vector<std::pair<double, protocols::traces::trace>>& input)
 {
         const auto power_consumption = parse_power_consumption(input);
 
@@ -117,7 +117,7 @@ void outputs::energy::plot(const std::multimap<double, protocols::traces::trace>
 }
 
 void outputs::energy::print_energy_consumption(
-    const std::multimap<double, protocols::traces::trace>& input)
+    const std::vector<std::pair<double, protocols::traces::trace>>& input)
 {
         const auto power_consumption = parse_power_consumption(input);
 

@@ -102,11 +102,11 @@ struct gantt {
 };
 
 auto generate_gantt(
-    const std::multimap<double, protocols::traces::trace>& logs,
+    const std::vector<std::pair<double, protocols::traces::trace>>& logs,
     const protocols::hardware::hardware& platform) -> gantt;
 
 auto generate_proc_mode(
-    const std::multimap<double, protocols::traces::trace>& logs,
+    const std::vector<std::pair<double, protocols::traces::trace>>& logs,
     const protocols::hardware::hardware& platform) -> gantt;
 }; // namespace outputs::gantt
 

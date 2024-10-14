@@ -4,6 +4,7 @@
 #include "nlohmann/json_fwd.hpp"
 #include <filesystem>
 #include <map>
+#include <rapidjson/document.h>
 #include <variant>
 
 namespace protocols::traces {
@@ -182,7 +183,7 @@ auto to_json(const trace& log) -> nlohmann::json;
  * @param log JSON representation of the trace event.
  * @return The trace event.
  */
-auto from_json(const nlohmann::json& log) -> trace;
+auto from_json(const rapidjson::Value& log) -> trace;
 
 /**
  * @brief Writes trace events to a log file.
@@ -196,7 +197,7 @@ void write_log_file(const std::multimap<double, trace>& logs, std::filesystem::p
  * @param file Path to the log file.
  * @return Multimap of trace events with timestamps.
  */
-auto read_log_file(std::filesystem::path& file) -> std::multimap<double, trace>;
+auto read_log_file(std::filesystem::path& file) -> std::vector<std::pair<double, trace>>;
 
 } // namespace protocols::traces
 

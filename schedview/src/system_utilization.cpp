@@ -1,6 +1,5 @@
 #include "system_utilization.hpp"
 #include <iostream>
-#include <map>
 #include <protocols/traces.hpp>
 #include <variant>
 
@@ -11,7 +10,7 @@ template <class... Ts> struct overloaded : Ts... {
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 namespace outputs::sys_util {
-void print_active_utilization(const std::multimap<double, protocols::traces::trace>& input)
+void print_active_utilization(const std::vector<std::pair<double, protocols::traces::trace>>& input)
 {
         double current_active_utilization{0};
 

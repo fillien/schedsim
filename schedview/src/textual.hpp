@@ -7,7 +7,7 @@
 #include <vector>
 
 namespace outputs::textual {
-void print(std::ostream& out, const std::multimap<double, protocols::traces::trace>& in);
+void print(std::ostream& out, const std::vector<std::pair<double, protocols::traces::trace>>& in);
 };
 
 #endif

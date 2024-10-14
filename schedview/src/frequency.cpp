@@ -12,7 +12,7 @@ template <class... Ts> struct overloaded : Ts... {
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 void outputs::frequency::print_frequency_changes(
-    const std::multimap<double, protocols::traces::trace>& input)
+    const std::vector<std::pair<double, protocols::traces::trace>>& input)
 {
         using namespace protocols::traces;
 

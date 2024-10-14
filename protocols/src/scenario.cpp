@@ -3,15 +3,24 @@
 #include <nlohmann/json.hpp>
 #include <protocols/scenario.hpp>
 #include <string>
+#ifdef TRACY_ENABLE
+#include <tracy/Tracy.hpp>
+#endif
 
 namespace protocols::scenario {
 auto to_json(const job& job) -> nlohmann::json
 {
+#ifdef TRACY_ENABLE
+        ZoneScoped;
+#endif
         return {{"arrival", job.arrival}, {"duration", job.duration}};
 }
 
 auto to_json(const task& task) -> nlohmann::json
 {
+#ifdef TRACY_ENABLE
+        ZoneScoped;
+#endif
         nlohmann::json json_task{
             {"id", task.id}, {"period", task.period}, {"utilization", task.utilization}};
 
@@ -24,6 +33,9 @@ auto to_json(const task& task) -> nlohmann::json
 
 auto to_json(const setting& setting) -> nlohmann::json
 {
+#ifdef TRACY_ENABLE
+        ZoneScoped;
+#endif
         nlohmann::json tasks{};
         for (const auto& task : setting.tasks) {
                 tasks.push_back(to_json(task));
@@ -34,6 +46,9 @@ auto to_json(const setting& setting) -> nlohmann::json
 
 auto from_json_job(const nlohmann::json& json_job) -> job
 {
+#ifdef TRACY_ENABLE
+        ZoneScoped;
+#endif
         return job{
             .arrival = json_job["arrival"].get<double>(),
             .duration = json_job["duration"].get<double>()};
@@ -41,6 +56,9 @@ auto from_json_job(const nlohmann::json& json_job) -> job
 
 auto from_json_task(const nlohmann::json& json_task) -> task
 {
+#ifdef TRACY_ENABLE
+        ZoneScoped;
+#endif
         task parsed_task{
             .id = json_task.at("id").get<std::size_t>(),
             .utilization = json_task.at("utilization").get<double>(),
@@ -56,6 +74,9 @@ auto from_json_task(const nlohmann::json& json_task) -> task
 
 auto from_json_setting(const nlohmann::json& json_setting) -> setting
 {
+#ifdef TRACY_ENABLE
+        ZoneScoped;
+#endif
         std::vector<task> tasks;
         for (const auto& json_task : json_setting.at("tasks")) {
                 tasks.push_back(from_json_task(json_task));
@@ -65,6 +86,9 @@ auto from_json_setting(const nlohmann::json& json_setting) -> setting
 
 void write_file(const std::filesystem::path& file, const setting& tasks)
 {
+#ifdef TRACY_ENABLE
+        ZoneScoped;
+#endif
         std::ofstream out(file);
         if (!out) { throw std::runtime_error("Unable to open file: " + file.string()); }
 
@@ -73,6 +97,9 @@ void write_file(const std::filesystem::path& file, const setting& tasks)
 
 auto read_file(const std::filesystem::path& file) -> setting
 {
+#ifdef TRACY_ENABLE
+        ZoneScoped;
+#endif
         std::ifstream input_file(file);
         if (!input_file) { throw std::runtime_error("Failed to open file: " + file.string()); }
 

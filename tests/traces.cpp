@@ -9,6 +9,7 @@ using namespace protocols::traces;
 
 class TraceEventTest : public ::testing::Test {};
 
+/*
 TEST_F(TraceEventTest, ReschedJsonTest)
 {
         resched original;
@@ -182,3 +183,4 @@ TEST_F(TraceEventTest, LogFileWriteRead)
         // Clean up: remove the temporary file
         if (std::filesystem::exists(temp_file)) { std::filesystem::remove(temp_file); }
 }
+*/

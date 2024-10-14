@@ -25,7 +25,8 @@ template <class... Ts> struct overloaded : Ts... {
 
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
-auto count_tasks(const std::multimap<double, protocols::traces::trace>& traces) -> std::size_t
+auto count_tasks(const std::vector<std::pair<double, protocols::traces::trace>>& traces)
+    -> std::size_t
 {
         using namespace protocols::traces;
 
@@ -41,7 +42,8 @@ auto count_tasks(const std::multimap<double, protocols::traces::trace>& traces) 
         return max_tid;
 }
 
-auto get_last_timestamp(const std::multimap<double, protocols::traces::trace>& traces) -> double
+auto get_last_timestamp(const std::vector<std::pair<double, protocols::traces::trace>>& traces)
+    -> double
 {
         double last_timestamp{0};
         if (traces.rbegin() != traces.rend()) { last_timestamp = std::prev(traces.end())->first; }
@@ -124,7 +126,7 @@ auto get_proc_id(
 
 namespace outputs::gantt {
 auto generate_gantt(
-    const std::multimap<double, protocols::traces::trace>& logs,
+    const std::vector<std::pair<double, protocols::traces::trace>>& logs,
     const protocols::hardware::hardware& platform) -> gantt
 {
         namespace traces = protocols::traces;
@@ -250,7 +252,7 @@ void close_proc_mode_zone(
 }
 
 auto generate_proc_mode(
-    const std::multimap<double, protocols::traces::trace>& logs,
+    const std::vector<std::pair<double, protocols::traces::trace>>& logs,
     const protocols::hardware::hardware& platform) -> gantt
 {
         namespace traces = protocols::traces;

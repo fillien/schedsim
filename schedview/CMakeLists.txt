@@ -4,6 +4,24 @@ target_compile_features(schedview PRIVATE cxx_std_23)
 target_compile_options(schedview PRIVATE -fdiagnostics-color=always -fsanitize=address)
 target_link_options(schedview PRIVATE -fsanitize=address)
 
+# Set Tracy option based on build type
+if (ENABLE_TRACY)
+    message(STATUS "Tracy is enabled")
+    set(ENABLE_TRACY ON)
+    FetchContent_Declare(tracy
+	GIT_REPOSITORY https://github.com/wolfpld/tracy.git
+	GIT_TAG v0.10
+	GIT_SHALLOW TRUE
+	GIT_PROGRESS TRUE
+    )
+    FetchContent_MakeAvailable(tracy)
+    target_link_libraries(schedview PRIVATE TracyClient cxxopts protocols)
+else()
+    message(STATUS "Tracy is disabled")
+    set(ENABLE_TRACY OFF)
+    target_link_libraries(schedview PRIVATE cxxopts protocols)
+endif()
+
 target_sources(schedview PRIVATE
   src/main.cpp
   src/gantt/gantt.cpp
@@ -27,5 +45,3 @@ target_sources(schedview PRIVATE
   src/system_utilization.hpp
   src/system_utilization.cpp
 )
-
-target_link_libraries(schedview PRIVATE protocols cxxopts)

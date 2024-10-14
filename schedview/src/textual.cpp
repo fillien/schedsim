@@ -129,7 +129,7 @@ void serialize(std::ostream& out, const protocols::traces::trace& tra)
 }; // namespace
 
 void outputs::textual::print(
-    std::ostream& out, const std::multimap<double, protocols::traces::trace>& in)
+    std::ostream& out, const std::vector<std::pair<double, protocols::traces::trace>>& in)
 {
         double last_timestamp{0};
 

@@ -1,10 +1,17 @@
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <map>
 #include <nlohmann/json.hpp>
 #include <ostream>
 #include <protocols/traces.hpp>
+#include <rapidjson/document.h>
+#include <rapidjson/istreamwrapper.h>
+#include <stdexcept>
 #include <variant>
+#ifdef TRACY_ENABLE
+#include <tracy/Tracy.hpp>
+#endif
 
 template <class... Ts> struct overloaded : Ts... {
         using Ts::operator()...;
@@ -15,6 +22,9 @@ template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 namespace protocols::traces {
 auto to_json(const trace& log) -> nlohmann::json
 {
+#ifdef TRACY_ENABLE
+        ZoneScoped;
+#endif
         using json = nlohmann::json;
         return std::visit(
             overloaded{
@@ -97,110 +107,111 @@ auto to_json(const trace& log) -> nlohmann::json
             log);
 }
 
-auto from_json(const nlohmann::json& log) -> trace
+auto from_json(const rapidjson::Value& log) -> trace
 {
-        const std::map<std::string, traces::trace> convert{
-            {"sim_finished", sim_finished{}},
-            {"resched", resched{}},
-            {"job_arrival", job_arrival{}},
-            {"job_finished", job_finished{}},
-            {"proc_activated", proc_activated{}},
-            {"proc_sleep", proc_sleep{}},
-            {"proc_idled", proc_idled{}},
-            {"serv_budget_replenished", serv_budget_replenished{}},
-            {"serv_inactive", serv_inactive{}},
-            {"serv_running", serv_running{}},
-            {"serv_budget_exhausted", serv_budget_exhausted{}},
-            {"serv_non_cont", serv_non_cont{}},
-            {"serv_postpone", serv_postpone{}},
-            {"serv_ready", serv_ready{}},
-            {"task_preempted", task_preempted{}},
-            {"task_scheduled", task_scheduled{}},
-            {"task_rejected", task_rejected{}},
-            {"virtual_time_update", virtual_time_update{}},
-            {"frequency_update", frequency_update{}}};
+#ifdef TRACY_ENABLE
+        ZoneScoped;
+#endif
 
-        auto search = convert.find(log.at("type").get<std::string>());
-        if (search == std::end(convert)) { throw std::out_of_range("Unsupported event"); }
+        using trace_handler = std::function<trace(const rapidjson::Value&)>;
 
-        trace out;
+        // Map event types to their respective handlers
+        const std::unordered_map<std::string_view, trace_handler> convert{
+            {"sim_finished",
+             [](const rapidjson::Value& log [[maybe_unused]]) -> trace { return sim_finished{}; }},
+            {"resched",
+             [](const rapidjson::Value& log [[maybe_unused]]) -> trace { return resched{}; }},
+            {"job_arrival",
+             [](const rapidjson::Value& log) -> trace {
+                     return job_arrival{
+                         log["tid"].GetUint64(),
+                         log["duration"].GetDouble(),
+                         log["deadline"].GetDouble()};
+             }},
+            {"job_finished",
+             [](const rapidjson::Value& log) -> trace {
+                     return job_finished{log["tid"].GetUint64()};
+             }},
+            {"proc_activated",
+             [](const rapidjson::Value& log) -> trace {
+                     return proc_activated{log["cpu"].GetUint64()};
+             }},
+            {"proc_sleep",
+             [](const rapidjson::Value& log) -> trace {
+                     return proc_sleep{log["cpu"].GetUint64()};
+             }},
+            {"proc_idled",
+             [](const rapidjson::Value& log) -> trace {
+                     return proc_idled{log["cpu"].GetUint64()};
+             }},
+            {"serv_budget_replenished",
+             [](const rapidjson::Value& log) -> trace {
+                     return serv_budget_replenished{
+                         log["tid"].GetUint64(), log["budget"].GetDouble()};
+             }},
+            {"serv_inactive",
+             [](const rapidjson::Value& log) -> trace {
+                     return serv_inactive{log["tid"].GetUint64(), log["utilization"].GetDouble()};
+             }},
+            {"serv_running",
+             [](const rapidjson::Value& log) -> trace {
+                     return serv_running{log["tid"].GetUint64()};
+             }},
+            {"serv_budget_exhausted",
+             [](const rapidjson::Value& log) -> trace {
+                     return serv_budget_exhausted{log["tid"].GetUint64()};
+             }},
+            {"serv_non_cont",
+             [](const rapidjson::Value& log) -> trace {
+                     return serv_non_cont{log["tid"].GetUint64()};
+             }},
+            {"serv_postpone",
+             [](const rapidjson::Value& log) -> trace {
+                     return serv_postpone{log["tid"].GetUint64(), log["deadline"].GetDouble()};
+             }},
+            {"serv_ready",
+             [](const rapidjson::Value& log) -> trace {
+                     return serv_ready{
+                         log["tid"].GetUint64(),
+                         log["deadline"].GetDouble(),
+                         log["utilization"].GetDouble()};
+             }},
+            {"task_preempted",
+             [](const rapidjson::Value& log) -> trace {
+                     return task_preempted{log["tid"].GetUint64()};
+             }},
+            {"task_scheduled",
+             [](const rapidjson::Value& log) -> trace {
+                     return task_scheduled{log["tid"].GetUint64(), log["cpu"].GetUint64()};
+             }},
+            {"task_rejected",
+             [](const rapidjson::Value& log) -> trace {
+                     return task_rejected{log["tid"].GetUint64()};
+             }},
+            {"virtual_time_update",
+             [](const rapidjson::Value& log) -> trace {
+                     return virtual_time_update{
+                         log["tid"].GetUint64(), log["virtual_time"].GetDouble()};
+             }},
+            {"frequency_update",
+             [](const rapidjson::Value& log) -> trace {
+                     return frequency_update{log["frequency"].GetDouble()};
+             }},
+        };
 
-        std::visit(
-            overloaded{
-                [&out, &log](frequency_update) {
-                        out = frequency_update{log.at("frequency").get<double>()};
-                },
-                [&out, &log](virtual_time_update) {
-                        out = virtual_time_update{
-                            log.at("tid").get<std::size_t>(), log.at("virtual_time").get<double>()};
-                },
-                [&out, &log](task_rejected) {
-                        out = task_rejected{log.at("tid").get<std::size_t>()};
-                },
-                [&out, &log](task_scheduled) {
-                        out = task_scheduled{
-                            log.at("tid").get<std::size_t>(), log.at("cpu").get<std::size_t>()};
-                },
-                [&out, &log](task_preempted) {
-                        out = task_preempted{log.at("tid").get<std::size_t>()};
-                },
-                [&out, &log](serv_running) {
-                        out = serv_running{log.at("tid").get<std::size_t>()};
-                },
-                [&out, &log](serv_ready) {
-                        out = serv_ready{
-                            log.at("tid").get<std::size_t>(),
-                            log.at("deadline").get<double>(),
-                            log.at("utilization").get<double>()};
-                },
-                [&out, &log](serv_postpone) {
-                        out = serv_postpone{
-                            log.at("tid").get<std::size_t>(), log.at("deadline").get<double>()};
-                },
-                [&out, &log](serv_non_cont) {
-                        out = serv_non_cont{log.at("tid").get<std::size_t>()};
-                },
-                [&out, &log](serv_budget_exhausted) {
-                        out = serv_budget_exhausted{log.at("tid").get<std::size_t>()};
-                },
-                [&out, &log](serv_budget_replenished) {
-                        out = serv_budget_replenished{
-                            log.at("tid").get<std::size_t>(), log.at("budget").get<double>()};
-                },
-                [&out, &log](serv_inactive) {
-                        out = serv_inactive{
-                            log.at("tid").get<std::size_t>(), log.at("utilization").get<double>()};
-                },
-                [&out, &log](proc_idled) {
-                        out = proc_idled{.proc_id = log.at("cpu").get<std::size_t>()};
-                },
-                [&out, &log](proc_sleep) {
-                        out = proc_sleep{.proc_id = log.at("cpu").get<std::size_t>()};
-                },
-                [&out, &log](proc_activated) {
-                        out = proc_activated{log.at("cpu").get<std::size_t>()};
-                },
-                [&out, &log](job_finished) {
-                        out = job_finished{log.at("tid").get<std::size_t>()};
-                },
-                [&out, &log](job_arrival) {
-                        out = job_arrival{
-                            log.at("tid").get<std::size_t>(),
-                            log.at("duration").get<double>(),
-                            log.at("deadline").get<double>()};
-                },
-                [&out](resched) { out = resched{}; },
-                [&out](sim_finished) { out = sim_finished{}; }},
-            search->second);
-        return out;
+        auto search = convert.find(log["type"].GetString());
+        if (search != convert.end()) [[likely]] { return search->second(log); }
+        throw std::out_of_range("Unsupported event type");
 }
 
 void write_log_file(const std::multimap<double, trace>& logs, std::filesystem::path& file)
 {
+#ifdef TRACY_ENABLE
+        ZoneScoped;
+#endif
         std::ofstream out;
         out.open(file);
 
-        /// Wait that the file is open
         while (!out.is_open()) {}
 
         out << "[";
@@ -214,26 +225,37 @@ void write_log_file(const std::multimap<double, trace>& logs, std::filesystem::p
         out.close();
 }
 
-auto read_log_file(std::filesystem::path& file) -> std::multimap<double, trace>
+auto read_log_file(std::filesystem::path& file) -> std::vector<std::pair<double, trace>>
 {
-        std::string input{};
-        {
-                std::ifstream input_file{file};
+#ifdef TRACY_ENABLE
+        ZoneScoped;
+#endif
+        std::ifstream input_file{file};
 
-                /// Wait that the file is open
-                while (!input_file.is_open()) {}
-                std::ostringstream oss;
-                oss << input_file.rdbuf();
-                input = oss.str();
+        if (!input_file.is_open()) { throw std::runtime_error("File could not be opened"); }
+
+        rapidjson::IStreamWrapper isw(input_file);
+        rapidjson::Document json_input;
+        json_input.ParseStream(isw);
+
+        if (json_input.HasParseError()) { throw std::runtime_error("Error parsing JSON"); }
+        if (!json_input.IsArray()) { throw std::runtime_error("Expected JSON array"); }
+
+        const auto& logs_array = json_input.GetArray();
+        std::vector<std::pair<double, trace>> parsed_traces;
+        parsed_traces.reserve(logs_array.Size());
+
+        for (const auto& json_trace : logs_array) {
+                ZoneScoped;
+                if (!json_trace.HasMember("time") || !json_trace["time"].IsDouble()) [[unlikely]] {
+                        throw std::runtime_error("Missing or invalid 'time' field");
+                }
+                parsed_traces.emplace_back(json_trace["time"].GetDouble(), from_json(json_trace));
         }
 
-        std::multimap<double, trace> parsed_traces{};
-
-        auto json_input = nlohmann::json::parse(input);
-
-        for (auto& json_trace : json_input) {
-                parsed_traces.insert({json_trace.at("time").get<double>(), from_json(json_trace)});
-        }
+        std::sort(parsed_traces.begin(), parsed_traces.end(), [](const auto& a, const auto& b) {
+                return a.first < b.first;
+        });
 
         return parsed_traces;
 }

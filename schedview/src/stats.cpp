@@ -15,7 +15,7 @@ template <class... Ts> struct overloaded : Ts... {
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 namespace {
-auto get_per_core_utilization(std::multimap<double, protocols::traces::trace> input)
+auto get_per_core_utilization(const std::vector<std::pair<double, protocols::traces::trace>>& input)
     -> std::map<std::size_t, double>
 {
         std::map<std::size_t, double> last_activation;
@@ -90,7 +90,7 @@ void close_ready_state_zone(
 } // namespace
 
 namespace outputs::stats {
-void print_utilizations(const std::multimap<double, protocols::traces::trace>& input)
+void print_utilizations(const std::vector<std::pair<double, protocols::traces::trace>>& input)
 {
         const auto utilizations = get_per_core_utilization(input);
 
@@ -101,7 +101,7 @@ void print_utilizations(const std::multimap<double, protocols::traces::trace>& i
         }
 }
 
-void print_nb_preemption(const std::multimap<double, protocols::traces::trace>& input)
+void print_nb_preemption(const std::vector<std::pair<double, protocols::traces::trace>>& input)
 {
         namespace traces = protocols::traces;
         std::size_t cpt_preemptions{0};
@@ -113,7 +113,7 @@ void print_nb_preemption(const std::multimap<double, protocols::traces::trace>& 
         std::cout << cpt_preemptions << std::endl;
 }
 
-void print_nb_contextswitch(const std::multimap<double, protocols::traces::trace>& input)
+void print_nb_contextswitch(const std::vector<std::pair<double, protocols::traces::trace>>& input)
 {
         namespace traces = protocols::traces;
         std::size_t cpt_contextswitch{0};
@@ -126,7 +126,8 @@ void print_nb_contextswitch(const std::multimap<double, protocols::traces::trace
         std::cout << cpt_contextswitch << std::endl;
 }
 
-void print_average_waiting_time(const std::multimap<double, protocols::traces::trace>& input)
+void print_average_waiting_time(
+    const std::vector<std::pair<double, protocols::traces::trace>>& input)
 {
         std::map<std::size_t, double> last_zone_entry;
         std::map<std::size_t, double> waiting_times;
@@ -157,7 +158,7 @@ void print_average_waiting_time(const std::multimap<double, protocols::traces::t
         std::cout << "Average Waiting Time: " << average_waiting_time << "\n";
 }
 
-void print_duration(const std::multimap<double, protocols::traces::trace>& input)
+void print_duration(const std::vector<std::pair<double, protocols::traces::trace>>& input)
 {
         for (const auto& tra : input) {
                 const auto& timestamp = tra.first;
@@ -172,7 +173,7 @@ void print_duration(const std::multimap<double, protocols::traces::trace>& input
         }
 }
 
-void print_rejected(const std::multimap<double, protocols::traces::trace>& input)
+void print_rejected(const std::vector<std::pair<double, protocols::traces::trace>>& input)
 {
         namespace traces = protocols::traces;
         std::size_t cpt{0};
@@ -184,7 +185,8 @@ void print_rejected(const std::multimap<double, protocols::traces::trace>& input
         std::cout << cpt << std::endl;
 }
 
-void print_core_state_request_count(const std::multimap<double, protocols::traces::trace>& input)
+void print_core_state_request_count(
+    const std::vector<std::pair<double, protocols::traces::trace>>& input)
 {
         std::set<std::size_t> active_cores;
         int cpt{0};
@@ -216,7 +218,8 @@ void print_core_state_request_count(const std::multimap<double, protocols::trace
         std::cout << cpt << std::endl;
 }
 
-void print_frequency_request_count(const std::multimap<double, protocols::traces::trace>& input)
+void print_frequency_request_count(
+    const std::vector<std::pair<double, protocols::traces::trace>>& input)
 {
         namespace traces = protocols::traces;
         std::size_t cpt{0};
