@@ -254,10 +254,6 @@ auto read_log_file(const std::filesystem::path& file) -> std::vector<std::pair<d
                 parsed_traces.emplace_back(json_trace["time"].GetDouble(), from_json(json_trace));
         }
 
-        std::sort(parsed_traces.begin(), parsed_traces.end(), [](const auto& a, const auto& b) {
-                return a.first < b.first;
-        });
-
         return parsed_traces;
 }
 } // namespace protocols::traces
