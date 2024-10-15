@@ -9,6 +9,7 @@ import concurrent.futures
 from datetime import datetime
 
 SCHEDSIM = "./build/schedsim/schedsim"
+PLATFORM = "./platforms/exynos5422LITTLE.json"
 
 
 def main():
@@ -57,6 +58,8 @@ def run_scenario(schedsim, current_dir, scenario, sched_policy, datadir, log_dir
             "-s",
             os.path.join(current_dir, scenario),
             "-p",
+            PLATFORM,
+            "--sched",
             str(sched_policy),
             "-o",
             os.path.join(log_dir, scenario),

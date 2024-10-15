@@ -224,7 +224,7 @@ void write_log_file(const std::multimap<double, trace>& logs, std::filesystem::p
         out.close();
 }
 
-auto read_log_file(std::filesystem::path& file) -> std::vector<std::pair<double, trace>>
+auto read_log_file(const std::filesystem::path& file) -> std::vector<std::pair<double, trace>>
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;

@@ -69,6 +69,9 @@ auto any_to_string(const std::any& a) -> std::string
         else if (a.type() == typeid(std::size_t)) {
                 return std::to_string(std::any_cast<std::size_t>(a));
         }
+        else if (a.type() == typeid(std::string)) {
+                return std::any_cast<std::string>(a);
+        }
         std::cout << "Unknown type" << std::endl;
         return "";
 }
@@ -80,15 +83,18 @@ void print_table(const auto& table)
 #endif
         for (auto it = table.begin(); it != table.end(); ++it) {
                 std::cout << it->first;
-                if (std::next(it) != table.end()) { std::cout << '\t'; }
+                if (std::next(it) != table.end()) { std::cout << ';'; }
         }
         std::cout << '\n';
 
-        for (auto it = table.begin(); it != table.end(); ++it) {
-                std::cout << any_to_string(it->second);
-                if (std::next(it) != table.end()) { std::cout << '\t'; }
+        std::size_t size = table.begin()->second.size();
+        for (std::size_t i = 0; i < size; ++i) {
+                for (auto it = table.begin(); it != table.end(); ++it) {
+                        std::cout << any_to_string(it->second.at(i));
+                        if (std::next(it) != table.end()) { std::cout << ';'; }
+                }
+                std::cout << '\n';
         }
-        std::cout << '\n';
 }
 
 void handle_table_args(const cxxopts::ParseResult& cli, const auto& parsed, const auto& hw)
@@ -96,29 +102,6 @@ void handle_table_args(const cxxopts::ParseResult& cli, const auto& parsed, cons
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        using namespace outputs::stats;
-        using namespace outputs::energy;
-
-        std::map<std::string, std::any> table;
-
-        if (cli.count("energy")) { table["energy"] = compute_energy_consumption(parsed, hw); }
-        if (cli.count("preemptions")) { table["preemptions"] = count_nb_preemption(parsed); }
-        if (cli.count("contextswitch")) { table["contextswitch"] = count_nb_contextswitch(parsed); }
-        if (cli.count("rejected")) { table["rejected"] = count_rejected(parsed); }
-        if (cli.count("waiting")) { table["waiting"] = count_average_waiting_time(parsed); }
-        if (cli.count("duration")) { table["duration"] = count_duration(parsed); }
-        if (cli.count("dpm-request")) { table["dpm-request"] = count_core_state_request(parsed); }
-        if (cli.count("freq-request")) { table["freq-request"] = count_frequency_request(parsed); }
-        if (cli.count("deadlines-rates")) {
-                auto deadlines{detect_deadline_misses(parsed)};
-                table["deadlines-rates"] = count_deadline_missed_rate(deadlines);
-        }
-        if (cli.count("deadlines-counts")) {
-                auto deadlines{detect_deadline_misses(parsed)};
-                table["deadlines-counts"] = count_deadline_missed(deadlines);
-        }
-
-        print_table(table);
 }
 
 void handle_outputs(const cxxopts::ParseResult& cli, const auto& parsed, const auto& hw)
@@ -160,6 +143,7 @@ auto main(const int argc, const char** argv) -> int
         options.add_options()
                 ("h,help", "Helper")
                 ("p,print", "Print trace logs")
+                ("d,directory", "Analyze a whole directory", cxxopts::value<std::string>())
                 ("f,frequency", "Print frequency changes")
                 ("r,rtsched", "Generate RTSched latex file")
                 ("procmode", "Generate RTSched latex file")
@@ -188,30 +172,109 @@ auto main(const int argc, const char** argv) -> int
                         std::cout << options.help() << std::endl;
                         exit(cli.arguments().empty() ? EXIT_FAILURE : EXIT_SUCCESS);
                 }
-
-                fs::path input_filepath = cli["infile"].as<std::string>();
                 fs::path platform_config = cli["platform"].as<std::string>();
-
-                if (!fs::exists(input_filepath)) {
-                        throw std::runtime_error(input_filepath.string() + " file missing");
-                }
 
                 if (!fs::exists(platform_config)) {
                         throw std::runtime_error(platform_config.string() + " file missing");
                 }
-
-                auto parsed = protocols::traces::read_log_file(input_filepath);
 
                 if ((is_args_ask_graph_result(cli) || is_args_ask_table_result(cli)) &&
                     cli.count("print")) {
                         throw std::runtime_error("cannot output graphs or table result, and logs");
                 }
                 else if (cli.count("print")) {
+                        fs::path input_filepath = cli["infile"].as<std::string>();
+                        if (!fs::exists(input_filepath)) {
+                                throw std::runtime_error(input_filepath.string() + " file missing");
+                        }
+                        auto parsed = protocols::traces::read_log_file(input_filepath);
                         outputs::textual::print(std::cout, parsed);
                 }
                 else {
                         auto hardware = protocols::hardware::read_file(platform_config);
-                        handle_outputs(cli, parsed, hardware);
+
+                        if (cli.count("directory")) {
+                                std::string dir_path = cli["directory"].as<std::string>();
+
+                                // Get the list of files in the directory
+                                if (fs::exists(dir_path) && fs::is_directory(dir_path)) {
+                                        std::map<std::string, std::vector<std::any>> table;
+                                        for (const auto& entry : fs::directory_iterator(dir_path)) {
+                                                table["file"].push_back(entry.path().string());
+                                                auto parsed =
+                                                    protocols::traces::read_log_file(entry.path().string());
+                                                if (fs::is_regular_file(entry.status())) {
+                                                        using namespace outputs::stats;
+                                                        using namespace outputs::energy;
+
+                                                        if (cli.count("energy")) {
+                                                                table["energy"].push_back(
+                                                                    compute_energy_consumption(
+                                                                        parsed, hardware));
+                                                        }
+                                                        if (cli.count("preemptions")) {
+                                                                table["preemptions"].push_back(
+                                                                    count_nb_preemption(parsed));
+                                                        }
+                                                        if (cli.count("contextswitch")) {
+                                                                table["contextswitch"].push_back(
+                                                                    count_nb_contextswitch(parsed));
+                                                        }
+                                                        if (cli.count("rejected")) {
+                                                                table["rejected"].push_back(
+                                                                    count_rejected(parsed));
+                                                        }
+                                                        if (cli.count("waiting")) {
+                                                                table["waiting"].push_back(
+                                                                    count_average_waiting_time(
+                                                                        parsed));
+                                                        }
+                                                        if (cli.count("duration")) {
+                                                                table["duration"].push_back(
+                                                                    count_duration(parsed));
+                                                        }
+                                                        if (cli.count("dpm-request")) {
+                                                                table["dpm-request"].push_back(
+                                                                    count_core_state_request(
+                                                                        parsed));
+                                                        }
+                                                        if (cli.count("freq-request")) {
+                                                                table["freq-request"].push_back(
+                                                                    count_frequency_request(
+                                                                        parsed));
+                                                        }
+                                                        if (cli.count("deadlines-rates")) {
+                                                                auto deadlines{
+                                                                    detect_deadline_misses(parsed)};
+                                                                table["deadlines-rates"].push_back(
+                                                                    count_deadline_missed_rate(
+                                                                        deadlines));
+                                                        }
+                                                        if (cli.count("deadlines-counts")) {
+                                                                auto deadlines{
+                                                                    detect_deadline_misses(parsed)};
+                                                                table["deadlines-counts"].push_back(
+                                                                    count_deadline_missed(
+                                                                        deadlines));
+                                                        }
+                                                }
+                                        }
+                                        print_table(table);
+                                }
+                                else {
+                                        throw std::runtime_error("directory does not exist "
+                                                                 "or is not a directory");
+                                }
+                        }
+                        else {
+                                fs::path input_filepath = cli["infile"].as<std::string>();
+                                if (!fs::exists(input_filepath)) {
+                                        throw std::runtime_error(
+                                            input_filepath.string() + " file missing");
+                                }
+                                auto parsed = protocols::traces::read_log_file(input_filepath);
+                                handle_outputs(cli, parsed, hardware);
+                        }
                 }
                 return EXIT_SUCCESS;
         }

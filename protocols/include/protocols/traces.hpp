@@ -197,7 +197,7 @@ void write_log_file(const std::multimap<double, trace>& logs, std::filesystem::p
  * @param file Path to the log file.
  * @return Multimap of trace events with timestamps.
  */
-auto read_log_file(std::filesystem::path& file) -> std::vector<std::pair<double, trace>>;
+auto read_log_file(const std::filesystem::path& file) -> std::vector<std::pair<double, trace>>;
 
 } // namespace protocols::traces
 
