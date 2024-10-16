@@ -2,7 +2,6 @@
 #include <protocols/traces.hpp>
 
 #include <iostream>
-#include <map>
 #include <variant>
 
 template <class... Ts> struct overloaded : Ts... {
@@ -11,24 +10,33 @@ template <class... Ts> struct overloaded : Ts... {
 
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
-void outputs::frequency::print_frequency_changes(
+auto outputs::frequency::track_frequency_changes(
     const std::vector<std::pair<double, protocols::traces::trace>>& input)
+    -> std::map<std::string, std::vector<std::any>>
 {
         using namespace protocols::traces;
 
-        double last_freq{0};
+        std::map<std::string, std::vector<std::any>> table;
 
-        std::cout << "timestamp freq\n";
+        double last_freq{-1};
 
         for (const auto& [timestamp, tra] : input) {
                 std::visit(
                     overloaded{
                         [&](frequency_update evt) {
-                                last_freq = evt.frequency;
-                                std::cout << timestamp << ' ' << evt.frequency << '\n';
+                                if (timestamp > last_freq) {
+                                        last_freq = evt.frequency;
+                                        if (!table["freq"].empty()) {
+                                                table["stop"].push_back(timestamp);
+                                        }
+                                        table["freq"].push_back(evt.frequency);
+                                        table["start"].push_back(timestamp);
+                                }
                         },
-                        [&](sim_finished) { std::cout << timestamp << ' ' << last_freq << '\n'; },
+                        [&](sim_finished) { table["stop"].push_back(timestamp); },
                         [](auto) {}},
                     tra);
         }
+
+        return table;
 }
