@@ -93,6 +93,8 @@ void handle_plots(const cxxopts::ParseResult& cli, const auto& parsed, const aut
                 print_table(track_frequency_changes(parsed), cli.count("index"));
         }
 
+        if (cli.count("cores")) { print_table(track_cores_changes(parsed), cli.count("index")); }
+
         if (cli.count("rtsched")) {
                 gantt chart{generate_gantt(parsed, hw)};
                 std::filesystem::path output_file(cli["rtsched"].as<std::string>());
@@ -218,6 +220,7 @@ auto main(const int argc, const char** argv) -> int
                 ("d,directory", "Analyze a whole directory", cxxopts::value<std::string>())
                 ("i,index", "Add columns name to table data")
                 ("f,frequency", "Print frequency changes")
+                ("m,cores", "Print the number of active cores changes")
                 ("r,rtsched", "Generate RTSched latex file")
                 ("procmode", "Generate RTSched latex file")
                 ("s,svg", "Generate GANTT chart in SVG file")

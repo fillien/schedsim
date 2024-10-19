@@ -22,6 +22,10 @@
 #include "schedulers/power_aware_m_min.hpp"
 #include "task.hpp"
 
+#ifdef TRACY_ENABLE
+#include <tracy/Tracy.hpp>
+#endif
+
 namespace fs = std::filesystem;
 
 struct app_config {
@@ -42,10 +46,10 @@ auto parse_args(const int argc, const char** argv) -> app_config
         app_config config;
 
         // clang-format off
-	cxxopts::Options options("schedsim", "Simulate the execution of the GRUB scheduler for a given taskset on given platform");
-	options.add_options()
-		("h,help", "Print this help message")
-		("s,scenario", "Specify the scenario file", cxxopts::value<std::string>())
+	    cxxopts::Options options("schedsim", "Simulate the execution of the GRUB scheduler for a given taskset on given platform");
+	    options.add_options()
+		        ("h,help", "Print this help message")
+		        ("s,scenario", "Specify the scenario file", cxxopts::value<std::string>())
 		        ("p,platform", "Specify the platform configuration file", cxxopts::value<std::string>())
 		        ("sched", "Specify the scheduling policy", cxxopts::value<std::string>())
 		        ("scheds", "List the available schedulers", cxxopts::value<bool>()->default_value("false"))
@@ -74,6 +78,9 @@ auto parse_args(const int argc, const char** argv) -> app_config
 
 auto main(const int argc, const char** argv) -> int
 {
+#ifdef TRACY_ENABLE
+        ZoneScoped;
+#endif
         using namespace std;
 
         const bool FREESCALING_ALLOWED{false};
