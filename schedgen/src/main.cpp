@@ -12,8 +12,6 @@
 #include <typeinfo>
 #include <vector>
 
-#include <nlohmann/json.hpp>
-
 namespace fs = std::filesystem;
 
 struct taskset_config {
