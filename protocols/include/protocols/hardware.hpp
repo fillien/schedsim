@@ -3,7 +3,7 @@
 
 #include <cstddef>
 #include <filesystem>
-#include <nlohmann/json_fwd.hpp>
+#include <rapidjson/document.h>
 #include <rapidjson/rapidjson.h>
 #include <vector>
 
@@ -15,8 +15,8 @@ struct hardware {
         std::vector<double> power_model;
 };
 
-auto to_json(const hardware& plat) -> nlohmann::json;
-auto from_json_hardware(const nlohmann::json& json_hardware) -> hardware;
+void to_json(const hardware& plat, rapidjson::Document& doc);
+auto from_json_hardware(const rapidjson::Document& doc) -> hardware;
 void write_file(const std::filesystem::path& file, const hardware& plat);
 auto read_file(const std::filesystem::path& file) -> hardware;
 } // namespace protocols::hardware
