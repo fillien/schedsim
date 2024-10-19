@@ -1,11 +1,13 @@
 #ifndef TRACES_HPP
 #define TRACES_HPP
 
-#include "nlohmann/json_fwd.hpp"
 #include <filesystem>
 #include <map>
 #include <rapidjson/document.h>
+#include <rapidjson/ostreamwrapper.h>
+#include <rapidjson/writer.h>
 #include <variant>
+#include <vector>
 
 namespace protocols::traces {
 
@@ -176,7 +178,7 @@ using trace = std::variant<
  * @param log The trace event to convert.
  * @return JSON representation of the trace event.
  */
-auto to_json(const trace& log) -> nlohmann::json;
+void to_json(const trace& log, rapidjson::Writer<rapidjson::OStreamWrapper>& writer);
 
 /**
  * @brief Converts JSON to a trace event.
@@ -190,7 +192,7 @@ auto from_json(const rapidjson::Value& log) -> trace;
  * @param logs Multimap of trace events with timestamps.
  * @param file Path to the log file.
  */
-void write_log_file(const std::multimap<double, trace>& logs, std::filesystem::path& file);
+void write_log_file(const std::multimap<double, trace>& logs, const std::filesystem::path& file);
 
 /**
  * @brief Reads trace events from a log file.

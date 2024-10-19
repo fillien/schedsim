@@ -2,7 +2,7 @@
 #define SCENARIO_HPP
 
 #include <filesystem>
-#include <nlohmann/json_fwd.hpp>
+#include <rapidjson/document.h>
 #include <vector>
 
 namespace protocols::scenario {
@@ -22,12 +22,18 @@ struct setting {
         std::vector<task> tasks;
 };
 
-auto to_json(const job& job) -> nlohmann::json;
-auto to_json(const task& task) -> nlohmann::json;
-auto to_json(const setting& setting) -> nlohmann::json;
-auto from_json_job(const nlohmann::json& json_job) -> job;
-auto from_json_task(const nlohmann::json& json_task) -> task;
-auto from_json_setting(const nlohmann::json& json_setting) -> setting;
+void to_json(
+    const job& job, rapidjson::Document::AllocatorType& allocator, rapidjson::Value& job_json);
+void to_json(
+    const task& task, rapidjson::Document::AllocatorType& allocator, rapidjson::Value& task_json);
+void to_json(
+    const setting& setting,
+    rapidjson::Document::AllocatorType& allocator,
+    rapidjson::Value& setting_json);
+
+auto from_json_job(const rapidjson::Value& json_job) -> job;
+auto from_json_task(const rapidjson::Value& json_task) -> task;
+auto from_json_setting(const rapidjson::Value& json_setting) -> setting;
 
 void write_file(const std::filesystem::path& file, const setting& tasks);
 auto read_file(const std::filesystem::path& file) -> setting;
