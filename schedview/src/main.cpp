@@ -210,33 +210,32 @@ auto main(const int argc, const char** argv) -> int
 #endif
         namespace fs = std::filesystem;
 
-        cxxopts::Options options("viewer", "Analyze simulation trace and produce stats and plots");
+        cxxopts::Options options("schedview", "Simulation Trace Analysis and Plot Generation Tool (For Post-Simulation Analysis of schedsim)");
         options.positional_help("infile");
         options.set_tab_expansion();
         // clang-format off
         options.add_options()
-                ("h,help", "Helper")
-                ("p,print", "Print trace logs")
-                ("d,directory", "Analyze a whole directory", cxxopts::value<std::string>())
-                ("i,index", "Add columns name to table data")
-                ("f,frequency", "Print frequency changes")
-                ("m,cores", "Print the number of active cores changes")
-                ("r,rtsched", "Generate RTSched latex file")
-                ("procmode", "Generate RTSched latex file")
-                ("s,svg", "Generate GANTT chart in SVG file")
-                ("html", "Generate GANTT chart in HTML file")
-                ("au", "Print active utilization")
-                ("e,energy", "Plot power & cumulative energy comsumption")
-                ("duration", "Print taskset execution duration")
-                ("preemptions", "Print number of preemption")
-                ("contextswitch", "Print number of context switch")
-                ("rejected", "Print number of rejected task")
-                ("waiting", "Print average waiting time")
-                ("dpm-request", "Print the number of requests to change the cores C-state")
-                ("freq-request", "Print the number of requests to change the frequency")
-                ("deadlines-rates", "Print deadline missed rates", cxxopts::value<std::size_t>()->implicit_value("0"))
-                ("deadlines-counts", "Print deadline missed counts", cxxopts::value<std::size_t>()->implicit_value("0"))
-                ("platform", "Hardware description source file", cxxopts::value<std::string>()->default_value("platform.json"))
+                ("h,help", "Show this help message.")
+                ("p,print", "Print the trace logs.")
+                ("d,directory", "Analyze all simulation traces within a directory.", cxxopts::value<std::string>())
+                ("i,index", "Add column names to table data.")
+                ("f,frequency", "Print frequency change events.")
+                ("m,cores", "Print active core count changes.")
+                ("r,rtsched", "Generate an RTSched LaTeX file.")
+                ("procmode", "Generate RTSched LaTeX file with processor mode.")
+                ("s,svg", "Generate a GANTT chart in SVG format.")
+                ("html", "Generate a GANTT chart in HTML format.")
+                ("au", "Print active utilization metrics.")
+                ("e,energy", "Print the energy used by the platform during the simulation.")
+                ("duration", "Print task set execution duration.")
+                ("preemptions", "Print the number of preemptions.")
+                ("contextswitch", "Print the number of context switches.")
+                ("rejected", "Print the number of tasks rejected by the admission test.")
+                ("dpm-request", "Print the number of requests to change core C-state.")
+                ("freq-request", "Print the number of requests to change frequency.")
+                ("deadlines-rates", "Print the rate of missed deadlines.", cxxopts::value<std::size_t>()->implicit_value("0"))
+                ("deadlines-counts", "Print the count of missed deadlines.", cxxopts::value<std::size_t>()->implicit_value("0"))
+                ("platform", "Specify the hardware description file (default: platform.json).", cxxopts::value<std::string>()->default_value("platform.json"))
                 ("infile", "Traces from simulator", cxxopts::value<std::string>());
         // clang-format on
 

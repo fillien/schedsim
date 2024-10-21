@@ -46,14 +46,14 @@ auto parse_args(const int argc, const char** argv) -> app_config
         app_config config;
 
         // clang-format off
-	    cxxopts::Options options("schedsim", "Simulate the execution of the GRUB scheduler for a given taskset on given platform");
+	    cxxopts::Options options("schedsim", "GRUB Scheduler Simulation for a Given Task Set and Platform");
 	    options.add_options()
-		        ("h,help", "Print this help message")
-		        ("s,scenario", "Specify the scenario file", cxxopts::value<std::string>())
-		        ("p,platform", "Specify the platform configuration file", cxxopts::value<std::string>())
-		        ("sched", "Specify the scheduling policy", cxxopts::value<std::string>())
-		        ("scheds", "List the available schedulers", cxxopts::value<bool>()->default_value("false"))
-		        ("o,output", "Specify the output file", cxxopts::value<std::string>());
+		        ("h,help", "Show this help message.")
+		        ("s,scenario", "Specify the scenario file.", cxxopts::value<std::string>())
+		        ("p,platform", "Specify the platform configuration file.", cxxopts::value<std::string>())
+		        ("sched", "Specify the scheduling policy to be used.", cxxopts::value<std::string>())
+		        ("scheds", "List the available schedulers.", cxxopts::value<bool>()->default_value("false"))
+		        ("o,output", "Specify the output file to write the simulation results.", cxxopts::value<std::string>());
         // clang-format on
         const auto cli = options.parse(argc, argv);
 

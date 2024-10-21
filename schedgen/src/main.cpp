@@ -36,15 +36,15 @@ auto parse_args_taskset(const int argc, const char** argv) -> taskset_config
         taskset_config config;
 
         // clang-format off
-        cxxopts::Options options("schedgen taskset", "Generate task for monocore and multicore systems");
+        cxxopts::Options options("schedgen taskset", "Task Set Generator for Mono-core and Multi-core Systems");
         options.add_options()
-                ("h,help", "Helper")
-                ("t,tasks", "Number of tasks to generate", cxxopts::value<int>())
-                ("u,totalu", "Total utilization of the taskset", cxxopts::value<double>())
-                ("m,umax", "The maximum utilization of a task (0..1)", cxxopts::value<double>())
-                ("s,success", "Rate of deadlines met (0..1)", cxxopts::value<double>())
-                ("c,compression", "Compression ratio (0..1)", cxxopts::value<double>())
-                ("o,output", "Output file to write the scenario", cxxopts::value<std::string>());
+                ("h,help", "Show this help message.")
+                ("t,tasks", "Specify the number of tasks to generate.", cxxopts::value<int>())
+                ("u,totalu", "Set the total utilization of the task set.", cxxopts::value<double>())
+                ("m,umax", "Define the maximum utilization for a task (range: 0 to 1).", cxxopts::value<double>())
+                ("s,success", "Specify the success rate of deadlines met (range: 0 to 1).", cxxopts::value<double>())
+                ("c,compression", "Set the compression ratio for the tasks (range: 0 to 1).", cxxopts::value<double>())
+                ("o,output", "Output file to write the generated scenario.", cxxopts::value<std::string>());
         // clang-format on
         const auto cli = options.parse(argc, argv);
 
@@ -68,14 +68,14 @@ auto parse_args_platform(const int argc, const char** argv) -> platform_config
         platform_config config;
 
         // clang-format off
-        cxxopts::Options options("schedgen platform", "Generate platform configuration file");
+        cxxopts::Options options("schedgen platform", "Platform Configuration File Generator");
         options.add_options()
-                ("h,help", "Print this help message")
-		        ("c,cores", "Number of cores", cxxopts::value<std::size_t>())
-		        ("f,freq", "Allowed operating frequencies", cxxopts::value<std::vector<double>>())
-		        ("e,eff", "Add a effective frequency", cxxopts::value<double>())
-                ("p,power", "Set the power model", cxxopts::value<std::vector<double>>())
-		        ("o,output", "Output file to write the scenario", cxxopts::value<std::string>());
+                ("h,help", "Show this help message.")
+		        ("c,cores", "Specify the number of processor cores.", cxxopts::value<std::size_t>())
+		        ("f,freq", "Define the allowed operating frequencies.", cxxopts::value<std::vector<double>>())
+		        ("e,eff", "Add an effective frequency (actual frequency that minimize the total energy consumption).", cxxopts::value<double>())
+                ("p,power", "Set the power model for the platform.", cxxopts::value<std::vector<double>>())
+		        ("o,output", "Specify the output file to write the configuration.", cxxopts::value<std::string>());
         // clang-format on
 
         const auto cli = options.parse(argc, argv);
