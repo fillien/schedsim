@@ -35,10 +35,10 @@ $ build/schedview/schedview
 ## Usage
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="doc/background-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="doc/background.png">
+  <source media="(prefers-color-scheme: dark)" srcset="doc/background-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="doc/background.svg">
   <img alt="Show a workflow diagram in order to chose the right program to use
-  in the current step of simulation" src="doc/background.png">
+  in the current step of simulation" src="doc/background.svg">
 </picture>
 
  1. Use `schedgen` to generate new task sets with your parameters. Here, we
