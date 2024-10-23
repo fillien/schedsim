@@ -45,3 +45,5 @@ target_sources(schedview PRIVATE
   src/system_utilization.hpp
   src/system_utilization.cpp
 )
+
+target_include_directories(schedview PUBLIC ${CMAKE_BINARY_DIR}/generated)

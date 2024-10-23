@@ -21,6 +21,7 @@
 #include "schedulers/power_aware_f_min.hpp"
 #include "schedulers/power_aware_m_min.hpp"
 #include "task.hpp"
+#include <version.h>
 
 #ifdef TRACY_ENABLE
 #include <tracy/Tracy.hpp>
@@ -49,6 +50,7 @@ auto parse_args(const int argc, const char** argv) -> app_config
 	    cxxopts::Options options("schedsim", "GRUB Scheduler Simulation for a Given Task Set and Platform");
 	    options.add_options()
 		        ("h,help", "Show this help message.")
+                ("v,version", "Show the build version")
 		        ("s,scenario", "Specify the scenario file.", cxxopts::value<std::string>())
 		        ("p,platform", "Specify the platform configuration file.", cxxopts::value<std::string>())
 		        ("sched", "Specify the scheduling policy to be used.", cxxopts::value<std::string>())
@@ -57,8 +59,9 @@ auto parse_args(const int argc, const char** argv) -> app_config
         // clang-format on
         const auto cli = options.parse(argc, argv);
 
-        if (cli.count("help") || cli.arguments().empty()) {
-                std::cout << options.help() << std::endl;
+        if (cli.count("help") || cli.count("version") || cli.arguments().empty()) {
+                if (cli.count("help")) { std::cout << options.help() << std::endl; }
+                if (cli.count("version")) { std::cout << GIT_COMMIT_HASH << std::endl; }
                 exit(cli.arguments().empty() ? EXIT_FAILURE : EXIT_SUCCESS);
         }
 

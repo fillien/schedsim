@@ -17,6 +17,19 @@ else()
     set(ENABLE_TRACY ON)
 endif()
 
+execute_process(
+    COMMAND git rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_COMMIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+configure_file(
+    ${CMAKE_SOURCE_DIR}/external/version.h.in
+    ${CMAKE_BINARY_DIR}/generated/version.h
+    @ONLY
+)
+
 add_subdirectory(external/cxxopts)
 add_subdirectory(external/json)
 

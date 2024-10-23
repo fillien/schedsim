@@ -9,4 +9,6 @@ target_sources(schedgen PRIVATE
   src/task_generator.cpp
 )
 
+target_include_directories(schedgen PUBLIC ${CMAKE_BINARY_DIR}/generated)
+
 target_link_libraries(schedgen cxxopts protocols)

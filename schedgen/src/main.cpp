@@ -11,6 +11,7 @@
 #include <string>
 #include <typeinfo>
 #include <vector>
+#include <version.h>
 
 namespace fs = std::filesystem;
 
@@ -39,6 +40,7 @@ auto parse_args_taskset(const int argc, const char** argv) -> taskset_config
         cxxopts::Options options("schedgen taskset", "Task Set Generator for Mono-core and Multi-core Systems");
         options.add_options()
                 ("h,help", "Show this help message.")
+                ("v,version", "Show the build version")
                 ("t,tasks", "Specify the number of tasks to generate.", cxxopts::value<int>())
                 ("u,totalu", "Set the total utilization of the task set.", cxxopts::value<double>())
                 ("m,umax", "Define the maximum utilization for a task (range: 0 to 1).", cxxopts::value<double>())
@@ -48,8 +50,9 @@ auto parse_args_taskset(const int argc, const char** argv) -> taskset_config
         // clang-format on
         const auto cli = options.parse(argc, argv);
 
-        if (cli.count("help") || cli.arguments().empty()) {
-                std::cout << options.help() << std::endl;
+        if (cli.count("help") || cli.count("version") || cli.arguments().empty()) {
+                if (cli.count("help")) { std::cout << options.help() << std::endl; }
+                if (cli.count("version")) { std::cout << GIT_COMMIT_HASH << std::endl; }
                 exit(cli.arguments().empty() ? EXIT_FAILURE : EXIT_SUCCESS);
         }
 
@@ -71,6 +74,7 @@ auto parse_args_platform(const int argc, const char** argv) -> platform_config
         cxxopts::Options options("schedgen platform", "Platform Configuration File Generator");
         options.add_options()
                 ("h,help", "Show this help message.")
+                ("v,version", "Show the build version")
 		        ("c,cores", "Specify the number of processor cores.", cxxopts::value<std::size_t>())
 		        ("f,freq", "Define the allowed operating frequencies.", cxxopts::value<std::vector<double>>())
 		        ("e,eff", "Add an effective frequency (actual frequency that minimize the total energy consumption).", cxxopts::value<double>())
@@ -80,8 +84,9 @@ auto parse_args_platform(const int argc, const char** argv) -> platform_config
 
         const auto cli = options.parse(argc, argv);
 
-        if (cli.count("help") || cli.arguments().empty()) {
-                std::cout << options.help() << std::endl;
+        if (cli.count("help") || cli.count("version") || cli.arguments().empty()) {
+                if (cli.count("help")) { std::cout << options.help() << std::endl; }
+                if (cli.count("version")) { std::cout << GIT_COMMIT_HASH << std::endl; }
                 exit(cli.arguments().empty() ? EXIT_FAILURE : EXIT_SUCCESS);
         }
 

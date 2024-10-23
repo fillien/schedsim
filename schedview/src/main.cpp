@@ -20,6 +20,7 @@
 #include <string>
 #include <typeinfo>
 #include <vector>
+#include <version.h>
 
 #ifdef TRACY_ENABLE
 #include <tracy/Tracy.hpp>
@@ -210,12 +211,16 @@ auto main(const int argc, const char** argv) -> int
 #endif
         namespace fs = std::filesystem;
 
-        cxxopts::Options options("schedview", "Simulation Trace Analysis and Plot Generation Tool (For Post-Simulation Analysis of schedsim)");
+        cxxopts::Options options(
+            "schedview",
+            "Simulation Trace Analysis and Plot Generation Tool (For Post-Simulation Analysis of "
+            "schedsim)");
         options.positional_help("infile");
         options.set_tab_expansion();
         // clang-format off
         options.add_options()
                 ("h,help", "Show this help message.")
+                ("v,version", "Show the build version")
                 ("p,print", "Print the trace logs.")
                 ("d,directory", "Analyze all simulation traces within a directory.", cxxopts::value<std::string>())
                 ("i,index", "Add column names to table data.")
@@ -243,8 +248,9 @@ auto main(const int argc, const char** argv) -> int
                 options.parse_positional({"infile"});
                 const auto cli = options.parse(argc, argv);
 
-                if (cli.count("help") || cli.arguments().empty()) {
-                        std::cout << options.help() << std::endl;
+                if (cli.count("help") || cli.count("version") || cli.arguments().empty()) {
+                        if (cli.count("help")) { std::cout << options.help() << std::endl; }
+                        if (cli.count("version")) { std::cout << GIT_COMMIT_HASH << std::endl; }
                         exit(cli.arguments().empty() ? EXIT_FAILURE : EXIT_SUCCESS);
                 }
 
