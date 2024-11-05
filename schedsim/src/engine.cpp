@@ -1,6 +1,7 @@
 #include "engine.hpp"
 #include "event.hpp"
 #include "scheduler.hpp"
+#include "timer.hpp"
 #include <map>
 #include <protocols/traces.hpp>
 

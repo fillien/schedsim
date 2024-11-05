@@ -3,6 +3,7 @@
 
 #include "server.hpp"
 #include "task.hpp"
+#include "timer.hpp"
 
 #include <memory>
 #include <variant>
@@ -38,10 +39,15 @@ struct serv_inactive {
         std::shared_ptr<server> serv; /**< The inactive server. */
 };
 
+struct timer_isr {
+        std::shared_ptr<timer> target_timer;
+};
+
 /**
  * @brief A variant type representing different types of events.
  */
-using event = std::variant<job_arrival, job_finished, serv_budget_exhausted, serv_inactive>;
+using event =
+    std::variant<job_arrival, job_finished, serv_budget_exhausted, serv_inactive, timer_isr>;
 
 } // namespace events
 

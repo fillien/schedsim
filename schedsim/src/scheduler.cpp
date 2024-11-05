@@ -155,6 +155,10 @@ void scheduler::handle(std::vector<events::event> evts)
                         const auto& [serv, job_duration] = std::get<events::job_arrival>(evt);
                         on_job_arrival(serv, job_duration);
                 }
+                else if (std::holds_alternative<events::timer_isr>(evt)) {
+                        const auto& [target_timer] = std::get<events::timer_isr>(evt);
+                        target_timer->fire();
+                }
                 else {
                         std::cerr << "Unknowned event" << std::endl;
                 }
@@ -168,7 +172,6 @@ void scheduler::handle(std::vector<events::event> evts)
 
 void scheduler::on_serv_inactive(const std::shared_ptr<server>& serv)
 {
-
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif

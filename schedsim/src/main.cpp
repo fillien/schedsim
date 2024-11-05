@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
+#include <ostream>
 #include <protocols/hardware.hpp>
 #include <protocols/scenario.hpp>
 #include <protocols/traces.hpp>
@@ -47,15 +48,15 @@ auto parse_args(const int argc, const char** argv) -> app_config
         app_config config;
 
         // clang-format off
-	    cxxopts::Options options("schedsim", "GRUB Scheduler Simulation for a Given Task Set and Platform");
-	    options.add_options()
-		        ("h,help", "Show this help message.")
+	cxxopts::Options options("schedsim", "GRUB Scheduler Simulation for a Given Task Set and Platform");
+	options.add_options()
+	        ("h,help", "Show this help message.")
                 ("v,version", "Show the build version")
-		        ("s,scenario", "Specify the scenario file.", cxxopts::value<std::string>())
-		        ("p,platform", "Specify the platform configuration file.", cxxopts::value<std::string>())
-		        ("sched", "Specify the scheduling policy to be used.", cxxopts::value<std::string>())
-		        ("scheds", "List the available schedulers.", cxxopts::value<bool>()->default_value("false"))
-		        ("o,output", "Specify the output file to write the simulation results.", cxxopts::value<std::string>());
+		("s,scenario", "Specify the scenario file.", cxxopts::value<std::string>())
+		("p,platform", "Specify the platform configuration file.", cxxopts::value<std::string>())
+		("sched", "Specify the scheduling policy to be used.", cxxopts::value<std::string>())
+		("scheds", "List the available schedulers.", cxxopts::value<bool>()->default_value("false"))
+		("o,output", "Specify the output file to write the simulation results.", cxxopts::value<std::string>());
         // clang-format on
         const auto cli = options.parse(argc, argv);
 

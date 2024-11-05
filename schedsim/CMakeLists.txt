@@ -35,6 +35,7 @@ target_sources(schedsim PRIVATE
     src/schedulers/power_aware_m_min.cpp
     src/server.cpp
     src/task.cpp
+    src/timer.cpp
 )
 target_include_directories(schedsim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_BINARY_DIR}/generated)
@@ -55,6 +56,7 @@ target_sources(schedsim_tests PRIVATE
     src/schedulers/power_aware_m_min.cpp
     src/server.cpp
     src/task.cpp
+    src/timer.cpp
 )
 
 target_include_directories(schedsim_tests PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
