@@ -15,5 +15,6 @@ void timer::cancel()
                 if (const auto& evt = std::get_if<events::timer_isr>(&entry.second)) {
                         return evt->target_timer.get() == this;
                 }
+                return false;
         });
 }
