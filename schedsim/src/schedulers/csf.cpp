@@ -1,6 +1,6 @@
 #include <cassert>
 #include <cmath>
-#include <schedulers/power_aware_m_min.hpp>
+#include <schedulers/csf.hpp>
 
 constexpr auto compute_freq_min(
     const double& freq_max,
@@ -11,12 +11,12 @@ constexpr auto compute_freq_min(
         return (freq_max * (total_util + (nb_procs - 1) * max_util)) / nb_procs;
 }
 
-auto pa_m_min::get_nb_active_procs(const double& new_utilization) const -> std::size_t
+auto csf::get_nb_active_procs(const double& new_utilization) const -> std::size_t
 {
         return nb_active_procs;
 }
 
-void pa_m_min::update_platform()
+void csf::update_platform()
 {
         double next_active_procs{0};
 

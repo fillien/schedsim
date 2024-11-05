@@ -19,8 +19,8 @@
 #include "scheduler.hpp"
 #include "schedulers/parallel.hpp"
 #include "schedulers/power_aware.hpp"
-#include "schedulers/power_aware_f_min.hpp"
-#include "schedulers/power_aware_m_min.hpp"
+#include "schedulers/ffa.hpp"
+#include "schedulers/csf.hpp"
 #include "task.hpp"
 #include <version.h>
 
@@ -114,10 +114,10 @@ auto main(const int argc, const char** argv) -> int
                         sched = make_shared<sched_power_aware>(sim);
                 }
                 else if (config.sched == "ffa") {
-                        sched = make_shared<pa_f_min>(sim);
+                        sched = make_shared<ffa>(sim);
                 }
                 else if (config.sched == "csf") {
-                        sched = make_shared<pa_m_min>(sim);
+                        sched = make_shared<csf>(sim);
                 }
                 else {
                         throw std::invalid_argument("Undefined scheduling policy");

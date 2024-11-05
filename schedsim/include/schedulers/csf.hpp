@@ -6,7 +6,7 @@
 #include "parallel.hpp"
 #include <memory>
 
-class pa_m_min : public sched_parallel {
+class csf : public sched_parallel {
       private:
         std::size_t nb_active_procs{1};
 
@@ -14,7 +14,7 @@ class pa_m_min : public sched_parallel {
         auto get_nb_active_procs(const double& new_utilization) const -> std::size_t override;
 
       public:
-        explicit pa_m_min(const std::weak_ptr<engine> sim) : sched_parallel(sim) {};
+        explicit csf(const std::weak_ptr<engine> sim) : sched_parallel(sim) {};
 
         void update_platform() override;
 };

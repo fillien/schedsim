@@ -31,8 +31,8 @@ target_sources(schedsim PRIVATE
     src/scheduler.cpp
     src/schedulers/parallel.cpp
     src/schedulers/power_aware.cpp
-    src/schedulers/power_aware_f_min.cpp
-    src/schedulers/power_aware_m_min.cpp
+    src/schedulers/ffa.cpp
+    src/schedulers/csf.cpp
     src/server.cpp
     src/task.cpp
     src/timer.cpp
@@ -52,8 +52,8 @@ target_sources(schedsim_tests PRIVATE
     src/scheduler.cpp
     src/schedulers/parallel.cpp
     src/schedulers/power_aware.cpp
-    src/schedulers/power_aware_f_min.cpp
-    src/schedulers/power_aware_m_min.cpp
+    src/schedulers/ffa.cpp
+    src/schedulers/csf.cpp
     src/server.cpp
     src/task.cpp
     src/timer.cpp
