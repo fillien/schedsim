@@ -27,6 +27,9 @@ processor::processor(const std::weak_ptr<engine>& sim, std::size_t cpu_id) : ent
                 sim.lock()->add_trace(proc_sleep{cpu_id});
                 break;
         }
+        case state::change: {
+                sim.lock()->add_trace(proc_change{cpu_id});
+        }
         }
 };
 
@@ -77,6 +80,10 @@ void processor::change_state(const processor::state& next_state)
                 current_state = state::sleep;
                 sim()->add_trace(traces::proc_sleep{shared_from_this()->id});
                 break;
+        }
+        case state::change: {
+                current_state = state::change;
+                sim()->add_trace(traces::proc_change{shared_from_this()->id});
         }
         }
 }

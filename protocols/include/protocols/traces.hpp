@@ -1,6 +1,7 @@
 #ifndef TRACES_HPP
 #define TRACES_HPP
 
+#include <cstddef>
 #include <filesystem>
 #include <map>
 #include <rapidjson/document.h>
@@ -55,6 +56,13 @@ struct proc_idled {
  * @brief Represents a processor activated event.
  */
 struct proc_sleep {
+        std::size_t proc_id; /**< ID of the processor. */
+};
+
+/**
+ * @brief Represents a processor change event.
+ */
+struct proc_change {
         std::size_t proc_id; /**< ID of the processor. */
 };
 
@@ -162,6 +170,7 @@ using trace = std::variant<
     proc_activated,
     proc_idled,
     proc_sleep,
+    proc_change,
     serv_budget_exhausted,
     serv_inactive,
     serv_budget_replenished,

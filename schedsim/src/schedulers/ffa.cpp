@@ -2,7 +2,7 @@
 #include <cmath>
 #include <schedulers/ffa.hpp>
 
-auto compute_freq_min(
+auto ffa::compute_freq_min(
     const double& freq_max,
     const double& total_util,
     const double& max_util,

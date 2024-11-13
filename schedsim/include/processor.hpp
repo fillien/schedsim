@@ -14,7 +14,7 @@ class processor : public entity, public std::enable_shared_from_this<processor> 
         /**
          * @brief Possible states of a processor.
          */
-        enum class state { sleep, idle, running };
+        enum class state { sleep, idle, running, change };
 
         /**
          * @brief Class constructor.

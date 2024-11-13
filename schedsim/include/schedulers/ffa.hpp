@@ -9,6 +9,11 @@
 class ffa : public sched_parallel {
       private:
         std::size_t nb_active_procs{1};
+        auto compute_freq_min(
+            const double& freq_max,
+            const double& total_util,
+            const double& max_util,
+            const double& nb_procs) -> double;
 
       protected:
         auto get_nb_active_procs(const double& new_utilization) const -> std::size_t override;

@@ -17,10 +17,10 @@
 #include "event.hpp"
 #include "platform.hpp"
 #include "scheduler.hpp"
+#include "schedulers/csf.hpp"
+#include "schedulers/ffa.hpp"
 #include "schedulers/parallel.hpp"
 #include "schedulers/power_aware.hpp"
-#include "schedulers/ffa.hpp"
-#include "schedulers/csf.hpp"
 #include "task.hpp"
 #include <version.h>
 

@@ -61,6 +61,12 @@ void to_json(const trace& log, rapidjson::Writer<rapidjson::OStreamWrapper>& wri
                         writer.Key("cpu");
                         writer.Uint(tra.proc_id);
                 },
+                [&writer](const proc_change& tra) {
+                        writer.Key("type");
+                        writer.String("proc_change");
+                        writer.Key("cpu");
+                        writer.Uint(tra.proc_id);
+                },
                 [&writer]([[maybe_unused]] const resched& tra) {
                         writer.Key("type");
                         writer.String("resched");
@@ -194,6 +200,10 @@ auto from_json(const rapidjson::Value& log) -> trace
             {"proc_idled",
              [](const rapidjson::Value& log) -> trace {
                      return proc_idled{log["cpu"].GetUint64()};
+             }},
+            {"proc_change",
+             [](const rapidjson::Value& log) -> trace {
+                     return proc_change{log["cpu"].GetUint64()};
              }},
             {"serv_budget_replenished",
              [](const rapidjson::Value& log) -> trace {

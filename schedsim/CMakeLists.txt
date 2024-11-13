@@ -32,6 +32,7 @@ target_sources(schedsim PRIVATE
     src/schedulers/parallel.cpp
     src/schedulers/power_aware.cpp
     src/schedulers/ffa.cpp
+    src/schedulers/ffa_timer.cpp
     src/schedulers/csf.cpp
     src/server.cpp
     src/task.cpp
@@ -53,6 +54,7 @@ target_sources(schedsim_tests PRIVATE
     src/schedulers/parallel.cpp
     src/schedulers/power_aware.cpp
     src/schedulers/ffa.cpp
+    src/schedulers/ffa_timer.cpp
     src/schedulers/csf.cpp
     src/server.cpp
     src/task.cpp

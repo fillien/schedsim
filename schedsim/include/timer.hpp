@@ -13,10 +13,14 @@ class timer : public entity, public std::enable_shared_from_this<timer> {
             : entity(sim), callback(callback) {};
         void set(const double& duration);
         void cancel();
+        auto is_active() -> bool { return active; };
         void fire() { callback(); };
+        auto get_deadline() -> double { return deadline; };
 
       private:
         std::function<void()> callback;
+        bool active{false};
+        double deadline{0};
 };
 
 #endif
