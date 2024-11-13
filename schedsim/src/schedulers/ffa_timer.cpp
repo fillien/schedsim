@@ -5,8 +5,11 @@
 #include <cmath>
 #include <cstddef>
 #include <memory>
+#include <ranges>
 #include <schedulers/ffa_timer.hpp>
 #include <vector>
+
+#include <iostream>
 
 auto ffa_timer::compute_freq_min(
     const double& freq_max,
@@ -22,7 +25,8 @@ auto ffa_timer::get_nb_active_procs(const double& new_utilization) const -> std:
         return nb_active_procs;
 }
 
-void ffa_timer::change_state_proc(const processor::state next_state, const auto& proc)
+void ffa_timer::change_state_proc(
+    const processor::state next_state, const std::shared_ptr<processor>& proc)
 {
         if (next_state == processor::state::idle) {
                 // The core must be active
@@ -139,26 +143,40 @@ void ffa_timer::update_platform()
 
         assert(nb_active_procs >= 1 && nb_active_procs <= sim()->chip()->processors.size());
 
-
-
         if (next_active_procs > this->nb_active_procs) {
                 // On cherche des coeurs en plus
                 auto diff = next_active_procs - this->nb_active_procs;
-                while (!cores_on_timer() && diff) {
-                        cancel_next_timer();
-                        diff -= 1;
-                }
-                while (!cores_on_sleep() && diff) {
-                        activate_next_core();
+                std::cout << "looking for " << diff << " more cores" << std::endl;
+                auto copy_active =
+                    sim()->chip()->processors | std::ranges::views::filter([](auto core) {
+                            return core->get_state() == processor::state::running ||
+                                   core->get_state() == processor::state::idle;
+                    });
+                while (diff) {
+                        assert(copy_active.begin() != copy_active.end());
+                        change_state_proc(processor::state::sleep, *copy_active.begin());
+                        std::cout << "added a core" << std::endl;
                         diff -= 1;
                 }
         }
         else if (next_active_procs < this->nb_active_procs) {
-                // On cherche des coeurs à éteindre
+                // On cherche des coeurs en moins
                 auto diff = this->nb_active_procs - next_active_procs;
+                std::cout << "looking for " << diff << " less cores" << std::endl;
+
                 while (diff) {
-                        put_next_core_to_bed();
+                        auto copy_active =
+                            sim()->chip()->processors | std::ranges::views::filter([](auto core) {
+                                    return core->get_state() == processor::state::running ||
+                                           core->get_state() == processor::state::idle;
+                            });
+
+                        assert(copy_active.begin() != copy_active.end());
+                        change_state_proc(processor::state::sleep, *copy_active.begin());
+                        std::cout << "remove a core" << std::endl;
                         diff -= 1;
                 }
         }
+
+        this->nb_active_procs = next_active_procs;
 }

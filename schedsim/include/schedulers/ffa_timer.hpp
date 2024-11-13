@@ -1,5 +1,5 @@
-#ifndef SCHED_F_MIN_HPP
-#define SCHED_F_MIN_HPP
+#ifndef SCHED_FFA_TIMER_HPP
+#define SCHED_FFA_TIMER_HPP
 
 #include "../engine.hpp"
 #include "../entity.hpp"
@@ -27,7 +27,8 @@ class ffa_timer : public sched_parallel {
         void cancel_next_timer();
         void activate_next_core();
         void put_next_core_to_bed();
-        void change_state_proc(const processor::state next_state, const auto& proc);
+        void change_state_proc(
+            const processor::state next_state, const std::shared_ptr<processor>& proc);
 
       protected:
         auto get_nb_active_procs(const double& new_utilization) const -> std::size_t override;

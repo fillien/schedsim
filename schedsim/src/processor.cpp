@@ -82,6 +82,7 @@ void processor::change_state(const processor::state& next_state)
                 break;
         }
         case state::change: {
+                assert(has_server_running() == false);
                 current_state = state::change;
                 sim()->add_trace(traces::proc_change{shared_from_this()->id});
         }

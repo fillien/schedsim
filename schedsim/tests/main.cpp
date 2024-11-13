@@ -54,6 +54,9 @@ TEST_F(Schedsim, ProcessorOrder)
         auto p_sleep = plat->processors.at(2);
         p_sleep->change_state(processor::state::sleep);
 
+        auto p_change = plat->processors.at(3);
+        p_change->change_state(processor::state::change);
+
         EXPECT_TRUE(sched_parallel::processor_order(*p_idle, *p_idle));
         EXPECT_TRUE(sched_parallel::processor_order(*p_idle, *p_run));
         EXPECT_TRUE(sched_parallel::processor_order(*p_idle, *p_sleep));
@@ -63,6 +66,14 @@ TEST_F(Schedsim, ProcessorOrder)
         EXPECT_FALSE(sched_parallel::processor_order(*p_sleep, *p_idle));
         EXPECT_FALSE(sched_parallel::processor_order(*p_sleep, *p_run));
         EXPECT_FALSE(sched_parallel::processor_order(*p_sleep, *p_sleep));
+
+        EXPECT_FALSE(sched_parallel::processor_order(*p_change, *p_sleep));
+        EXPECT_FALSE(sched_parallel::processor_order(*p_change, *p_run));
+        EXPECT_FALSE(sched_parallel::processor_order(*p_change, *p_idle));
+        EXPECT_FALSE(sched_parallel::processor_order(*p_change, *p_change));
+        EXPECT_FALSE(sched_parallel::processor_order(*p_sleep, *p_change));
+        EXPECT_TRUE(sched_parallel::processor_order(*p_run, *p_change));
+        EXPECT_TRUE(sched_parallel::processor_order(*p_idle, *p_change));
 }
 
 int main(int argc, char** argv)

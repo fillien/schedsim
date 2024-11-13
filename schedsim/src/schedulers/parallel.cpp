@@ -13,6 +13,8 @@
 #include <ranges>
 #include <vector>
 
+#include <iostream>
+
 #ifdef TRACY_ENABLE
 #include <tracy/Tracy.hpp>
 #endif
@@ -46,7 +48,9 @@ auto sched_parallel::processor_order(const processor& first, const processor& se
 #endif
 
         if (!first.has_server_running()) { return (first.get_state() == idle); }
-        if (!second.has_server_running()) { return (second.get_state() == sleep); }
+        if (!second.has_server_running()) {
+                return (second.get_state() == sleep || second.get_state() == change);
+        }
         return deadline_order(*(first.get_server()), *(second.get_server()));
 }
 
@@ -98,6 +102,8 @@ auto sched_parallel::admission_test(const task& new_task) const -> bool
         const auto NB_PROCS{static_cast<double>(sim()->chip()->processors.size())};
         const auto U_MAX{get_max_utilization(servers, new_task.utilization)};
         const auto NEW_TOTAL_UTILIZATION{get_total_utilization() + new_task.utilization};
+        std::cout << NEW_TOTAL_UTILIZATION << " " << (NB_PROCS - (NB_PROCS - 1) * U_MAX)
+                  << std::endl;
         return (NEW_TOTAL_UTILIZATION <= (NB_PROCS - (NB_PROCS - 1) * U_MAX));
 }
 
@@ -126,6 +132,7 @@ void sched_parallel::on_resched()
         update_platform();
 
         // Keep active procs and put to sleep others
+        /*
         std::vector<std::shared_ptr<processor>> copy_chip = sim()->chip()->processors;
         std::sort(copy_chip.begin(), copy_chip.end(), from_shared<processor>(processor_order));
         auto middle = copy_chip.begin();
@@ -140,6 +147,7 @@ void sched_parallel::on_resched()
                 remove_task_from_cpu((*it));
                 (*it)->change_state(sleep);
         }
+        */
 
         // Place task using global EDF
         std::size_t cpt_scheduled_proc{0};

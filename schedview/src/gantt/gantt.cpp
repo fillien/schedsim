@@ -299,6 +299,8 @@ auto generate_proc_mode(
                                 }
                                 last_state_times.insert({evt.proc_id, {2, timestamp}});
                         },
+                        [&](traces::proc_change evt) {
+                        },
                         [&](traces::sim_finished) {
                                 for (auto const& last_state : last_state_times) {
                                         const auto& id = last_state.first;
