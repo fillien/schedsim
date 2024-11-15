@@ -181,6 +181,7 @@ void sched_parallel::on_resched()
         // Set next job finish or budget exhausted event for each proc with a task
         for (auto proc : sim()->chip()->processors) {
                 if (proc->get_state() == sleep) { continue; }
+                else if (proc->get_state() == change) { continue; }
                 else if (proc->has_server_running()) {
                         cancel_alarms(*proc->get_server());
                         set_alarms(proc->get_server());
