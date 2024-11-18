@@ -2,6 +2,7 @@
 #define PROCESSOR_HPP
 
 #include "entity.hpp"
+#include "timer.hpp"
 #include <memory>
 
 class server;
@@ -15,6 +16,8 @@ class processor : public entity, public std::enable_shared_from_this<processor> 
          * @brief Possible states of a processor.
          */
         enum class state { sleep, idle, running, change };
+
+        std::shared_ptr<timer> coretimer;
 
         /**
          * @brief Class constructor.

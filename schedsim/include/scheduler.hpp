@@ -21,7 +21,6 @@ auto compare_events(const events::event& ev1, const events::event& ev2) -> bool;
  */
 class scheduler : public entity {
       private:
-        bool need_resched{false};    /**< Flag indicating if a rescheduling is needed. */
         double total_utilization{0}; /**< Total utilization of the system. */
 
         /**
@@ -57,6 +56,8 @@ class scheduler : public entity {
         void detach_server_if_needed(const std::shared_ptr<task>& inactive_task);
 
       protected:
+        bool need_resched{false}; /**< Flag indicating if a rescheduling is needed. */
+
         /**
          * @brief A vector to track and own server objects.
          */

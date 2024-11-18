@@ -102,8 +102,6 @@ auto sched_parallel::admission_test(const task& new_task) const -> bool
         const auto NB_PROCS{static_cast<double>(sim()->chip()->processors.size())};
         const auto U_MAX{get_max_utilization(servers, new_task.utilization)};
         const auto NEW_TOTAL_UTILIZATION{get_total_utilization() + new_task.utilization};
-        std::cout << NEW_TOTAL_UTILIZATION << " " << (NB_PROCS - (NB_PROCS - 1) * U_MAX)
-                  << std::endl;
         return (NEW_TOTAL_UTILIZATION <= (NB_PROCS - (NB_PROCS - 1) * U_MAX));
 }
 
@@ -131,24 +129,6 @@ void sched_parallel::on_resched()
 
         update_platform();
 
-        // Keep active procs and put to sleep others
-        /*
-        std::vector<std::shared_ptr<processor>> copy_chip = sim()->chip()->processors;
-        std::sort(copy_chip.begin(), copy_chip.end(), from_shared<processor>(processor_order));
-        auto middle = copy_chip.begin();
-        std::advance(middle, get_nb_active_procs());
-
-        auto it = copy_chip.begin();
-        for (it; it != middle; ++it) {
-                if ((*it)->get_state() == sleep) { (*it)->change_state(idle); }
-        }
-
-        for (it; it != copy_chip.end(); ++it) {
-                remove_task_from_cpu((*it));
-                (*it)->change_state(sleep);
-        }
-        */
-
         // Place task using global EDF
         std::size_t cpt_scheduled_proc{0};
         while (cpt_scheduled_proc < get_nb_active_procs()) {
@@ -165,7 +145,8 @@ void sched_parallel::on_resched()
                 auto leastest_priority_processor =
                     min(sim()->chip()->processors, from_shared<processor>(processor_order));
 
-                if (!leastest_priority_processor->has_server_running() ||
+                if (!(leastest_priority_processor->get_state() == change) ||
+                    !leastest_priority_processor->has_server_running() ||
                     deadline_order(
                         *highest_priority_server, *leastest_priority_processor->get_server())) {
                         assert(leastest_priority_processor->get_state() != sleep);
@@ -181,7 +162,9 @@ void sched_parallel::on_resched()
         // Set next job finish or budget exhausted event for each proc with a task
         for (auto proc : sim()->chip()->processors) {
                 if (proc->get_state() == sleep) { continue; }
-                else if (proc->get_state() == change) { continue; }
+                else if (proc->get_state() == change) {
+                        continue;
+                }
                 else if (proc->has_server_running()) {
                         cancel_alarms(*proc->get_server());
                         set_alarms(proc->get_server());

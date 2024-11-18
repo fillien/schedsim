@@ -11,9 +11,10 @@
 #include <tracy/Tracy.hpp>
 #endif
 
-processor::processor(const std::weak_ptr<engine>& sim, std::size_t cpu_id) : entity(sim), id(cpu_id)
+processor::processor(const std::weak_ptr<engine>& sim, std::size_t cpu_id) : entity(sim), coretimer(std::make_shared<timer>(sim, [](){})), id(cpu_id) 
 {
         using namespace protocols::traces;
+
         switch (current_state) {
         case state::idle: {
                 sim.lock()->add_trace(proc_idled{cpu_id});

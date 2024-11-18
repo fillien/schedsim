@@ -17,8 +17,9 @@ class timer : public entity, public std::enable_shared_from_this<timer> {
         void fire() { callback(); };
         auto get_deadline() -> double { return deadline; };
 
-      private:
         std::function<void()> callback;
+
+      private:
         bool active{false};
         double deadline{0};
 };

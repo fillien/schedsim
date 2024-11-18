@@ -13,6 +13,7 @@ class ffa_timer : public sched_parallel {
       private:
         static constexpr double DELAY_CORE_CHANGE{2};
         static constexpr double DELAY_BEFORE_SLEEP{DELAY_CORE_CHANGE};
+        static constexpr double DELAY_FREQUENCY{5};
         std::size_t nb_active_procs{1};
         std::vector<std::shared_ptr<timer>> core_timers;
         std::shared_ptr<timer> freq_timer;
@@ -29,34 +30,14 @@ class ffa_timer : public sched_parallel {
         void put_next_core_to_bed();
         void change_state_proc(
             const processor::state next_state, const std::shared_ptr<processor>& proc);
+        void adjust_active_processors(std::size_t target_processors);
+        void adjust_frequency(std::size_t target_freq);
 
       protected:
         auto get_nb_active_procs(const double& new_utilization) const -> std::size_t override;
 
       public:
-        explicit ffa_timer(const std::weak_ptr<engine> sim) : sched_parallel(sim)
-        {
-                core_timers.resize(sim.lock()->chip()->processors.size());
-                for (std::size_t i = 0; i < sim.lock()->chip()->processors.size(); i++) {
-                        core_timers.push_back(std::make_shared<timer>(sim, [&]() {
-                                std::vector<std::shared_ptr<processor>> copy_chip =
-                                    sim.lock()->chip()->processors;
-                                std::sort(
-                                    copy_chip.begin(),
-                                    copy_chip.end(),
-                                    from_shared<processor>(processor_order));
-                                auto it = copy_chip.cbegin();
-                                bool found_idle_proc{false};
-                                while (!found_idle_proc) {
-                                        if ((*it)->get_state() != processor::state::sleep) {
-                                                change_state_proc(processor::state::sleep, (*it));
-                                                found_idle_proc = true;
-                                        }
-                                }
-                        }));
-                }
-        };
-
+        explicit ffa_timer(const std::weak_ptr<engine> sim);
         void update_platform() override;
 };
 
