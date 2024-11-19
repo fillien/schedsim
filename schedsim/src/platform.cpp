@@ -37,16 +37,14 @@ platform::platform(
 
 void platform::set_freq(const double& new_freq)
 {
-        if (new_freq < 0 && new_freq > freq_max()) {
+        if (new_freq < 0 || new_freq > freq_max()) {
                 throw std::domain_error("This frequency is not available");
         }
 
-        if (freescaling && current_freq != new_freq) {
-                current_freq = new_freq;
-                sim()->add_trace(protocols::traces::frequency_update{current_freq});
-        }
-        else if (!freescaling && current_freq != ceil_to_mode(new_freq)) {
-                current_freq = ceil_to_mode(new_freq);
+        double target_freq = freescaling ? new_freq : ceil_to_mode(new_freq);
+
+        if (current_freq != target_freq) {
+                current_freq = target_freq;
                 sim()->add_trace(protocols::traces::frequency_update{current_freq});
         }
 }
