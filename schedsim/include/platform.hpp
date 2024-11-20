@@ -13,10 +13,14 @@
  */
 class platform : public entity {
       private:
+        static constexpr double DVFS_DELAY{0.5};
         std::vector<double> frequencies;
         double effective_freq;
         double current_freq;
         bool freescaling;
+
+        std::shared_ptr<timer> dvfs_timer;
+        double dvfs_target;
 
       public:
         /**
@@ -43,6 +47,8 @@ class platform : public entity {
         void set_freq(const double& new_freq);
 
         auto ceil_to_mode(const double& freq) -> double;
+
+        void dvfs_change_freq(const double& next_freq);
 };
 
 #endif

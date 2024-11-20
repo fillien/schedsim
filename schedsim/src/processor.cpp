@@ -11,7 +11,7 @@
 #include <tracy/Tracy.hpp>
 #endif
 
-processor::processor(const std::weak_ptr<engine>& sim, std::size_t cpu_id) : entity(sim), coretimer(std::make_shared<timer>(sim, [](){})), id(cpu_id) 
+processor::processor(const std::weak_ptr<engine>& sim, std::size_t cpu_id) : entity(sim), id(cpu_id)
 {
         using namespace protocols::traces;
 
@@ -32,6 +32,13 @@ processor::processor(const std::weak_ptr<engine>& sim, std::size_t cpu_id) : ent
                 sim.lock()->add_trace(proc_change{cpu_id});
         }
         }
+
+        coretimer = std::make_shared<timer>(sim, [this, sim]() {
+                assert(this->current_state == state::change);
+                this->change_state(dpm_target);
+                sim.lock()->get_sched()->call_resched();
+                assert(this->current_state != state::change);
+        });
 };
 
 void processor::set_server(std::weak_ptr<server> server_to_execute)
@@ -63,7 +70,7 @@ void processor::change_state(const processor::state& next_state)
         ZoneScoped;
 #endif
         namespace traces = protocols::traces;
-        // assert that a processor can't enter twice in the same state
+
         if (next_state == current_state) { return; }
 
         switch (next_state) {
@@ -98,5 +105,41 @@ void processor::update_state()
         if (has_server_running()) { change_state(state::running); }
         else {
                 change_state(state::idle);
+        }
+}
+
+void processor::dvfs_change_state(const double& delay)
+{
+        if (current_state == state::change) {
+                if (coretimer->get_deadline() < (sim()->time() + delay)) {
+                        coretimer->cancel();
+                        dpm_target = state::idle;
+                        coretimer->set(delay);
+                }
+        }
+        else {
+                change_state(state::change);
+                dpm_target = state::idle;
+                coretimer->set(delay);
+        }
+}
+
+void processor::dpm_change_state(const state& next_state)
+{
+#ifdef TRACY_ENABLE
+        ZoneScoped;
+#endif
+        assert(next_state != current_state);
+        if (current_state == state::change) {
+                if (coretimer->get_deadline() < (sim()->time() + DPM_DELAY)) {
+                        coretimer->cancel();
+                        dpm_target = next_state;
+                        coretimer->set(DPM_DELAY);
+                }
+        }
+        else {
+                change_state(state::change);
+                dpm_target = next_state;
+                coretimer->set(DPM_DELAY);
         }
 }

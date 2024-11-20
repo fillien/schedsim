@@ -7,7 +7,11 @@
 #include <cassert>
 #include <cstddef>
 #include <functional>
+#include <iterator>
+#include <memory>
 #include <vector>
+
+#include <iostream>
 
 platform::platform(
     const std::weak_ptr<engine>& sim,
@@ -33,6 +37,8 @@ platform::platform(
                 auto new_proc = std::make_shared<processor>(sim, i);
                 processors.push_back(std::move(new_proc));
         }
+
+        dvfs_timer = std::make_shared<timer>(sim, [this]() { set_freq(dvfs_target); });
 }
 
 void platform::set_freq(const double& new_freq)
@@ -59,4 +65,29 @@ auto platform::ceil_to_mode(const double& freq) -> double
                 last = opp;
         }
         return freq_min();
+}
+
+void platform::dvfs_change_freq(const double& next_freq)
+{
+        using enum processor::state;
+
+        if (next_freq < 0 || next_freq > freq_max()) {
+                throw std::domain_error("This frequency is not available");
+        }
+
+        double target_freq = freescaling ? next_freq : ceil_to_mode(next_freq);
+        if (target_freq == current_freq) { return; }
+
+        if (!dvfs_timer->is_active()) {
+                dvfs_target = target_freq;
+                for (auto proc : processors) {
+                        proc->dvfs_change_state(DVFS_DELAY);
+                }
+                dvfs_timer->set(DVFS_DELAY);
+        }
+        else {
+                for (const auto& proc : processors) {
+                        assert(proc->get_state() == processor::state::change);
+                }
+        }
 }

@@ -141,6 +141,8 @@ class engine {
          * @return The traces (past events) recorded by the engine.
          */
         auto traces() { return past_list; };
+
+        auto get_sched() -> std::shared_ptr<scheduler> { return sched; };
 };
 
 #endif

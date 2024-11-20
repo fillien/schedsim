@@ -195,6 +195,8 @@ class scheduler : public entity {
          */
         void handle(std::vector<events::event> evts);
 
+        void call_resched() { this->need_resched = true; };
+
         /**
          * @brief Retrieves the active bandwidth of the system.
          * @return Active bandwidth of the system.

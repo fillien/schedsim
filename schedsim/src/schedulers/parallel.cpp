@@ -13,8 +13,6 @@
 #include <ranges>
 #include <vector>
 
-#include <iostream>
-
 #ifdef TRACY_ENABLE
 #include <tracy/Tracy.hpp>
 #endif
@@ -46,7 +44,6 @@ auto sched_parallel::processor_order(const processor& first, const processor& se
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-
         if (!first.has_server_running()) { return (first.get_state() == idle); }
         if (!second.has_server_running()) {
                 return (second.get_state() == sleep || second.get_state() == change);
@@ -131,24 +128,35 @@ void sched_parallel::on_resched()
 
         // Place task using global EDF
         std::size_t cpt_scheduled_proc{0};
+
         while (cpt_scheduled_proc < get_nb_active_procs()) {
                 // refresh active servers list
                 auto ready_servers = servers | filter(from_shared<server>(is_ready_server));
+                auto available_procs =
+                    sim()->chip()->processors | filter([](const auto& proc) {
+                            return proc->get_state() == idle || proc->get_state() == running;
+                    });
 
                 // Check if there are servers in ready or running state
                 if (empty(ready_servers)) { break; }
+                if (empty(available_procs)) { break; }
 
                 // Get the server with the earliest deadline
                 // Get the processeur that is idle or with the maximum deadline
                 auto highest_priority_server =
                     min(ready_servers, from_shared<server>(deadline_order));
                 auto leastest_priority_processor =
-                    min(sim()->chip()->processors, from_shared<processor>(processor_order));
+                    min(available_procs, from_shared<processor>(processor_order));
 
-                if (!(leastest_priority_processor->get_state() == change) ||
+                if (leastest_priority_processor->get_state() == sleep) {
+                        assert(!leastest_priority_processor->has_server_running());
+                }
+
+                if ((!(leastest_priority_processor->get_state() == change)) ||
                     !leastest_priority_processor->has_server_running() ||
                     deadline_order(
                         *highest_priority_server, *leastest_priority_processor->get_server())) {
+
                         assert(leastest_priority_processor->get_state() != sleep);
                         resched_proc(leastest_priority_processor, highest_priority_server);
 

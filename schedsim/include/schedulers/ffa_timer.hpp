@@ -15,7 +15,6 @@ class ffa_timer : public sched_parallel {
         static constexpr double DELAY_BEFORE_SLEEP{DELAY_CORE_CHANGE};
         static constexpr double DELAY_FREQUENCY{5};
         std::size_t nb_active_procs{1};
-        std::vector<std::shared_ptr<timer>> core_timers;
         std::shared_ptr<timer> freq_timer;
 
         auto compute_freq_min(
@@ -31,7 +30,6 @@ class ffa_timer : public sched_parallel {
         void change_state_proc(
             const processor::state next_state, const std::shared_ptr<processor>& proc);
         void adjust_active_processors(std::size_t target_processors);
-        void adjust_frequency(std::size_t target_freq);
 
       protected:
         auto get_nb_active_procs(const double& new_utilization) const -> std::size_t override;

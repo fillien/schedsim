@@ -17,8 +17,6 @@ class processor : public entity, public std::enable_shared_from_this<processor> 
          */
         enum class state { sleep, idle, running, change };
 
-        std::shared_ptr<timer> coretimer;
-
         /**
          * @brief Class constructor.
          * @param sim Weak pointer to the engine.
@@ -76,11 +74,22 @@ class processor : public entity, public std::enable_shared_from_this<processor> 
          */
         void change_state(const state& next_state);
 
+        void dpm_change_state(const state& next_state);
+
+        void dvfs_change_state(const double& delay);
+
       private:
+        static constexpr double DPM_DELAY{0.5};
+
         /**
          * @brief Unique ID of the processor.
          */
         std::size_t id;
+
+        /**
+         * @brief Next the DPM will have to be in
+         */
+        state dpm_target;
 
         /**
          * @brief Weak pointer to the server currently running on the processor.
@@ -91,6 +100,8 @@ class processor : public entity, public std::enable_shared_from_this<processor> 
          * @brief Current state of the processor, initialized as idle by default.
          */
         state current_state{state::idle};
+
+        std::shared_ptr<timer> coretimer;
 };
 
 #endif // PROCESSOR_HPP

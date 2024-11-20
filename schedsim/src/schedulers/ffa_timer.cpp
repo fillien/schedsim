@@ -27,37 +27,22 @@ auto ffa_timer::compute_freq_min(
 
 auto ffa_timer::get_nb_active_procs(const double& new_utilization = 0) const -> std::size_t
 {
-        return std::count_if(
-            sim()->chip()->processors.begin(), sim()->chip()->processors.end(), [](auto prc) {
-                    return prc->get_state() == processor::state::idle ||
-                           prc->get_state() == processor::state::running;
-            });
+        auto is_active = [](const auto& proc) {
+                auto state = proc->get_state();
+                return state == processor::state::idle || state == processor::state::running;
+        };
+
+        const auto& processors = sim()->chip()->processors;
+        return std::count_if(processors.begin(), processors.end(), is_active);
 }
 
 void ffa_timer::change_state_proc(
     const processor::state next_state, const std::shared_ptr<processor>& proc)
 {
-        using enum processor::state;
-
         assert(next_state != proc->get_state());
-
-        // Is the proc already in CHANGE mode ?
-        // Is the proc there a timer that already active that is on this proc
-
+        assert(proc->get_state() != processor::state::change);
         remove_task_from_cpu(proc);
-        proc->change_state(change);
-        proc->coretimer->callback = [this, proc, next_state]() {
-                proc->change_state(next_state);
-                this->need_resched = true;
-        };
-        proc->coretimer->set(DELAY_CORE_CHANGE);
-}
-
-auto ffa_timer::cores_on_timer() -> std::size_t
-{
-        return std::count_if(core_timers.begin(), core_timers.end(), [](const auto& timer) {
-                return timer->is_active();
-        });
+        proc->dpm_change_state(next_state);
 }
 
 auto ffa_timer::cores_on_sleep() -> std::size_t
@@ -109,25 +94,6 @@ void ffa_timer::adjust_active_processors(std::size_t target_processors)
         }
 }
 
-void ffa_timer::adjust_frequency(const std::size_t target_freq)
-{
-        using enum processor::state;
-
-        assert(target_freq != sim()->chip()->freq());
-        for (auto procs : sim()->chip()->processors) {
-                remove_task_from_cpu(procs);
-                procs->change_state(change);
-        }
-        auto isr = std::make_shared<timer>(sim(), [target_freq, this]() {
-                sim()->chip()->set_freq(target_freq);
-                for (auto& procs : sim()->chip()->processors) {
-                        procs->change_state(idle);
-                }
-                this->need_resched = true;
-        });
-        isr->set(DELAY_FREQUENCY);
-}
-
 void ffa_timer::update_platform()
 {
         const auto chip = sim()->chip();
@@ -155,10 +121,10 @@ void ffa_timer::update_platform()
         assert(next_active_procs >= 1 && next_active_procs <= max_procs);
 
         adjust_active_processors(static_cast<std::size_t>(next_active_procs));
-        // this->nb_active_procs = static_cast<std::size_t>(next_active_procs);
-        chip->set_freq(next_freq);
-        // if (chip->freq() != next_freq) {
-        //         adjust_frequency(next_freq);
-        //         // chip->set_freq(next_freq);
-        // }
+        if (sim()->chip()->freq() != sim()->chip()->ceil_to_mode(next_freq)) {
+                for (const auto& proc : sim()->chip()->processors) {
+                        remove_task_from_cpu(proc);
+                }
+                chip->dvfs_change_freq(next_freq);
+        }
 }
