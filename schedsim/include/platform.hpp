@@ -13,7 +13,6 @@
  */
 class platform : public entity {
       private:
-        static constexpr double DVFS_DELAY{0.5};
         std::vector<double> frequencies;
         double effective_freq;
         double current_freq;
@@ -23,6 +22,8 @@ class platform : public entity {
         double dvfs_target;
 
       public:
+        static constexpr double DVFS_DELAY{0.5};
+
         /**
          * @brief Processors of the platform.
          */

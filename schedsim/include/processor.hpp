@@ -12,6 +12,8 @@ class server;
  */
 class processor : public entity, public std::enable_shared_from_this<processor> {
       public:
+        static constexpr double DPM_DELAY{0.5};
+
         /**
          * @brief Possible states of a processor.
          */
@@ -79,8 +81,6 @@ class processor : public entity, public std::enable_shared_from_this<processor> 
         void dvfs_change_state(const double& delay);
 
       private:
-        static constexpr double DPM_DELAY{0.5};
-
         /**
          * @brief Unique ID of the processor.
          */

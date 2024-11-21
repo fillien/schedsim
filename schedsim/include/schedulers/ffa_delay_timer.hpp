@@ -1,17 +1,26 @@
-#ifndef SCHED_FFA_DELAY_HPP
-#define SCHED_FFA_DELAY_HPP
+#ifndef SCHED_FFA_DELAY_TIMER_HPP
+#define SCHED_FFA_DELAY_TIMER_HPP
 
 #include "../engine.hpp"
 #include "../entity.hpp"
 #include "parallel.hpp"
+#include "platform.hpp"
 #include "processor.hpp"
 #include "timer.hpp"
 #include <cstddef>
 #include <memory>
 
-class ffa_delay : public sched_parallel {
+class ffa_delay_timer : public sched_parallel {
       private:
         std::size_t nb_active_procs{1};
+
+        static constexpr double DVFS_COOLDOWN{platform::DVFS_DELAY * 2};
+        static constexpr double DPM_COOLDOWN{processor::DPM_DELAY * 2};
+
+        std::shared_ptr<timer> timer_dvfs_cooldown;
+        std::vector<std::shared_ptr<timer>> timers_dpm_cooldown;
+
+        double freq_after_cooldown;
 
         auto compute_freq_min(
             const double& freq_max,
@@ -31,7 +40,7 @@ class ffa_delay : public sched_parallel {
         auto get_nb_active_procs(const double& new_utilization) const -> std::size_t override;
 
       public:
-        explicit ffa_delay(const std::weak_ptr<engine> sim);
+        explicit ffa_delay_timer(const std::weak_ptr<engine> sim);
         void update_platform() override;
 };
 
