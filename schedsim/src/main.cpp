@@ -19,7 +19,7 @@
 #include "scheduler.hpp"
 #include "schedulers/csf.hpp"
 #include "schedulers/ffa.hpp"
-#include "schedulers/ffa_timer.hpp"
+#include "schedulers/ffa_delay.hpp"
 #include "schedulers/parallel.hpp"
 #include "schedulers/power_aware.hpp"
 #include "task.hpp"
@@ -120,8 +120,8 @@ auto main(const int argc, const char** argv) -> int
                 else if (config.sched == "csf") {
                         sched = make_shared<csf>(sim);
                 }
-                else if (config.sched == "timer") {
-                        sched = make_shared<ffa_timer>(sim);
+                else if (config.sched == "ffa_delay") {
+                        sched = make_shared<ffa_delay>(sim);
                 }
                 else {
                         throw std::invalid_argument("Undefined scheduling policy");
