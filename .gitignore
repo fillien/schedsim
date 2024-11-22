@@ -27,3 +27,4 @@
 /*.dat
 /*.svg
 /*.csv
+.ipynb_checkpoints*
