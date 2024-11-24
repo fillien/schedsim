@@ -44,7 +44,7 @@ auto is_args_ask_table_result(const cxxopts::ParseResult& cli) -> bool
 auto is_args_ask_graph_result(const cxxopts::ParseResult& cli) -> bool
 {
         return (
-            cli.count("rtsched") || cli.count("frequency") || cli.count("svg") ||
+            cli.count("rtsched") || cli.count("frequency") || cli.count("config") || cli.count("svg") ||
             cli.count("html") || cli.count("procmode") || cli.count("au"));
 }
 
@@ -95,6 +95,8 @@ void handle_plots(const cxxopts::ParseResult& cli, const auto& parsed, const aut
         }
 
         if (cli.count("cores")) { print_table(track_cores_changes(parsed), cli.count("index")); }
+
+        if (cli.count("config")) { print_table(track_config_changes(parsed), cli.count("index")); }
 
         if (cli.count("rtsched")) {
                 gantt chart{generate_gantt(parsed, hw)};
@@ -226,6 +228,7 @@ auto main(const int argc, const char** argv) -> int
                 ("i,index", "Add column names to table data.")
                 ("f,frequency", "Print frequency change events.")
                 ("m,cores", "Print active core count changes.")
+                ("c,config", "Print the timestamp start/stop at which the config stay the same.")
                 ("r,rtsched", "Generate an RTSched LaTeX file.")
                 ("procmode", "Generate RTSched LaTeX file with processor mode.")
                 ("s,svg", "Generate a GANTT chart in SVG format.")
