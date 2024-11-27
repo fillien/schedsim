@@ -11,7 +11,7 @@ class Schedsim : public ::testing::Test {};
 
 TEST_F(Schedsim, ProcessorGetterId)
 {
-        auto sim = std::make_shared<engine>();
+        auto sim = std::make_shared<engine>(false);
         processor p1{sim, 5};
 
         EXPECT_EQ(p1.get_id(), 5);
@@ -24,7 +24,7 @@ TEST_F(Schedsim, ProcessorOrder)
         std::vector<double> freqs = {EFF_FREQ};
         bool FREESCALING{false};
 
-        auto sim = std::make_shared<engine>();
+        auto sim = std::make_shared<engine>(false);
 
         auto plat = std::make_shared<platform>(sim, NB_PROCS, freqs, EFF_FREQ, FREESCALING);
         sim->set_platform(plat);

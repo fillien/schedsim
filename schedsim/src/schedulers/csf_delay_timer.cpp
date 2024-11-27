@@ -187,10 +187,9 @@ void csf_delay_timer::update_platform()
         // Manage DVFS timer
         if (chip->freq() != chip->ceil_to_mode(next_freq)) {
                 freq_after_cooldown = chip->ceil_to_mode(next_freq);
-                if (!timer_dvfs_cooldown->is_active()) {
-                        timer_dvfs_cooldown->set(DVFS_COOLDOWN);
-                }
-        } else if (timer_dvfs_cooldown->is_active()) {
+                if (!timer_dvfs_cooldown->is_active()) { timer_dvfs_cooldown->set(DVFS_COOLDOWN); }
+        }
+        else if (timer_dvfs_cooldown->is_active()) {
                 timer_dvfs_cooldown->cancel();
         }
 }

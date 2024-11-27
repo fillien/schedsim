@@ -78,6 +78,11 @@ void platform::dvfs_change_freq(const double& next_freq)
         double target_freq = freescaling ? next_freq : ceil_to_mode(next_freq);
         if (target_freq == current_freq) { return; }
 
+        if (!sim()->is_delay_active()) {
+                set_freq(next_freq);
+                return;
+        }
+
         if (!dvfs_timer->is_active()) {
                 dvfs_target = target_freq;
                 for (auto proc : processors) {

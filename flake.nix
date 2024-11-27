@@ -32,7 +32,7 @@
             shellcheck
             black
             tracy
-            (python312.withPackages (ps: with ps; [ pandas ]))
+            (python312.withPackages (ps: with ps; [ pandas polars pyarrow ]))
           ];
         };
 

@@ -9,6 +9,8 @@
 #include <tracy/Tracy.hpp>
 #endif
 
+engine::engine(const bool is_there_delay) : active_delay(is_there_delay) {}
+
 void engine::add_event(const events::event& new_event, const double& timestamp)
 {
         future_list.insert({timestamp, std::move(new_event)});

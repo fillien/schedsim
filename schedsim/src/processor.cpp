@@ -110,6 +110,8 @@ void processor::update_state()
 
 void processor::dvfs_change_state(const double& delay)
 {
+        assert(sim()->is_delay_active());
+
         if (current_state == state::change) {
                 if (coretimer->get_deadline() < (sim()->time() + delay)) {
                         coretimer->cancel();
@@ -130,6 +132,12 @@ void processor::dpm_change_state(const state& next_state)
         ZoneScoped;
 #endif
         assert(next_state != current_state);
+
+        if (!sim()->is_delay_active()) {
+                change_state(next_state);
+                return;
+        }
+
         if (current_state == state::change) {
                 if (coretimer->get_deadline() < (sim()->time() + DPM_DELAY)) {
                         coretimer->cancel();

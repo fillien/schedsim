@@ -44,8 +44,8 @@ auto is_args_ask_table_result(const cxxopts::ParseResult& cli) -> bool
 auto is_args_ask_graph_result(const cxxopts::ParseResult& cli) -> bool
 {
         return (
-            cli.count("rtsched") || cli.count("frequency") || cli.count("config") || cli.count("svg") ||
-            cli.count("html") || cli.count("procmode") || cli.count("au"));
+            cli.count("rtsched") || cli.count("frequency") || cli.count("config") ||
+            cli.count("svg") || cli.count("html") || cli.count("procmode") || cli.count("au"));
 }
 
 auto any_to_string(const std::any& a) -> std::string

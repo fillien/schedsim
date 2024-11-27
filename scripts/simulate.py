@@ -63,6 +63,8 @@ def run_scenario(schedsim, current_dir, scenario, sched_policy, datadir, log_dir
             str(sched_policy),
             "-o",
             os.path.join(log_dir, scenario),
+            "--delay",
+            "true"
         ],
         check=True,
     )

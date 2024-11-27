@@ -19,7 +19,6 @@ class ffa_delay : public sched_parallel {
             const double& max_util,
             const double& nb_procs) -> double;
         auto cores_on_timer() -> std::size_t;
-        auto cores_on_sleep() -> std::size_t;
         void cancel_next_timer();
         void activate_next_core();
         void put_next_core_to_bed();

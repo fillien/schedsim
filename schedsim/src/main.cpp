@@ -18,10 +18,10 @@
 #include "platform.hpp"
 #include "scheduler.hpp"
 #include "schedulers/csf.hpp"
+#include "schedulers/csf_delay_timer.hpp"
 #include "schedulers/ffa.hpp"
 #include "schedulers/ffa_delay.hpp"
 #include "schedulers/ffa_delay_timer.hpp"
-#include "schedulers/csf_delay_timer.hpp"
 #include "schedulers/parallel.hpp"
 #include "schedulers/power_aware.hpp"
 #include "task.hpp"
@@ -38,13 +38,17 @@ struct app_config {
         fs::path scenario_file{"scenario.json"};
         fs::path platform_file{"platform.json"};
         std::string sched;
+        bool active_delay;
 };
 
-constexpr std::array<const char*, 4> policies{
+constexpr std::array<const char*, 6> policies{
     "grub - M-GRUB with global reclaiming",
     "pa   - M-GRUB-PA with global reclaiming",
     "ffa  - M-GRUB with minimum frequency",
-    "csf  - M-GRUB with minimum active processor"};
+    "csf  - M-GRUB with minimum active processor"
+    "ffa_delay",
+    "ffa_delay_timer",
+    "csf_delay_timer"};
 
 auto parse_args(const int argc, const char** argv) -> app_config
 {
@@ -59,6 +63,7 @@ auto parse_args(const int argc, const char** argv) -> app_config
 		("p,platform", "Specify the platform configuration file.", cxxopts::value<std::string>())
 		("sched", "Specify the scheduling policy to be used.", cxxopts::value<std::string>())
 		("scheds", "List the available schedulers.", cxxopts::value<bool>()->default_value("false"))
+                ("delay", "Activate delay during DVFS and DPM switch mode", cxxopts::value<bool>()->default_value("false"))
 		("o,output", "Specify the output file to write the simulation results.", cxxopts::value<std::string>());
         // clang-format on
         const auto cli = options.parse(argc, argv);
@@ -79,6 +84,7 @@ auto parse_args(const int argc, const char** argv) -> app_config
         if (cli.count("platform")) { config.platform_file = cli["platform"].as<std::string>(); }
         if (cli.count("sched")) { config.sched = cli["sched"].as<std::string>(); }
         if (cli.count("output")) { config.output_file = cli["output"].as<std::string>(); }
+        if (cli.count("delay")) { config.active_delay = true; }
 
         return config;
 }
@@ -99,7 +105,7 @@ auto main(const int argc, const char** argv) -> int
                 auto platform_config = protocols::hardware::read_file(config.platform_file);
 
                 // Create the simulation engine and attache to it a scheduler
-                auto sim = make_shared<engine>();
+                auto sim = make_shared<engine>(config.active_delay);
 
                 // Insert the platform configured through the scenario file, in the simulation
                 // engine

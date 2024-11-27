@@ -61,6 +61,8 @@ class engine {
          */
         std::multimap<double, protocols::traces::trace> past_list{};
 
+        bool active_delay{false};
+
       public:
         static constexpr double ZERO_ROUNDED = 0.0000001;
 
@@ -73,7 +75,7 @@ class engine {
         /**
          * @brief A constructor to help generate the platform.
          */
-        explicit engine() = default;
+        engine(const bool is_there_delay);
 
         /**
          * @brief Setter to attach a scheduler.
@@ -143,6 +145,8 @@ class engine {
         auto traces() { return past_list; };
 
         auto get_sched() -> std::shared_ptr<scheduler> { return sched; };
+
+        auto is_delay_active() -> bool { return active_delay; };
 };
 
 #endif

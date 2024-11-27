@@ -1,19 +1,11 @@
-#include "processor.hpp"
-#include "timer.hpp"
-#include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <cstddef>
 #include <memory>
 #include <schedulers/ffa_delay.hpp>
-#include <vector>
 
 ffa_delay::ffa_delay(const std::weak_ptr<engine> sim) : sched_parallel(sim)
 {
-        using enum processor::state;
-
-        const auto processors = sim.lock()->chip()->processors;
-        nb_active_procs = processors.size();
+        nb_active_procs = sim.lock()->chip()->processors.size();
 }
 
 auto ffa_delay::compute_freq_min(
@@ -43,16 +35,6 @@ void ffa_delay::change_state_proc(
         assert(proc->get_state() != processor::state::change);
         remove_task_from_cpu(proc);
         proc->dpm_change_state(next_state);
-}
-
-auto ffa_delay::cores_on_sleep() -> std::size_t
-{
-        using enum processor::state;
-
-        return std::count_if(
-            sim()->chip()->processors.begin(),
-            sim()->chip()->processors.end(),
-            [](const auto& proc) { return proc->get_state() == sleep; });
 }
 
 void ffa_delay::activate_next_core()
@@ -100,8 +82,8 @@ void ffa_delay::update_platform()
         const double total_util{get_active_bandwidth()};
         const double max_util{get_max_utilization(servers)};
         const double max_procs{static_cast<double>(chip->processors.size())};
-        const double freq_eff{sim()->chip()->freq_eff()};
-        const double freq_max{sim()->chip()->freq_max()};
+        const double freq_eff{chip->freq_eff()};
+        const double freq_max{chip->freq_max()};
         const double freq_min{compute_freq_min(freq_max, total_util, max_util, max_procs)};
 
         double next_freq{0};
@@ -121,10 +103,11 @@ void ffa_delay::update_platform()
         assert(next_active_procs >= 1 && next_active_procs <= max_procs);
 
         adjust_active_processors(static_cast<std::size_t>(next_active_procs));
-        if (sim()->chip()->freq() != sim()->chip()->ceil_to_mode(next_freq)) {
-                for (const auto& proc : sim()->chip()->processors) {
+        if (chip->freq() != chip->ceil_to_mode(next_freq)) {
+                for (const auto& proc : chip->processors) {
                         remove_task_from_cpu(proc);
                 }
                 chip->dvfs_change_freq(next_freq);
+                call_resched();
         }
 }

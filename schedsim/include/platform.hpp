@@ -45,6 +45,7 @@ class platform : public entity {
         [[nodiscard]] auto freq_eff() const { return effective_freq; }
         [[nodiscard]] auto freq() const { return current_freq; };
         [[nodiscard]] auto speed() const { return current_freq / freq_max(); }
+
         void set_freq(const double& new_freq);
 
         auto ceil_to_mode(const double& freq) -> double;
