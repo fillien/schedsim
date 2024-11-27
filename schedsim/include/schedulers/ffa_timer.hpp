@@ -1,5 +1,5 @@
-#ifndef SCHED_FFA_DELAY_TIMER_HPP
-#define SCHED_FFA_DELAY_TIMER_HPP
+#ifndef SCHED_FFA_TIMER_HPP
+#define SCHED_FFA_TIMER_HPP
 
 #include "../engine.hpp"
 #include "../entity.hpp"
@@ -10,7 +10,7 @@
 #include <cstddef>
 #include <memory>
 
-class ffa_delay_timer : public sched_parallel {
+class ffa_timer : public sched_parallel {
       private:
         std::size_t nb_active_procs{1};
 
@@ -40,7 +40,7 @@ class ffa_delay_timer : public sched_parallel {
         auto get_nb_active_procs(const double& new_utilization) const -> std::size_t override;
 
       public:
-        explicit ffa_delay_timer(const std::weak_ptr<engine> sim);
+        explicit ffa_timer(const std::weak_ptr<engine> sim);
         void update_platform() override;
 };
 

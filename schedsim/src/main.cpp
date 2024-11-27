@@ -18,10 +18,9 @@
 #include "platform.hpp"
 #include "scheduler.hpp"
 #include "schedulers/csf.hpp"
-#include "schedulers/csf_delay_timer.hpp"
+#include "schedulers/csf_timer.hpp"
 #include "schedulers/ffa.hpp"
-#include "schedulers/ffa_delay.hpp"
-#include "schedulers/ffa_delay_timer.hpp"
+#include "schedulers/ffa_timer.hpp"
 #include "schedulers/parallel.hpp"
 #include "schedulers/power_aware.hpp"
 #include "task.hpp"
@@ -46,9 +45,8 @@ constexpr std::array<const char*, 6> policies{
     "pa   - M-GRUB-PA with global reclaiming",
     "ffa  - M-GRUB with minimum frequency",
     "csf  - M-GRUB with minimum active processor"
-    "ffa_delay",
-    "ffa_delay_timer",
-    "csf_delay_timer"};
+    "ffa_timer",
+    "csf_timer"};
 
 auto parse_args(const int argc, const char** argv) -> app_config
 {
@@ -128,14 +126,11 @@ auto main(const int argc, const char** argv) -> int
                 else if (config.sched == "csf") {
                         sched = make_shared<csf>(sim);
                 }
-                else if (config.sched == "ffa_delay") {
-                        sched = make_shared<ffa_delay>(sim);
+                else if (config.sched == "ffa_timer") {
+                        sched = make_shared<ffa_timer>(sim);
                 }
-                else if (config.sched == "ffa_delay_timer") {
-                        sched = make_shared<ffa_delay_timer>(sim);
-                }
-                else if (config.sched == "csf_delay_timer") {
-                        sched = make_shared<csf_delay_timer>(sim);
+                else if (config.sched == "csf_timer") {
+                        sched = make_shared<csf_timer>(sim);
                 }
                 else {
                         throw std::invalid_argument("Undefined scheduling policy");
