@@ -20,7 +20,7 @@
       {
         formatter = pkgs.nixpkgs-fmt;
         devShells.default = pkgs.mkShell rec {
-          name = "schesim";
+          name = "schedsim";
           packages = with pkgs; [
             bash
             cmake
@@ -28,7 +28,6 @@
             graphviz
             ninja
             gtest
-            gdb
             lldb
             shellcheck
             gnuplot

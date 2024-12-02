@@ -12,19 +12,13 @@ SCHEDSIM = "./build/schedsim/schedsim"
 PLATFORM = "./platforms/exynos5422LITTLE.json"
 
 
-def main():
-    if len(sys.argv) <= 2:
-        print("error: " + sys.argv[0] + " <tasksets> <sched_policy>")
-        return
-
-    datadir = sys.argv[1]
-    sched_policy = sys.argv[2]
-
-    logs = datadir + "_logs_" + sched_policy
+def main(datadir, sched_policy, delay, suffix=""):
+    logs = datadir + "_logs_" + sched_policy + suffix
     if os.path.isdir(logs):
         shutil.rmtree(logs)
 
     os.mkdir(logs)
+
     for directory in sorted(os.listdir(datadir)):
         current_dir = os.path.join(datadir, directory)
         logs_dir = os.path.join(logs, directory)
@@ -44,32 +38,45 @@ def main():
                         sched_policy,
                         datadir,
                         logs_dir,
+                        delay
                     )
                     for scenario in scenarios
                 ]
                 for future in concurrent.futures.as_completed(futures):
                     future.result()
 
-
-def run_scenario(schedsim, current_dir, scenario, sched_policy, datadir, log_dir):
-    result = subprocess.run(
-        [
-            schedsim,
-            "-s",
-            os.path.join(current_dir, scenario),
-            "-p",
-            PLATFORM,
-            "--sched",
-            str(sched_policy),
-            "-o",
-            os.path.join(log_dir, scenario),
-            "--delay",
-            "true"
-        ],
-        check=True,
-    )
-    return result
+def run_scenario(schedsim, current_dir, scenario, sched_policy, datadir, log_dir, delay):
+    command = [
+        schedsim,
+        "-s",
+        os.path.join(current_dir, scenario),
+        "-p",
+        PLATFORM,
+        "--sched",
+        str(sched_policy),
+        "-o",
+        os.path.join(log_dir, scenario),
+    ]
+    if delay:
+        command.extend(["--delay", "true"])
+    
+    return subprocess.run(command, check=True)
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) <= 3:
+        print("error: " + sys.argv[0] + " <tasksets> <sched_policy> <delay>")
+        exit()
+
+    datadir = sys.argv[1]
+    sched_policy = sys.argv[2]
+    delay = sys.argv[3]
+
+    if delay == "true":
+        print("delay is true")
+        delay = True
+    else:
+        print("delay is false")
+        delay = False
+
+    main(datadir, sched_policy, delay)

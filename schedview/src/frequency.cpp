@@ -95,19 +95,21 @@ auto outputs::frequency::track_config_changes(
         std::map<std::string, std::vector<std::any>> table;
 
         std::set<std::size_t> active_cores;
-        double last_timestamp{-1};
+        double last_timestamp{0};
         double last_freq{0};
-        double last_cores{0};
+        std::size_t last_cores{0};
         double new_freq{0};
+
+        table["start"].push_back(last_timestamp);
 
         for (const auto& [timestamp, tra] : input) {
                 if (timestamp > last_timestamp &&
                     (last_freq != new_freq || last_cores != active_cores.size())) {
-                        last_timestamp = timestamp;
-                        if (!table["freq"].empty()) { table["stop"].push_back(timestamp); }
+                        table["stop"].push_back(timestamp);
                         table["freq"].push_back(new_freq);
                         table["active_cores"].push_back(active_cores.size());
                         table["start"].push_back(timestamp);
+                        last_timestamp = timestamp;
                         last_freq = new_freq;
                         last_cores = active_cores.size();
                 }
@@ -128,11 +130,11 @@ auto outputs::frequency::track_config_changes(
                                         active_cores.erase(evt.proc_id);
                                 }
                         },
-                        [&](protocols::traces::proc_change evt) {
-                                if (active_cores.contains(evt.proc_id)) {
-                                        active_cores.erase(evt.proc_id);
-                                }
-                        },
+                        // [&](protocols::traces::proc_change evt) {
+                        //         if (active_cores.contains(evt.proc_id)) {
+                        //                 active_cores.erase(evt.proc_id);
+                        //         }
+                        // },
                         [&](protocols::traces::frequency_update evt) { new_freq = evt.frequency; },
                         [&](protocols::traces::sim_finished) {
                                 table["stop"].push_back(timestamp);
