@@ -1,11 +1,15 @@
 #include <cassert>
 #include <cmath>
 #include <schedulers/csf_timer.hpp>
+#include <algorithm>
 #include <stdexcept>
 
 csf_timer::csf_timer(const std::weak_ptr<engine> sim) : sched_parallel(sim)
 {
-        if (!sim.lock()->is_delay_active()) { throw std::runtime_error("Simulation without DVFS & DPM delays is not support for this scheduler"); }
+        if (!sim.lock()->is_delay_active()) {
+                throw std::runtime_error(
+                    "Simulation without DVFS & DPM delays is not support for this scheduler");
+        }
         using enum processor::state;
 
         const auto processors = sim.lock()->chip()->processors;

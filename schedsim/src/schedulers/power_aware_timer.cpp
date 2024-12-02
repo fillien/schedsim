@@ -5,11 +5,17 @@
 #include <tracy/Tracy.hpp>
 #endif
 
-sched_power_aware_timer::sched_power_aware_timer(const std::weak_ptr<engine> sim) : sched_parallel(sim) {
-        if (!sim.lock()->is_delay_active()) { throw std::runtime_error("Simulation without DVFS & DPM delays is not support for this scheduler"); }
+sched_power_aware_timer::sched_power_aware_timer(const std::weak_ptr<engine> sim)
+    : sched_parallel(sim)
+{
+        if (!sim.lock()->is_delay_active()) {
+                throw std::runtime_error(
+                    "Simulation without DVFS & DPM delays is not support for this scheduler");
+        }
 };
 
-auto sched_power_aware_timer::get_nb_active_procs(const double& new_utilization) const -> std::size_t
+auto sched_power_aware_timer::get_nb_active_procs(const double& new_utilization) const
+    -> std::size_t
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;

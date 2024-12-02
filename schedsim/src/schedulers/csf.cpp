@@ -2,6 +2,7 @@
 #include <cmath>
 #include <memory>
 #include <schedulers/csf.hpp>
+#include <algorithm>
 
 csf::csf(const std::weak_ptr<engine> sim) : sched_parallel(sim)
 {

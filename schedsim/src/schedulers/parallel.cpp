@@ -6,8 +6,6 @@
 #include <server.hpp>
 
 #include <algorithm>
-#include <bits/ranges_algo.h>
-#include <bits/ranges_util.h>
 #include <iterator>
 #include <memory>
 #include <ranges>

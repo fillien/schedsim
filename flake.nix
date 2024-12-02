@@ -8,7 +8,7 @@
   outputs = { self, nixpkgs, ... }@inputs: inputs.utils.lib.eachSystem [
     "x86_64-linux"
     "i686-linux"
-    "aarch64-linux"
+    "aarch64-darwin"
     "x86_64-darwin"
   ]
     (system:
@@ -29,7 +29,9 @@
             ninja
             gtest
             gdb
+            lldb
             shellcheck
+            gnuplot
             black
             tracy
             (python312.withPackages (ps: with ps; [ pandas polars pyarrow ]))

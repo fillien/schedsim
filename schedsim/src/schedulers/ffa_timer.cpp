@@ -1,10 +1,14 @@
 #include <cassert>
 #include <cmath>
+#include <algorithm>
 #include <schedulers/ffa_timer.hpp>
 
 ffa_timer::ffa_timer(const std::weak_ptr<engine> sim) : sched_parallel(sim)
 {
-        if (!sim.lock()->is_delay_active()) { throw std::runtime_error("Simulation without DVFS & DPM delays is not support for this scheduler"); }
+        if (!sim.lock()->is_delay_active()) {
+                throw std::runtime_error(
+                    "Simulation without DVFS & DPM delays is not support for this scheduler");
+        }
         using enum processor::state;
 
         const auto processors = sim.lock()->chip()->processors;
