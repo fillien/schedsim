@@ -15,7 +15,7 @@ class sched_power_aware : public sched_parallel {
          * @brief Constructs a parallel scheduler with a weak pointer to the engine.
          * @param sim Weak pointer to the engine.
          */
-        explicit sched_power_aware(const std::weak_ptr<engine> sim) : sched_parallel(sim) {};
+        explicit sched_power_aware(const std::weak_ptr<engine> sim) : sched_parallel(sim){};
 
         void update_platform() override;
 };

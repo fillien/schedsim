@@ -35,7 +35,7 @@ class sched_parallel : public scheduler {
          * @brief Constructs a parallel scheduler with a weak pointer to the engine.
          * @param sim Weak pointer to the engine.
          */
-        explicit sched_parallel(const std::weak_ptr<engine> sim) : scheduler(sim) {};
+        explicit sched_parallel(const std::weak_ptr<engine> sim) : scheduler(sim){};
 
         /**
          * @brief Compares two processors based on their order.
@@ -61,8 +61,8 @@ class sched_parallel : public scheduler {
          * @param running_time The running time of the server.
          * @return Calculated virtual time.
          */
-        auto
-        get_server_virtual_time(const server& serv, const double& running_time) -> double override;
+        auto get_server_virtual_time(const server& serv, const double& running_time)
+            -> double override;
 
         /**
          * @brief Performs an admission test for a new task in the parallel scheduler.
@@ -76,7 +76,7 @@ class sched_parallel : public scheduler {
          */
         void on_resched() override;
 
-        void on_active_utilization_updated() override {};
+        void on_active_utilization_updated() override{};
 
         void update_platform() override;
 };

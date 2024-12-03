@@ -1,7 +1,7 @@
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <memory>
-#include <algorithm>
 #include <schedulers/ffa.hpp>
 
 ffa::ffa(const std::weak_ptr<engine> sim) : sched_parallel(sim)

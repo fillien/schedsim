@@ -1,6 +1,6 @@
+#include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <algorithm>
 #include <schedulers/ffa_timer.hpp>
 
 ffa_timer::ffa_timer(const std::weak_ptr<engine> sim) : sched_parallel(sim)

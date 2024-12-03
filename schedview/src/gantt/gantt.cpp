@@ -113,8 +113,8 @@ void new_finished(gantt& chart, double time, std::size_t tid)
 }
 
 auto get_proc_id(
-    const std::map<std::size_t, std::pair<double, std::size_t>> executions,
-    std::size_t tid) -> std::size_t
+    const std::map<std::size_t, std::pair<double, std::size_t>> executions, std::size_t tid)
+    -> std::size_t
 {
         if (auto search = executions.find(tid); search != std::end(executions)) {
                 return search->second.second;

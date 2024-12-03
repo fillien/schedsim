@@ -1,7 +1,7 @@
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <schedulers/csf_timer.hpp>
-#include <algorithm>
 #include <stdexcept>
 
 csf_timer::csf_timer(const std::weak_ptr<engine> sim) : sched_parallel(sim)

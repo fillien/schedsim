@@ -16,8 +16,8 @@
 #endif
 
 auto sched_parallel::get_max_utilization(
-    const std::vector<std::shared_ptr<server>>& servers,
-    const double& new_utilization) const -> double
+    const std::vector<std::shared_ptr<server>>& servers, const double& new_utilization) const
+    -> double
 {
 
 #ifdef TRACY_ENABLE
