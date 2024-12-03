@@ -17,6 +17,7 @@
 /test.aux
 /mydessin.tex
 /result
+/Archive*
 
 /*.png
 /*.tex
@@ -28,3 +29,5 @@
 /*.svg
 /*.csv
 .ipynb_checkpoints*
+*.pyc
+.DS_Store
