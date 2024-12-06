@@ -35,7 +35,7 @@ auto ffa_timer::compute_freq_min(
         return (freq_max * (total_util + (nb_procs - 1) * max_util)) / nb_procs;
 }
 
-auto ffa_timer::get_nb_active_procs(const double& new_utilization = 0) const -> std::size_t
+auto ffa_timer::get_nb_active_procs([[maybe_unused]] const double& new_utilization = 0) const -> std::size_t
 {
         auto is_active = [](const auto& proc) {
                 auto state = proc->get_state();

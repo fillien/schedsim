@@ -18,7 +18,7 @@ auto csf::compute_freq_min(
         return (freq_max * (total_util + (nb_procs - 1) * max_util)) / nb_procs;
 }
 
-auto csf::get_nb_active_procs(const double& new_utilization = 0) const -> std::size_t
+auto csf::get_nb_active_procs([[maybe_unused]] const double& new_utilization = 0) const -> std::size_t
 {
         auto is_active = [](const auto& proc) {
                 auto state = proc->get_state();
@@ -63,7 +63,7 @@ void csf::put_next_core_to_bed()
         change_state_proc(sleep, *it);
 }
 
-void csf::adjust_active_processors(std::size_t target_processors)
+void csf::adjust_active_processors(const std::size_t target_processors)
 {
         if (target_processors > get_nb_active_procs()) {
                 for (std::size_t i = 0; i < target_processors - get_nb_active_procs(); ++i) {

@@ -38,7 +38,7 @@ auto parse_power_consumption(const std::vector<std::pair<double, protocols::trac
                                 power_consumption.push_back({last_timestamp, current_power});
                         }
                         current_power = energy::compute_power(current_freq) *
-                                        static_cast<double>(current_active_cores);
+                                        static_cast<double>(active_cores.size());
                         power_consumption.push_back({last_timestamp, current_power});
                         last_timestamp = timestamp;
                 }
@@ -69,7 +69,7 @@ auto parse_power_consumption(const std::vector<std::pair<double, protocols::trac
                         [&](protocols::traces::sim_finished) {
                                 power_consumption.push_back({last_timestamp, current_power});
                                 current_power = energy::compute_power(current_freq) *
-                                                static_cast<double>(current_active_cores);
+                                                static_cast<double>(active_cores.size());
                                 power_consumption.push_back({last_timestamp, current_power});
                                 last_timestamp = timestamp;
                         },

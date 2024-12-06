@@ -60,7 +60,7 @@ auto sched_parallel::get_inactive_bandwidth() const -> double
         return NB_PROCS - (NB_PROCS - 1) * MAX_UTILIZATION - TOTAL_UTILIZATION;
 }
 
-auto sched_parallel::get_nb_active_procs(const double& new_utilization) const -> std::size_t
+auto sched_parallel::get_nb_active_procs([[maybe_unused]] const double& new_utilization) const -> std::size_t
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
