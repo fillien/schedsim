@@ -5,7 +5,8 @@
 #include <tracy/Tracy.hpp>
 #endif
 
-auto sched_power_aware::get_nb_active_procs([[maybe_unused]] const double& new_utilization) const -> std::size_t
+auto sched_power_aware::get_nb_active_procs([[maybe_unused]] const double& new_utilization) const
+    -> std::size_t
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;

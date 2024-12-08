@@ -14,8 +14,8 @@ sched_power_aware_timer::sched_power_aware_timer(const std::weak_ptr<engine> sim
         }
 };
 
-auto sched_power_aware_timer::get_nb_active_procs([[maybe_unused]] const double& new_utilization) const
-    -> std::size_t
+auto sched_power_aware_timer::get_nb_active_procs(
+    [[maybe_unused]] const double& new_utilization) const -> std::size_t
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
