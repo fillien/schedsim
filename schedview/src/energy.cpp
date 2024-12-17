@@ -17,8 +17,9 @@ template <class... Ts> struct overloaded : Ts... {
 
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
-auto parse_power_consumption(const std::vector<std::pair<double, protocols::traces::trace>>& input)
-    -> std::vector<std::pair<double, double>>
+auto parse_power_consumption(
+    const std::vector<std::pair<double, protocols::traces::trace>>& input,
+    const protocols::hardware::hardware& hw) -> std::vector<std::pair<double, double>>
 {
         std::vector<std::pair<double, double>> power_consumption;
 
@@ -37,7 +38,7 @@ auto parse_power_consumption(const std::vector<std::pair<double, protocols::trac
                                 first = false;
                                 power_consumption.push_back({last_timestamp, current_power});
                         }
-                        current_power = energy::compute_power(current_freq) *
+                        current_power = energy::compute_power(current_freq, hw) *
                                         static_cast<double>(active_cores.size());
                         power_consumption.push_back({last_timestamp, current_power});
                         last_timestamp = timestamp;
@@ -68,7 +69,7 @@ auto parse_power_consumption(const std::vector<std::pair<double, protocols::trac
                         },
                         [&](protocols::traces::sim_finished) {
                                 power_consumption.push_back({last_timestamp, current_power});
-                                current_power = energy::compute_power(current_freq) *
+                                current_power = energy::compute_power(current_freq, hw) *
                                                 static_cast<double>(active_cores.size());
                                 power_consumption.push_back({last_timestamp, current_power});
                                 last_timestamp = timestamp;
@@ -84,7 +85,7 @@ auto outputs::energy::compute_energy_consumption(
     const std::vector<std::pair<double, protocols::traces::trace>>& input,
     const protocols::hardware::hardware& hw) -> double
 {
-        const auto power_consumption = parse_power_consumption(input);
+        const auto power_consumption = parse_power_consumption(input, hw);
 
         std::vector<double> energy_timestamps;
         std::vector<double> energy_measures;
