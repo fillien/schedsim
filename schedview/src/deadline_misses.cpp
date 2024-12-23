@@ -39,21 +39,16 @@ using job_events = std::variant<job_finished, job_deadline>;
  * @return true if the job is accepted, false otherwise.
  */
 auto is_accepted_job(
-    const outputs::stats::logs_type& logs, const double& timestamp, std::size_t tid) -> bool
+    const outputs::stats::logs_type& logs, const double& timestamp, const std::size_t tid) -> bool
 {
         namespace traces = protocols::traces;
 
-        return true;
-
-        // auto range = logs.equal_range(timestamp);
-        // return std::find_if(
-        //            range.first, range.second, [&tid](std::pair<double, traces::trace> tra) {
-        //                    if (auto* const evt = std::get_if<traces::task_rejected>(&tra.second))
-        //                    {
-        //                            return tid == evt->task_id;
-        //                    }
-        //                    return false;
-        //            }) == range.second;
+        for (const auto& tra : logs) {
+                if (const auto* const evt = std::get_if<traces::task_rejected>(&tra.second)) {
+                        if (evt->task_id == tid && tra.first == timestamp) { return true; }
+                }
+        }
+        return false;
 }
 
 /**
@@ -196,24 +191,6 @@ auto count_task_deadline_missed(const deadline_type& deadline_stats, std::size_t
 }
 
 /**
- * @brief Prints the percentage of missed deadlines for a specific task.
- *
- * This function prints the percentage of missed deadlines relative to the total number of jobs
- * for a specified task. It throws an exception if the task ID is not present in the provided
- * deadline statistics map.
- *
- * @param deadline_stats The map containing task IDs with associated statistics.
- * @param tid The task ID for which to print the deadline miss rate.
- * @throws std::out_of_range If the specified task ID is not found in the deadline statistics.
- */
-auto count_task_deadline_missed_rate(const deadline_type& deadline_stats, std::size_t tid) -> double
-{
-        if (!deadline_stats.contains(tid)) { throw std::out_of_range("Unknown task"); }
-        const auto& [jobs_count, deadline_missed_count] = deadline_stats.at(tid);
-        return (static_cast<double>(deadline_missed_count) / static_cast<double>(jobs_count));
-}
-
-/**
  * @brief Prints the total count of missed deadlines across all tasks.
  *
  * This function calculates and prints the total count of missed deadlines and the total number
@@ -234,29 +211,6 @@ auto count_deadline_missed(const deadline_type& deadline_stats) -> std::size_t
         }
 
         return sum_of_deadline_missed;
-}
-
-/**
- * @brief Prints the overall percentage of missed deadlines across all tasks.
- *
- * This function calculates and prints the overall percentage of missed deadlines relative to
- * the total number of jobs across all tasks based on the provided deadline statistics map.
- *
- * @param deadline_stats The map containing task IDs with associated statistics.
- */
-auto count_deadline_missed_rate(const deadline_type& deadline_stats) -> double
-{
-        std::size_t sum_of_jobs{0};
-        std::size_t sum_of_deadline_missed{0};
-
-        for (const auto& [_, task] : deadline_stats) {
-                const auto& jobs_count{task.first};
-                const auto& deadline_missed_count{task.second};
-                sum_of_jobs += jobs_count;
-                sum_of_deadline_missed += deadline_missed_count;
-        }
-
-        return (static_cast<double>(sum_of_deadline_missed) / static_cast<double>(sum_of_jobs));
 }
 
 } // namespace outputs::stats

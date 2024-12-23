@@ -156,11 +156,8 @@ void handle_table_args(
         if (cli.count("freq-request")) {
                 table["freq-request"].push_back(count_frequency_request(parsed));
         }
-        if (cli.count("deadlines-rates") || cli.count("deadlines-counts")) {
+        if (cli.count("deadlines-counts")) {
                 auto deadlines = detect_deadline_misses(parsed);
-                if (cli.count("deadlines-rates")) {
-                        table["deadlines-rates"].push_back(count_deadline_missed_rate(deadlines));
-                }
                 if (cli.count("deadlines-counts")) {
                         table["deadlines-counts"].push_back(count_deadline_missed(deadlines));
                 }
