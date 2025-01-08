@@ -226,6 +226,7 @@ auto main(const int argc, const char** argv) -> int
                 ("f,frequency", "Print frequency change events.")
                 ("m,cores", "Print active core count changes.")
                 ("c,config", "Print the timestamp start/stop at which the config stay the same.")
+                ("change", "Print the total duration of change state on the scenario")
                 ("r,rtsched", "Generate an RTSched LaTeX file.")
                 ("procmode", "Generate RTSched LaTeX file with processor mode.")
                 ("s,svg", "Generate a GANTT chart in SVG format.")

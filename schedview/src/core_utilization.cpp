@@ -73,4 +73,52 @@ void print_utilizations(const std::vector<std::pair<double, protocols::traces::t
                           << "%\n";
         }
 }
+
+auto outputs::stats::track_change_state(
+    const std::vector<std::pair<double, protocols::traces::trace>>& input)
+    -> std::map<std::string, std::vector<std::any>>
+{
+        using namespace protocols::traces;
+
+        std::map<std::string, std::vector<std::any>> table;
+
+        std::map<std::size_t, double> last_activation;
+
+        double last_timestamp{-1};
+        double total_changing_time{0};
+
+        for (const auto& [timestamp, tra] : input) {
+                if (timestamp > last_timestamp) { last_timestamp = timestamp; }
+                std::visit(
+                    overloaded{
+                        [&](protocols::traces::proc_change evt) {
+                                if (!changing_cores.contains(evt.proc_id)) {
+                                        changing_cores.insert(evt.proc_id);
+                                }
+                        },
+                        [&](protocols::traces::proc_activated evt) {
+                                if (changing_cores.contains(evt.proc_id)) {
+                                        changing_cores.erase(evt.proc_id);
+                                }
+                        },
+                        [&](protocols::traces::proc_idled evt) {
+                                if (changing_cores.contains(evt.proc_id)) {
+                                        changing_cores.erase(evt.proc_id);
+                                }
+                        },
+                        [&](protocols::traces::proc_sleep evt) {
+                                if (changing_cores.contains(evt.proc_id)) {
+                                        changing_cores.erase(evt.proc_id);
+                                }
+                        },
+                        [&](protocols::traces::sim_finished) {
+                                table["stop"].push_back(timestamp);
+                        },
+                        [](auto) {}},
+                    tra);
+        }
+
+        return table;
+}
+
 } // namespace outputs::stats
