@@ -3,28 +3,28 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
 import numpy as np
+import polars as pl
 import matplotlib.pyplot as plt
 import statistics
 from IPython.display import display
 
 SCHEDVIEW = "./build/schedview/schedview"
 
-
-def run_scenario(schedview, platform, logs_path):
+def run_scenario(schedview, platform, path, measures):
+    args = [schedview, "--platform", platform, "--directory", path, "--index"]
+    args += measures
     output = subprocess.run(
-        [schedview, "--platform", platform, "--directory", logs_path, "--index", "--energy", "--duration"],
+        args,
         capture_output=True,
         text=True,
         check=True,
     )
-    data = StringIO(output.stdout)
-    df = pl.read_csv(data, separator=";")
-    df = df.with_columns((pl.col("energy") / pl.col("duration")).alias("power"))
-    return df
+    return pl.read_csv(StringIO(output.stdout), separator=";")
 
 def process_scheduler(scheduler, platform, directory, log_paths):
     """Process a scheduler's log directory to calculate mean power."""
-    result = run_scenario(SCHEDVIEW, platform, os.path.join(log_paths[scheduler], directory))
+    result = run_scenario(SCHEDVIEW, platform, os.path.join(log_paths[scheduler], directory), ["--energy", "--duration"])
+    result = result.with_columns((pl.col("energy") / pl.col("duration")).alias("power"))
     return result
 
 def normalize(data):
