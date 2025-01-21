@@ -6,15 +6,19 @@
 #include "task.hpp"
 #include <gtest/gtest.h>
 #include <memory>
+#include <vector>
 
 class Schedsim : public ::testing::Test {};
 
 TEST_F(Schedsim, ProcessorGetterId)
 {
         auto sim = std::make_shared<engine>(false);
-        processor p1{sim, 5};
+        auto plat = std::make_shared<platform>(sim, false);
+        sim->set_platform(plat);
 
-        EXPECT_EQ(p1.get_id(), 5);
+        plat->clusters.push_back(std::make_shared<cluster>(sim, 1, std::vector<double>{1.0}, 1.0));
+
+        EXPECT_EQ(plat->clusters.at(0)->processors.at(0)->get_id(), 0);
 }
 
 TEST_F(Schedsim, ProcessorOrder)
@@ -26,8 +30,10 @@ TEST_F(Schedsim, ProcessorOrder)
 
         auto sim = std::make_shared<engine>(false);
 
-        auto plat = std::make_shared<platform>(sim, NB_PROCS, freqs, EFF_FREQ, FREESCALING);
+        auto plat = std::make_shared<platform>(sim, FREESCALING);
         sim->set_platform(plat);
+        plat->clusters.push_back(std::make_shared<cluster>(sim, 1, freqs, EFF_FREQ));
+        plat->clusters.back()->create_procs(NB_PROCS);
 
         std::shared_ptr<scheduler> sched = std::make_shared<sched_parallel>(sim);
         sim->set_scheduler(sched);
@@ -44,17 +50,18 @@ TEST_F(Schedsim, ProcessorOrder)
         auto t1 = std::make_shared<task>(sim, 1, 1, 0.1);
         t1->set_server(s1);
 
-        auto p_idle = plat->processors.at(0);
+        auto p_idle = plat->clusters.at(0)->processors.at(0);
         p_idle->change_state(processor::state::idle);
 
-        auto p_run = plat->processors.at(1);
+        auto p_run = plat->clusters.at(0)->processors.at(1);
         p_run->change_state(processor::state::running);
-        p_run->set_server(s0);
+        p_run->set_task(s0->get_task());
+        // p_run->set_server(s0);
 
-        auto p_sleep = plat->processors.at(2);
+        auto p_sleep = plat->clusters.at(0)->processors.at(2);
         p_sleep->change_state(processor::state::sleep);
 
-        auto p_change = plat->processors.at(3);
+        auto p_change = plat->clusters.at(0)->processors.at(3);
         p_change->change_state(processor::state::change);
 
         EXPECT_TRUE(sched_parallel::processor_order(*p_idle, *p_idle));

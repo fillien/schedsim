@@ -98,6 +98,47 @@ auto parse_args_platform(const int argc, const char** argv) -> platform_config
         return config;
 }
 
+auto parse_args_check(const int argc, const char** argv)
+{
+        cxxopts::Options options("schedgen check", "Check platform and taskset files");
+        options.positional_help("infile");
+        options.set_tab_expansion();
+        // clang-format off
+    options.add_options()
+            ("h,help", "Show this help message.")
+            ("infile", "Configuration file to validate", cxxopts::value<std::string>());
+        // clang-format on
+
+        options.parse_positional({"infile"});
+        const auto cli = options.parse(argc, argv);
+
+        bool error_platform{false};
+        bool error_scenario{false};
+
+        fs::path file_to_check = cli["infile"].as<std::string>();
+        if (!fs::exists(file_to_check)) {
+                throw std::runtime_error("the file does not exist");
+                return;
+        }
+
+        try {
+                const auto config = protocols::hardware::read_file(file_to_check);
+        }
+        catch (const std::runtime_error& e) {
+                error_platform = true;
+        }
+        try {
+                const auto config = protocols::scenario::read_file(file_to_check);
+        }
+        catch (const std::runtime_error& e) {
+                error_scenario = true;
+        }
+
+        if (error_platform && error_scenario) {
+                std::cout << "failed to parse the file" << std::endl;
+        }
+}
+
 auto main(const int argc, const char** argv) -> int
 {
         constexpr auto helper{
@@ -124,12 +165,16 @@ auto main(const int argc, const char** argv) -> int
                 }
                 else if (command == "platform") {
                         const auto config = parse_args_platform(argc - 1, argv + 1);
+
                         protocols::hardware::write_file(
                             config.output_filepath,
-                            {config.nb_procs,
-                             config.frequencies,
-                             config.effective_freq,
-                             config.power_model});
+                            {{{config.nb_procs,
+                               config.frequencies,
+                               config.effective_freq,
+                               config.power_model}}});
+                }
+                else if (command == "check") {
+                        parse_args_check(argc - 1, argv + 1);
                 }
                 else {
                         std::cerr << helper << std::endl;

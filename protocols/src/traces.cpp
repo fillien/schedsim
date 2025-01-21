@@ -154,6 +154,8 @@ void to_json(const trace& log, rapidjson::Writer<rapidjson::OStreamWrapper>& wri
                 [&writer](const frequency_update& tra) {
                         writer.Key("type");
                         writer.String("frequency_update");
+                        writer.Key("cluster_id");
+                        writer.Uint(tra.cluster_id);
                         writer.Key("frequency");
                         writer.Double(tra.frequency);
                 },
@@ -256,7 +258,8 @@ auto from_json(const rapidjson::Value& log) -> trace
              }},
             {"frequency_update",
              [](const rapidjson::Value& log) -> trace {
-                     return frequency_update{log["frequency"].GetDouble()};
+                     return frequency_update{
+                         log["cluster_id"].GetUint64(), log["frequency"].GetDouble()};
              }},
         };
 

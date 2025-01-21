@@ -4,8 +4,10 @@
 #include "entity.hpp"
 #include "timer.hpp"
 #include <memory>
+#include <task.hpp>
 
 class server;
+class cluster;
 
 /**
  * @brief Represents a processor model, composed of a state, and a running task.
@@ -24,34 +26,24 @@ class processor : public entity, public std::enable_shared_from_this<processor> 
          * @param sim Weak pointer to the engine.
          * @param cpu_id The unique ID of the processor.
          */
-        explicit processor(const std::weak_ptr<engine>& sim, std::size_t cpu_id);
+        explicit processor(
+            const std::weak_ptr<engine>& sim,
+            const std::weak_ptr<cluster>& clu,
+            const std::size_t cpu_id);
 
-        /**
-         * @brief Sets the server to be executed on the processor.
-         * @param server_to_execute Weak pointer to the server.
-         */
-        void set_server(std::weak_ptr<server> server_to_execute);
+        auto get_cluster() { return attached_cluster; };
 
-        /**
-         * @brief Clears the server currently associated with the processor.
-         */
-        void clear_server();
+        void set_task(const std::weak_ptr<task>& task_to_execute);
 
-        /**
-         * @brief Retrieves the server currently associated with the processor.
-         * @return Shared pointer to the server.
-         */
-        auto get_server() const -> std::shared_ptr<server>
+        void clear_task();
+
+        auto get_task() const -> std::shared_ptr<task>
         {
-                assert(!running_server.expired());
-                return this->running_server.lock();
+                assert(!running_task.expired());
+                return this->running_task.lock();
         };
 
-        /**
-         * @brief Checks if a server is currently running on the processor.
-         * @return True if a server is running, false otherwise.
-         */
-        auto has_server_running() const -> bool { return !running_server.expired(); };
+        auto has_running_task() const -> bool { return !running_task.expired(); };
 
         /**
          * @brief Updates the state of the processor based on its current activities.
@@ -92,9 +84,11 @@ class processor : public entity, public std::enable_shared_from_this<processor> 
         state dpm_target;
 
         /**
-         * @brief Weak pointer to the server currently running on the processor.
+         * @brief Weak pointer to the task currently running on the processor.
          */
-        std::weak_ptr<server> running_server;
+        std::weak_ptr<task> running_task;
+
+        std::weak_ptr<cluster> attached_cluster;
 
         /**
          * @brief Current state of the processor, initialized as idle by default.

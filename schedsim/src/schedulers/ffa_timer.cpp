@@ -11,17 +11,16 @@ ffa_timer::ffa_timer(const std::weak_ptr<engine> sim) : sched_parallel(sim)
         }
         using enum processor::state;
 
-        const auto processors = sim.lock()->chip()->processors;
+        const auto processors = chip()->processors;
         nb_active_procs = processors.size();
 
-        freq_after_cooldown = sim.lock()->chip()->freq_max();
+        freq_after_cooldown = chip()->freq_max();
         timer_dvfs_cooldown = std::make_shared<timer>(sim, [this, sim]() {
-                const auto chip = sim.lock()->chip();
-                if (chip->freq() != chip->ceil_to_mode(freq_after_cooldown)) {
-                        for (const auto& proc : chip->processors) {
+                if (chip()->freq() != chip()->ceil_to_mode(freq_after_cooldown)) {
+                        for (const auto& proc : chip()->processors) {
                                 remove_task_from_cpu(proc);
                         }
-                        chip->dvfs_change_freq(freq_after_cooldown);
+                        chip()->dvfs_change_freq(freq_after_cooldown);
                 }
         });
 }
@@ -43,7 +42,7 @@ auto ffa_timer::get_nb_active_procs([[maybe_unused]] const double& new_utilizati
                 return state == processor::state::idle || state == processor::state::running;
         };
 
-        const auto& processors = sim()->chip()->processors;
+        const auto& processors = chip()->processors;
         return std::count_if(processors.begin(), processors.end(), is_active);
 }
 
@@ -61,15 +60,15 @@ auto ffa_timer::cores_on_sleep() -> std::size_t
         using enum processor::state;
 
         return std::count_if(
-            sim()->chip()->processors.begin(),
-            sim()->chip()->processors.end(),
-            [](const auto& proc) { return proc->get_state() == sleep; });
+            chip()->processors.begin(), chip()->processors.end(), [](const auto& proc) {
+                    return proc->get_state() == sleep;
+            });
 }
 
 void ffa_timer::activate_next_core()
 {
         using enum processor::state;
-        auto& processors = sim()->chip()->processors;
+        auto& processors = chip()->processors;
         auto it = std::find_if(processors.begin(), processors.end(), [](const auto& proc) {
                 return proc->get_state() == sleep;
         });
@@ -83,7 +82,7 @@ void ffa_timer::activate_next_core()
 void ffa_timer::put_next_core_to_bed()
 {
         using enum processor::state;
-        auto& processors = sim()->chip()->processors;
+        auto& processors = chip()->processors;
         auto it = std::find_if(processors.begin(), processors.end(), [](const auto& proc) {
                 return proc->get_state() == idle || proc->get_state() == running;
         });
@@ -107,12 +106,11 @@ void ffa_timer::adjust_active_processors(std::size_t target_processors)
 
 void ffa_timer::update_platform()
 {
-        const auto chip = sim()->chip();
         const double total_util{get_active_bandwidth()};
         const double max_util{get_max_utilization(servers)};
-        const double max_procs{static_cast<double>(chip->processors.size())};
-        const double freq_eff{sim()->chip()->freq_eff()};
-        const double freq_max{sim()->chip()->freq_max()};
+        const double max_procs{static_cast<double>(chip()->processors.size())};
+        const double freq_eff{chip()->freq_eff()};
+        const double freq_max{chip()->freq_max()};
         const double freq_min{compute_freq_min(freq_max, total_util, max_util, max_procs)};
 
         double next_freq{0};
@@ -123,8 +121,8 @@ void ffa_timer::update_platform()
                 next_active_procs = std::ceil(max_procs * (freq_min / freq_eff));
         }
         else {
-                assert(freq_min <= chip->freq_max());
-                next_freq = chip->ceil_to_mode(freq_min);
+                assert(freq_min <= chip()->freq_max());
+                next_freq = chip()->ceil_to_mode(freq_min);
                 next_active_procs = max_procs;
         }
 
@@ -170,8 +168,8 @@ void ffa_timer::update_platform()
         }
 
         // Manage DVFS timer
-        if (chip->freq() != chip->ceil_to_mode(next_freq)) {
-                freq_after_cooldown = chip->ceil_to_mode(next_freq);
+        if (chip()->freq() != chip()->ceil_to_mode(next_freq)) {
+                freq_after_cooldown = chip()->ceil_to_mode(next_freq);
                 if (!timer_dvfs_cooldown->is_active()) { timer_dvfs_cooldown->set(DVFS_COOLDOWN); }
         }
         else if (timer_dvfs_cooldown->is_active()) {

@@ -65,6 +65,13 @@ auto from_json_job(const rapidjson::Value& json_job) -> job
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
+
+        if (!json_job.HasMember("arrival") || !json_job["arrival"].IsDouble()) {
+                throw std::runtime_error("Invalid or missing 'arrival' field");
+        }
+        if (!json_job.HasMember("duration") || !json_job["duration"].IsDouble()) {
+                throw std::runtime_error("Invalid or missing 'duration' field");
+        }
         return job{
             .arrival = json_job["arrival"].GetDouble(),
             .duration = json_job["duration"].GetDouble()};
@@ -75,6 +82,18 @@ auto from_json_task(const rapidjson::Value& json_task) -> task
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
+        if (!json_task.HasMember("id") || !json_task["id"].IsUint64()) {
+                throw std::runtime_error("Invalid or missing 'id' field");
+        }
+        if (!json_task.HasMember("utilization") || !json_task["utilization"].IsDouble()) {
+                throw std::runtime_error("Invalid or missing 'utilization' field");
+        }
+        if (!json_task.HasMember("period") || !json_task["period"].IsDouble()) {
+                throw std::runtime_error("Invalid or missing 'period' field");
+        }
+        if (!json_task.HasMember("jobs") || !json_task["jobs"].IsArray()) {
+                throw std::runtime_error("Invalid or missing 'jobs' field");
+        }
         task parsed_task{
             .id = json_task["id"].GetUint64(),
             .utilization = json_task["utilization"].GetDouble(),
@@ -94,6 +113,10 @@ auto from_json_setting(const rapidjson::Value& json_setting) -> setting
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
+        if (!json_setting.HasMember("tasks") || !json_setting["tasks"].IsArray()) {
+                throw std::runtime_error("Invalid or missing 'tasks' field");
+        }
+
         std::vector<task> tasks;
         const rapidjson::Value& tasks_json = json_setting["tasks"];
         for (rapidjson::SizeType i = 0; i < tasks_json.Size(); ++i) {

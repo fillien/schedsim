@@ -130,8 +130,9 @@ auto generate_gantt(
     const protocols::hardware::hardware& platform) -> gantt
 {
         namespace traces = protocols::traces;
-        auto [plat_f_min, plat_f_max] =
-            std::minmax_element(std::begin(platform.frequencies), std::end(platform.frequencies));
+        auto [plat_f_min, plat_f_max] = std::minmax_element(
+            std::begin(platform.clusters.at(0).frequencies),
+            std::end(platform.clusters.at(0).frequencies));
 
         const auto f_max{*plat_f_max};
         const auto f_min{(*plat_f_min == *plat_f_max ? 0 : *plat_f_min)};
@@ -258,7 +259,7 @@ auto generate_proc_mode(
         namespace traces = protocols::traces;
         gantt chart;
 
-        chart.nb_axis = platform.nb_procs;
+        chart.nb_axis = platform.clusters.at(0).nb_procs;
         chart.duration = std::ceil(get_last_timestamp(logs));
 
         // proc_id, pair<mode, timestamp>

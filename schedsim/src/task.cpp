@@ -46,13 +46,14 @@ void task::add_job(const double& duration)
 
 auto task::get_remaining_time() const -> double
 {
-        return remaining_execution_time / sim()->chip()->speed();
+        return remaining_execution_time / attached_proc->get_cluster().lock()->speed();
 };
 
 void task::consume_time(const double& duration)
 {
         assert(duration >= 0);
-        remaining_execution_time -= duration * sim()->chip()->speed();
+
+        remaining_execution_time -= duration * attached_proc->get_cluster().lock()->speed();
         assert(sim()->round_zero(remaining_execution_time) >= 0);
 }
 

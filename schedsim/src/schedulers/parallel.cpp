@@ -4,6 +4,7 @@
 #include <protocols/traces.hpp>
 #include <schedulers/parallel.hpp>
 #include <server.hpp>
+#include <task.hpp>
 
 #include <algorithm>
 #include <iterator>
@@ -42,11 +43,12 @@ auto sched_parallel::processor_order(const processor& first, const processor& se
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        if (!first.has_server_running()) { return (first.get_state() == idle); }
-        if (!second.has_server_running()) {
+        if (!first.has_running_task()) { return (first.get_state() == idle); }
+        if (!second.has_running_task()) {
                 return (second.get_state() == sleep || second.get_state() == change);
         }
-        return deadline_order(*(first.get_server()), *(second.get_server()));
+        return deadline_order(
+            *(first.get_task()->get_server()), *(second.get_task()->get_server()));
 }
 
 auto sched_parallel::get_inactive_bandwidth() const -> double
@@ -66,7 +68,7 @@ auto sched_parallel::get_nb_active_procs([[maybe_unused]] const double& new_util
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        return sim()->chip()->processors.size();
+        return chip()->processors.size();
 }
 
 auto sched_parallel::get_server_budget(const server& serv) const -> double
@@ -95,7 +97,7 @@ auto sched_parallel::admission_test(const task& new_task) const -> bool
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        const auto NB_PROCS{static_cast<double>(sim()->chip()->processors.size())};
+        const auto NB_PROCS{static_cast<double>(chip()->processors.size())};
         const auto U_MAX{get_max_utilization(servers, new_task.utilization)};
         const auto NEW_TOTAL_UTILIZATION{get_total_utilization() + new_task.utilization};
         return (NEW_TOTAL_UTILIZATION <= (NB_PROCS - (NB_PROCS - 1) * U_MAX));
@@ -103,11 +105,11 @@ auto sched_parallel::admission_test(const task& new_task) const -> bool
 
 void sched_parallel::remove_task_from_cpu(const std::shared_ptr<processor>& proc)
 {
-        if (proc->has_server_running()) {
-                cancel_alarms(*(proc->get_server()));
+        if (proc->has_running_task()) {
+                cancel_alarms(*(proc->get_task()->get_server()));
 
-                proc->get_server()->change_state(server::state::ready);
-                proc->clear_server();
+                proc->get_task()->get_server()->change_state(server::state::ready);
+                proc->clear_task();
         }
 }
 
@@ -132,7 +134,7 @@ void sched_parallel::on_resched()
                 // refresh active servers list
                 auto ready_servers = servers | filter(from_shared<server>(is_ready_server));
                 auto available_procs =
-                    sim()->chip()->processors | filter([](const auto& proc) {
+                    chip()->processors | filter([](const auto& proc) {
                             return proc->get_state() == idle || proc->get_state() == running;
                     });
 
@@ -152,9 +154,10 @@ void sched_parallel::on_resched()
                 }
 
                 if ((!(leastest_priority_processor->get_state() == change)) ||
-                    !leastest_priority_processor->has_server_running() ||
+                    !leastest_priority_processor->has_running_task() ||
                     deadline_order(
-                        *highest_priority_server, *leastest_priority_processor->get_server())) {
+                        *highest_priority_server,
+                        *leastest_priority_processor->get_task()->get_server())) {
 
                         assert(leastest_priority_processor->get_state() != sleep);
                         resched_proc(leastest_priority_processor, highest_priority_server);
@@ -167,14 +170,14 @@ void sched_parallel::on_resched()
         }
 
         // Set next job finish or budget exhausted event for each proc with a task
-        for (auto proc : sim()->chip()->processors) {
+        for (auto proc : chip()->processors) {
                 if (proc->get_state() == sleep) { continue; }
                 else if (proc->get_state() == change) {
                         continue;
                 }
-                else if (proc->has_server_running()) {
-                        cancel_alarms(*proc->get_server());
-                        set_alarms(proc->get_server());
+                else if (proc->has_running_task()) {
+                        cancel_alarms(*proc->get_task()->get_server());
+                        set_alarms(proc->get_task()->get_server());
                         proc->change_state(running);
                 }
                 else {
@@ -183,4 +186,4 @@ void sched_parallel::on_resched()
         }
 }
 
-void sched_parallel::update_platform() { sim()->chip()->set_freq(sim()->chip()->freq_max()); }
+void sched_parallel::update_platform() { chip()->set_freq(chip()->freq_max()); }

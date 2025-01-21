@@ -1,8 +1,10 @@
 add_executable(schedgen)
 
 target_compile_features(schedgen PRIVATE cxx_std_23)
-target_compile_options(schedgen PRIVATE -fdiagnostics-color=always -fsanitize=address)
-target_link_options(schedgen PRIVATE -fsanitize=address)
+if (NOT APPLE)
+    target_compile_options(schedgen PRIVATE -fdiagnostics-color=always -fsanitize=address)
+    target_link_options(schedgen PRIVATE -fsanitize=address)
+endif()
 
 target_sources(schedgen PRIVATE
   src/main.cpp

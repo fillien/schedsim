@@ -3,6 +3,7 @@
 
 #include "entity.hpp"
 #include "event.hpp"
+#include "platform.hpp"
 #include "processor.hpp"
 #include "server.hpp"
 #include <memory>
@@ -57,6 +58,8 @@ class scheduler : public entity {
 
       protected:
         bool need_resched{false}; /**< Flag indicating if a rescheduling is needed. */
+
+        [[nodiscard]] auto chip() const -> std::shared_ptr<cluster>;
 
         /**
          * @brief A vector to track and own server objects.

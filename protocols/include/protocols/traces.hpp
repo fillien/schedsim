@@ -154,7 +154,8 @@ struct virtual_time_update {
  * @brief Represents a frequency scaling of the platform
  */
 struct frequency_update {
-        double frequency; /**< New frequency. */
+        std::size_t cluster_id; /**< ID of the cluster. */
+        double frequency;       /**< New frequency. */
 };
 
 /**

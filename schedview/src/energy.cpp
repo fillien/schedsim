@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <protocols/traces.hpp>
 
+#include <array>
 #include <cassert>
 #include <iostream>
 #include <set>
@@ -16,6 +17,18 @@ template <class... Ts> struct overloaded : Ts... {
 };
 
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
+auto cpu_to_cluster(const protocols::hardware::hardware& hw, const std::size_t cpu) -> std::size_t
+{
+        std::size_t min_cluster{0};
+        std::size_t index{hw.clusters.at(min_cluster).nb_procs};
+        while (cpu > index) {
+                min_cluster += 1;
+                index += hw.clusters.at(min_cluster).nb_procs;
+        }
+
+        return min_cluster;
+}
 
 auto parse_power_consumption(
     const std::vector<std::pair<double, protocols::traces::trace>>& input,
@@ -36,11 +49,11 @@ auto parse_power_consumption(
                 if (timestamp > last_timestamp) {
                         if (!first) {
                                 first = false;
-                                power_consumption.push_back({last_timestamp, current_power});
+                                power_consumption.emplace_back(last_timestamp, current_power);
                         }
-                        current_power = energy::compute_power(current_freq, hw) *
+                        current_power = energy::compute_power(current_freq, hw.clusters.at(0)) *
                                         static_cast<double>(active_cores.size());
-                        power_consumption.push_back({last_timestamp, current_power});
+                        power_consumption.emplace_back(last_timestamp, current_power);
                         last_timestamp = timestamp;
                 }
 
@@ -68,10 +81,11 @@ auto parse_power_consumption(
                                 current_freq = evt.frequency;
                         },
                         [&](protocols::traces::sim_finished) {
-                                power_consumption.push_back({last_timestamp, current_power});
-                                current_power = energy::compute_power(current_freq, hw) *
-                                                static_cast<double>(active_cores.size());
-                                power_consumption.push_back({last_timestamp, current_power});
+                                power_consumption.emplace_back(last_timestamp, current_power);
+                                current_power =
+                                    energy::compute_power(current_freq, hw.clusters.at(0)) *
+                                    static_cast<double>(active_cores.size());
+                                power_consumption.emplace_back(last_timestamp, current_power);
                                 last_timestamp = timestamp;
                         },
                         [](auto) {}},

@@ -14,7 +14,7 @@ class csf_timer : public sched_parallel {
       private:
         std::size_t nb_active_procs{1};
 
-        static constexpr double DVFS_COOLDOWN{platform::DVFS_DELAY * 2};
+        static constexpr double DVFS_COOLDOWN{cluster::DVFS_DELAY * 2};
         static constexpr double DPM_COOLDOWN{processor::DPM_DELAY * 2};
 
         std::shared_ptr<timer> timer_dvfs_cooldown;

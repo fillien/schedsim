@@ -55,14 +55,14 @@ auto parse_args(const int argc, const char** argv) -> app_config
         // clang-format off
 	cxxopts::Options options("schedsim", "GRUB Scheduler Simulation for a Given Task Set and Platform");
 	options.add_options()
-	        ("h,help", "Show this help message.")
-                ("v,version", "Show the build version")
-		("s,scenario", "Specify the scenario file.", cxxopts::value<std::string>())
-		("p,platform", "Specify the platform configuration file.", cxxopts::value<std::string>())
-		("sched", "Specify the scheduling policy to be used.", cxxopts::value<std::string>())
-		("scheds", "List the available schedulers.", cxxopts::value<bool>()->default_value("false"))
-                ("delay", "Activate delay during DVFS and DPM switch mode", cxxopts::value<bool>()->default_value("false"))
-		("o,output", "Specify the output file to write the simulation results.", cxxopts::value<std::string>());
+	    ("h,help", "Show this help message.")
+	    ("v,version", "Show the build version")
+	    ("s,scenario", "Specify the scenario file.", cxxopts::value<std::string>())
+	    ("p,platform", "Specify the platform configuration file.", cxxopts::value<std::string>())
+	    ("sched", "Specify the scheduling policy to be used.", cxxopts::value<std::string>())
+	    ("scheds", "List the available schedulers.", cxxopts::value<bool>()->default_value("false"))
+            ("delay", "Activate delay during DVFS and DPM switch mode", cxxopts::value<bool>()->default_value("false"))
+	    ("o,output", "Specify the output file to write the simulation results.", cxxopts::value<std::string>());
         // clang-format on
         const auto cli = options.parse(argc, argv);
 
@@ -107,13 +107,16 @@ auto main(const int argc, const char** argv) -> int
 
                 // Insert the platform configured through the scenario file, in the simulation
                 // engine
-                auto plat = make_shared<platform>(
-                    sim,
-                    platform_config.nb_procs,
-                    platform_config.frequencies,
-                    platform_config.effective_freq,
-                    FREESCALING_ALLOWED);
+                auto plat = make_shared<platform>(sim, FREESCALING_ALLOWED);
                 sim->set_platform(plat);
+
+                std::size_t cluster_id_cpt{1};
+                for (const protocols::hardware::cluster& clu : platform_config.clusters) {
+                        plat->clusters.push_back(std::make_shared<cluster>(
+                            sim, cluster_id_cpt, clu.frequencies, clu.effective_freq));
+                        plat->clusters.back()->create_procs(clu.nb_procs);
+                        cluster_id_cpt++;
+                }
 
                 std::shared_ptr<scheduler> sched;
                 if (config.sched == "grub") { sched = make_shared<sched_parallel>(sim); }

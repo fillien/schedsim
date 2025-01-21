@@ -20,7 +20,7 @@ auto sched_power_aware_timer::get_nb_active_procs(
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        return sim()->chip()->processors.size();
+        return chip()->processors.size();
 }
 
 void sched_power_aware_timer::update_platform()
@@ -28,19 +28,18 @@ void sched_power_aware_timer::update_platform()
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        const auto chip = sim()->chip();
         const double U_MAX{get_max_utilization(servers)};
-        const double NB_PROCS{static_cast<double>(chip->processors.size())};
+        const double NB_PROCS{static_cast<double>(chip()->processors.size())};
         const double TOTAL_U{get_total_utilization()};
-        const double F_MAX{chip->freq_max()};
+        const double F_MAX{chip()->freq_max()};
         const double new_freq{(F_MAX * ((NB_PROCS - 1) * U_MAX + TOTAL_U)) / NB_PROCS};
 
-        assert(new_freq <= chip->freq_max());
-        if (chip->freq() != chip->ceil_to_mode(new_freq)) {
-                for (const auto& proc : chip->processors) {
+        assert(new_freq <= chip()->freq_max());
+        if (chip()->freq() != chip()->ceil_to_mode(new_freq)) {
+                for (const auto& proc : chip()->processors) {
                         remove_task_from_cpu(proc);
                 }
-                chip->dvfs_change_freq(new_freq);
+                chip()->dvfs_change_freq(new_freq);
                 call_resched();
         }
 }

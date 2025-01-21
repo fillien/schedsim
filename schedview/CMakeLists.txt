@@ -49,3 +49,42 @@ target_sources(schedview PRIVATE
 )
 
 target_include_directories(schedview PUBLIC ${CMAKE_BINARY_DIR}/generated)
+
+enable_testing()
+find_package(GTest REQUIRED)
+
+add_executable(schedview_tests)
+target_sources(schedview_tests PRIVATE
+  tests/main.cpp
+  src/gantt/gantt.cpp
+  src/gantt/gantt.hpp
+  src/gantt/svg.cpp
+  src/gantt/svg.hpp
+  src/gantt/rtsched.cpp
+  src/gantt/rtsched.hpp
+  src/textual.cpp
+  src/textual.hpp
+  src/energy.hpp
+  src/energy.cpp
+  src/energy_model.hpp
+  src/energy_model.cpp
+  src/frequency.hpp
+  src/frequency.cpp
+  src/stats.hpp
+  src/stats.cpp
+  src/deadline_misses.hpp
+  src/deadline_misses.cpp
+  src/system_utilization.hpp
+  src/system_utilization.cpp
+)
+
+target_include_directories(schedview_tests PUBLIC ${CMAKE_BINARY_DIR}/generated)
+
+target_link_libraries(
+    schedview_tests
+    protocols
+    GTest::gtest
+    GTest::gtest_main
+)
+
+gtest_discover_tests(schedview_tests)

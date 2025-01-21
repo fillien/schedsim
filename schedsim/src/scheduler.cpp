@@ -2,6 +2,7 @@
 #include "engine.hpp"
 #include "entity.hpp"
 #include "event.hpp"
+#include "platform.hpp"
 #include "processor.hpp"
 #include "server.hpp"
 #include "task.hpp"
@@ -34,10 +35,14 @@ auto compare_events(const events::event& ev1, const events::event& ev2) -> bool
         return std::visit(get_priority, ev1) < std::visit(get_priority, ev2);
 }
 
+auto scheduler::chip() const -> std::shared_ptr<cluster> { return sim()->chip()->clusters[0]; }
+
 void scheduler::update_running_servers()
 {
-        for (const auto& proc : sim()->chip()->processors) {
-                if (proc->has_server_running()) { update_server_times(proc->get_server()); }
+        for (const auto& proc : chip()->processors) {
+                if (proc->has_running_task()) {
+                        update_server_times(proc->get_task()->get_server());
+                }
         }
 };
 
@@ -253,7 +258,7 @@ void scheduler::on_job_finished(const std::shared_ptr<server>& serv, bool is_the
                 serv->postpone();
         }
         else {
-                serv->get_task()->attached_proc->clear_server();
+                serv->get_task()->attached_proc->clear_task();
 
                 if ((serv->virtual_time - sim()->time()) > 0 &&
                     serv->virtual_time < serv->relative_deadline) {
@@ -340,8 +345,6 @@ void scheduler::set_alarms(const std::shared_ptr<server>& serv)
 #ifdef TRACY_ENABLE
         TracyPlot("budget", new_budget);
 #endif
-        if (remaining_time < 0) { std::cout << remaining_time << std::endl; }
-        if (new_budget < 0) { std::cout << new_budget << std::endl; }
         assert(new_budget >= 0);
         assert(remaining_time >= 0);
 
@@ -362,21 +365,21 @@ void scheduler::resched_proc(
         ZoneScoped;
 #endif
         namespace traces = protocols::traces;
-        if (proc->has_server_running()) {
-                cancel_alarms(*(proc->get_server()));
-                sim()->add_trace(traces::task_preempted{proc->get_server()->get_task()->id});
-                proc->get_server()->change_state(server::state::ready);
-                proc->clear_server();
+        if (proc->has_running_task()) {
+                cancel_alarms(*(proc->get_task()->get_server()));
+                sim()->add_trace(traces::task_preempted{proc->get_task()->id});
+                proc->get_task()->get_server()->change_state(server::state::ready);
+                proc->clear_task();
         }
 
         if (server_to_execute->current_state != server::state::running) {
                 server_to_execute->change_state(server::state::running);
         }
 
-        proc->set_server(server_to_execute);
+        proc->set_task(server_to_execute->get_task());
 }
 
 auto scheduler::clamp(const double& nb_procs) -> double
 {
-        return std::clamp(nb_procs, 1.0, static_cast<double>(sim()->chip()->processors.size()));
+        return std::clamp(nb_procs, 1.0, static_cast<double>(chip()->processors.size()));
 }

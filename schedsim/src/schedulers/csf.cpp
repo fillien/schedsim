@@ -6,7 +6,7 @@
 
 csf::csf(const std::weak_ptr<engine> sim) : sched_parallel(sim)
 {
-        nb_active_procs = sim.lock()->chip()->processors.size();
+        nb_active_procs = chip()->processors.size();
 }
 
 auto csf::compute_freq_min(
@@ -26,7 +26,7 @@ auto csf::get_nb_active_procs([[maybe_unused]] const double& new_utilization = 0
                 return state == processor::state::idle || state == processor::state::running;
         };
 
-        const auto& processors = sim()->chip()->processors;
+        const auto& processors = chip()->processors;
         return std::count_if(processors.begin(), processors.end(), is_active);
 }
 
@@ -42,7 +42,7 @@ void csf::change_state_proc(
 void csf::activate_next_core()
 {
         using enum processor::state;
-        auto& processors = sim()->chip()->processors;
+        auto& processors = chip()->processors;
         auto it = std::find_if(processors.begin(), processors.end(), [](const auto& proc) {
                 return proc->get_state() == sleep;
         });
@@ -56,7 +56,7 @@ void csf::activate_next_core()
 void csf::put_next_core_to_bed()
 {
         using enum processor::state;
-        auto& processors = sim()->chip()->processors;
+        auto& processors = chip()->processors;
         auto it = std::find_if(processors.begin(), processors.end(), [](const auto& proc) {
                 return proc->get_state() == idle || proc->get_state() == running;
         });
@@ -80,12 +80,11 @@ void csf::adjust_active_processors(const std::size_t target_processors)
 
 void csf::update_platform()
 {
-        const auto chip = sim()->chip();
         const double total_util{get_active_bandwidth()};
         const double max_util{get_max_utilization(servers)};
-        const double max_procs{static_cast<double>(chip->processors.size())};
-        const double freq_eff{chip->freq_eff()};
-        const double freq_max{chip->freq_max()};
+        const double max_procs{static_cast<double>(chip()->processors.size())};
+        const double freq_eff{chip()->freq_eff()};
+        const double freq_max{chip()->freq_max()};
         const double m_min{clamp(std::ceil((total_util - max_util) / (1 - max_util)))};
         const double freq_min{compute_freq_min(freq_max, total_util, max_util, m_min)};
 
@@ -97,8 +96,8 @@ void csf::update_platform()
                 next_active_procs = std::ceil(m_min * (freq_min / freq_eff));
         }
         else {
-                assert(freq_min <= chip->freq_max());
-                next_freq = chip->ceil_to_mode(freq_min);
+                assert(freq_min <= chip()->freq_max());
+                next_freq = chip()->ceil_to_mode(freq_min);
                 next_active_procs = max_procs;
         }
 
@@ -106,11 +105,11 @@ void csf::update_platform()
         assert(next_active_procs >= 1 && next_active_procs <= max_procs);
 
         adjust_active_processors(static_cast<std::size_t>(next_active_procs));
-        if (chip->freq() != chip->ceil_to_mode(next_freq)) {
-                for (const auto& proc : chip->processors) {
+        if (chip()->freq() != chip()->ceil_to_mode(next_freq)) {
+                for (const auto& proc : chip()->processors) {
                         remove_task_from_cpu(proc);
                 }
-                chip->dvfs_change_freq(next_freq);
+                chip()->dvfs_change_freq(next_freq);
                 call_resched();
         }
 }

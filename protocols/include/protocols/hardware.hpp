@@ -8,11 +8,16 @@
 #include <vector>
 
 namespace protocols::hardware {
-struct hardware {
+
+struct cluster {
         uint64_t nb_procs;
         std::vector<double> frequencies;
         double effective_freq;
         std::vector<double> power_model;
+};
+
+struct hardware {
+        std::vector<cluster> clusters;
 };
 
 void to_json(const hardware& plat, rapidjson::Document& doc);

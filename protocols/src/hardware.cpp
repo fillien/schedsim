@@ -1,3 +1,4 @@
+#include "rapidjson/rapidjson.h"
 #include <filesystem>
 #include <fstream>
 #include <protocols/hardware.hpp>
@@ -13,6 +14,31 @@
 
 namespace protocols::hardware {
 
+auto to_json(const cluster& plat, rapidjson::Document::AllocatorType& allocator) -> rapidjson::Value
+{
+#ifdef TRACY_ENABLE
+        ZoneScoped;
+#endif
+        rapidjson::Value res(rapidjson::kObjectType);
+
+        res.AddMember("procs", plat.nb_procs, allocator);
+
+        rapidjson::Value freq_array(rapidjson::kArrayType);
+        for (const auto& freq : plat.frequencies) {
+                freq_array.PushBack(freq, allocator);
+        }
+        res.AddMember("frequencies", freq_array, allocator);
+        res.AddMember("effective_freq", plat.effective_freq, allocator);
+
+        rapidjson::Value power_model_array(rapidjson::kArrayType);
+        for (const auto& power : plat.power_model) {
+                power_model_array.PushBack(power, allocator);
+        }
+        res.AddMember("power_model", power_model_array, allocator);
+
+        return res;
+}
+
 void to_json(const hardware& plat, rapidjson::Document& doc)
 {
 #ifdef TRACY_ENABLE
@@ -21,20 +47,52 @@ void to_json(const hardware& plat, rapidjson::Document& doc)
         doc.SetObject();
         auto& allocator = doc.GetAllocator();
 
-        doc.AddMember("procs", plat.nb_procs, allocator);
-
-        rapidjson::Value freq_array(rapidjson::kArrayType);
-        for (const auto& freq : plat.frequencies) {
-                freq_array.PushBack(freq, allocator);
+        rapidjson::Value cluster_array(rapidjson::kArrayType);
+        for (const auto& clu : plat.clusters) {
+                cluster_array.PushBack(to_json(clu, allocator), allocator);
         }
-        doc.AddMember("frequencies", freq_array, allocator);
-        doc.AddMember("effective_freq", plat.effective_freq, allocator);
+        doc.AddMember("clusters", cluster_array, allocator);
+}
 
-        rapidjson::Value power_model_array(rapidjson::kArrayType);
-        for (const auto& power : plat.power_model) {
-                power_model_array.PushBack(power, allocator);
+auto from_json_cluster(const rapidjson::Value& value) -> cluster
+{
+#ifdef TRACY_ENABLE
+        ZoneScoped;
+#endif
+
+        cluster clu;
+
+        if (!value.HasMember("procs") || !value["procs"].IsUint64()) {
+                throw std::runtime_error("Invalid or missing 'procs' field");
         }
-        doc.AddMember("power_model", power_model_array, allocator);
+        clu.nb_procs = value["procs"].GetUint64();
+
+        if (!value.HasMember("frequencies") || !value["frequencies"].IsArray()) {
+                throw std::runtime_error("Invalid or missing 'frequencies' field");
+        }
+        const auto& freq_array = value["frequencies"].GetArray();
+        clu.frequencies.reserve(freq_array.Size());
+        for (const auto& freq : freq_array) {
+                if (!freq.IsDouble()) { throw std::runtime_error("Invalid frequency value"); }
+                clu.frequencies.push_back(freq.GetDouble());
+        }
+
+        if (!value.HasMember("effective_freq") || !value["effective_freq"].IsDouble()) {
+                throw std::runtime_error("Invalid or missing 'effective_freq' field");
+        }
+        clu.effective_freq = value["effective_freq"].GetDouble();
+
+        if (!value.HasMember("power_model") || !value["power_model"].IsArray()) {
+                throw std::runtime_error("Invalid or missing 'power_model' field");
+        }
+        const auto& power_model_array = value["power_model"].GetArray();
+        clu.power_model.reserve(power_model_array.Size());
+        for (const auto& power : power_model_array) {
+                if (!power.IsDouble()) { throw std::runtime_error("Invalid power model value"); }
+                clu.power_model.push_back(power.GetDouble());
+        }
+
+        return clu;
 }
 
 auto from_json_hardware(const rapidjson::Document& doc) -> hardware
@@ -42,22 +100,17 @@ auto from_json_hardware(const rapidjson::Document& doc) -> hardware
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        hardware plat;
 
-        plat.nb_procs = doc["procs"].GetUint64();
-
-        const auto& freq_array = doc["frequencies"].GetArray();
-        plat.frequencies.reserve(freq_array.Size());
-        for (const auto& freq : freq_array) {
-                plat.frequencies.push_back(freq.GetDouble());
+        if (!doc.HasMember("clusters") || !doc["clusters"].IsArray()) {
+                throw std::runtime_error("Invalid or missing 'clusters' field");
         }
 
-        plat.effective_freq = doc["effective_freq"].GetDouble();
+        hardware plat;
+        const auto& clusters_array = doc["clusters"].GetArray();
+        plat.clusters.reserve(clusters_array.Size());
 
-        const auto& power_model_array = doc["power_model"].GetArray();
-        plat.power_model.reserve(power_model_array.Size());
-        for (const auto& power : power_model_array) {
-                plat.power_model.push_back(power.GetDouble());
+        for (const auto& clu : clusters_array) {
+                plat.clusters.push_back(from_json_cluster(clu));
         }
 
         return plat;
