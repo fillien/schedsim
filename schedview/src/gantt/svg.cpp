@@ -1,5 +1,5 @@
-#include "svg.hpp"
-#include "gantt.hpp"
+#include <gantt/gantt.hpp>
+#include <gantt/svg.hpp>
 
 #include <algorithm>
 #include <cstddef>

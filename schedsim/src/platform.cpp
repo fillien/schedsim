@@ -20,7 +20,6 @@ cluster::cluster(
     : entity(sim), id(cid), frequencies(std::move(frequencies)), effective_freq(effective_freq),
       current_freq(0)
 {
-        assert(nb_procs > 0);
         assert(std::all_of(
             frequencies.begin(), frequencies.end(), [](double freq) { return freq > 0; }));
         assert(std::any_of(frequencies.begin(), frequencies.end(), [effective_freq](double freq) {

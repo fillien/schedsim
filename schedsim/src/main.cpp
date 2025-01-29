@@ -15,6 +15,7 @@
 #include "engine.hpp"
 #include "entity.hpp"
 #include "event.hpp"
+#include "meta_scheduler.hpp"
 #include "platform.hpp"
 #include "scheduler.hpp"
 #include "schedulers/csf.hpp"
@@ -110,34 +111,37 @@ auto main(const int argc, const char** argv) -> int
                 auto plat = make_shared<platform>(sim, FREESCALING_ALLOWED);
                 sim->set_platform(plat);
 
+                std::shared_ptr<meta_scheduler> sched;
+                sched = std::make_shared<meta_scheduler>(sim);
+
                 std::size_t cluster_id_cpt{1};
                 for (const protocols::hardware::cluster& clu : platform_config.clusters) {
                         plat->clusters.push_back(std::make_shared<cluster>(
                             sim, cluster_id_cpt, clu.frequencies, clu.effective_freq));
                         plat->clusters.back()->create_procs(clu.nb_procs);
+                        sched->add_child_sched(plat->clusters.back());
                         cluster_id_cpt++;
                 }
 
-                std::shared_ptr<scheduler> sched;
-                if (config.sched == "grub") { sched = make_shared<sched_parallel>(sim); }
-                else if (config.sched == "pa") {
-                        sched = make_shared<sched_power_aware>(sim);
-                }
-                else if (config.sched == "ffa") {
-                        sched = make_shared<ffa>(sim);
-                }
-                else if (config.sched == "csf") {
-                        sched = make_shared<csf>(sim);
-                }
-                else if (config.sched == "ffa_timer") {
-                        sched = make_shared<ffa_timer>(sim);
-                }
-                else if (config.sched == "csf_timer") {
-                        sched = make_shared<csf_timer>(sim);
-                }
-                else {
-                        throw std::invalid_argument("Undefined scheduling policy");
-                }
+                // if (config.sched == "grub") { sched = make_shared<sched_parallel>(sim); }
+                // else if (config.sched == "pa") {
+                //         sched = make_shared<sched_power_aware>(sim);
+                // }
+                // else if (config.sched == "ffa") {
+                //         sched = make_shared<ffa>(sim);
+                // }
+                // else if (config.sched == "csf") {
+                //         sched = make_shared<csf>(sim);
+                // }
+                // else if (config.sched == "ffa_timer") {
+                //         sched = make_shared<ffa_timer>(sim);
+                // }
+                // else if (config.sched == "csf_timer") {
+                //         sched = make_shared<csf_timer>(sim);
+                // }
+                // else {
+                //         throw std::invalid_argument("Undefined scheduling policy");
+                // }
                 sim->set_scheduler(sched);
 
                 std::vector<std::shared_ptr<task>> tasks{taskset.tasks.size()};

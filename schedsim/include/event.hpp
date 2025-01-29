@@ -23,6 +23,8 @@ struct job_arrival {
  */
 struct job_finished {
         std::shared_ptr<server> server_of_job; /**< The server where the job is completed. */
+        bool is_there_new_job =
+            false; /**< Give info about a job_finished event at the same timestep. */
 };
 
 /**

@@ -5,6 +5,7 @@
 #include "../entity.hpp"
 #include "../processor.hpp"
 #include "../scheduler.hpp"
+#include <iostream>
 #include <memory>
 #include <vector>
 

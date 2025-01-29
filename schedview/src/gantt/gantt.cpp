@@ -1,5 +1,5 @@
-#include "gantt.hpp"
 #include <exception>
+#include <gantt/gantt.hpp>
 #include <iterator>
 #include <ostream>
 #include <protocols/hardware.hpp>
@@ -300,7 +300,7 @@ auto generate_proc_mode(
                                 }
                                 last_state_times.insert({evt.proc_id, {2, timestamp}});
                         },
-                        [&](traces::proc_change evt) {},
+                        [&](traces::proc_change evt [[maybe_unused]]) {},
                         [&](traces::sim_finished) {
                                 for (auto const& last_state : last_state_times) {
                                         const auto& id = last_state.first;

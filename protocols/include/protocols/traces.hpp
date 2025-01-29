@@ -158,6 +158,11 @@ struct frequency_update {
         double frequency;       /**< New frequency. */
 };
 
+struct task_placed {
+        std::size_t task_id;
+        std::size_t cluster_id;
+};
+
 /**
  * @brief Type representing various trace events.
  */
@@ -181,7 +186,8 @@ using trace = std::variant<
     serv_running,
     task_preempted,
     task_scheduled,
-    task_rejected>;
+    task_rejected,
+    task_placed>;
 
 /**
  * @brief Converts a trace event to JSON format.

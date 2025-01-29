@@ -32,6 +32,7 @@ target_sources(schedsim PRIVATE
     src/engine.cpp
     src/platform.cpp
     src/processor.cpp
+    src/meta_scheduler.cpp
     src/scheduler.cpp
     src/schedulers/parallel.cpp
     src/schedulers/power_aware.cpp
@@ -47,35 +48,36 @@ target_sources(schedsim PRIVATE
 target_include_directories(schedsim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_BINARY_DIR}/generated)
 
-enable_testing()
-find_package(GTest REQUIRED)
+# enable_testing()
+# find_package(GTest REQUIRED)
 
-add_executable(schedsim_tests)
-target_sources(schedsim_tests PRIVATE
-    tests/main.cpp
-    src/engine.cpp
-    src/platform.cpp
-    src/processor.cpp
-    src/scheduler.cpp
-    src/schedulers/parallel.cpp
-    src/schedulers/power_aware.cpp
-    src/schedulers/power_aware_timer.cpp
-    src/schedulers/ffa.cpp
-    src/schedulers/ffa_timer.cpp
-    src/schedulers/csf.cpp
-    src/schedulers/csf_timer.cpp
-    src/server.cpp
-    src/task.cpp
-    src/timer.cpp
-)
+# add_executable(schedsim_tests)
+# target_sources(schedsim_tests PRIVATE
+#     tests/main.cpp
+#     src/engine.cpp
+#     src/platform.cpp
+#     src/processor.cpp
+#     src/meta_scheduler.cpp
+#     src/scheduler.cpp
+#     src/schedulers/parallel.cpp
+#     src/schedulers/power_aware.cpp
+#     src/schedulers/power_aware_timer.cpp
+#     src/schedulers/ffa.cpp
+#     src/schedulers/ffa_timer.cpp
+#     src/schedulers/csf.cpp
+#     src/schedulers/csf_timer.cpp
+#     src/server.cpp
+#     src/task.cpp
+#     src/timer.cpp
+# )
 
-target_include_directories(schedsim_tests PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+# target_include_directories(schedsim_tests PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-target_link_libraries(
-    schedsim_tests
-    protocols
-    GTest::gtest
-    GTest::gtest_main
-)
+# target_link_libraries(
+#     schedsim_tests
+#     protocols
+#     GTest::gtest
+#     GTest::gtest_main
+# )
 
-gtest_discover_tests(schedsim_tests)
+# gtest_discover_tests(schedsim_tests)

@@ -4,6 +4,7 @@
 #include "event.hpp"
 #include "platform.hpp"
 #include "processor.hpp"
+#include "protocols/traces.hpp"
 #include "server.hpp"
 #include "task.hpp"
 
@@ -15,6 +16,8 @@
 #include <memory>
 #include <ostream>
 #include <ranges>
+#include <stdexcept>
+#include <type_traits>
 #include <variant>
 #include <vector>
 
@@ -22,20 +25,41 @@
 #include <tracy/Tracy.hpp>
 #endif
 
-auto compare_events(const events::event& ev1, const events::event& ev2) -> bool
-{
-        constexpr static int MIN_PRIORITY = 100;
-        constexpr auto get_priority = overloaded{
-            [](const events::job_finished&) { return 0; },
-            [](const events::serv_budget_exhausted&) { return 1; },
-            [](const events::serv_inactive&) { return 2; },
-            [](const events::job_arrival&) { return 3; },
-            [](const auto&) { return MIN_PRIORITY; }};
+auto scheduler::chip() const -> std::shared_ptr<cluster> { return attached_cluster.lock(); }
 
-        return std::visit(get_priority, ev1) < std::visit(get_priority, ev2);
+void scheduler::call_resched()
+{
+        sim()->add_trace(protocols::traces::resched{});
+        on_resched();
 }
 
-auto scheduler::chip() const -> std::shared_ptr<cluster> { return sim()->chip()->clusters[0]; }
+auto scheduler::is_this_my_event(const events::event& evt) -> bool
+{
+        using namespace events;
+
+        auto matches_server = [&](const auto& serv) {
+                return std::any_of(
+                    servers.begin(), servers.end(), [&](const std::shared_ptr<server>& first) {
+                            return first->id() == serv->id();
+                    });
+        };
+
+        if (std::holds_alternative<job_finished>(evt)) {
+                return matches_server(std::get<job_finished>(evt).server_of_job);
+        }
+        if (std::holds_alternative<serv_budget_exhausted>(evt)) {
+                return matches_server(std::get<serv_budget_exhausted>(evt).serv);
+        }
+        if (std::holds_alternative<serv_inactive>(evt)) {
+                return matches_server(std::get<serv_inactive>(evt).serv);
+        }
+        if (std::holds_alternative<job_arrival>(evt)) {
+                const auto& [task, duration] = std::get<job_arrival>(evt);
+                return task->has_server() && matches_server(task->get_server());
+        }
+
+        throw std::runtime_error("Unknown event");
+}
 
 void scheduler::update_running_servers()
 {
@@ -120,57 +144,36 @@ void scheduler::detach_server_if_needed(const std::shared_ptr<task>& inactive_ta
         }
 }
 
-void scheduler::handle(std::vector<events::event> evts)
+void scheduler::handle(const events::event& evt)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        // Sort events according to event priority cf:get_priority function
-        std::sort(std::begin(evts), std::end(evts), compare_events);
+        using namespace events;
 
-        // Reset flags
-        this->need_resched = false;
-
-        for (const auto& evt : evts) {
-                /// TODO refactor to a visitor pattern
-                if (std::holds_alternative<events::job_finished>(evt)) {
-                        // Looking for JOB_ARRIVAL events at the same time for this server
-                        const auto& [serv] = std::get<events::job_finished>(evt);
-                        auto is_there_new_job{false};
-                        for (auto future_evt : evts) {
-                                if (const auto& job_evt =
-                                        std::get_if<events::job_arrival>(&future_evt)) {
-                                        is_there_new_job =
-                                            (job_evt->task_of_job == serv->get_task());
-                                }
-                        }
-                        on_job_finished(serv, is_there_new_job);
-                }
-                else if (std::holds_alternative<events::serv_budget_exhausted>(evt)) {
-                        const auto& [serv] = std::get<events::serv_budget_exhausted>(evt);
-                        on_serv_budget_exhausted(serv);
-                }
-                else if (std::holds_alternative<events::serv_inactive>(evt)) {
-                        const auto& [serv] = std::get<events::serv_inactive>(evt);
-                        on_serv_inactive(serv);
-                }
-                else if (std::holds_alternative<events::job_arrival>(evt)) {
-                        const auto& [serv, job_duration] = std::get<events::job_arrival>(evt);
-                        on_job_arrival(serv, job_duration);
-                }
-                else if (std::holds_alternative<events::timer_isr>(evt)) {
-                        const auto& [target_timer] = std::get<events::timer_isr>(evt);
-                        target_timer->fire();
-                }
-                else {
-                        std::cerr << "Unknowned event" << std::endl;
-                }
-        }
-
-        if (this->need_resched) {
-                sim()->add_trace(protocols::traces::resched{});
-                on_resched();
-        }
+        std::visit(
+            [this](auto&& arg) {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (std::is_same_v<T, job_finished>) {
+                            on_job_finished(arg.server_of_job, arg.is_there_new_job);
+                    }
+                    else if constexpr (std::is_same_v<T, serv_budget_exhausted>) {
+                            on_serv_budget_exhausted(arg.serv);
+                    }
+                    else if constexpr (std::is_same_v<T, serv_inactive>) {
+                            on_serv_inactive(arg.serv);
+                    }
+                    else if constexpr (std::is_same_v<T, job_arrival>) {
+                            on_job_arrival(arg.task_of_job, arg.job_duration);
+                    }
+                    else if constexpr (std::is_same_v<T, timer_isr>) {
+                            arg.target_timer->fire();
+                    }
+                    else {
+                            throw std::runtime_error("Unknown event");
+                    }
+            },
+            evt);
 }
 
 void scheduler::on_serv_inactive(const std::shared_ptr<server>& serv)
@@ -191,7 +194,7 @@ void scheduler::on_serv_inactive(const std::shared_ptr<server>& serv)
                 update_server_times(serv);
         }
 
-        need_resched = true;
+        sim()->get_sched()->call_resched(shared_from_this());
 }
 
 void scheduler::on_job_arrival(const std::shared_ptr<task>& new_task, const double& job_duration)
@@ -232,7 +235,7 @@ void scheduler::on_job_arrival(const std::shared_ptr<task>& new_task, const doub
             new_task->get_server()->current_state != server::state::running) {
                 new_task->get_server()->change_state(server::state::ready);
                 on_active_utilization_updated();
-                this->need_resched = true;
+                sim()->get_sched()->call_resched(shared_from_this());
         }
 }
 
@@ -270,7 +273,7 @@ void scheduler::on_job_finished(const std::shared_ptr<server>& serv, bool is_the
                         on_active_utilization_updated();
                 }
         }
-        this->need_resched = true;
+        sim()->get_sched()->call_resched(shared_from_this());
 }
 
 void scheduler::on_serv_budget_exhausted(const std::shared_ptr<server>& serv)
@@ -290,7 +293,7 @@ void scheduler::on_serv_budget_exhausted(const std::shared_ptr<server>& serv)
                 sim()->add_trace(traces::job_finished{serv->id()}); // If yes, trace it
         }
 
-        this->need_resched = true;
+        sim()->get_sched()->call_resched(shared_from_this());
 }
 
 void scheduler::update_server_times(const std::shared_ptr<server>& serv)

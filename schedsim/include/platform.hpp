@@ -8,6 +8,8 @@
 #include <memory>
 #include <vector>
 
+class scheduler;
+
 class cluster : public entity, public std::enable_shared_from_this<cluster> {
       private:
         std::size_t id;
@@ -17,6 +19,8 @@ class cluster : public entity, public std::enable_shared_from_this<cluster> {
 
         std::shared_ptr<timer> dvfs_timer;
         double dvfs_target;
+
+        std::weak_ptr<scheduler> attached_scheduler;
 
       public:
         static constexpr double DVFS_DELAY{0.5};
@@ -42,6 +46,8 @@ class cluster : public entity, public std::enable_shared_from_this<cluster> {
         auto ceil_to_mode(const double& freq) -> double;
         void dvfs_change_freq(const double& next_freq);
         void create_procs(const std::size_t nb_procs);
+        auto get_sched() const -> std::weak_ptr<scheduler> { return attached_scheduler; };
+        void set_sched(const std::weak_ptr<scheduler>& sched) { attached_scheduler = sched; };
 };
 
 /**

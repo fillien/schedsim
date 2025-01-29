@@ -13,7 +13,7 @@ template <class... Ts> struct overloaded : Ts... {
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 namespace {
-constexpr auto TIME_LENGTH = 8;
+constexpr auto TIME_LENGTH = 11;
 constexpr auto TIME_PRECISION = 5;
 
 constexpr auto color_name = [](std::ostream& out, const std::string& name) {
@@ -124,6 +124,12 @@ void serialize(std::ostream& out, const protocols::traces::trace& tra)
                 [&out]([[maybe_unused]] traces::resched tra) { color_name(out, "resched"); },
                 [&out]([[maybe_unused]] traces::sim_finished tra) {
                         color_name(out, "sim_finished");
+                },
+                [&out](traces::task_placed tra) {
+                        color_name(out, "task_placed");
+                        color_arg(out, "tid", tra.task_id);
+                        out << ", ";
+                        color_arg(out, "cluster_id", tra.cluster_id);
                 },
                 []([[maybe_unused]] auto&) {},
             },

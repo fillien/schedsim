@@ -150,7 +150,7 @@ void sched_parallel::on_resched()
                     min(available_procs, from_shared<processor>(processor_order));
 
                 if (leastest_priority_processor->get_state() == sleep) {
-                        assert(!leastest_priority_processor->has_server_running());
+                        assert(!leastest_priority_processor->has_running_task());
                 }
 
                 if ((!(leastest_priority_processor->get_state() == change)) ||

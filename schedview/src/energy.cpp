@@ -18,7 +18,8 @@ template <class... Ts> struct overloaded : Ts... {
 
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
-auto cpu_to_cluster(const protocols::hardware::hardware& hw, const std::size_t cpu) -> std::size_t
+auto outputs::energy::cpu_to_cluster(const protocols::hardware::hardware& hw, std::size_t cpu)
+    -> std::size_t
 {
         std::size_t min_cluster{0};
         std::size_t index{hw.clusters.at(min_cluster).nb_procs};

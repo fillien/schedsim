@@ -2,6 +2,7 @@
 #include "engine.hpp"
 #include "server.hpp"
 #include "task.hpp"
+#include <platform.hpp>
 #include <protocols/traces.hpp>
 
 #include <cassert>
@@ -39,7 +40,7 @@ processor::processor(
         coretimer = std::make_shared<timer>(sim, [this, sim]() {
                 assert(this->current_state == state::change);
                 this->change_state(dpm_target);
-                sim.lock()->get_sched()->call_resched();
+                sim.lock()->get_sched()->call_resched(attached_cluster.lock()->get_sched().lock());
                 assert(this->current_state != state::change);
         });
 };
@@ -97,7 +98,7 @@ void processor::change_state(const processor::state& next_state)
                 break;
         }
         case state::change: {
-                assert(has_server_running() == false);
+                assert(has_running_task() == false);
                 current_state = state::change;
                 sim()->add_trace(traces::proc_change{shared_from_this()->id});
         }

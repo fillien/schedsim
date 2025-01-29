@@ -20,9 +20,11 @@ auto compare_events(const events::event& ev1, const events::event& ev2) -> bool;
 /**
  * @brief A class that handles the events of the system according to a scheduling policy.
  */
-class scheduler : public entity {
+class scheduler : public entity, public std::enable_shared_from_this<scheduler> {
       private:
         double total_utilization{0}; /**< Total utilization of the system. */
+
+        std::weak_ptr<cluster> attached_cluster;
 
         /**
          * @brief Handles the arrival of a job.
@@ -57,8 +59,6 @@ class scheduler : public entity {
         void detach_server_if_needed(const std::shared_ptr<task>& inactive_task);
 
       protected:
-        bool need_resched{false}; /**< Flag indicating if a rescheduling is needed. */
-
         [[nodiscard]] auto chip() const -> std::shared_ptr<cluster>;
 
         /**
@@ -165,13 +165,6 @@ class scheduler : public entity {
         virtual auto get_server_budget(const server& serv) const -> double = 0;
 
         /**
-         * @brief Performs an admission test for a new task.
-         * @param new_task The new task to test for admission.
-         * @return True if the new task is admitted, false otherwise.
-         */
-        virtual auto admission_test(const task& new_task) const -> bool = 0;
-
-        /**
          * @brief Custom scheduling logic to be implemented by derived classes.
          */
         virtual void on_resched() = 0;
@@ -193,18 +186,30 @@ class scheduler : public entity {
         virtual ~scheduler() = default;
 
         /**
+         * @brief Performs an admission test for a new task.
+         * @param new_task The new task to test for admission.
+         * @return True if the new task is admitted, false otherwise.
+         */
+        virtual auto admission_test(const task& new_task) const -> bool = 0;
+
+        /**
          * @brief Handles a vector of events according to the scheduling policy.
          * @param evts Vector of events to handle.
          */
-        void handle(std::vector<events::event> evts);
+        void handle(const events::event& evt);
 
-        void call_resched() { this->need_resched = true; };
+        void call_resched();
+
+        auto is_this_my_event(const events::event& evt) -> bool;
+
+        void set_cluster(const std::weak_ptr<cluster> clu) { attached_cluster = clu; };
+        auto get_cluster() -> std::weak_ptr<cluster> { return attached_cluster; };
 
         /**
          * @brief Retrieves the active bandwidth of the system.
          * @return Active bandwidth of the system.
          */
-        auto get_active_bandwidth() const -> double;
+        [[nodiscard]] auto get_active_bandwidth() const -> double;
 };
 
 #endif
