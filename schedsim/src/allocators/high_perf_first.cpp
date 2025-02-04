@@ -1,5 +1,5 @@
 #include <allocators/high_perf_first.hpp>
-#include <meta_scheduler.hpp>
+#include <allocator.hpp>
 
 auto allocators::high_perf_first::where_to_put_the_task(const std::shared_ptr<task>& new_task)
     -> std::pair<std::shared_ptr<scheds::scheduler>, bool>

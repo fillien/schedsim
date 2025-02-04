@@ -8,7 +8,8 @@
 #include <scheduler.hpp>
 #include <set>
 
-class meta_scheduler : public entity {
+namespace allocators {
+class allocator : public entity {
       private:
         std::set<std::shared_ptr<scheds::scheduler>> rescheds;
 
@@ -18,8 +19,8 @@ class meta_scheduler : public entity {
             -> std::pair<std::shared_ptr<scheds::scheduler>, bool> = 0;
 
       public:
-        explicit meta_scheduler(const std::weak_ptr<engine> sim) : entity(sim){};
-        virtual ~meta_scheduler() = default;
+        explicit allocator(const std::weak_ptr<engine>& sim) : entity(sim){};
+        virtual ~allocator() = default;
 
         void add_child_sched(const std::weak_ptr<cluster>& clu);
         void handle(std::vector<events::event> evts);
@@ -28,5 +29,5 @@ class meta_scheduler : public entity {
                 rescheds.insert(index);
         };
 };
-
+}
 #endif

@@ -10,7 +10,7 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
-#include <meta_scheduler.hpp>
+#include <allocator.hpp>
 #include <ostream>
 #include <platform.hpp>
 #include <protocols/hardware.hpp>
@@ -113,7 +113,7 @@ auto main(const int argc, const char** argv) -> int
                 auto plat = make_shared<platform>(sim, FREESCALING_ALLOWED);
                 sim->set_platform(plat);
 
-                std::shared_ptr<meta_scheduler> sched;
+                std::shared_ptr<allocators::allocator> sched;
                 sched = std::make_shared<allocators::smart_ass>(sim);
 
                 std::size_t cluster_id_cpt{1};

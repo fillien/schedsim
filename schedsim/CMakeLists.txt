@@ -32,7 +32,7 @@ target_sources(schedsim PRIVATE
     src/engine.cpp
     src/platform.cpp
     src/processor.cpp
-    src/meta_scheduler.cpp
+    src/allocator.cpp
     src/allocators/low_perf_first.cpp
     src/allocators/high_perf_first.cpp
     src/allocators/smart_ass.cpp

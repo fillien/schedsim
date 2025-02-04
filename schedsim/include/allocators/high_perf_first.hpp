@@ -1,16 +1,16 @@
 #ifndef ALLOCATOR_HIGH_PERF_FIRST
 #define ALLOCATOR_HIGH_PERF_FIRST
 
-#include <meta_scheduler.hpp>
+#include <allocator.hpp>
 
 namespace allocators {
-class high_perf_first : public meta_scheduler {
+class high_perf_first : public allocator {
       protected:
         auto where_to_put_the_task(const std::shared_ptr<task>& new_task)
             -> std::pair<std::shared_ptr<scheds::scheduler>, bool> final;
 
       public:
-        explicit high_perf_first(const std::weak_ptr<engine> sim) : meta_scheduler(sim){};
+        explicit high_perf_first(const std::weak_ptr<engine>& sim) : allocator(sim){};
 };
 }; // namespace allocators
 

@@ -2,7 +2,7 @@
 #include <cstddef>
 #include <event.hpp>
 #include <map>
-#include <meta_scheduler.hpp>
+#include <allocator.hpp>
 #include <platform.hpp>
 #include <protocols/traces.hpp>
 #include <scheduler.hpp>
@@ -15,7 +15,7 @@
 #include <variant>
 #include <vector>
 
-void meta_scheduler::add_child_sched(const std::weak_ptr<cluster>& clu)
+void allocators::allocator::add_child_sched(const std::weak_ptr<cluster>& clu)
 {
         schedulers.push_back(std::make_shared<scheds::parallel>(sim()));
         clu.lock()->set_sched(schedulers.back()->weak_from_this());
@@ -35,7 +35,7 @@ auto compare_events(const events::event& ev1, const events::event& ev2) -> bool
         return std::visit(get_priority, ev1) < std::visit(get_priority, ev2);
 }
 
-void meta_scheduler::handle(std::vector<events::event> evts)
+void allocators::allocator::handle(std::vector<events::event> evts)
 {
         using namespace events;
 

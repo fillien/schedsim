@@ -5,7 +5,7 @@
 #include <functional>
 #include <map>
 #include <memory>
-#include <meta_scheduler.hpp>
+#include <allocator.hpp>
 #include <platform.hpp>
 #include <protocols/traces.hpp>
 
@@ -47,7 +47,7 @@ class engine {
         /**
          * @brief The attached scheduler.
          */
-        std::shared_ptr<meta_scheduler> sched;
+        std::shared_ptr<allocators::allocator> sched;
 
         /**
          * @brief A model of the platform on which the scheduler will operate.
@@ -81,7 +81,7 @@ class engine {
          * @brief Setter to attach a scheduler.
          * @param new_sched The new scheduler to attach.
          */
-        void set_scheduler(const std::shared_ptr<meta_scheduler>& new_sched) { sched = new_sched; }
+        void set_scheduler(const std::shared_ptr<allocators::allocator>& new_sched) { sched = new_sched; }
 
         /**
          * @brief Setter to attach a platform.
@@ -144,9 +144,9 @@ class engine {
          */
         auto traces() { return past_list; };
 
-        auto get_sched() -> std::shared_ptr<meta_scheduler> { return sched; };
+        auto get_sched() -> std::shared_ptr<allocators::allocator> { return sched; };
 
-        auto is_delay_active() -> bool { return active_delay; };
+        [[nodiscard]] auto is_delay_active() const -> bool { return active_delay; };
 };
 
 #endif
