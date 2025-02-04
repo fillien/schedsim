@@ -9,6 +9,7 @@
 #include <memory>
 #include <vector>
 
+namespace scheds {
 /**
  * @brief Compares two events based on their timestamps.
  * @param ev1 The first event.
@@ -217,5 +218,6 @@ class scheduler : public entity, public std::enable_shared_from_this<scheduler> 
          */
         [[nodiscard]] auto get_active_bandwidth() const -> double;
 };
+} // namespace scheds
 
 #endif

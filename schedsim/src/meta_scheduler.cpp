@@ -17,7 +17,7 @@
 
 void meta_scheduler::add_child_sched(const std::weak_ptr<cluster>& clu)
 {
-        schedulers.push_back(std::make_shared<csf>(sim()));
+        schedulers.push_back(std::make_shared<scheds::parallel>(sim()));
         clu.lock()->set_sched(schedulers.back()->weak_from_this());
         schedulers.back()->set_cluster(clu.lock());
 }

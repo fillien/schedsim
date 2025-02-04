@@ -4,7 +4,7 @@
 #include <meta_scheduler.hpp>
 
 auto allocators::smart_ass::where_to_put_the_task(const std::shared_ptr<task>& new_task)
-    -> std::pair<std::shared_ptr<scheduler>, bool>
+    -> std::pair<std::shared_ptr<scheds::scheduler>, bool>
 {
         const auto compare_perf = [](const auto& first, const auto& second) {
                 return first->get_cluster()->perf() < second->get_cluster()->perf();

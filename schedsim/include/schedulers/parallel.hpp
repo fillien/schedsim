@@ -9,10 +9,11 @@
 #include <memory>
 #include <vector>
 
+namespace scheds {
 /**
  * @brief A class implementing a parallel scheduler, derived from the base scheduler class.
  */
-class sched_parallel : public scheduler {
+class parallel : public scheduler {
         /**
          * @brief Retrieves the inactive bandwidth of the system.
          * @return Inactive bandwidth of the system.
@@ -32,7 +33,7 @@ class sched_parallel : public scheduler {
          * @brief Constructs a parallel scheduler with a weak pointer to the engine.
          * @param sim Weak pointer to the engine.
          */
-        explicit sched_parallel(const std::weak_ptr<engine> sim) : scheduler(sim){};
+        explicit parallel(const std::weak_ptr<engine>& sim) : scheduler(sim){};
 
         /**
          * @brief Compares two processors based on their order.
@@ -77,5 +78,6 @@ class sched_parallel : public scheduler {
 
         void update_platform() override;
 };
+} // namespace scheds
 
 #endif

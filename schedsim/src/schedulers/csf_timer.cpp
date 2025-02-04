@@ -4,7 +4,7 @@
 #include <schedulers/csf_timer.hpp>
 #include <stdexcept>
 
-csf_timer::csf_timer(const std::weak_ptr<engine> sim) : sched_parallel(sim)
+scheds::csf_timer::csf_timer(const std::weak_ptr<engine>& sim) : parallel(sim)
 {
         if (!sim.lock()->is_delay_active()) {
                 throw std::runtime_error(
@@ -26,7 +26,7 @@ csf_timer::csf_timer(const std::weak_ptr<engine> sim) : sched_parallel(sim)
         });
 }
 
-auto csf_timer::compute_freq_min(
+auto scheds::csf_timer::compute_freq_min(
     const double& freq_max,
     const double& total_util,
     const double& max_util,
@@ -35,8 +35,8 @@ auto csf_timer::compute_freq_min(
         return (freq_max * (total_util + (nb_procs - 1) * max_util)) / nb_procs;
 }
 
-auto csf_timer::get_nb_active_procs([[maybe_unused]] const double& new_utilization = 0) const
-    -> std::size_t
+auto scheds::csf_timer::get_nb_active_procs(
+    [[maybe_unused]] const double& new_utilization = 0) const -> std::size_t
 {
         auto is_active = [](const auto& proc) {
                 auto state = proc->get_state();
@@ -47,8 +47,8 @@ auto csf_timer::get_nb_active_procs([[maybe_unused]] const double& new_utilizati
         return std::count_if(processors.begin(), processors.end(), is_active);
 }
 
-void csf_timer::change_state_proc(
-    const processor::state next_state, const std::shared_ptr<processor>& proc)
+void scheds::csf_timer::change_state_proc(
+    const processor::state& next_state, const std::shared_ptr<processor>& proc)
 {
         assert(next_state != proc->get_state());
         assert(proc->get_state() != processor::state::change);
@@ -56,7 +56,7 @@ void csf_timer::change_state_proc(
         proc->dpm_change_state(next_state);
 }
 
-auto csf_timer::cores_on_sleep() -> std::size_t
+auto scheds::csf_timer::cores_on_sleep() -> std::size_t
 {
         using enum processor::state;
 
@@ -66,32 +66,32 @@ auto csf_timer::cores_on_sleep() -> std::size_t
             });
 }
 
-void csf_timer::activate_next_core()
+void scheds::csf_timer::activate_next_core()
 {
         using enum processor::state;
         auto& processors = chip()->processors;
-        auto it = std::find_if(processors.begin(), processors.end(), [](const auto& proc) {
+        auto itr = std::find_if(processors.begin(), processors.end(), [](const auto& proc) {
                 return proc->get_state() == sleep;
         });
-        if (it == processors.end()) {
+        if (itr == processors.end()) {
                 return;
         } // No sleeping core found, there
           // is core in change state.
-        change_state_proc(idle, *it);
+        change_state_proc(idle, *itr);
 }
 
-void csf_timer::put_next_core_to_bed()
+void scheds::csf_timer::put_next_core_to_bed()
 {
         using enum processor::state;
         auto& processors = chip()->processors;
-        auto it = std::find_if(processors.begin(), processors.end(), [](const auto& proc) {
+        auto itr = std::find_if(processors.begin(), processors.end(), [](const auto& proc) {
                 return proc->get_state() == idle || proc->get_state() == running;
         });
-        assert(it != processors.end());
-        change_state_proc(sleep, *it);
+        assert(itr != processors.end());
+        change_state_proc(sleep, *itr);
 }
 
-void csf_timer::adjust_active_processors(std::size_t target_processors)
+void scheds::csf_timer::adjust_active_processors(std::size_t target_processors)
 {
         if (target_processors > get_nb_active_procs()) {
                 for (std::size_t i = 0; i < target_processors - get_nb_active_procs(); ++i) {
@@ -105,7 +105,7 @@ void csf_timer::adjust_active_processors(std::size_t target_processors)
         }
 }
 
-void csf_timer::update_platform()
+void scheds::csf_timer::update_platform()
 {
 
         const double total_util{get_active_bandwidth()};
@@ -142,11 +142,11 @@ void csf_timer::update_platform()
                 next_active_procs = max_procs;
         }
 
-        next_active_procs = static_cast<std::size_t>(clamp(next_active_procs));
+        next_active_procs = clamp(next_active_procs);
         assert(next_active_procs >= 1 && next_active_procs <= max_procs);
 
         // Manage DPM timers
-        int diff_dpm = static_cast<std::size_t>(next_active_procs) - get_nb_active_procs();
+        int diff_dpm = (next_active_procs)-get_nb_active_procs();
         if (diff_dpm > 0) {
                 for (int i = 0; i < diff_dpm; ++i) {
                         activate_next_core();
