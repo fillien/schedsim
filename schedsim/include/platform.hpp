@@ -1,11 +1,10 @@
 #ifndef PLATFORM_HPP
 #define PLATFORM_HPP
 
-#include "entity.hpp"
-#include "processor.hpp"
-
 #include <cstddef>
+#include <entity.hpp>
 #include <memory>
+#include <processor.hpp>
 #include <vector>
 
 namespace scheds {

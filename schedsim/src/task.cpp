@@ -1,11 +1,10 @@
-#include "task.hpp"
-#include "engine.hpp"
-#include "server.hpp"
-
 #include <cassert>
+#include <engine.hpp>
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <server.hpp>
+#include <task.hpp>
 
 task::task(
     const std::weak_ptr<engine>& sim,

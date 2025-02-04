@@ -1,11 +1,11 @@
 #ifndef META_SCHEDULER_HPP
 #define META_SCHEDULER_HPP
 
-#include "entity.hpp"
-#include "event.hpp"
-#include "scheduler.hpp"
 #include <cstddef>
+#include <entity.hpp>
+#include <event.hpp>
 #include <memory>
+#include <scheduler.hpp>
 #include <set>
 
 class meta_scheduler : public entity {

@@ -1,7 +1,7 @@
 #ifndef TIMER_HPP
 #define TIMER_HPP
 
-#include "entity.hpp"
+#include <entity.hpp>
 #include <functional>
 #include <memory>
 

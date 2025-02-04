@@ -1,13 +1,13 @@
 #ifndef SCHED_FFA_HPP
 #define SCHED_FFA_HPP
 
-#include "../engine.hpp"
-#include "../entity.hpp"
-#include "parallel.hpp"
-#include "processor.hpp"
-#include "timer.hpp"
 #include <cstddef>
+#include <engine.hpp>
+#include <entity.hpp>
 #include <memory>
+#include <processor.hpp>
+#include <schedulers/parallel.hpp>
+#include <timer.hpp>
 
 namespace scheds {
 class ffa : public parallel {

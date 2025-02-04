@@ -1,8 +1,8 @@
 #ifndef TASK_HPP
 #define TASK_HPP
 
-#include "entity.hpp"
 #include <cstddef>
+#include <entity.hpp>
 #include <memory>
 #include <queue>
 

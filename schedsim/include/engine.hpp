@@ -1,12 +1,12 @@
 #ifndef ENGINE_HPP
 #define ENGINE_HPP
 
-#include "event.hpp"
-#include "meta_scheduler.hpp"
-#include "platform.hpp"
+#include <event.hpp>
 #include <functional>
 #include <map>
 #include <memory>
+#include <meta_scheduler.hpp>
+#include <platform.hpp>
 #include <protocols/traces.hpp>
 
 template <class... Ts> struct overloaded : Ts... {

@@ -1,12 +1,12 @@
 #ifndef SCHED_PARALLEL_HPP
 #define SCHED_PARALLEL_HPP
 
-#include "../engine.hpp"
-#include "../entity.hpp"
-#include "../processor.hpp"
-#include "../scheduler.hpp"
+#include <engine.hpp>
+#include <entity.hpp>
 #include <iostream>
 #include <memory>
+#include <processor.hpp>
+#include <scheduler.hpp>
 #include <vector>
 
 namespace scheds {

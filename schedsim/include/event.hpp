@@ -1,11 +1,10 @@
 #ifndef EVENT_HPP
 #define EVENT_HPP
 
-#include "server.hpp"
-#include "task.hpp"
-#include "timer.hpp"
-
 #include <memory>
+#include <server.hpp>
+#include <task.hpp>
+#include <timer.hpp>
 #include <variant>
 
 namespace events {

@@ -1,13 +1,12 @@
-#include "processor.hpp"
-#include "engine.hpp"
-#include "server.hpp"
-#include "task.hpp"
-#include <platform.hpp>
-#include <protocols/traces.hpp>
-
 #include <cassert>
+#include <engine.hpp>
 #include <iostream>
 #include <memory>
+#include <platform.hpp>
+#include <processor.hpp>
+#include <protocols/traces.hpp>
+#include <server.hpp>
+#include <task.hpp>
 
 #ifdef TRACY_ENABLE
 #include <tracy/Tracy.hpp>

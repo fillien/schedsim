@@ -1,11 +1,11 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-#include "entity.hpp"
-#include "task.hpp"
 #include <cstddef>
+#include <entity.hpp>
 #include <memory>
 #include <ostream>
+#include <task.hpp>
 
 class processor;
 

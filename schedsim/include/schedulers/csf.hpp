@@ -1,12 +1,12 @@
 #ifndef SCHED_CSF_HPP
 #define SCHED_CSF_HPP
 
-#include "../engine.hpp"
-#include "../entity.hpp"
-#include "parallel.hpp"
-#include "processor.hpp"
 #include <cstddef>
+#include <engine.hpp>
+#include <entity.hpp>
 #include <memory>
+#include <processor.hpp>
+#include <schedulers/parallel.hpp>
 
 namespace scheds {
 class csf : public parallel {

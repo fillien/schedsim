@@ -1,10 +1,9 @@
 #ifndef SCHED_POWER_AWARE_HPP
 #define SCHED_POWER_AWARE_HPP
 
-#include "../entity.hpp"
-#include "parallel.hpp"
-
+#include <entity.hpp>
 #include <memory>
+#include <schedulers/parallel.hpp>
 
 namespace scheds {
 class power_aware : public parallel {

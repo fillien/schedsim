@@ -1,10 +1,10 @@
 #ifndef PROCESSOR_HPP
 #define PROCESSOR_HPP
 
-#include "entity.hpp"
-#include "timer.hpp"
+#include <entity.hpp>
 #include <memory>
 #include <task.hpp>
+#include <timer.hpp>
 
 class server;
 class cluster;
