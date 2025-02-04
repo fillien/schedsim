@@ -10,16 +10,18 @@
 
 class meta_scheduler : public entity {
       private:
-        std::vector<std::shared_ptr<scheduler>> schedulers;
-
         std::set<std::shared_ptr<scheduler>> rescheds;
+
+      protected:
+        std::vector<std::shared_ptr<scheduler>> schedulers;
+        virtual auto where_to_put_the_task(const std::shared_ptr<task>& new_task)
+            -> std::pair<std::shared_ptr<scheduler>, bool> = 0;
 
       public:
         explicit meta_scheduler(const std::weak_ptr<engine> sim) : entity(sim){};
+        virtual ~meta_scheduler() = default;
 
         void add_child_sched(const std::weak_ptr<cluster>& clu);
-        auto where_to_put_the_task(const std::shared_ptr<task>& new_task)
-            -> std::pair<std::size_t, bool>;
         void handle(std::vector<events::event> evts);
         void call_resched(const std::shared_ptr<scheduler>& index) { rescheds.insert(index); };
 };

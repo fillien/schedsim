@@ -35,6 +35,7 @@ auto to_json(const cluster& plat, rapidjson::Document::AllocatorType& allocator)
                 power_model_array.PushBack(power, allocator);
         }
         res.AddMember("power_model", power_model_array, allocator);
+        res.AddMember("perf_score", plat.perf_score, allocator);
 
         return res;
 }
@@ -91,6 +92,11 @@ auto from_json_cluster(const rapidjson::Value& value) -> cluster
                 if (!power.IsDouble()) { throw std::runtime_error("Invalid power model value"); }
                 clu.power_model.push_back(power.GetDouble());
         }
+
+        if (!value.HasMember("perf_score") || !value["perf_score"].IsDouble()) {
+                throw std::runtime_error("Invalid or missing 'perf_score' field");
+        }
+        clu.perf_score = value["perf_score"].GetDouble();
 
         return clu;
 }

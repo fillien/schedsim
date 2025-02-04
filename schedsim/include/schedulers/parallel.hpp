@@ -20,10 +20,6 @@ class sched_parallel : public scheduler {
         auto get_inactive_bandwidth() const -> double;
 
       protected:
-        auto get_max_utilization(
-            const std::vector<std::shared_ptr<server>>& servers,
-            const double& new_utilization = 0) const -> double;
-
         /**
          * @brief Retrieves the number of active processors in the system.
          * @param new_utilization The additional utilization to consider (default is 0).

@@ -33,6 +33,27 @@ void scheduler::call_resched()
         on_resched();
 }
 
+auto scheduler::get_max_utilization(
+    const std::vector<std::shared_ptr<server>>& servers, const double& new_utilization) const
+    -> double
+{
+
+#ifdef TRACY_ENABLE
+        ZoneScoped;
+#endif
+        if (std::distance(std::begin(servers), std::end(servers)) > 0) {
+                auto u_max = std::max_element(
+                    std::begin(servers),
+                    std::end(servers),
+                    [](const std::shared_ptr<server>& first,
+                       const std::shared_ptr<server>& second) {
+                            return (first->utilization() < second->utilization());
+                    });
+                return std::max((*u_max)->utilization(), new_utilization);
+        }
+        return new_utilization;
+}
+
 auto scheduler::is_this_my_event(const events::event& evt) -> bool
 {
         using namespace events;
@@ -57,6 +78,7 @@ auto scheduler::is_this_my_event(const events::event& evt) -> bool
                 const auto& [task, duration] = std::get<job_arrival>(evt);
                 return task->has_server() && matches_server(task->get_server());
         }
+        if (std::holds_alternative<timer_isr>(evt)) { return true; }
 
         throw std::runtime_error("Unknown event");
 }

@@ -2,6 +2,8 @@
 #include "event.hpp"
 #include "protocols/traces.hpp"
 #include "scheduler.hpp"
+#include "schedulers/csf.hpp"
+#include "schedulers/ffa.hpp"
 #include "schedulers/parallel.hpp"
 #include "server.hpp"
 #include <algorithm>
@@ -15,24 +17,9 @@
 
 void meta_scheduler::add_child_sched(const std::weak_ptr<cluster>& clu)
 {
-        schedulers.push_back(std::make_shared<sched_parallel>(sim()));
+        schedulers.push_back(std::make_shared<csf>(sim()));
         clu.lock()->set_sched(schedulers.back()->weak_from_this());
         schedulers.back()->set_cluster(clu.lock());
-}
-
-auto meta_scheduler::where_to_put_the_task(const std::shared_ptr<task>& new_task)
-    -> std::pair<std::size_t, bool>
-{
-        bool task_placed{false};
-        std::size_t i = 0;
-        while (!task_placed && i < schedulers.size()) {
-                if (schedulers.at(i)->admission_test(*new_task)) { task_placed = true; }
-                else {
-                        i++;
-                }
-        }
-
-        return {i, task_placed};
 }
 
 auto compare_events(const events::event& ev1, const events::event& ev2) -> bool
@@ -90,8 +77,9 @@ void meta_scheduler::handle(std::vector<events::event> evts)
                         const auto& [task, _] = std::get<job_arrival>(evt);
                         const auto& [index, valid] = where_to_put_the_task(task);
                         if (valid) {
-                                sim()->add_trace(protocols::traces::task_placed{task->id, index});
-                                schedulers.at(index)->handle(evt);
+                                sim()->add_trace(protocols::traces::task_placed{
+                                    task->id, index->get_cluster()->get_id()});
+                                index->handle(evt);
                         }
                         else {
                                 throw std::runtime_error("i duno why, but can't place this task.");

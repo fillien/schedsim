@@ -24,8 +24,6 @@ class scheduler : public entity, public std::enable_shared_from_this<scheduler> 
       private:
         double total_utilization{0}; /**< Total utilization of the system. */
 
-        std::weak_ptr<cluster> attached_cluster;
-
         /**
          * @brief Handles the arrival of a job.
          * @param new_task The newly arrived task.
@@ -59,6 +57,8 @@ class scheduler : public entity, public std::enable_shared_from_this<scheduler> 
         void detach_server_if_needed(const std::shared_ptr<task>& inactive_task);
 
       protected:
+        std::weak_ptr<cluster> attached_cluster;
+
         [[nodiscard]] auto chip() const -> std::shared_ptr<cluster>;
 
         /**
@@ -203,7 +203,13 @@ class scheduler : public entity, public std::enable_shared_from_this<scheduler> 
         auto is_this_my_event(const events::event& evt) -> bool;
 
         void set_cluster(const std::weak_ptr<cluster> clu) { attached_cluster = clu; };
-        auto get_cluster() -> std::weak_ptr<cluster> { return attached_cluster; };
+        auto get_cluster() -> std::shared_ptr<cluster> { return attached_cluster.lock(); };
+
+        auto get_max_utilization(
+            const std::vector<std::shared_ptr<server>>& servers,
+            const double& new_utilization = 0) const -> double;
+
+        auto get_umax() const -> double { return get_max_utilization(this->servers, 0); };
 
         /**
          * @brief Retrieves the active bandwidth of the system.

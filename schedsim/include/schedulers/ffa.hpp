@@ -31,6 +31,7 @@ class ffa : public sched_parallel {
 
       public:
         explicit ffa(const std::weak_ptr<engine> sim);
+        void set_cluster(const std::weak_ptr<cluster> clu);
         void update_platform() override;
 };
 

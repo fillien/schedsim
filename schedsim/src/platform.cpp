@@ -16,9 +16,10 @@ cluster::cluster(
     const std::weak_ptr<engine>& sim,
     const std::size_t cid,
     const std::vector<double>& frequencies,
-    const double& effective_freq)
+    const double& effective_freq,
+    const double& perf_score)
     : entity(sim), id(cid), frequencies(std::move(frequencies)), effective_freq(effective_freq),
-      current_freq(0)
+      current_freq(0), perf_score(perf_score)
 {
         assert(std::all_of(
             frequencies.begin(), frequencies.end(), [](double freq) { return freq > 0; }));

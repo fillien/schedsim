@@ -12,6 +12,9 @@
 #include <string>
 #include <vector>
 
+#include "allocators/high_perf_first.hpp"
+#include "allocators/low_perf_first.hpp"
+#include "allocators/smart_ass.hpp"
 #include "engine.hpp"
 #include "entity.hpp"
 #include "event.hpp"
@@ -112,12 +115,16 @@ auto main(const int argc, const char** argv) -> int
                 sim->set_platform(plat);
 
                 std::shared_ptr<meta_scheduler> sched;
-                sched = std::make_shared<meta_scheduler>(sim);
+                sched = std::make_shared<allocators::smart_ass>(sim);
 
                 std::size_t cluster_id_cpt{1};
                 for (const protocols::hardware::cluster& clu : platform_config.clusters) {
                         plat->clusters.push_back(std::make_shared<cluster>(
-                            sim, cluster_id_cpt, clu.frequencies, clu.effective_freq));
+                            sim,
+                            cluster_id_cpt,
+                            clu.frequencies,
+                            clu.effective_freq,
+                            clu.perf_score));
                         plat->clusters.back()->create_procs(clu.nb_procs);
                         sched->add_child_sched(plat->clusters.back());
                         cluster_id_cpt++;

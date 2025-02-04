@@ -4,8 +4,11 @@
 #include <memory>
 #include <schedulers/csf.hpp>
 
-csf::csf(const std::weak_ptr<engine> sim) : sched_parallel(sim)
+csf::csf(const std::weak_ptr<engine> sim) : sched_parallel(sim) {}
+
+void csf::set_cluster(const std::weak_ptr<cluster> clu)
 {
+        attached_cluster = clu;
         nb_active_procs = chip()->processors.size();
 }
 
@@ -110,6 +113,6 @@ void csf::update_platform()
                         remove_task_from_cpu(proc);
                 }
                 chip()->dvfs_change_freq(next_freq);
-                call_resched();
+                sim()->get_sched()->call_resched(shared_from_this());
         }
 }

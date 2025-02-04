@@ -33,6 +33,9 @@ target_sources(schedsim PRIVATE
     src/platform.cpp
     src/processor.cpp
     src/meta_scheduler.cpp
+    src/allocators/low_perf_first.cpp
+    src/allocators/high_perf_first.cpp
+    src/allocators/smart_ass.cpp
     src/scheduler.cpp
     src/schedulers/parallel.cpp
     src/schedulers/power_aware.cpp

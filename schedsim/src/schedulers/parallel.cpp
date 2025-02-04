@@ -16,27 +16,6 @@
 #include <tracy/Tracy.hpp>
 #endif
 
-auto sched_parallel::get_max_utilization(
-    const std::vector<std::shared_ptr<server>>& servers, const double& new_utilization) const
-    -> double
-{
-
-#ifdef TRACY_ENABLE
-        ZoneScoped;
-#endif
-        if (std::distance(std::begin(servers), std::end(servers)) > 0) {
-                auto u_max = std::max_element(
-                    std::begin(servers),
-                    std::end(servers),
-                    [](const std::shared_ptr<server>& first,
-                       const std::shared_ptr<server>& second) {
-                            return (first->utilization() < second->utilization());
-                    });
-                return std::max((*u_max)->utilization(), new_utilization);
-        }
-        return new_utilization;
-}
-
 auto sched_parallel::processor_order(const processor& first, const processor& second) -> bool
 {
         using enum processor::state;
