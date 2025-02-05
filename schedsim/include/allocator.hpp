@@ -5,6 +5,7 @@
 #include <entity.hpp>
 #include <event.hpp>
 #include <memory>
+#include <optional>
 #include <scheduler.hpp>
 #include <set>
 
@@ -16,7 +17,7 @@ class allocator : public entity {
       protected:
         std::vector<std::shared_ptr<scheds::scheduler>> schedulers;
         virtual auto where_to_put_the_task(const std::shared_ptr<task>& new_task)
-            -> std::pair<std::shared_ptr<scheds::scheduler>, bool> = 0;
+            -> std::optional<std::shared_ptr<scheds::scheduler>> = 0;
 
       public:
         explicit allocator(const std::weak_ptr<engine>& sim) : entity(sim){};

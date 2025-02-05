@@ -37,7 +37,7 @@ auto compare_events(const events::event& ev1, const events::event& ev2) -> bool
         return std::visit(get_priority, ev1) < std::visit(get_priority, ev2);
 }
 
-void allocators::allocator::handle(std::vector<events::event> evts)
+void allocator::handle(std::vector<events::event> evts)
 {
         using namespace events;
 
@@ -45,7 +45,7 @@ void allocators::allocator::handle(std::vector<events::event> evts)
 
         // Looking for JOB_ARRIVAL events at the same time for this server
         auto has_matching_job_arrival = [&evts](const auto& server) {
-                return std::any_of(evts.begin(), evts.end(), [server](const auto& evt) {
+                return std::ranges::any_of(evts, [server](const auto& evt) {
                         if (const auto* job_evt = std::get_if<events::job_arrival>(&evt)) {
                                 return job_evt->task_of_job == server->get_task();
                         }
@@ -55,10 +55,9 @@ void allocators::allocator::handle(std::vector<events::event> evts)
 
         // Process all job_finished events
         for (auto& evt : evts) {
-                if (std::holds_alternative<job_finished>(evt)) {
-                        auto& finished_evt = std::get<job_finished>(evt);
-                        const auto server = finished_evt.server_of_job;
-                        finished_evt.is_there_new_job = has_matching_job_arrival(server);
+                if (auto* finished_evt = std::get_if<job_finished>(&evt)) {
+                        finished_evt->is_there_new_job =
+                            has_matching_job_arrival(finished_evt->server_of_job);
                 }
         }
 
@@ -66,25 +65,29 @@ void allocators::allocator::handle(std::vector<events::event> evts)
         rescheds.clear();
 
         for (const auto& evt : evts) {
-                bool i_found_a_owner = false;
+                bool handled = false;
                 for (const auto& scheduler : schedulers) {
                         if (scheduler->is_this_my_event(evt)) {
                                 scheduler->handle(evt);
-                                i_found_a_owner = true;
+                                handled = true;
                                 break;
                         }
                 }
 
-                if ((!i_found_a_owner) && std::holds_alternative<job_arrival>(evt)) {
-                        const auto& [task, _] = std::get<job_arrival>(evt);
-                        const auto& [index, valid] = where_to_put_the_task(task);
-                        if (valid) {
-                                sim()->add_trace(protocols::traces::task_placed{
-                                    task->id, index->get_cluster()->get_id()});
-                                index->handle(evt);
-                        }
-                        else {
-                                throw std::runtime_error("i duno why, but can't place this task.");
+                if (!handled) {
+                        if (const auto* job_evt = std::get_if<job_arrival>(&evt)) {
+                                const auto& receiver = where_to_put_the_task(job_evt->task_of_job);
+                                if (receiver) {
+                                        sim()->add_trace(protocols::traces::task_placed{
+                                            job_evt->task_of_job->id,
+                                            receiver.value()->get_cluster()->get_id()});
+                                        receiver.value()->handle(evt);
+                                }
+                                else {
+                                        throw std::runtime_error(
+                                            "Failed to place task: " +
+                                            std::to_string(job_evt->task_of_job->id));
+                                }
                         }
                 }
         }
