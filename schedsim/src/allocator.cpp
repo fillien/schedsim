@@ -1,8 +1,8 @@
 #include <algorithm>
+#include <allocator.hpp>
 #include <cstddef>
 #include <event.hpp>
 #include <map>
-#include <allocator.hpp>
 #include <platform.hpp>
 #include <protocols/traces.hpp>
 #include <scheduler.hpp>
@@ -15,7 +15,9 @@
 #include <variant>
 #include <vector>
 
-void allocators::allocator::add_child_sched(const std::weak_ptr<cluster>& clu)
+namespace allocators {
+
+void allocator::add_child_sched(const std::weak_ptr<cluster>& clu)
 {
         schedulers.push_back(std::make_shared<scheds::parallel>(sim()));
         clu.lock()->set_sched(schedulers.back()->weak_from_this());
@@ -92,3 +94,5 @@ void allocators::allocator::handle(std::vector<events::event> evts)
         }
         rescheds.clear();
 }
+
+} // namespace allocators

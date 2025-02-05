@@ -4,15 +4,17 @@
 #include <memory>
 #include <schedulers/csf.hpp>
 
-scheds::csf::csf(const std::weak_ptr<engine>& sim) : parallel(sim) {}
+namespace scheds {
 
-void scheds::csf::set_cluster(const std::weak_ptr<cluster>& clu)
+csf::csf(const std::weak_ptr<engine>& sim) : parallel(sim) {}
+
+void csf::set_cluster(const std::weak_ptr<cluster>& clu)
 {
         attached_cluster = clu;
         nb_active_procs = chip()->processors.size();
 }
 
-auto scheds::csf::compute_freq_min(
+auto csf::compute_freq_min(
     const double& freq_max,
     const double& total_util,
     const double& max_util,
@@ -21,7 +23,7 @@ auto scheds::csf::compute_freq_min(
         return (freq_max * (total_util + (nb_procs - 1) * max_util)) / nb_procs;
 }
 
-auto scheds::csf::get_nb_active_procs([[maybe_unused]] const double& new_utilization = 0) const
+auto csf::get_nb_active_procs([[maybe_unused]] const double& new_utilization = 0) const
     -> std::size_t
 {
         auto is_active = [](const auto& proc) {
@@ -33,7 +35,7 @@ auto scheds::csf::get_nb_active_procs([[maybe_unused]] const double& new_utiliza
         return std::count_if(processors.begin(), processors.end(), is_active);
 }
 
-void scheds::csf::change_state_proc(
+void csf::change_state_proc(
     const processor::state& next_state, const std::shared_ptr<processor>& proc)
 {
         assert(next_state != proc->get_state());
@@ -42,7 +44,7 @@ void scheds::csf::change_state_proc(
         proc->dpm_change_state(next_state);
 }
 
-void scheds::csf::activate_next_core()
+void csf::activate_next_core()
 {
         using enum processor::state;
         auto& processors = chip()->processors;
@@ -56,7 +58,7 @@ void scheds::csf::activate_next_core()
         change_state_proc(idle, *itr);
 }
 
-void scheds::csf::put_next_core_to_bed()
+void csf::put_next_core_to_bed()
 {
         using enum processor::state;
         auto& processors = chip()->processors;
@@ -67,7 +69,7 @@ void scheds::csf::put_next_core_to_bed()
         change_state_proc(sleep, *itr);
 }
 
-void scheds::csf::adjust_active_processors(const std::size_t target_processors)
+void csf::adjust_active_processors(const std::size_t target_processors)
 {
         if (target_processors > get_nb_active_procs()) {
                 for (std::size_t i = 0; i < target_processors - get_nb_active_procs(); ++i) {
@@ -81,7 +83,7 @@ void scheds::csf::adjust_active_processors(const std::size_t target_processors)
         }
 }
 
-void scheds::csf::update_platform()
+void csf::update_platform()
 {
         const double total_util{get_active_bandwidth()};
         const double max_util{get_max_utilization(servers)};
@@ -116,3 +118,5 @@ void scheds::csf::update_platform()
                 sim()->get_sched()->call_resched(shared_from_this());
         }
 }
+
+} // namespace scheds

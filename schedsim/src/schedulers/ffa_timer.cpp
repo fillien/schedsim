@@ -3,7 +3,8 @@
 #include <cmath>
 #include <schedulers/ffa_timer.hpp>
 
-scheds::ffa_timer::ffa_timer(const std::weak_ptr<engine>& sim) : parallel(sim)
+namespace scheds {
+ffa_timer::ffa_timer(const std::weak_ptr<engine>& sim) : parallel(sim)
 {
         if (!sim.lock()->is_delay_active()) {
                 throw std::runtime_error(
@@ -25,7 +26,7 @@ scheds::ffa_timer::ffa_timer(const std::weak_ptr<engine>& sim) : parallel(sim)
         });
 }
 
-auto scheds::ffa_timer::compute_freq_min(
+auto ffa_timer::compute_freq_min(
     const double& freq_max,
     const double& total_util,
     const double& max_util,
@@ -34,8 +35,8 @@ auto scheds::ffa_timer::compute_freq_min(
         return (freq_max * (total_util + (nb_procs - 1) * max_util)) / nb_procs;
 }
 
-auto scheds::ffa_timer::get_nb_active_procs(
-    [[maybe_unused]] const double& new_utilization = 0) const -> std::size_t
+auto ffa_timer::get_nb_active_procs([[maybe_unused]] const double& new_utilization = 0) const
+    -> std::size_t
 {
         auto is_active = [](const auto& proc) {
                 auto state = proc->get_state();
@@ -46,7 +47,7 @@ auto scheds::ffa_timer::get_nb_active_procs(
         return std::count_if(processors.begin(), processors.end(), is_active);
 }
 
-void scheds::ffa_timer::change_state_proc(
+void ffa_timer::change_state_proc(
     const processor::state& next_state, const std::shared_ptr<processor>& proc)
 {
         assert(next_state != proc->get_state());
@@ -55,7 +56,7 @@ void scheds::ffa_timer::change_state_proc(
         proc->dpm_change_state(next_state);
 }
 
-auto scheds::ffa_timer::cores_on_sleep() -> std::size_t
+auto ffa_timer::cores_on_sleep() -> std::size_t
 {
         using enum processor::state;
 
@@ -65,7 +66,7 @@ auto scheds::ffa_timer::cores_on_sleep() -> std::size_t
             });
 }
 
-void scheds::ffa_timer::activate_next_core()
+void ffa_timer::activate_next_core()
 {
         using enum processor::state;
         auto& processors = chip()->processors;
@@ -79,7 +80,7 @@ void scheds::ffa_timer::activate_next_core()
         change_state_proc(idle, *itr);
 }
 
-void scheds::ffa_timer::put_next_core_to_bed()
+void ffa_timer::put_next_core_to_bed()
 {
         using enum processor::state;
         auto& processors = chip()->processors;
@@ -90,7 +91,7 @@ void scheds::ffa_timer::put_next_core_to_bed()
         change_state_proc(sleep, *itr);
 }
 
-void scheds::ffa_timer::adjust_active_processors(std::size_t target_processors)
+void ffa_timer::adjust_active_processors(std::size_t target_processors)
 {
         if (target_processors > get_nb_active_procs()) {
                 for (std::size_t i = 0; i < target_processors - get_nb_active_procs(); ++i) {
@@ -104,7 +105,7 @@ void scheds::ffa_timer::adjust_active_processors(std::size_t target_processors)
         }
 }
 
-void scheds::ffa_timer::update_platform()
+void ffa_timer::update_platform()
 {
         const double total_util{get_active_bandwidth()};
         const double max_util{get_max_utilization(servers)};
@@ -176,3 +177,5 @@ void scheds::ffa_timer::update_platform()
                 timer_dvfs_cooldown->cancel();
         }
 }
+
+} // namespace scheds

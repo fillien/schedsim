@@ -5,7 +5,9 @@
 #include <tracy/Tracy.hpp>
 #endif
 
-scheds::power_aware_timer::power_aware_timer(const std::weak_ptr<engine>& sim) : parallel(sim)
+namespace scheds {
+
+power_aware_timer::power_aware_timer(const std::weak_ptr<engine>& sim) : parallel(sim)
 {
         if (!sim.lock()->is_delay_active()) {
                 throw std::runtime_error(
@@ -13,8 +15,8 @@ scheds::power_aware_timer::power_aware_timer(const std::weak_ptr<engine>& sim) :
         }
 };
 
-auto scheds::power_aware_timer::get_nb_active_procs(
-    [[maybe_unused]] const double& new_utilization) const -> std::size_t
+auto power_aware_timer::get_nb_active_procs([[maybe_unused]] const double& new_utilization) const
+    -> std::size_t
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -22,7 +24,7 @@ auto scheds::power_aware_timer::get_nb_active_procs(
         return chip()->processors.size();
 }
 
-void scheds::power_aware_timer::update_platform()
+void power_aware_timer::update_platform()
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -42,3 +44,5 @@ void scheds::power_aware_timer::update_platform()
                 call_resched();
         }
 }
+
+} // namespace scheds

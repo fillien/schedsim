@@ -15,7 +15,9 @@
 #include <tracy/Tracy.hpp>
 #endif
 
-auto scheds::parallel::processor_order(const processor& first, const processor& second) -> bool
+namespace scheds {
+
+auto parallel::processor_order(const processor& first, const processor& second) -> bool
 {
         using enum processor::state;
 #ifdef TRACY_ENABLE
@@ -29,7 +31,7 @@ auto scheds::parallel::processor_order(const processor& first, const processor& 
             *(first.get_task()->get_server()), *(second.get_task()->get_server()));
 }
 
-auto scheds::parallel::get_inactive_bandwidth() const -> double
+auto parallel::get_inactive_bandwidth() const -> double
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -40,7 +42,7 @@ auto scheds::parallel::get_inactive_bandwidth() const -> double
         return NB_PROCS - (NB_PROCS - 1) * MAX_UTILIZATION - TOTAL_UTILIZATION;
 }
 
-auto scheds::parallel::get_nb_active_procs([[maybe_unused]] const double& new_utilization) const
+auto parallel::get_nb_active_procs([[maybe_unused]] const double& new_utilization) const
     -> std::size_t
 {
 #ifdef TRACY_ENABLE
@@ -49,7 +51,7 @@ auto scheds::parallel::get_nb_active_procs([[maybe_unused]] const double& new_ut
         return chip()->processors.size();
 }
 
-auto scheds::parallel::get_server_budget(const server& serv) const -> double
+auto parallel::get_server_budget(const server& serv) const -> double
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -59,8 +61,7 @@ auto scheds::parallel::get_server_budget(const server& serv) const -> double
         return serv.utilization() / bandwidth * (serv.relative_deadline - serv.virtual_time);
 }
 
-auto scheds::parallel::get_server_virtual_time(const server& serv, const double& running_time)
-    -> double
+auto parallel::get_server_virtual_time(const server& serv, const double& running_time) -> double
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -70,7 +71,7 @@ auto scheds::parallel::get_server_virtual_time(const server& serv, const double&
         return serv.virtual_time + bandwidth / serv.utilization() * running_time;
 }
 
-auto scheds::parallel::admission_test(const task& new_task) const -> bool
+auto parallel::admission_test(const task& new_task) const -> bool
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -81,7 +82,7 @@ auto scheds::parallel::admission_test(const task& new_task) const -> bool
         return (NEW_TOTAL_UTILIZATION <= (NB_PROCS - (NB_PROCS - 1) * U_MAX));
 }
 
-void scheds::parallel::remove_task_from_cpu(const std::shared_ptr<processor>& proc)
+void parallel::remove_task_from_cpu(const std::shared_ptr<processor>& proc)
 {
         if (proc->has_running_task()) {
                 cancel_alarms(*(proc->get_task()->get_server()));
@@ -91,7 +92,7 @@ void scheds::parallel::remove_task_from_cpu(const std::shared_ptr<processor>& pr
         }
 }
 
-void scheds::parallel::on_resched()
+void parallel::on_resched()
 {
         using std::ranges::empty;
         using std::ranges::max;
@@ -164,4 +165,6 @@ void scheds::parallel::on_resched()
         }
 }
 
-void scheds::parallel::update_platform() { chip()->set_freq(chip()->freq_max()); }
+void parallel::update_platform() { chip()->set_freq(chip()->freq_max()); }
+
+} // namespace scheds

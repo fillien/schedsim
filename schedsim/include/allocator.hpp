@@ -29,5 +29,5 @@ class allocator : public entity {
                 rescheds.insert(index);
         };
 };
-}
+} // namespace allocators
 #endif

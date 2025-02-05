@@ -1,11 +1,11 @@
 #ifndef ENGINE_HPP
 #define ENGINE_HPP
 
+#include <allocator.hpp>
 #include <event.hpp>
 #include <functional>
 #include <map>
 #include <memory>
-#include <allocator.hpp>
 #include <platform.hpp>
 #include <protocols/traces.hpp>
 
@@ -81,7 +81,10 @@ class engine {
          * @brief Setter to attach a scheduler.
          * @param new_sched The new scheduler to attach.
          */
-        void set_scheduler(const std::shared_ptr<allocators::allocator>& new_sched) { sched = new_sched; }
+        void set_scheduler(const std::shared_ptr<allocators::allocator>& new_sched)
+        {
+                sched = new_sched;
+        }
 
         /**
          * @brief Setter to attach a platform.

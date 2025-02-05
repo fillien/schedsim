@@ -24,15 +24,17 @@
 #include <tracy/Tracy.hpp>
 #endif
 
-auto scheds::scheduler::chip() const -> std::shared_ptr<cluster> { return attached_cluster.lock(); }
+namespace scheds {
 
-void scheds::scheduler::call_resched()
+auto scheduler::chip() const -> std::shared_ptr<cluster> { return attached_cluster.lock(); }
+
+void scheduler::call_resched()
 {
         sim()->add_trace(protocols::traces::resched{});
         on_resched();
 }
 
-auto scheds::scheduler::get_max_utilization(
+auto scheduler::get_max_utilization(
     const std::vector<std::shared_ptr<server>>& servers, const double& new_utilization) const
     -> double
 {
@@ -53,7 +55,7 @@ auto scheds::scheduler::get_max_utilization(
         return new_utilization;
 }
 
-auto scheds::scheduler::is_this_my_event(const events::event& evt) -> bool
+auto scheduler::is_this_my_event(const events::event& evt) -> bool
 {
         using namespace events;
 
@@ -82,7 +84,7 @@ auto scheds::scheduler::is_this_my_event(const events::event& evt) -> bool
         throw std::runtime_error("Unknown event");
 }
 
-void scheds::scheduler::update_running_servers()
+void scheduler::update_running_servers()
 {
         for (const auto& proc : chip()->processors) {
                 if (proc->has_running_task()) {
@@ -91,28 +93,28 @@ void scheds::scheduler::update_running_servers()
         }
 };
 
-auto scheds::scheduler::is_running_server(const server& serv) -> bool
+auto scheduler::is_running_server(const server& serv) -> bool
 {
         return serv.current_state == server::state::running;
 }
 
-auto scheds::scheduler::is_ready_server(const server& serv) -> bool
+auto scheduler::is_ready_server(const server& serv) -> bool
 {
         return serv.current_state == server::state::ready;
 }
 
-auto scheds::scheduler::has_job_server(const server& serv) -> bool
+auto scheduler::has_job_server(const server& serv) -> bool
 {
         return (serv.current_state == server::state::ready) ||
                (serv.current_state == server::state::running);
 }
 
-auto scheds::scheduler::is_active_server(const server& serv) -> bool
+auto scheduler::is_active_server(const server& serv) -> bool
 {
         return serv.current_state != server::state::inactive;
 }
 
-auto scheds::scheduler::get_total_utilization() const -> double
+auto scheduler::get_total_utilization() const -> double
 {
         double total_u{0};
         for (const auto& serv : servers) {
@@ -122,7 +124,7 @@ auto scheds::scheduler::get_total_utilization() const -> double
 }
 
 /// Compare two servers and return true if the first have an highest priority
-auto scheds::scheduler::deadline_order(const server& first, const server& second) -> bool
+auto scheduler::deadline_order(const server& first, const server& second) -> bool
 {
         if (first.relative_deadline == second.relative_deadline) {
                 if (first.current_state == server::state::running) { return true; }
@@ -132,7 +134,7 @@ auto scheds::scheduler::deadline_order(const server& first, const server& second
         return first.relative_deadline < second.relative_deadline;
 }
 
-auto scheds::scheduler::get_active_bandwidth() const -> double
+auto scheduler::get_active_bandwidth() const -> double
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -144,7 +146,7 @@ auto scheds::scheduler::get_active_bandwidth() const -> double
         return active_bandwidth;
 }
 
-void scheds::scheduler::detach_server_if_needed(const std::shared_ptr<task>& inactive_task)
+void scheduler::detach_server_if_needed(const std::shared_ptr<task>& inactive_task)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -165,7 +167,7 @@ void scheds::scheduler::detach_server_if_needed(const std::shared_ptr<task>& ina
         }
 }
 
-void scheds::scheduler::handle(const events::event& evt)
+void scheduler::handle(const events::event& evt)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -197,7 +199,7 @@ void scheds::scheduler::handle(const events::event& evt)
             evt);
 }
 
-void scheds::scheduler::on_serv_inactive(const std::shared_ptr<server>& serv)
+void scheduler::on_serv_inactive(const std::shared_ptr<server>& serv)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -218,8 +220,7 @@ void scheds::scheduler::on_serv_inactive(const std::shared_ptr<server>& serv)
         sim()->get_sched()->call_resched(shared_from_this());
 }
 
-void scheds::scheduler::on_job_arrival(
-    const std::shared_ptr<task>& new_task, const double& job_duration)
+void scheduler::on_job_arrival(const std::shared_ptr<task>& new_task, const double& job_duration)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -261,7 +262,7 @@ void scheds::scheduler::on_job_arrival(
         }
 }
 
-void scheds::scheduler::on_job_finished(const std::shared_ptr<server>& serv, bool is_there_new_job)
+void scheduler::on_job_finished(const std::shared_ptr<server>& serv, bool is_there_new_job)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -298,7 +299,7 @@ void scheds::scheduler::on_job_finished(const std::shared_ptr<server>& serv, boo
         sim()->get_sched()->call_resched(shared_from_this());
 }
 
-void scheds::scheduler::on_serv_budget_exhausted(const std::shared_ptr<server>& serv)
+void scheduler::on_serv_budget_exhausted(const std::shared_ptr<server>& serv)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -318,7 +319,7 @@ void scheds::scheduler::on_serv_budget_exhausted(const std::shared_ptr<server>& 
         sim()->get_sched()->call_resched(shared_from_this());
 }
 
-void scheds::scheduler::update_server_times(const std::shared_ptr<server>& serv)
+void scheduler::update_server_times(const std::shared_ptr<server>& serv)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -338,7 +339,7 @@ void scheds::scheduler::update_server_times(const std::shared_ptr<server>& serv)
         serv->last_update = sim()->time();
 }
 
-void scheds::scheduler::cancel_alarms(const server& serv)
+void scheduler::cancel_alarms(const server& serv)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -357,7 +358,7 @@ void scheds::scheduler::cancel_alarms(const server& serv)
         });
 }
 
-void scheds::scheduler::set_alarms(const std::shared_ptr<server>& serv)
+void scheduler::set_alarms(const std::shared_ptr<server>& serv)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -383,7 +384,7 @@ void scheds::scheduler::set_alarms(const std::shared_ptr<server>& serv)
         }
 }
 
-void scheds::scheduler::resched_proc(
+void scheduler::resched_proc(
     const std::shared_ptr<processor>& proc, const std::shared_ptr<server>& server_to_execute)
 {
 #ifdef TRACY_ENABLE
@@ -404,7 +405,9 @@ void scheds::scheduler::resched_proc(
         proc->set_task(server_to_execute->get_task());
 }
 
-auto scheds::scheduler::clamp(const double& nb_procs) -> double
+auto scheduler::clamp(const double& nb_procs) -> double
 {
         return std::clamp(nb_procs, 1.0, static_cast<double>(chip()->processors.size()));
 }
+
+} // namespace scheds

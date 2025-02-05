@@ -1,3 +1,4 @@
+#include <allocator.hpp>
 #include <allocators/high_perf_first.hpp>
 #include <allocators/low_perf_first.hpp>
 #include <allocators/smart_ass.hpp>
@@ -10,7 +11,6 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
-#include <allocator.hpp>
 #include <ostream>
 #include <platform.hpp>
 #include <protocols/hardware.hpp>
