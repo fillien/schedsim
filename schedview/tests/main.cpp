@@ -12,9 +12,9 @@ TEST_F(Schedview, EnergyCpuToCluster)
         using namespace protocols::hardware;
 
         const protocols::hardware::hardware hw{
-            {{2, {1.0}, 1.0, {0.1, 0.2, 0.3, 0.4}},
-             {2, {1.0}, 1.0, {0.1, 0.2, 0.3, 0.4}},
-             {2, {1.0}, 1.0, {0.1, 0.2, 0.3, 0.4}}}};
+            {{2, {1.0}, 1.0, {0.1, 0.2, 0.3, 0.4}, 1.0},
+             {2, {1.0}, 1.0, {0.1, 0.2, 0.3, 0.4}, 0.5},
+             {2, {1.0}, 1.0, {0.1, 0.2, 0.3, 0.4}, 0.33}}};
 
         EXPECT_EQ(outputs::energy::cpu_to_cluster(hw, 5), 2);
 }

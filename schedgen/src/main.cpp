@@ -30,6 +30,7 @@ struct platform_config {
         std::vector<double> frequencies{0};
         double effective_freq{0};
         std::vector<double> power_model{0};
+        double perf{1.0};
 };
 
 auto parse_args_taskset(const int argc, const char** argv) -> taskset_config
@@ -171,7 +172,8 @@ auto main(const int argc, const char** argv) -> int
                             {{{config.nb_procs,
                                config.frequencies,
                                config.effective_freq,
-                               config.power_model}}});
+                               config.power_model,
+                               config.perf}}});
                 }
                 else if (command == "check") {
                         parse_args_check(argc - 1, argv + 1);
