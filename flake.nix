@@ -19,21 +19,22 @@
       in
       {
         formatter = pkgs.nixpkgs-fmt;
-        devShells.default = pkgs.mkShell rec {
+        devShells.default = pkgs.mkShell {
           name = "schedsim";
           packages = with pkgs; [
+            (python312.withPackages (ps: with ps; [ pandas polars pyarrow ]))
             bash
+            black
+            clang-tools
             cmake
             doxygen
+            gnuplot
             graphviz
-            ninja
             gtest
             lldb
+            ninja
             shellcheck
-            gnuplot
-            black
             tracy
-            (python312.withPackages (ps: with ps; [ pandas polars pyarrow ]))
           ];
         };
 
