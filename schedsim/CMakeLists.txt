@@ -20,6 +20,7 @@ if (ENABLE_TRACY)
         GIT_PROGRESS TRUE
     )
     FetchContent_MakeAvailable(tracy)
+    target_compile_options(TracyClient PRIVATE -Wno-unused-parameter -Wno-missing-field-initializers -Wno-c11-extensions)
     target_link_libraries(schedsim PRIVATE TracyClient cxxopts protocols)
 else()
     message(STATUS "Tracy is disabled")
