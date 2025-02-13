@@ -7,7 +7,7 @@
 
 namespace scheds {
 
-auto power_aware::get_nb_active_procs([[maybe_unused]] const double& new_utilization) const
+auto PowerAware::get_nb_active_procs([[maybe_unused]] const double& new_utilization) const
     -> std::size_t
 {
 #ifdef TRACY_ENABLE
@@ -16,7 +16,7 @@ auto power_aware::get_nb_active_procs([[maybe_unused]] const double& new_utiliza
         return chip()->processors.size();
 }
 
-void power_aware::update_platform()
+void PowerAware::update_platform()
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;

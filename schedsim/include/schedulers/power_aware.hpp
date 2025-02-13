@@ -6,7 +6,7 @@
 #include <schedulers/parallel.hpp>
 
 namespace scheds {
-class power_aware : public Parallel {
+class PowerAware : public Parallel {
       protected:
         auto get_nb_active_procs(const double& new_utilization) const -> std::size_t override;
 
@@ -15,7 +15,7 @@ class power_aware : public Parallel {
          * @brief Constructs a parallel scheduler with a weak pointer to the engine.
          * @param sim Weak pointer to the engine.
          */
-        explicit power_aware(const std::weak_ptr<engine>& sim) : Parallel(sim){};
+        explicit PowerAware(const std::weak_ptr<engine>& sim) : Parallel(sim){};
 
         void update_platform() override;
 };
