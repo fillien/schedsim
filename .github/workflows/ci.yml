@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: ["cluster-types"]
+  pull_request:
+    branches: ["cluster-types"]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v3
+      - name: Install Nix
+        uses: cachix/install-nix-action@v20
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+      - name: Build project via Nix flake
+        run: nix build
+      - name: Run tests via Nix flake
+        run: nix flake check
