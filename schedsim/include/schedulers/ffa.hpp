@@ -10,7 +10,7 @@
 #include <timer.hpp>
 
 namespace scheds {
-class ffa : public Parallel {
+class Ffa : public Parallel {
       private:
         std::size_t nb_active_procs{1};
 
@@ -31,7 +31,7 @@ class ffa : public Parallel {
         auto get_nb_active_procs(const double& new_utilization) const -> std::size_t override;
 
       public:
-        explicit ffa(const std::weak_ptr<engine>& sim);
+        explicit Ffa(const std::weak_ptr<engine>& sim);
         void set_cluster(const std::weak_ptr<Cluster>& clu);
         void update_platform() override;
 };

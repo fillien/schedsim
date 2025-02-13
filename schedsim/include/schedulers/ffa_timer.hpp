@@ -11,7 +11,7 @@
 #include <timer.hpp>
 
 namespace scheds {
-class ffa_timer : public Parallel {
+class FfaTimer : public Parallel {
       private:
         std::size_t nb_active_procs{1};
 
@@ -41,7 +41,7 @@ class ffa_timer : public Parallel {
         auto get_nb_active_procs(const double& new_utilization) const -> std::size_t override;
 
       public:
-        explicit ffa_timer(const std::weak_ptr<engine>& sim);
+        explicit FfaTimer(const std::weak_ptr<engine>& sim);
         void update_platform() override;
 };
 } // namespace scheds

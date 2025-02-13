@@ -5,15 +5,15 @@
 #include <schedulers/ffa.hpp>
 
 namespace scheds {
-ffa::ffa(const std::weak_ptr<engine>& sim) : Parallel(sim) {}
+Ffa::Ffa(const std::weak_ptr<engine>& sim) : Parallel(sim) {}
 
-void ffa::set_cluster(const std::weak_ptr<Cluster>& clu)
+void Ffa::set_cluster(const std::weak_ptr<Cluster>& clu)
 {
         attached_cluster = clu;
         nb_active_procs = chip()->processors.size();
 }
 
-auto ffa::compute_freq_min(
+auto Ffa::compute_freq_min(
     const double& freq_max,
     const double& total_util,
     const double& max_util,
@@ -22,7 +22,7 @@ auto ffa::compute_freq_min(
         return (freq_max * (total_util + (nb_procs - 1) * max_util)) / nb_procs;
 }
 
-auto ffa::get_nb_active_procs([[maybe_unused]] const double& new_utilization = 0) const
+auto Ffa::get_nb_active_procs([[maybe_unused]] const double& new_utilization = 0) const
     -> std::size_t
 {
         auto is_active = [](const auto& proc) {
@@ -34,7 +34,7 @@ auto ffa::get_nb_active_procs([[maybe_unused]] const double& new_utilization = 0
         return std::count_if(processors.begin(), processors.end(), is_active);
 }
 
-void ffa::change_state_proc(
+void Ffa::change_state_proc(
     const Processor::state& next_state, const std::shared_ptr<Processor>& proc)
 {
         assert(next_state != proc->get_state());
@@ -43,7 +43,7 @@ void ffa::change_state_proc(
         proc->dpm_change_state(next_state);
 }
 
-void ffa::activate_next_core()
+void Ffa::activate_next_core()
 {
         using enum Processor::state;
         auto& processors = chip()->processors;
@@ -57,7 +57,7 @@ void ffa::activate_next_core()
         change_state_proc(idle, *itr);
 }
 
-void ffa::put_next_core_to_bed()
+void Ffa::put_next_core_to_bed()
 {
         using enum Processor::state;
         auto& processors = chip()->processors;
@@ -68,7 +68,7 @@ void ffa::put_next_core_to_bed()
         change_state_proc(sleep, *itr);
 }
 
-void ffa::adjust_active_processors(const std::size_t target_processors)
+void Ffa::adjust_active_processors(const std::size_t target_processors)
 {
         if (target_processors > get_nb_active_procs()) {
                 for (std::size_t i = 0; i < target_processors - get_nb_active_procs(); ++i) {
@@ -82,7 +82,7 @@ void ffa::adjust_active_processors(const std::size_t target_processors)
         }
 }
 
-void ffa::update_platform()
+void Ffa::update_platform()
 {
         const double total_util{get_active_bandwidth()};
         const double max_util{u_max()};
