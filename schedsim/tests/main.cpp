@@ -35,7 +35,7 @@ TEST_F(Schedsim, ProcessorOrder)
         plat->clusters.push_back(std::make_shared<cluster>(sim, 1, freqs, EFF_FREQ));
         plat->clusters.back()->create_procs(NB_PROCS);
 
-        std::shared_ptr<Scheduler> sched = std::make_shared<sched_parallel>(sim);
+        std::shared_ptr<Scheduler> sched = std::make_shared<sched::Parallel>(sim);
         sim->set_scheduler(sched);
 
         auto s0 = std::make_shared<server>(sim);
@@ -64,23 +64,23 @@ TEST_F(Schedsim, ProcessorOrder)
         auto p_change = plat->clusters.at(0)->processors.at(3);
         p_change->change_state(processor::state::change);
 
-        EXPECT_TRUE(sched_parallel::processor_order(*p_idle, *p_idle));
-        EXPECT_TRUE(sched_parallel::processor_order(*p_idle, *p_run));
-        EXPECT_TRUE(sched_parallel::processor_order(*p_idle, *p_sleep));
-        EXPECT_FALSE(sched_parallel::processor_order(*p_run, *p_idle));
-        EXPECT_TRUE(sched_parallel::processor_order(*p_run, *p_run));
-        EXPECT_TRUE(sched_parallel::processor_order(*p_run, *p_sleep));
-        EXPECT_FALSE(sched_parallel::processor_order(*p_sleep, *p_idle));
-        EXPECT_FALSE(sched_parallel::processor_order(*p_sleep, *p_run));
-        EXPECT_FALSE(sched_parallel::processor_order(*p_sleep, *p_sleep));
+        EXPECT_TRUE(sched::Parallel::processor_order(*p_idle, *p_idle));
+        EXPECT_TRUE(sched::Parallel::processor_order(*p_idle, *p_run));
+        EXPECT_TRUE(sched::Parallel::processor_order(*p_idle, *p_sleep));
+        EXPECT_FALSE(sched::Parallel::processor_order(*p_run, *p_idle));
+        EXPECT_TRUE(sched::Parallel::processor_order(*p_run, *p_run));
+        EXPECT_TRUE(sched::Parallel::processor_order(*p_run, *p_sleep));
+        EXPECT_FALSE(sched::Parallel::processor_order(*p_sleep, *p_idle));
+        EXPECT_FALSE(sched::Parallel::processor_order(*p_sleep, *p_run));
+        EXPECT_FALSE(sched::Parallel::processor_order(*p_sleep, *p_sleep));
 
-        EXPECT_FALSE(sched_parallel::processor_order(*p_change, *p_sleep));
-        EXPECT_FALSE(sched_parallel::processor_order(*p_change, *p_run));
-        EXPECT_FALSE(sched_parallel::processor_order(*p_change, *p_idle));
-        EXPECT_FALSE(sched_parallel::processor_order(*p_change, *p_change));
-        EXPECT_FALSE(sched_parallel::processor_order(*p_sleep, *p_change));
-        EXPECT_TRUE(sched_parallel::processor_order(*p_run, *p_change));
-        EXPECT_TRUE(sched_parallel::processor_order(*p_idle, *p_change));
+        EXPECT_FALSE(sched::Parallel::processor_order(*p_change, *p_sleep));
+        EXPECT_FALSE(sched::Parallel::processor_order(*p_change, *p_run));
+        EXPECT_FALSE(sched::Parallel::processor_order(*p_change, *p_idle));
+        EXPECT_FALSE(sched::Parallel::processor_order(*p_change, *p_change));
+        EXPECT_FALSE(sched::Parallel::processor_order(*p_sleep, *p_change));
+        EXPECT_TRUE(sched::Parallel::processor_order(*p_run, *p_change));
+        EXPECT_TRUE(sched::Parallel::processor_order(*p_idle, *p_change));
 }
 
 int main(int argc, char** argv)

@@ -10,7 +10,7 @@
 #include <timer.hpp>
 
 namespace scheds {
-class ffa : public parallel {
+class ffa : public Parallel {
       private:
         std::size_t nb_active_procs{1};
 

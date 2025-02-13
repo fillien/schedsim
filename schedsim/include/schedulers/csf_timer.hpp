@@ -12,7 +12,7 @@
 
 namespace scheds {
 
-class csf_timer : public parallel {
+class csf_timer : public Parallel {
       private:
         std::size_t nb_active_procs{1};
 

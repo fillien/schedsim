@@ -6,7 +6,7 @@
 #include <schedulers/parallel.hpp>
 
 namespace scheds {
-class power_aware_timer : public parallel {
+class power_aware_timer : public Parallel {
       protected:
         auto get_nb_active_procs(const double& new_utilization) const -> std::size_t override;
 

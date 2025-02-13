@@ -5,7 +5,7 @@
 #include <stdexcept>
 
 namespace scheds {
-csf_timer::csf_timer(const std::weak_ptr<engine>& sim) : parallel(sim)
+csf_timer::csf_timer(const std::weak_ptr<engine>& sim) : Parallel(sim)
 {
         if (!sim.lock()->is_delay_active()) {
                 throw std::runtime_error(

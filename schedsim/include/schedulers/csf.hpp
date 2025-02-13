@@ -9,7 +9,7 @@
 #include <schedulers/parallel.hpp>
 
 namespace scheds {
-class csf : public parallel {
+class csf : public Parallel {
       private:
         std::size_t nb_active_procs{1};
 

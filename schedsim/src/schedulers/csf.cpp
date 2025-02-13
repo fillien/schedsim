@@ -6,7 +6,7 @@
 
 namespace scheds {
 
-csf::csf(const std::weak_ptr<engine>& sim) : parallel(sim) {}
+csf::csf(const std::weak_ptr<engine>& sim) : Parallel(sim) {}
 
 void csf::set_cluster(const std::weak_ptr<Cluster>& clu)
 {

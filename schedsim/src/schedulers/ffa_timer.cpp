@@ -4,7 +4,7 @@
 #include <schedulers/ffa_timer.hpp>
 
 namespace scheds {
-ffa_timer::ffa_timer(const std::weak_ptr<engine>& sim) : parallel(sim)
+ffa_timer::ffa_timer(const std::weak_ptr<engine>& sim) : Parallel(sim)
 {
         if (!sim.lock()->is_delay_active()) {
                 throw std::runtime_error(
