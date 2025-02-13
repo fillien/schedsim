@@ -7,7 +7,7 @@
 
 namespace scheds {
 
-power_aware_timer::power_aware_timer(const std::weak_ptr<engine>& sim) : Parallel(sim)
+PowerAwareTimer::PowerAwareTimer(const std::weak_ptr<engine>& sim) : Parallel(sim)
 {
         if (!sim.lock()->is_delay_active()) {
                 throw std::runtime_error(
@@ -15,7 +15,7 @@ power_aware_timer::power_aware_timer(const std::weak_ptr<engine>& sim) : Paralle
         }
 };
 
-auto power_aware_timer::get_nb_active_procs([[maybe_unused]] const double& new_utilization) const
+auto PowerAwareTimer::get_nb_active_procs([[maybe_unused]] const double& new_utilization) const
     -> std::size_t
 {
 #ifdef TRACY_ENABLE
@@ -24,7 +24,7 @@ auto power_aware_timer::get_nb_active_procs([[maybe_unused]] const double& new_u
         return chip()->processors.size();
 }
 
-void power_aware_timer::update_platform()
+void PowerAwareTimer::update_platform()
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
