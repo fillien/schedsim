@@ -32,6 +32,7 @@ configure_file(
 
 add_subdirectory(external/cxxopts)
 add_subdirectory(external/json)
+add_subdirectory(external/tracy)
 
 add_subdirectory(doc)
 add_subdirectory(protocols)
@@ -56,7 +57,6 @@ add_custom_target(
         COMMAND clang-format -i ${ALL_SOURCE_FILES}
 )
 
-# Clang-Tidy configuration
 find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
 
 if(NOT CLANG_TIDY_EXE)

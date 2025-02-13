@@ -10,13 +10,6 @@ endif()
 if (ENABLE_TRACY)
     message(STATUS "Tracy is enabled")
     set(ENABLE_TRACY ON)
-    FetchContent_Declare(tracy
-        GIT_REPOSITORY https://github.com/wolfpld/tracy.git
-        GIT_TAG v0.10
-        GIT_SHALLOW TRUE
-        GIT_PROGRESS TRUE
-    )
-    FetchContent_MakeAvailable(tracy)
     target_link_libraries(schedview PRIVATE TracyClient cxxopts protocols)
 else()
     message(STATUS "Tracy is disabled")

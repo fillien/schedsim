@@ -13,13 +13,6 @@ endif()
 if (ENABLE_TRACY)
     message(STATUS "Tracy is enabled")
     set(ENABLE_TRACY ON)
-    FetchContent_Declare(tracy
-        GIT_REPOSITORY https://github.com/wolfpld/tracy.git
-        GIT_TAG v0.10
-        GIT_SHALLOW TRUE
-        GIT_PROGRESS TRUE
-    )
-    FetchContent_MakeAvailable(tracy)
     target_compile_options(TracyClient PRIVATE -Wno-unused-parameter -Wno-missing-field-initializers -Wno-c11-extensions)
     target_link_libraries(schedsim PRIVATE TracyClient cxxopts protocols)
 else()
