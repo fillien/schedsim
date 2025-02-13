@@ -15,7 +15,7 @@
 
 namespace fs = std::filesystem;
 
-struct taskset_config {
+struct TasksetConfig {
         fs::path output_filepath{"scenario.json"};
         std::size_t nb_tasks{0};
         double total_utilization{1};
@@ -24,7 +24,7 @@ struct taskset_config {
         double compression_rate{1};
 };
 
-struct platform_config {
+struct PlatformConfig {
         fs::path output_filepath{"platform.json"};
         std::size_t nb_procs{0};
         std::vector<double> frequencies{0};
@@ -33,9 +33,9 @@ struct platform_config {
         double perf{1.0};
 };
 
-auto parse_args_taskset(const int argc, const char** argv) -> taskset_config
+auto parse_args_taskset(const int argc, const char** argv) -> TasksetConfig
 {
-        taskset_config config;
+        TasksetConfig config;
 
         // clang-format off
         cxxopts::Options options("schedgen taskset", "Task Set Generator for Mono-core and Multi-core Systems");
@@ -67,9 +67,9 @@ auto parse_args_taskset(const int argc, const char** argv) -> taskset_config
         return config;
 }
 
-auto parse_args_platform(const int argc, const char** argv) -> platform_config
+auto parse_args_platform(const int argc, const char** argv) -> PlatformConfig
 {
-        platform_config config;
+        PlatformConfig config;
 
         // clang-format off
         cxxopts::Options options("schedgen platform", "Platform Configuration File Generator");
