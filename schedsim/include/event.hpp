@@ -12,7 +12,7 @@ namespace events {
 /**
  * @brief Represents an event for the arrival of a job.
  */
-struct job_arrival {
+struct JobArrival {
         std::shared_ptr<Task> task_of_job; /**< The task associated with the arrived job. */
         double job_duration;               /**< The duration of the arrived job. */
 };
@@ -20,35 +20,35 @@ struct job_arrival {
 /**
  * @brief Represents an event for the completion of a job on a server.
  */
-struct job_finished {
+struct JobFinished {
         std::shared_ptr<Server> server_of_job; /**< The server where the job is completed. */
         bool is_there_new_job =
-            false; /**< Give info about a job_finished event at the same timestep. */
+            false; /**< Give info about a JobFinished event at the same timestep. */
 };
 
 /**
  * @brief Represents an event for the exhaustion of the budget on a server.
  */
-struct serv_budget_exhausted {
+struct ServBudgetExhausted {
         std::shared_ptr<Server> serv; /**< The server with an exhausted budget. */
 };
 
 /**
  * @brief Represents an event for the inactivity of a server.
  */
-struct serv_inactive {
+struct ServInactive {
         std::shared_ptr<Server> serv; /**< The inactive server. */
 };
 
-struct timer_isr {
-        std::shared_ptr<timer> target_timer;
+struct TimerIsr {
+        std::shared_ptr<Timer> target_timer;
 };
 
 /**
  * @brief A variant type representing different types of events.
  */
-using event =
-    std::variant<job_arrival, job_finished, serv_budget_exhausted, serv_inactive, timer_isr>;
+using Event =
+    std::variant<JobArrival, JobFinished, ServBudgetExhausted, ServInactive, TimerIsr>;
 
 } // namespace events
 

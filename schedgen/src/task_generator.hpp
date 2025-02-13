@@ -19,7 +19,7 @@
  * of arrival and the duration for the job.
  */
 auto generate_jobs(std::vector<double>& durations, double period)
-    -> std::vector<protocols::scenario::job>;
+    -> std::vector<protocols::scenario::Job>;
 
 /**
  * @brief Generates a task with a set of jobs based on utilization and success rate.
@@ -47,7 +47,7 @@ auto generate_task(
     double success_rate,
     double compression_rate,
     double wcet,
-    double task_period) -> protocols::scenario::task;
+    double task_period) -> protocols::scenario::Task;
 
 /**
  * @brief Generates a set of tasks (taskset) for a given scenario, each with a specific utilization
@@ -78,6 +78,6 @@ auto generate_taskset(
     double total_utilization,
     double umax,
     double success_rate,
-    double compression_rate) -> protocols::scenario::setting;
+    double compression_rate) -> protocols::scenario::Setting;
 
 #endif

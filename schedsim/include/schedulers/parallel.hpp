@@ -33,7 +33,7 @@ class Parallel : public Scheduler {
          * @brief Constructs a parallel scheduler with a weak pointer to the engine.
          * @param sim Weak pointer to the engine.
          */
-        explicit Parallel(const std::weak_ptr<engine>& sim) : Scheduler(sim){};
+        explicit Parallel(const std::weak_ptr<Engine>& sim) : Scheduler(sim){};
 
         /**
          * @brief Compares two processors based on their order.

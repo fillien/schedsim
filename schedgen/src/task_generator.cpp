@@ -98,16 +98,16 @@ auto bounded_weibull(double min, double max) -> double
 } // namespace
 
 auto generate_jobs(std::vector<double>& durations, double period)
-    -> std::vector<protocols::scenario::job>
+    -> std::vector<protocols::scenario::Job>
 {
         using namespace protocols::scenario;
 
         double time{0};
-        std::vector<job> jobs;
+        std::vector<Job> jobs;
         jobs.reserve(durations.size());
 
         for (const auto& duration : durations) {
-                jobs.push_back(job{.arrival = time, .duration = duration});
+                jobs.push_back(Job{.arrival = time, .duration = duration});
                 time += period;
         }
 
@@ -120,7 +120,7 @@ auto generate_task(
     double success_rate,
     double compression_rate,
     double wcet,
-    double task_period) -> protocols::scenario::task
+    double task_period) -> protocols::scenario::Task
 {
         using namespace protocols::scenario;
         using std::ceil;
@@ -141,7 +141,7 @@ auto generate_task(
         const double budget{durations.at(index)};
 
         std::shuffle(durations.begin(), durations.end(), random_gen);
-        return task{
+        return Task{
             .id = static_cast<std::size_t>(tid + 1),
             .utilization = budget / task_period,
             .period = task_period,
@@ -153,7 +153,7 @@ auto generate_taskset(
     double total_utilization,
     double umax,
     double success_rate,
-    double compression_rate) -> protocols::scenario::setting
+    double compression_rate) -> protocols::scenario::Setting
 {
         using namespace protocols::scenario;
         using std::round;
@@ -174,7 +174,7 @@ auto generate_taskset(
         double hyperperiod{25200};
         // double hyperperiod{1000};
 
-        std::vector<task> tasks;
+        std::vector<Task> tasks;
         tasks.reserve(nb_tasks);
 
         for (size_t tid = 0; tid < nb_tasks; ++tid) {
@@ -188,5 +188,5 @@ auto generate_taskset(
                     generate_task(tid, nb_jobs, success_rate, compression_rate, wcet, period));
         }
 
-        return setting{.tasks = tasks};
+        return Setting{.tasks = tasks};
 }

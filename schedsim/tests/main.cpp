@@ -12,11 +12,11 @@ class Schedsim : public ::testing::Test {};
 
 TEST_F(Schedsim, ProcessorGetterId)
 {
-        auto sim = std::make_shared<engine>(false);
+        auto sim = std::make_shared<Engine>(false);
         auto plat = std::make_shared<platform>(sim, false);
         sim->set_platform(plat);
 
-        plat->clusters.push_back(std::make_shared<cluster>(sim, 1, std::vector<double>{1.0}, 1.0));
+        plat->clusters.push_back(std::make_shared<Cluster>(sim, 1, std::vector<double>{1.0}, 1.0));
 
         EXPECT_EQ(plat->clusters.at(0)->processors.at(0)->get_id(), 0);
 }
@@ -28,11 +28,11 @@ TEST_F(Schedsim, ProcessorOrder)
         std::vector<double> freqs = {EFF_FREQ};
         bool FREESCALING{false};
 
-        auto sim = std::make_shared<engine>(false);
+        auto sim = std::make_shared<Engine>(false);
 
         auto plat = std::make_shared<platform>(sim, FREESCALING);
         sim->set_platform(plat);
-        plat->clusters.push_back(std::make_shared<cluster>(sim, 1, freqs, EFF_FREQ));
+        plat->clusters.push_back(std::make_shared<Cluster>(sim, 1, freqs, EFF_FREQ));
         plat->clusters.back()->create_procs(NB_PROCS);
 
         std::shared_ptr<Scheduler> sched = std::make_shared<sched::Parallel>(sim);
@@ -45,9 +45,9 @@ TEST_F(Schedsim, ProcessorOrder)
         s0->current_state = server::state::running;
         s0->relative_deadline = 1;
 
-        auto t0 = std::make_shared<task>(sim, 0, 1, 0.1);
+        auto t0 = std::make_shared<Task>(sim, 0, 1, 0.1);
         t0->set_server(s0);
-        auto t1 = std::make_shared<task>(sim, 1, 1, 0.1);
+        auto t1 = std::make_shared<Task>(sim, 1, 1, 0.1);
         t1->set_server(s1);
 
         auto p_idle = plat->clusters.at(0)->processors.at(0);

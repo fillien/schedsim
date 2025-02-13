@@ -41,10 +41,10 @@ auto get_per_core_utilization(const std::vector<std::pair<double, protocols::tra
                 const auto& event = tra.second;
                 std::visit(
                     overloaded{
-                        [&](protocols::traces::proc_activated event) {
+                        [&](protocols::traces::ProcActivated event) {
                                 last_activation.insert({event.proc_id, timestamp});
                         },
-                        [&](protocols::traces::proc_idled event) {
+                        [&](protocols::traces::ProcIdled event) {
                                 close_utilization_zone(timestamp, event.proc_id);
                         },
                         [](auto) {}},
@@ -91,27 +91,27 @@ auto outputs::stats::track_change_state(
                 if (timestamp > last_timestamp) { last_timestamp = timestamp; }
                 std::visit(
                     overloaded{
-                        [&](protocols::traces::proc_change evt) {
+                        [&](protocols::traces::ProcChange evt) {
                                 if (!changing_cores.contains(evt.proc_id)) {
                                         changing_cores.insert(evt.proc_id);
                                 }
                         },
-                        [&](protocols::traces::proc_activated evt) {
+                        [&](protocols::traces::ProcActivated evt) {
                                 if (changing_cores.contains(evt.proc_id)) {
                                         changing_cores.erase(evt.proc_id);
                                 }
                         },
-                        [&](protocols::traces::proc_idled evt) {
+                        [&](protocols::traces::ProcIdled evt) {
                                 if (changing_cores.contains(evt.proc_id)) {
                                         changing_cores.erase(evt.proc_id);
                                 }
                         },
-                        [&](protocols::traces::proc_sleep evt) {
+                        [&](protocols::traces::ProcSleep evt) {
                                 if (changing_cores.contains(evt.proc_id)) {
                                         changing_cores.erase(evt.proc_id);
                                 }
                         },
-                        [&](protocols::traces::sim_finished) {
+                        [&](protocols::traces::SimFinished) {
                                 table["stop"].push_back(timestamp);
                         },
                         [](auto) {}},

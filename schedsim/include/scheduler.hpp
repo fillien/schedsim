@@ -16,7 +16,7 @@ namespace scheds {
  * @param ev2 The second event.
  * @return True if the first event occurs before the second, false otherwise.
  */
-auto compare_events(const events::event& ev1, const events::event& ev2) -> bool;
+auto compare_events(const events::Event& ev1, const events::Event& ev2) -> bool;
 
 /**
  * @brief A class that handles the events of the system according to a scheduling policy.
@@ -179,7 +179,7 @@ class Scheduler : public Entity, public std::enable_shared_from_this<Scheduler> 
          * @brief Constructs a scheduler with a weak pointer to the engine.
          * @param sim Weak pointer to the engine.
          */
-        explicit Scheduler(const std::weak_ptr<engine> sim) : Entity(sim){};
+        explicit Scheduler(const std::weak_ptr<Engine> sim) : Entity(sim){};
 
         /**
          * @brief Virtual destructor for the scheduler class.
@@ -197,11 +197,11 @@ class Scheduler : public Entity, public std::enable_shared_from_this<Scheduler> 
          * @brief Handles a vector of events according to the scheduling policy.
          * @param evts Vector of events to handle.
          */
-        void handle(const events::event& evt);
+        void handle(const events::Event& evt);
 
         void call_resched();
 
-        auto is_this_my_event(const events::event& evt) -> bool;
+        auto is_this_my_event(const events::Event& evt) -> bool;
 
         void set_cluster(const std::weak_ptr<Cluster> clu) { attached_cluster = clu; };
         auto get_cluster() -> std::shared_ptr<Cluster> { return attached_cluster.lock(); };

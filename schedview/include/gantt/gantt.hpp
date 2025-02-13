@@ -36,22 +36,22 @@ inline auto get_color_name(std::size_t index) -> std::string { return colors.at(
 
 inline auto get_color_hex(std::size_t index) -> std::string { return colors.at(index).second; }
 
-struct arrival {
+struct Arrival {
         std::size_t index;
         double timestamp;
 };
 
-struct deadline {
+struct Deadline {
         std::size_t index;
         double timestamp;
 };
 
-struct finished {
+struct Finished {
         std::size_t index;
         double timestamp;
 };
 
-struct execution {
+struct Execution {
         std::size_t index;
         std::size_t cpu;
         double start;
@@ -61,41 +61,41 @@ struct execution {
         double frequency_min;
 };
 
-struct active_non_cont {
+struct ActiveNonCont {
         std::size_t index;
         double start;
         double stop;
 };
 
-struct proc_mode_idle {
+struct ProcModeIdle {
         std::size_t index;
         double start;
         double stop;
 };
 
-struct proc_mode_running {
+struct ProcModeRunning {
         std::size_t index;
         double start;
         double stop;
 };
 
-struct proc_mode_sleep {
+struct ProcModeSleep {
         std::size_t index;
         double start;
         double stop;
 };
 
 using command = std::variant<
-    arrival,
-    deadline,
-    finished,
-    execution,
-    active_non_cont,
-    proc_mode_idle,
-    proc_mode_running,
-    proc_mode_sleep>;
+    Arrival,
+    Deadline,
+    Finished,
+    Execution,
+    ActiveNonCont,
+    ProcModeIdle,
+    ProcModeRunning,
+    ProcModeSleep>;
 
-struct gantt {
+struct Gantt {
         std::size_t nb_axis;
         double duration;
         std::vector<command> commands;
@@ -103,11 +103,11 @@ struct gantt {
 
 auto generate_gantt(
     const std::vector<std::pair<double, protocols::traces::trace>>& logs,
-    const protocols::hardware::hardware& platform) -> gantt;
+    const protocols::hardware::Hardware& platform) -> Gantt;
 
 auto generate_proc_mode(
     const std::vector<std::pair<double, protocols::traces::trace>>& logs,
-    const protocols::hardware::hardware& platform) -> gantt;
+    const protocols::hardware::Hardware& platform) -> Gantt;
 }; // namespace outputs::gantt
 
 #endif

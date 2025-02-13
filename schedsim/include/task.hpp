@@ -8,7 +8,7 @@
 
 class Processor;
 class Server;
-class engine;
+class Engine;
 
 /**
  * @brief Represents a model of a user code that is executed by a processor.
@@ -43,7 +43,7 @@ class Task : public Entity, public std::enable_shared_from_this<Task> {
          * @param utilization The utilization taken when active.
          */
         Task(
-            const std::weak_ptr<engine>& sim,
+            const std::weak_ptr<Engine>& sim,
             std::size_t tid,
             const double& period,
             const double& utilization);

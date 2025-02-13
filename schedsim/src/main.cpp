@@ -35,7 +35,7 @@
 
 namespace fs = std::filesystem;
 
-struct app_config {
+struct AppConfig {
         fs::path output_file{"logs.json"};
         fs::path scenario_file{"scenario.json"};
         fs::path platform_file{"platform.json"};
@@ -51,9 +51,9 @@ constexpr std::array<const char*, 6> policies{
     "ffa_timer",
     "csf_timer"};
 
-auto parse_args(const int argc, const char** argv) -> app_config
+auto parse_args(const int argc, const char** argv) -> AppConfig
 {
-        app_config config;
+        AppConfig config;
 
         // clang-format off
 	cxxopts::Options options("schedsim", "GRUB Scheduler Simulation for a Given Task Set and Platform");
@@ -103,21 +103,21 @@ auto main(const int argc, const char** argv) -> int
                 auto config = parse_args(argc, argv);
 
                 auto taskset = protocols::scenario::read_file(config.scenario_file);
-                auto platform_config = protocols::hardware::read_file(config.platform_file);
+                auto PlatformConfig = protocols::hardware::read_file(config.platform_file);
 
                 // Create the simulation engine and attache to it a scheduler
-                auto sim = make_shared<engine>(config.active_delay);
+                auto sim = make_shared<Engine>(config.active_delay);
 
                 // Insert the platform configured through the scenario file, in the simulation
                 // engine
                 auto plat = make_shared<Platform>(sim, FREESCALING_ALLOWED);
                 sim->set_platform(plat);
 
-                std::shared_ptr<allocators::allocator> sched;
-                sched = std::make_shared<allocators::smart_ass>(sim);
+                std::shared_ptr<allocators::Allocator> sched;
+                sched = std::make_shared<allocators::SmartAss>(sim);
 
                 std::size_t cluster_id_cpt{1};
-                for (const protocols::hardware::cluster& clu : platform_config.clusters) {
+                for (const protocols::hardware::Cluster& clu : PlatformConfig.clusters) {
                         plat->clusters.push_back(std::make_shared<Cluster>(
                             sim,
                             cluster_id_cpt,
@@ -160,7 +160,7 @@ auto main(const int argc, const char** argv) -> int
                         // For each job of tasks add a "job arrival" event in the future list
                         for (auto job : input_task.jobs) {
                                 sim->add_event(
-                                    events::job_arrival{new_task, job.duration}, job.arrival);
+                                    events::JobArrival{new_task, job.duration}, job.arrival);
                         }
                         tasks.push_back(std::move(new_task));
                 }

@@ -5,11 +5,11 @@
 #include <functional>
 #include <memory>
 
-class engine;
+class Engine;
 
-class timer : public Entity, public std::enable_shared_from_this<timer> {
+class Timer : public Entity, public std::enable_shared_from_this<Timer> {
       public:
-        timer(const std::weak_ptr<engine>& sim, std::function<void()> callback)
+        Timer(const std::weak_ptr<Engine>& sim, std::function<void()> callback)
             : Entity(sim), callback(callback){};
         void set(const double& duration);
         void cancel();

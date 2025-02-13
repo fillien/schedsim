@@ -6,30 +6,30 @@
 #include <variant>
 
 namespace {
-auto operator<<(std::ostream& out, const outputs::gantt::arrival& evt) -> std::ostream&
+auto operator<<(std::ostream& out, const outputs::gantt::Arrival& evt) -> std::ostream&
 {
         return out << "\\TaskArrival{" << evt.index << "}{" << evt.timestamp << "}";
 }
 
-auto operator<<(std::ostream& out, const outputs::gantt::deadline& evt) -> std::ostream&
+auto operator<<(std::ostream& out, const outputs::gantt::Deadline& evt) -> std::ostream&
 {
         return out << "\\TaskDeadline{" << evt.index << "}{" << evt.timestamp << "}";
 }
 
-auto operator<<(std::ostream& out, const outputs::gantt::execution& evt) -> std::ostream&
+auto operator<<(std::ostream& out, const outputs::gantt::Execution& evt) -> std::ostream&
 {
         using namespace outputs::gantt;
         return out << "\\TaskExecution[color=" << get_color_name(evt.cpu) << "]{" << evt.index
                    << "}{" << evt.start << "}{" << evt.stop << "}";
 }
 
-auto operator<<(std::ostream& out, const outputs::gantt::active_non_cont& evt) -> std::ostream&
+auto operator<<(std::ostream& out, const outputs::gantt::ActiveNonCont& evt) -> std::ostream&
 {
         return out << "\\TaskRespTime{" << evt.index << "}{" << evt.start << "}{" << evt.stop
                    << "}";
 }
 
-auto operator<<(std::ostream& out, [[maybe_unused]] const outputs::gantt::finished& evt)
+auto operator<<(std::ostream& out, [[maybe_unused]] const outputs::gantt::Finished& evt)
     -> std::ostream&
 {
         return out;
@@ -43,7 +43,7 @@ auto operator<<(std::ostream& out, const outputs::gantt::command& cmd) -> std::o
 }; // namespace
 
 namespace outputs::gantt::rtsched {
-auto draw(const outputs::gantt::gantt& chart) -> std::string
+auto draw(const outputs::gantt::Gantt& chart) -> std::string
 {
         std::stringstream out;
         out << "\\begin{RTGrid}{" << chart.nb_axis << "}{" << chart.duration << "}\n";

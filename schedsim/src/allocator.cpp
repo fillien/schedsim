@@ -17,27 +17,27 @@
 
 namespace allocators {
 
-void allocator::add_child_sched(const std::weak_ptr<Cluster>& clu)
+void Allocator::add_child_sched(const std::weak_ptr<Cluster>& clu)
 {
         schedulers.push_back(std::make_shared<scheds::Parallel>(sim()));
         clu.lock()->set_sched(schedulers.back()->weak_from_this());
         schedulers.back()->set_cluster(clu.lock());
 }
 
-auto compare_events(const events::event& ev1, const events::event& ev2) -> bool
+auto compare_events(const events::Event& ev1, const events::Event& ev2) -> bool
 {
         constexpr static int MIN_PRIORITY = 100;
         constexpr auto get_priority = overloaded{
-            [](const events::job_finished&) { return 0; },
-            [](const events::serv_budget_exhausted&) { return 1; },
-            [](const events::serv_inactive&) { return 2; },
-            [](const events::job_arrival&) { return 3; },
+            [](const events::JobFinished&) { return 0; },
+            [](const events::ServBudgetExhausted&) { return 1; },
+            [](const events::ServInactive&) { return 2; },
+            [](const events::JobArrival&) { return 3; },
             [](const auto&) { return MIN_PRIORITY; }};
 
         return std::visit(get_priority, ev1) < std::visit(get_priority, ev2);
 }
 
-void allocator::handle(std::vector<events::event> evts)
+void Allocator::handle(std::vector<events::Event> evts)
 {
         using namespace events;
 
@@ -46,16 +46,16 @@ void allocator::handle(std::vector<events::event> evts)
         // Looking for JOB_ARRIVAL events at the same time for this server
         auto has_matching_job_arrival = [&evts](const auto& server) {
                 return std::ranges::any_of(evts, [server](const auto& evt) {
-                        if (const auto* job_evt = std::get_if<events::job_arrival>(&evt)) {
+                        if (const auto* job_evt = std::get_if<events::JobArrival>(&evt)) {
                                 return job_evt->task_of_job == server->get_task();
                         }
                         return false;
                 });
         };
 
-        // Process all job_finished events
+        // Process all JobFinished events
         for (auto& evt : evts) {
-                if (auto* finished_evt = std::get_if<job_finished>(&evt)) {
+                if (auto* finished_evt = std::get_if<JobFinished>(&evt)) {
                         finished_evt->is_there_new_job =
                             has_matching_job_arrival(finished_evt->server_of_job);
                 }
@@ -75,10 +75,10 @@ void allocator::handle(std::vector<events::event> evts)
                 }
 
                 if (!handled) {
-                        if (const auto* job_evt = std::get_if<job_arrival>(&evt)) {
+                        if (const auto* job_evt = std::get_if<JobArrival>(&evt)) {
                                 const auto& receiver = where_to_put_the_task(job_evt->task_of_job);
                                 if (receiver) {
-                                        sim()->add_trace(protocols::traces::task_placed{
+                                        sim()->add_trace(protocols::traces::TaskPlaced{
                                             job_evt->task_of_job->id,
                                             receiver.value()->get_cluster()->get_id()});
                                         receiver.value()->handle(evt);

@@ -5,7 +5,7 @@
 #include <schedulers/ffa.hpp>
 
 namespace scheds {
-Ffa::Ffa(const std::weak_ptr<engine>& sim) : Parallel(sim) {}
+Ffa::Ffa(const std::weak_ptr<Engine>& sim) : Parallel(sim) {}
 
 void Ffa::set_cluster(const std::weak_ptr<Cluster>& clu)
 {

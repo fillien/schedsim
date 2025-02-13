@@ -37,7 +37,7 @@ auto from_shared(std::function<bool(const T&, const T&)> func)
  * @brief According to a platform and a scheduler, the class simulates, in order of time,
  * each event contained in the future list.
  */
-class engine {
+class Engine {
       private:
         /**
          * @brief A counter of the time passing.
@@ -47,7 +47,7 @@ class engine {
         /**
          * @brief The attached scheduler.
          */
-        std::shared_ptr<allocators::allocator> sched;
+        std::shared_ptr<allocators::Allocator> sched;
 
         /**
          * @brief A model of the platform on which the scheduler will operate.
@@ -70,18 +70,18 @@ class engine {
          * @brief The list of future events, a pair of the timestamp of the event and the event
          * itself.
          */
-        std::multimap<double, events::event> future_list{};
+        std::multimap<double, events::Event> future_list{};
 
         /**
          * @brief A constructor to help generate the platform.
          */
-        engine(const bool is_there_delay);
+        Engine(const bool is_there_delay);
 
         /**
          * @brief Setter to attach a scheduler.
          * @param new_sched The new scheduler to attach.
          */
-        void set_scheduler(const std::shared_ptr<allocators::allocator>& new_sched)
+        void set_scheduler(const std::shared_ptr<allocators::Allocator>& new_sched)
         {
                 sched = new_sched;
         }
@@ -113,7 +113,7 @@ class engine {
         /**
          * @return The future list of events.
          */
-        [[nodiscard]] auto get_future_list() const -> std::multimap<double, events::event>
+        [[nodiscard]] auto get_future_list() const -> std::multimap<double, events::Event>
         {
                 return this->future_list;
         };
@@ -123,7 +123,7 @@ class engine {
          * @param new_event The new event to add.
          * @param timestamp The timestamp at which the event should occur.
          */
-        void add_event(const events::event& new_event, const double& timestamp);
+        void add_event(const events::Event& new_event, const double& timestamp);
 
         /**
          * @brief Add a trace to the logs (past list).
@@ -147,7 +147,7 @@ class engine {
          */
         auto traces() { return past_list; };
 
-        auto get_sched() -> std::shared_ptr<allocators::allocator> { return sched; };
+        auto get_sched() -> std::shared_ptr<allocators::Allocator> { return sched; };
 
         [[nodiscard]] auto is_delay_active() const -> bool { return active_delay; };
 };

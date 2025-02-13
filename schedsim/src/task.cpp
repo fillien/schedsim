@@ -7,7 +7,7 @@
 #include <task.hpp>
 
 Task::Task(
-    const std::weak_ptr<engine>& sim,
+    const std::weak_ptr<Engine>& sim,
     const std::size_t tid,
     const double& period,
     const double& utilization)

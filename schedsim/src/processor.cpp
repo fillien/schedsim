@@ -13,30 +13,30 @@
 #endif
 
 Processor::Processor(
-    const std::weak_ptr<engine>& sim, const std::weak_ptr<Cluster>& clu, const std::size_t cpu_id)
+    const std::weak_ptr<Engine>& sim, const std::weak_ptr<Cluster>& clu, const std::size_t cpu_id)
     : Entity(sim), id(cpu_id), attached_cluster(clu)
 {
         using namespace protocols::traces;
 
         switch (current_state) {
         case state::idle: {
-                sim.lock()->add_trace(proc_idled{cpu_id});
+                sim.lock()->add_trace(ProcIdled{cpu_id});
                 break;
         }
         case state::running: {
-                sim.lock()->add_trace(proc_activated{cpu_id});
+                sim.lock()->add_trace(ProcActivated{cpu_id});
                 break;
         }
         case state::sleep: {
-                sim.lock()->add_trace(proc_sleep{cpu_id});
+                sim.lock()->add_trace(ProcSleep{cpu_id});
                 break;
         }
         case state::change: {
-                sim.lock()->add_trace(proc_change{cpu_id});
+                sim.lock()->add_trace(ProcChange{cpu_id});
         }
         }
 
-        coretimer = std::make_shared<timer>(sim, [this, sim]() {
+        coretimer = std::make_shared<Timer>(sim, [this, sim]() {
                 assert(this->current_state == state::change);
                 this->change_state(dpm_target);
                 sim.lock()->get_sched()->call_resched(attached_cluster.lock()->get_sched().lock());
@@ -58,7 +58,7 @@ void Processor::set_task(const std::weak_ptr<Task>& task_to_execute)
         shared_task->attached_proc = shared_from_this();
 
         sim()->add_trace(
-            protocols::traces::task_scheduled{shared_task->id, shared_from_this()->id});
+            protocols::traces::TaskScheduled{shared_task->id, shared_from_this()->id});
 }
 
 void Processor::clear_task()
@@ -83,23 +83,23 @@ void Processor::change_state(const Processor::state& next_state)
         switch (next_state) {
         case state::idle: {
                 current_state = state::idle;
-                sim()->add_trace(traces::proc_idled{shared_from_this()->id});
+                sim()->add_trace(traces::ProcIdled{shared_from_this()->id});
                 break;
         }
         case state::running: {
                 current_state = state::running;
-                sim()->add_trace(traces::proc_activated{shared_from_this()->id});
+                sim()->add_trace(traces::ProcActivated{shared_from_this()->id});
                 break;
         }
         case state::sleep: {
                 current_state = state::sleep;
-                sim()->add_trace(traces::proc_sleep{shared_from_this()->id});
+                sim()->add_trace(traces::ProcSleep{shared_from_this()->id});
                 break;
         }
         case state::change: {
                 assert(has_running_task() == false);
                 current_state = state::change;
-                sim()->add_trace(traces::proc_change{shared_from_this()->id});
+                sim()->add_trace(traces::ProcChange{shared_from_this()->id});
         }
         }
 }

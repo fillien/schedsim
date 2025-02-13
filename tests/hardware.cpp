@@ -8,14 +8,14 @@ using namespace protocols::hardware;
 
 class HardwareTest : public ::testing::Test {};
 
-const hardware original{
-    {cluster{
+const Hardware original{
+    {Cluster{
          5,
          {1.3, 2.5, 3.2},
          1.3,
          {0.04433100178, 0.000003410453667, 0.00000002193142733, 0.00000000004609381282},
          1.0},
-     cluster{
+     Cluster{
          2,
          {1.3, 2.5, 3.2},
          1.3,
@@ -38,7 +38,7 @@ TEST_F(HardwareTest, ConvertToJsonTest)
 TEST_F(HardwareTest, FileWriteRead)
 {
         namespace fs = std::filesystem;
-        cluster converted;
+        Cluster converted;
         auto orig_clu = original.clusters.at(0);
         fs::path temp_file = fs::temp_directory_path() / "hardware_test.json";
         EXPECT_NO_THROW(write_file(temp_file, original));

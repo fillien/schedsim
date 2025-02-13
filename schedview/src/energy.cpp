@@ -18,7 +18,7 @@ template <class... Ts> struct overloaded : Ts... {
 
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
-auto outputs::energy::cpu_to_cluster(const protocols::hardware::hardware& hw, std::size_t cpu)
+auto outputs::energy::cpu_to_cluster(const protocols::hardware::Hardware& hw, std::size_t cpu)
     -> std::size_t
 {
         std::size_t min_cluster{0};
@@ -33,7 +33,7 @@ auto outputs::energy::cpu_to_cluster(const protocols::hardware::hardware& hw, st
 
 auto parse_power_consumption(
     const std::vector<std::pair<double, protocols::traces::trace>>& input,
-    const protocols::hardware::hardware& hw) -> std::vector<std::pair<double, double>>
+    const protocols::hardware::Hardware& hw) -> std::vector<std::pair<double, double>>
 {
         std::vector<std::pair<double, double>> power_consumption;
 
@@ -60,28 +60,28 @@ auto parse_power_consumption(
 
                 std::visit(
                     overloaded{
-                        [&](protocols::traces::proc_activated evt) {
+                        [&](protocols::traces::ProcActivated evt) {
                                 if (!active_cores.contains(evt.proc_id)) {
                                         active_cores.insert(evt.proc_id);
                                         current_active_cores++;
                                 }
                         },
-                        [&](protocols::traces::proc_idled evt) {
+                        [&](protocols::traces::ProcIdled evt) {
                                 if (!active_cores.contains(evt.proc_id)) {
                                         active_cores.insert(evt.proc_id);
                                         current_active_cores++;
                                 }
                         },
-                        [&](protocols::traces::proc_sleep evt) {
+                        [&](protocols::traces::ProcSleep evt) {
                                 if (active_cores.contains(evt.proc_id)) {
                                         active_cores.erase(evt.proc_id);
                                         current_active_cores--;
                                 }
                         },
-                        [&](protocols::traces::frequency_update evt) {
+                        [&](protocols::traces::FrequencyUpdate evt) {
                                 current_freq = evt.frequency;
                         },
-                        [&](protocols::traces::sim_finished) {
+                        [&](protocols::traces::SimFinished) {
                                 power_consumption.emplace_back(last_timestamp, current_power);
                                 current_power =
                                     energy::compute_power(current_freq, hw.clusters.at(0)) *
@@ -98,7 +98,7 @@ auto parse_power_consumption(
 
 auto outputs::energy::compute_energy_consumption(
     const std::vector<std::pair<double, protocols::traces::trace>>& input,
-    const protocols::hardware::hardware& hw) -> double
+    const protocols::hardware::Hardware& hw) -> double
 {
         const auto power_consumption = parse_power_consumption(input, hw);
 

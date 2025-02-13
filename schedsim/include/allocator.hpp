@@ -10,7 +10,7 @@
 #include <set>
 
 namespace allocators {
-class allocator : public Entity {
+class Allocator : public Entity {
       private:
         std::set<std::shared_ptr<scheds::Scheduler>> rescheds;
 
@@ -20,11 +20,11 @@ class allocator : public Entity {
             -> std::optional<std::shared_ptr<scheds::Scheduler>> = 0;
 
       public:
-        explicit allocator(const std::weak_ptr<engine>& sim) : Entity(sim){};
-        virtual ~allocator() = default;
+        explicit Allocator(const std::weak_ptr<Engine>& sim) : Entity(sim){};
+        virtual ~Allocator() = default;
 
         void add_child_sched(const std::weak_ptr<Cluster>& clu);
-        void handle(std::vector<events::event> evts);
+        void handle(std::vector<events::Event> evts);
         void call_resched(const std::shared_ptr<scheds::Scheduler>& index)
         {
                 rescheds.insert(index);

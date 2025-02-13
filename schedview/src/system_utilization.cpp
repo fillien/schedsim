@@ -20,11 +20,11 @@ void print_active_utilization(const std::vector<std::pair<double, protocols::tra
 
                 std::visit(
                     overloaded{
-                        [&](protocols::traces::serv_ready evt) {
+                        [&](protocols::traces::ServReady evt) {
                                 current_active_utilization += evt.utilization;
                                 std::cout << timestamp << ' ' << current_active_utilization << '\n';
                         },
-                        [&](protocols::traces::serv_inactive evt) {
+                        [&](protocols::traces::ServInactive evt) {
                                 current_active_utilization -= evt.utilization;
                                 std::cout << timestamp << ' ' << current_active_utilization << '\n';
                         },

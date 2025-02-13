@@ -99,24 +99,24 @@ void handle_plots(const cxxopts::ParseResult& cli, const auto& parsed, const aut
         if (cli.count("config")) { print_table(track_config_changes(parsed), cli.count("index")); }
 
         if (cli.count("rtsched")) {
-                gantt chart{generate_gantt(parsed, hw)};
+                Gantt chart{generate_gantt(parsed, hw)};
                 std::filesystem::path output_file(cli["rtsched"].as<std::string>());
                 std::ofstream fd(output_file);
                 fd << rtsched::draw(chart);
         }
 
         if (cli.count("procmode")) {
-                gantt chart{generate_proc_mode(parsed, hw)};
+                Gantt chart{generate_proc_mode(parsed, hw)};
                 std::cout << svg::draw(chart);
         }
 
         if (cli.count("svg")) {
-                const gantt gen_gantt = generate_gantt(parsed, hw);
+                const Gantt gen_gantt = generate_gantt(parsed, hw);
                 std::cout << svg::draw(gen_gantt);
         }
 
         if (cli.count("html")) {
-                const gantt gen_gantt = generate_gantt(parsed, hw);
+                const Gantt gen_gantt = generate_gantt(parsed, hw);
                 std::cout << html::draw(gen_gantt);
         }
 }

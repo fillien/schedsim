@@ -11,7 +11,7 @@
 #include <tracy/Tracy.hpp>
 #endif
 
-Server::Server(const std::weak_ptr<engine>& sim) : Entity(sim){};
+Server::Server(const std::weak_ptr<Engine>& sim) : Entity(sim){};
 
 void Server::set_task(const std::shared_ptr<Task>& task_to_attach)
 {
@@ -41,7 +41,7 @@ void Server::change_state(const state& new_state)
                 case state::inactive: {
                         // Job arrival
                         relative_deadline = sim()->time() + period();
-                        sim()->add_trace(traces::serv_ready{
+                        sim()->add_trace(traces::ServReady{
                             shared_from_this()->id(), relative_deadline, this->utilization()});
                         break;
                 }
@@ -50,14 +50,14 @@ void Server::change_state(const state& new_state)
                         /// TODO Replace events insertion and deletion by a timer mechanism.
                         auto const& serv_id = id();
                         std::erase_if(sim()->future_list, [serv_id](const auto& evt) {
-                                if (holds_alternative<events::serv_inactive>(evt.second)) {
-                                        auto knowned = std::get<events::serv_inactive>(evt.second);
+                                if (holds_alternative<events::ServInactive>(evt.second)) {
+                                        auto knowned = std::get<events::ServInactive>(evt.second);
                                         return knowned.serv->id() == serv_id;
                                 }
                                 return false;
                         });
                         cant_be_inactive = true;
-                        sim()->add_trace(traces::serv_ready{
+                        sim()->add_trace(traces::ServReady{
                             shared_from_this()->id(), relative_deadline, this->utilization()});
                         break;
                 }
@@ -73,25 +73,25 @@ void Server::change_state(const state& new_state)
         case state::running: {
                 assert(current_state == state::ready || current_state == state::running);
                 // Dispatch
-                sim()->add_trace(traces::serv_running{shared_from_this()->id()});
+                sim()->add_trace(traces::ServRunning{shared_from_this()->id()});
                 last_update = sim()->time();
                 current_state = state::running;
                 break;
         }
         case state::non_cont: {
                 assert(current_state == state::running);
-                sim()->add_trace(traces::serv_non_cont{shared_from_this()->id()});
+                sim()->add_trace(traces::ServNonCont{shared_from_this()->id()});
 
                 // Insert a event to pass in IDLE state when the time will be equal to the
                 // virtual time. Deleting this event is necessery if a job arrive.
                 assert(virtual_time > sim()->time());
-                sim()->add_event(events::serv_inactive{shared_from_this()}, virtual_time);
+                sim()->add_event(events::ServInactive{shared_from_this()}, virtual_time);
                 current_state = state::non_cont;
                 break;
         }
         case state::inactive: {
                 assert(current_state == state::running || current_state == state::non_cont);
-                sim()->add_trace(traces::serv_inactive{shared_from_this()->id(), utilization()});
+                sim()->add_trace(traces::ServInactive{shared_from_this()->id(), utilization()});
                 current_state = state::inactive;
                 break;
         }
@@ -105,7 +105,7 @@ void Server::postpone()
 #endif
         namespace traces = protocols::traces;
         relative_deadline += period();
-        sim()->add_trace(traces::serv_postpone{shared_from_this()->id(), relative_deadline});
+        sim()->add_trace(traces::ServPostpone{shared_from_this()->id(), relative_deadline});
 }
 
 auto operator<<(std::ostream& out, const Server& serv) -> std::ostream&

@@ -49,7 +49,7 @@ auto count_nb_preemption(const logs_type& input) -> std::size_t
         std::size_t cpt{0};
 
         for (const auto& [_, event] : input) {
-                if (std::holds_alternative<traces::task_preempted>(event)) { cpt++; }
+                if (std::holds_alternative<traces::TaskPreempted>(event)) { cpt++; }
         }
 
         return cpt;
@@ -61,8 +61,8 @@ auto count_nb_contextswitch(const logs_type& input) -> std::size_t
         std::size_t cpt{0};
 
         for (const auto& [_, event] : input) {
-                if (std::holds_alternative<traces::task_preempted>(event)) { cpt++; }
-                else if (std::holds_alternative<traces::job_finished>(event)) {
+                if (std::holds_alternative<traces::TaskPreempted>(event)) { cpt++; }
+                else if (std::holds_alternative<traces::JobFinished>(event)) {
                         cpt++;
                 }
         }
@@ -80,10 +80,10 @@ auto count_average_waiting_time(const logs_type& input) -> double
                 const auto& event = tra.second;
                 std::visit(
                     overloaded{
-                        [&](protocols::traces::serv_ready event) {
+                        [&](protocols::traces::ServReady event) {
                                 open_ready_state_zone(last_zone_entry, event.task_id, timestamp);
                         },
-                        [&](protocols::traces::serv_running event) {
+                        [&](protocols::traces::ServRunning event) {
                                 close_ready_state_zone(
                                     last_zone_entry, waiting_times, event.task_id, timestamp);
                         },
@@ -105,7 +105,7 @@ auto count_duration(const logs_type& input) -> double
 {
         double duration{-1};
         for (const auto& [timestamp, event] : input) {
-                if (std::holds_alternative<protocols::traces::sim_finished>(event)) {
+                if (std::holds_alternative<protocols::traces::SimFinished>(event)) {
                         duration = timestamp;
                 }
         }
@@ -119,7 +119,7 @@ auto count_rejected(const logs_type& input) -> std::size_t
         std::size_t cpt{0};
 
         for (const auto& [_, event] : input) {
-                if (std::holds_alternative<traces::task_rejected>(event)) { cpt++; }
+                if (std::holds_alternative<traces::TaskRejected>(event)) { cpt++; }
         }
 
         return cpt;
@@ -133,19 +133,19 @@ auto count_core_state_request(const logs_type& input) -> std::size_t
         for (const auto& [timestamp, tra] : input) {
                 std::visit(
                     overloaded{
-                        [&](protocols::traces::proc_activated evt) {
+                        [&](protocols::traces::ProcActivated evt) {
                                 if (!active_cores.contains(evt.proc_id)) {
                                         active_cores.insert(evt.proc_id);
                                         cpt++;
                                 }
                         },
-                        [&](protocols::traces::proc_idled evt) {
+                        [&](protocols::traces::ProcIdled evt) {
                                 if (!active_cores.contains(evt.proc_id)) {
                                         active_cores.insert(evt.proc_id);
                                         cpt++;
                                 }
                         },
-                        [&](protocols::traces::proc_sleep evt) {
+                        [&](protocols::traces::ProcSleep evt) {
                                 if (active_cores.contains(evt.proc_id)) {
                                         active_cores.erase(evt.proc_id);
                                         cpt++;
@@ -164,7 +164,7 @@ auto count_frequency_request(const logs_type& input) -> std::size_t
         double last_timestamp{-1};
 
         for (const auto& [timestamp, event] : input) {
-                if (std::holds_alternative<traces::frequency_update>(event) &&
+                if (std::holds_alternative<traces::FrequencyUpdate>(event) &&
                     timestamp > last_timestamp) {
                         last_timestamp = timestamp;
                         cpt++;

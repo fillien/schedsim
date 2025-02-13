@@ -7,7 +7,7 @@
 
 namespace scheds {
 
-PowerAwareTimer::PowerAwareTimer(const std::weak_ptr<engine>& sim) : Parallel(sim)
+PowerAwareTimer::PowerAwareTimer(const std::weak_ptr<Engine>& sim) : Parallel(sim)
 {
         if (!sim.lock()->is_delay_active()) {
                 throw std::runtime_error(

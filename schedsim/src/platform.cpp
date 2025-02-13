@@ -12,7 +12,7 @@
 #include <vector>
 
 Cluster::Cluster(
-    const std::weak_ptr<engine>& sim,
+    const std::weak_ptr<Engine>& sim,
     const std::size_t cid,
     const std::vector<double>& frequencies,
     const double& effective_freq,
@@ -30,7 +30,7 @@ Cluster::Cluster(
 
         set_freq(freq_max());
 
-        dvfs_timer = std::make_shared<timer>(sim, [this]() { set_freq(dvfs_target); });
+        dvfs_timer = std::make_shared<Timer>(sim, [this]() { set_freq(dvfs_target); });
 }
 
 void Cluster::create_procs(const std::size_t nb_procs)
@@ -54,7 +54,7 @@ void Cluster::set_freq(const double& new_freq)
 
         if (current_freq != target_freq) {
                 current_freq = target_freq;
-                sim()->add_trace(protocols::traces::frequency_update{id, current_freq});
+                sim()->add_trace(protocols::traces::FrequencyUpdate{id, current_freq});
         }
 }
 
@@ -100,7 +100,7 @@ void Cluster::dvfs_change_freq(const double& next_freq)
         }
 }
 
-Platform::Platform(const std::weak_ptr<engine>& sim, bool freescaling_allowed)
+Platform::Platform(const std::weak_ptr<Engine>& sim, bool freescaling_allowed)
     : Entity(sim), freescaling(freescaling_allowed)
 {
 }

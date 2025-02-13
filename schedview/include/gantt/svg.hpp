@@ -5,10 +5,10 @@
 #include <string>
 
 namespace outputs::gantt::svg {
-auto draw(const outputs::gantt::gantt& chart) -> std::string;
+auto draw(const outputs::gantt::Gantt& chart) -> std::string;
 };
 
 namespace outputs::gantt::html {
-auto draw(const outputs::gantt::gantt& chart) -> std::string;
+auto draw(const outputs::gantt::Gantt& chart) -> std::string;
 };
 #endif

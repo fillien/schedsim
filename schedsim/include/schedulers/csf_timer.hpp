@@ -19,8 +19,8 @@ class CsfTimer : public Parallel {
         static constexpr double DVFS_COOLDOWN{Cluster::DVFS_DELAY * 2};
         static constexpr double DPM_COOLDOWN{Processor::DPM_DELAY * 2};
 
-        std::shared_ptr<timer> timer_dvfs_cooldown;
-        std::vector<std::shared_ptr<timer>> timers_dpm_cooldown;
+        std::shared_ptr<Timer> timer_dvfs_cooldown;
+        std::vector<std::shared_ptr<Timer>> timers_dpm_cooldown;
 
         double freq_after_cooldown;
 
@@ -42,7 +42,7 @@ class CsfTimer : public Parallel {
         auto get_nb_active_procs(const double& new_utilization) const -> std::size_t override;
 
       public:
-        explicit CsfTimer(const std::weak_ptr<engine>& sim);
+        explicit CsfTimer(const std::weak_ptr<Engine>& sim);
         void update_platform() override;
 };
 } // namespace scheds

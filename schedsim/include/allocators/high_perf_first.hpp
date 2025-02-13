@@ -5,13 +5,13 @@
 #include <optional>
 
 namespace allocators {
-class high_perf_first : public allocator {
+class HighPerfFirst : public Allocator {
       protected:
         auto where_to_put_the_task(const std::shared_ptr<Task>& new_task)
             -> std::optional<std::shared_ptr<scheds::Scheduler>> final;
 
       public:
-        explicit high_perf_first(const std::weak_ptr<engine>& sim) : allocator(sim){};
+        explicit HighPerfFirst(const std::weak_ptr<Engine>& sim) : Allocator(sim){};
 };
 }; // namespace allocators
 

@@ -5,7 +5,7 @@
 #include <stdexcept>
 
 namespace scheds {
-CsfTimer::CsfTimer(const std::weak_ptr<engine>& sim) : Parallel(sim)
+CsfTimer::CsfTimer(const std::weak_ptr<Engine>& sim) : Parallel(sim)
 {
         if (!sim.lock()->is_delay_active()) {
                 throw std::runtime_error(
@@ -17,7 +17,7 @@ CsfTimer::CsfTimer(const std::weak_ptr<engine>& sim) : Parallel(sim)
         nb_active_procs = processors.size();
 
         freq_after_cooldown = chip()->freq_max();
-        timer_dvfs_cooldown = std::make_shared<timer>(sim, [this, sim]() {
+        timer_dvfs_cooldown = std::make_shared<Timer>(sim, [this, sim]() {
                 if (chip()->freq() != chip()->ceil_to_mode(freq_after_cooldown)) {
                         for (const auto& proc : chip()->processors) {
                                 remove_task_from_cpu(proc);
@@ -163,7 +163,7 @@ void CsfTimer::update_platform()
                         std::sort(
                             timers_dpm_cooldown.begin(),
                             timers_dpm_cooldown.end(),
-                            [](const std::shared_ptr<timer>& a, const std::shared_ptr<timer>& b) {
+                            [](const std::shared_ptr<Timer>& a, const std::shared_ptr<Timer>& b) {
                                     return a->get_deadline() < b->get_deadline();
                             });
 
@@ -176,7 +176,7 @@ void CsfTimer::update_platform()
                 }
                 else if (couverture < 0) {
                         for (int i = couverture; i > 0; --i) {
-                                auto timer_dpm = std::make_shared<timer>(
+                                auto timer_dpm = std::make_shared<Timer>(
                                     sim(), [this]() { activate_next_core(); });
                                 timer_dpm->set(DPM_COOLDOWN);
                                 timers_dpm_cooldown.push_back(std::move(timer_dpm));

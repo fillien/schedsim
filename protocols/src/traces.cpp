@@ -27,7 +27,7 @@ void to_json(const trace& log, rapidjson::Writer<rapidjson::OStreamWrapper>& wri
 #endif
         std::visit(
             overloaded{
-                [&writer](const job_arrival& tra) {
+                [&writer](const JobArrival& tra) {
                         writer.Key("type");
                         writer.String("job_arrival");
                         writer.Key("tid");
@@ -37,53 +37,53 @@ void to_json(const trace& log, rapidjson::Writer<rapidjson::OStreamWrapper>& wri
                         writer.Key("deadline");
                         writer.Double(tra.deadline);
                 },
-                [&writer](const job_finished& tra) {
+                [&writer](const JobFinished& tra) {
                         writer.Key("type");
                         writer.String("job_finished");
                         writer.Key("tid");
                         writer.Uint(tra.task_id);
                 },
-                [&writer](const proc_idled& tra) {
+                [&writer](const ProcIdled& tra) {
                         writer.Key("type");
                         writer.String("proc_idled");
                         writer.Key("cpu");
                         writer.Uint(tra.proc_id);
                 },
-                [&writer](const proc_activated& tra) {
+                [&writer](const ProcActivated& tra) {
                         writer.Key("type");
                         writer.String("proc_activated");
                         writer.Key("cpu");
                         writer.Uint(tra.proc_id);
                 },
-                [&writer](const proc_sleep& tra) {
+                [&writer](const ProcSleep& tra) {
                         writer.Key("type");
                         writer.String("proc_sleep");
                         writer.Key("cpu");
                         writer.Uint(tra.proc_id);
                 },
-                [&writer](const proc_change& tra) {
+                [&writer](const ProcChange& tra) {
                         writer.Key("type");
                         writer.String("proc_change");
                         writer.Key("cpu");
                         writer.Uint(tra.proc_id);
                 },
-                [&writer]([[maybe_unused]] const resched& tra) {
+                [&writer]([[maybe_unused]] const Resched& tra) {
                         writer.Key("type");
                         writer.String("resched");
                 },
-                [&writer](const serv_non_cont& tra) {
+                [&writer](const ServNonCont& tra) {
                         writer.Key("type");
                         writer.String("serv_non_cont");
                         writer.Key("tid");
                         writer.Uint(tra.task_id);
                 },
-                [&writer](const serv_budget_exhausted& tra) {
+                [&writer](const ServBudgetExhausted& tra) {
                         writer.Key("type");
                         writer.String("serv_budget_exhausted");
                         writer.Key("tid");
                         writer.Uint(tra.task_id);
                 },
-                [&writer](const serv_budget_replenished& tra) {
+                [&writer](const ServBudgetReplenished& tra) {
                         writer.Key("type");
                         writer.String("serv_budget_replenished");
                         writer.Key("tid");
@@ -91,7 +91,7 @@ void to_json(const trace& log, rapidjson::Writer<rapidjson::OStreamWrapper>& wri
                         writer.Key("budget");
                         writer.Double(tra.budget);
                 },
-                [&writer](const serv_inactive& tra) {
+                [&writer](const ServInactive& tra) {
                         writer.Key("type");
                         writer.String("serv_inactive");
                         writer.Key("tid");
@@ -99,7 +99,7 @@ void to_json(const trace& log, rapidjson::Writer<rapidjson::OStreamWrapper>& wri
                         writer.Key("utilization");
                         writer.Double(tra.utilization);
                 },
-                [&writer](const serv_postpone& tra) {
+                [&writer](const ServPostpone& tra) {
                         writer.Key("type");
                         writer.String("serv_postpone");
                         writer.Key("tid");
@@ -107,7 +107,7 @@ void to_json(const trace& log, rapidjson::Writer<rapidjson::OStreamWrapper>& wri
                         writer.Key("deadline");
                         writer.Double(tra.deadline);
                 },
-                [&writer](const serv_ready& tra) {
+                [&writer](const ServReady& tra) {
                         writer.Key("type");
                         writer.String("serv_ready");
                         writer.Key("tid");
@@ -117,19 +117,19 @@ void to_json(const trace& log, rapidjson::Writer<rapidjson::OStreamWrapper>& wri
                         writer.Key("utilization");
                         writer.Double(tra.utilization);
                 },
-                [&writer](const serv_running& tra) {
+                [&writer](const ServRunning& tra) {
                         writer.Key("type");
                         writer.String("serv_running");
                         writer.Key("tid");
                         writer.Uint(tra.task_id);
                 },
-                [&writer](const task_preempted& tra) {
+                [&writer](const TaskPreempted& tra) {
                         writer.Key("type");
                         writer.String("task_preempted");
                         writer.Key("tid");
                         writer.Uint(tra.task_id);
                 },
-                [&writer](const task_scheduled& tra) {
+                [&writer](const TaskScheduled& tra) {
                         writer.Key("type");
                         writer.String("task_scheduled");
                         writer.Key("tid");
@@ -137,13 +137,13 @@ void to_json(const trace& log, rapidjson::Writer<rapidjson::OStreamWrapper>& wri
                         writer.Key("cpu");
                         writer.Uint(tra.proc_id);
                 },
-                [&writer](const task_rejected& tra) {
+                [&writer](const TaskRejected& tra) {
                         writer.Key("type");
                         writer.String("task_rejected");
                         writer.Key("tid");
                         writer.Uint(tra.task_id);
                 },
-                [&writer](const virtual_time_update& tra) {
+                [&writer](const VirtualTimeUpdate& tra) {
                         writer.Key("type");
                         writer.String("virtual_time_update");
                         writer.Key("tid");
@@ -151,7 +151,7 @@ void to_json(const trace& log, rapidjson::Writer<rapidjson::OStreamWrapper>& wri
                         writer.Key("virtual_time");
                         writer.Double(tra.virtual_time);
                 },
-                [&writer](const frequency_update& tra) {
+                [&writer](const FrequencyUpdate& tra) {
                         writer.Key("type");
                         writer.String("frequency_update");
                         writer.Key("cluster_id");
@@ -159,11 +159,11 @@ void to_json(const trace& log, rapidjson::Writer<rapidjson::OStreamWrapper>& wri
                         writer.Key("frequency");
                         writer.Double(tra.frequency);
                 },
-                [&writer]([[maybe_unused]] const sim_finished& tra) {
+                [&writer]([[maybe_unused]] const SimFinished& tra) {
                         writer.Key("type");
                         writer.String("sim_finished");
                 },
-                [&writer](const task_placed& tra) {
+                [&writer](const TaskPlaced& tra) {
                         writer.Key("type");
                         writer.String("task_placed");
                         writer.Key("tid");
@@ -185,93 +185,93 @@ auto from_json(const rapidjson::Value& log) -> trace
         // Map event types to their respective handlers
         const std::unordered_map<std::string_view, trace_handler> convert{
             {"sim_finished",
-             [](const rapidjson::Value& log [[maybe_unused]]) -> trace { return sim_finished{}; }},
+             [](const rapidjson::Value& log [[maybe_unused]]) -> trace { return SimFinished{}; }},
             {"resched",
-             [](const rapidjson::Value& log [[maybe_unused]]) -> trace { return resched{}; }},
+             [](const rapidjson::Value& log [[maybe_unused]]) -> trace { return Resched{}; }},
             {"job_arrival",
              [](const rapidjson::Value& log) -> trace {
-                     return job_arrival{
+                     return JobArrival{
                          log["tid"].GetUint64(),
                          log["duration"].GetDouble(),
                          log["deadline"].GetDouble()};
              }},
             {"job_finished",
              [](const rapidjson::Value& log) -> trace {
-                     return job_finished{log["tid"].GetUint64()};
+                     return JobFinished{log["tid"].GetUint64()};
              }},
             {"proc_activated",
              [](const rapidjson::Value& log) -> trace {
-                     return proc_activated{log["cpu"].GetUint64()};
+                     return ProcActivated{log["cpu"].GetUint64()};
              }},
             {"proc_sleep",
              [](const rapidjson::Value& log) -> trace {
-                     return proc_sleep{log["cpu"].GetUint64()};
+                     return ProcSleep{log["cpu"].GetUint64()};
              }},
             {"proc_idled",
              [](const rapidjson::Value& log) -> trace {
-                     return proc_idled{log["cpu"].GetUint64()};
+                     return ProcIdled{log["cpu"].GetUint64()};
              }},
             {"proc_change",
              [](const rapidjson::Value& log) -> trace {
-                     return proc_change{log["cpu"].GetUint64()};
+                     return ProcChange{log["cpu"].GetUint64()};
              }},
             {"serv_budget_replenished",
              [](const rapidjson::Value& log) -> trace {
-                     return serv_budget_replenished{
+                     return ServBudgetReplenished{
                          log["tid"].GetUint64(), log["budget"].GetDouble()};
              }},
             {"serv_inactive",
              [](const rapidjson::Value& log) -> trace {
-                     return serv_inactive{log["tid"].GetUint64(), log["utilization"].GetDouble()};
+                     return ServInactive{log["tid"].GetUint64(), log["utilization"].GetDouble()};
              }},
             {"serv_running",
              [](const rapidjson::Value& log) -> trace {
-                     return serv_running{log["tid"].GetUint64()};
+                     return ServRunning{log["tid"].GetUint64()};
              }},
             {"serv_budget_exhausted",
              [](const rapidjson::Value& log) -> trace {
-                     return serv_budget_exhausted{log["tid"].GetUint64()};
+                     return ServBudgetExhausted{log["tid"].GetUint64()};
              }},
             {"serv_non_cont",
              [](const rapidjson::Value& log) -> trace {
-                     return serv_non_cont{log["tid"].GetUint64()};
+                     return ServNonCont{log["tid"].GetUint64()};
              }},
             {"serv_postpone",
              [](const rapidjson::Value& log) -> trace {
-                     return serv_postpone{log["tid"].GetUint64(), log["deadline"].GetDouble()};
+                     return ServPostpone{log["tid"].GetUint64(), log["deadline"].GetDouble()};
              }},
             {"serv_ready",
              [](const rapidjson::Value& log) -> trace {
-                     return serv_ready{
+                     return ServReady{
                          log["tid"].GetUint64(),
                          log["deadline"].GetDouble(),
                          log["utilization"].GetDouble()};
              }},
             {"task_preempted",
              [](const rapidjson::Value& log) -> trace {
-                     return task_preempted{log["tid"].GetUint64()};
+                     return TaskPreempted{log["tid"].GetUint64()};
              }},
             {"task_scheduled",
              [](const rapidjson::Value& log) -> trace {
-                     return task_scheduled{log["tid"].GetUint64(), log["cpu"].GetUint64()};
+                     return TaskScheduled{log["tid"].GetUint64(), log["cpu"].GetUint64()};
              }},
             {"task_rejected",
              [](const rapidjson::Value& log) -> trace {
-                     return task_rejected{log["tid"].GetUint64()};
+                     return TaskRejected{log["tid"].GetUint64()};
              }},
             {"virtual_time_update",
              [](const rapidjson::Value& log) -> trace {
-                     return virtual_time_update{
+                     return VirtualTimeUpdate{
                          log["tid"].GetUint64(), log["virtual_time"].GetDouble()};
              }},
             {"frequency_update",
              [](const rapidjson::Value& log) -> trace {
-                     return frequency_update{
+                     return FrequencyUpdate{
                          log["cluster_id"].GetUint64(), log["frequency"].GetDouble()};
              }},
             {"task_placed",
              [](const rapidjson::Value& log) -> trace {
-                     return task_placed{log["tid"].GetUint64(), log["cluster_id"].GetUint64()};
+                     return TaskPlaced{log["tid"].GetUint64(), log["cluster_id"].GetUint64()};
              }},
         };
 

@@ -28,7 +28,7 @@ class Csf : public Parallel {
         auto get_nb_active_procs(const double& new_utilization) const -> std::size_t override;
 
       public:
-        explicit Csf(const std::weak_ptr<engine>& sim);
+        explicit Csf(const std::weak_ptr<Engine>& sim);
         void set_cluster(const std::weak_ptr<Cluster>& clu);
         void update_platform() override;
 };

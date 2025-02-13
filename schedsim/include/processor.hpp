@@ -26,7 +26,7 @@ class Processor : public Entity, public std::enable_shared_from_this<Processor> 
          * @param cpu_id The unique ID of the processor.
          */
         explicit Processor(
-            const std::weak_ptr<engine>& sim,
+            const std::weak_ptr<Engine>& sim,
             const std::weak_ptr<Cluster>& clu,
             const std::size_t cpu_id);
 
@@ -94,7 +94,7 @@ class Processor : public Entity, public std::enable_shared_from_this<Processor> 
          */
         state current_state{state::idle};
 
-        std::shared_ptr<timer> coretimer;
+        std::shared_ptr<Timer> coretimer;
 };
 
 #endif // PROCESSOR_HPP

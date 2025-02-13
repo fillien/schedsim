@@ -9,7 +9,7 @@
 
 namespace protocols::hardware {
 
-struct cluster {
+struct Cluster {
         uint64_t nb_procs;
         std::vector<double> frequencies;
         double effective_freq;
@@ -17,14 +17,14 @@ struct cluster {
         double perf_score;
 };
 
-struct hardware {
-        std::vector<cluster> clusters;
+struct Hardware {
+        std::vector<Cluster> clusters;
 };
 
-void to_json(const hardware& plat, rapidjson::Document& doc);
-auto from_json_hardware(const rapidjson::Document& doc) -> hardware;
-void write_file(const std::filesystem::path& file, const hardware& plat);
-auto read_file(const std::filesystem::path& file) -> hardware;
+void to_json(const Hardware& plat, rapidjson::Document& doc);
+auto from_json_hardware(const rapidjson::Document& doc) -> Hardware;
+void write_file(const std::filesystem::path& file, const Hardware& plat);
+auto read_file(const std::filesystem::path& file) -> Hardware;
 } // namespace protocols::hardware
 
 #endif

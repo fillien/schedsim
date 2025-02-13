@@ -15,17 +15,17 @@ namespace protocols::traces {
 /**
  * @brief Represents a rescheduling event.
  */
-struct resched {};
+struct Resched {};
 
 /**
  * @brief Represents a simulation finished event.
  */
-struct sim_finished {};
+struct SimFinished {};
 
 /**
  * @brief Represents a job arrival event.
  */
-struct job_arrival {
+struct JobArrival {
         std::size_t task_id; /**< ID of the task. */
         double duration;     /**< Duration of the job. */
         double deadline;     /**< Absolut deadline of the job. */
@@ -34,42 +34,42 @@ struct job_arrival {
 /**
  * @brief Represents a job finished event.
  */
-struct job_finished {
+struct JobFinished {
         std::size_t task_id; /**< ID of the task. */
 };
 
 /**
  * @brief Represents a processor activated event.
  */
-struct proc_activated {
+struct ProcActivated {
         std::size_t proc_id; /**< ID of the processor. */
 };
 
 /**
  * @brief Represents a processor idled event.
  */
-struct proc_idled {
+struct ProcIdled {
         std::size_t proc_id; /**< ID of the processor. */
 };
 
 /**
  * @brief Represents a processor activated event.
  */
-struct proc_sleep {
+struct ProcSleep {
         std::size_t proc_id; /**< ID of the processor. */
 };
 
 /**
  * @brief Represents a processor change event.
  */
-struct proc_change {
+struct ProcChange {
         std::size_t proc_id; /**< ID of the processor. */
 };
 
 /**
  * @brief Represents a service budget replenished event.
  */
-struct serv_budget_replenished {
+struct ServBudgetReplenished {
         std::size_t task_id; /**< ID of the task. */
         double budget;       /**< Replenished budget. */
 };
@@ -77,7 +77,7 @@ struct serv_budget_replenished {
 /**
  * @brief Represents a service inactive event.
  */
-struct serv_inactive {
+struct ServInactive {
         std::size_t task_id; /**< ID of the task. */
         double utilization;  /**< Utilization of the task. */
 };
@@ -85,21 +85,21 @@ struct serv_inactive {
 /**
  * @brief Represents a service budget exhausted event.
  */
-struct serv_budget_exhausted {
+struct ServBudgetExhausted {
         std::size_t task_id; /**< ID of the task. */
 };
 
 /**
  * @brief Represents a non-continuous service event.
  */
-struct serv_non_cont {
+struct ServNonCont {
         std::size_t task_id; /**< ID of the task. */
 };
 
 /**
  * @brief Represents a service postpone event.
  */
-struct serv_postpone {
+struct ServPostpone {
         std::size_t task_id; /**< ID of the task. */
         double deadline;     /**< New deadline after postponement. */
 };
@@ -107,7 +107,7 @@ struct serv_postpone {
 /**
  * @brief Represents a service ready event.
  */
-struct serv_ready {
+struct ServReady {
         std::size_t task_id; /**< ID of the task. */
         double deadline;     /**< Deadline of the task. */
         double utilization;  /**< Utilization of the task. */
@@ -116,21 +116,21 @@ struct serv_ready {
 /**
  * @brief Represents a service running event.
  */
-struct serv_running {
+struct ServRunning {
         std::size_t task_id; /**< ID of the task. */
 };
 
 /**
  * @brief Represents a task preempted event.
  */
-struct task_preempted {
+struct TaskPreempted {
         std::size_t task_id; /**< ID of the task. */
 };
 
 /**
  * @brief Represents a task scheduled event.
  */
-struct task_scheduled {
+struct TaskScheduled {
         std::size_t task_id; /**< ID of the task. */
         std::size_t proc_id; /**< ID of the processor. */
 };
@@ -138,14 +138,14 @@ struct task_scheduled {
 /**
  * @brief Represents a task rejected event.
  */
-struct task_rejected {
+struct TaskRejected {
         std::size_t task_id; /**< ID of the task. */
 };
 
 /**
  * @brief Represents a virtual time update event.
  */
-struct virtual_time_update {
+struct VirtualTimeUpdate {
         std::size_t task_id; /**< ID of the task. */
         double virtual_time; /**< Updated virtual time. */
 };
@@ -153,12 +153,12 @@ struct virtual_time_update {
 /**
  * @brief Represents a frequency scaling of the platform
  */
-struct frequency_update {
+struct FrequencyUpdate {
         std::size_t cluster_id; /**< ID of the cluster. */
         double frequency;       /**< New frequency. */
 };
 
-struct task_placed {
+struct TaskPlaced {
         std::size_t task_id;
         std::size_t cluster_id;
 };
@@ -167,27 +167,27 @@ struct task_placed {
  * @brief Type representing various trace events.
  */
 using trace = std::variant<
-    resched,
-    sim_finished,
-    virtual_time_update,
-    frequency_update,
-    job_arrival,
-    job_finished,
-    proc_activated,
-    proc_idled,
-    proc_sleep,
-    proc_change,
-    serv_budget_exhausted,
-    serv_inactive,
-    serv_budget_replenished,
-    serv_non_cont,
-    serv_postpone,
-    serv_ready,
-    serv_running,
-    task_preempted,
-    task_scheduled,
-    task_rejected,
-    task_placed>;
+    Resched,
+    SimFinished,
+    VirtualTimeUpdate,
+    FrequencyUpdate,
+    JobArrival,
+    JobFinished,
+    ProcActivated,
+    ProcIdled,
+    ProcSleep,
+    ProcChange,
+    ServBudgetExhausted,
+    ServInactive,
+    ServBudgetReplenished,
+    ServNonCont,
+    ServPostpone,
+    ServReady,
+    ServRunning,
+    TaskPreempted,
+    TaskScheduled,
+    TaskRejected,
+    TaskPlaced>;
 
 /**
  * @brief Converts a trace event to JSON format.

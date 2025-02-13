@@ -11,15 +11,15 @@ using namespace protocols::scenario;
 
 class ScenarioTest : public ::testing::Test {
       protected:
-        job test_job;
-        task test_task;
-        setting test_setting;
+        Job test_job;
+        Task test_task;
+        Setting test_setting;
 
         void SetUp() override
         {
-                test_job = job{.arrival = 5, .duration = 3};
-                test_task = task{.id = 2, .utilization = 10, .period = 3, .jobs = {test_job}};
-                test_setting = setting{.tasks = {test_task}};
+                test_job = Job{.arrival = 5, .duration = 3};
+                test_task = Task{.id = 2, .utilization = 10, .period = 3, .jobs = {test_job}};
+                test_setting = Setting{.tasks = {test_task}};
         }
 };
 
@@ -69,7 +69,7 @@ TEST_F(ScenarioTest, FromJsonJob)
         json_job.AddMember("arrival", 5.0, allocator);
         json_job.AddMember("duration", 3.0, allocator);
 
-        job parsed_job = from_json_job(json_job);
+        Job parsed_job = from_json_job(json_job);
         EXPECT_DOUBLE_EQ(parsed_job.arrival, 5.0);
         EXPECT_DOUBLE_EQ(parsed_job.duration, 3.0);
 }
@@ -92,7 +92,7 @@ TEST_F(ScenarioTest, FromJsonTask)
         jobs_json.PushBack(json_job, json_task.GetAllocator());
         json_task.AddMember("jobs", jobs_json, json_task.GetAllocator());
 
-        task parsed_task = from_json_task(json_task);
+        Task parsed_task = from_json_task(json_task);
         EXPECT_EQ(parsed_task.id, 2);
         EXPECT_DOUBLE_EQ(parsed_task.utilization, 10.0);
         EXPECT_DOUBLE_EQ(parsed_task.period, 3.0);
@@ -126,7 +126,7 @@ TEST_F(ScenarioTest, FromJsonSetting)
         tasks_json.PushBack(json_task, json_setting.GetAllocator());
         json_setting.AddMember("tasks", tasks_json, json_setting.GetAllocator());
 
-        setting parsed_setting = from_json_setting(json_setting);
+        Setting parsed_setting = from_json_setting(json_setting);
         ASSERT_EQ(parsed_setting.tasks.size(), 1);
         EXPECT_EQ(parsed_setting.tasks[0].id, 2);
         EXPECT_EQ(parsed_setting.tasks[0].jobs.size(), 1);
@@ -136,12 +136,12 @@ TEST_F(ScenarioTest, FromJsonSetting)
 class ScenarioFileIOTest : public ::testing::Test {
       protected:
         std::filesystem::path temp_file;
-        setting test_setting;
+        Setting test_setting;
 
         void SetUp() override
         {
                 temp_file = std::filesystem::temp_directory_path() / "scenario_test.json";
-                test_setting = setting{
+                test_setting = Setting{
                     .tasks = {
                         {.id = 2,
                          .utilization = 10,
@@ -157,7 +157,7 @@ class ScenarioFileIOTest : public ::testing::Test {
 
 TEST_F(ScenarioFileIOTest, WriteAndReadFile)
 {
-        setting read_setting{};
+        Setting read_setting{};
         EXPECT_NO_THROW(write_file(temp_file, test_setting));
         EXPECT_NO_THROW(read_setting = read_file(temp_file));
 

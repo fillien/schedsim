@@ -14,7 +14,7 @@
 
 namespace protocols::hardware {
 
-auto to_json(const cluster& plat, rapidjson::Document::AllocatorType& allocator) -> rapidjson::Value
+auto to_json(const Cluster& plat, rapidjson::Document::AllocatorType& allocator) -> rapidjson::Value
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -40,7 +40,7 @@ auto to_json(const cluster& plat, rapidjson::Document::AllocatorType& allocator)
         return res;
 }
 
-void to_json(const hardware& plat, rapidjson::Document& doc)
+void to_json(const Hardware& plat, rapidjson::Document& doc)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -55,13 +55,13 @@ void to_json(const hardware& plat, rapidjson::Document& doc)
         doc.AddMember("clusters", cluster_array, allocator);
 }
 
-auto from_json_cluster(const rapidjson::Value& value) -> cluster
+auto from_json_cluster(const rapidjson::Value& value) -> Cluster
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
 
-        cluster clu;
+        Cluster clu;
 
         if (!value.HasMember("procs") || !value["procs"].IsUint64()) {
                 throw std::runtime_error("Invalid or missing 'procs' field");
@@ -101,7 +101,7 @@ auto from_json_cluster(const rapidjson::Value& value) -> cluster
         return clu;
 }
 
-auto from_json_hardware(const rapidjson::Document& doc) -> hardware
+auto from_json_hardware(const rapidjson::Document& doc) -> Hardware
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -111,7 +111,7 @@ auto from_json_hardware(const rapidjson::Document& doc) -> hardware
                 throw std::runtime_error("Invalid or missing 'clusters' field");
         }
 
-        hardware plat;
+        Hardware plat;
         const auto& clusters_array = doc["clusters"].GetArray();
         plat.clusters.reserve(clusters_array.Size());
 
@@ -122,7 +122,7 @@ auto from_json_hardware(const rapidjson::Document& doc) -> hardware
         return plat;
 }
 
-void write_file(const std::filesystem::path& file, const hardware& plat)
+void write_file(const std::filesystem::path& file, const Hardware& plat)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -138,7 +138,7 @@ void write_file(const std::filesystem::path& file, const hardware& plat)
         doc.Accept(writer);
 }
 
-auto read_file(const std::filesystem::path& file) -> hardware
+auto read_file(const std::filesystem::path& file) -> Hardware
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;

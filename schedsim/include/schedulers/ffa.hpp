@@ -31,7 +31,7 @@ class Ffa : public Parallel {
         auto get_nb_active_procs(const double& new_utilization) const -> std::size_t override;
 
       public:
-        explicit Ffa(const std::weak_ptr<engine>& sim);
+        explicit Ffa(const std::weak_ptr<Engine>& sim);
         void set_cluster(const std::weak_ptr<Cluster>& clu);
         void update_platform() override;
 };

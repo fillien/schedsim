@@ -1,7 +1,7 @@
 #include "energy_model.hpp"
 #include "protocols/hardware.hpp"
 
-auto energy::compute_power(const double& freq, const protocols::hardware::cluster& hw) -> double
+auto energy::compute_power(const double& freq, const protocols::hardware::Cluster& hw) -> double
 {
         constexpr double MHZ_TO_HZ{1};
         assert(hw.power_model.size() == 4);

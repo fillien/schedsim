@@ -34,8 +34,8 @@ auto count_tasks(const std::vector<std::pair<double, protocols::traces::trace>>&
 
         /// @TODO If the task has no jobs she is not counted in the number of tasks
         for (const auto& tra : traces) {
-                if (std::holds_alternative<job_arrival>(tra.second)) {
-                        max_tid = std::max(max_tid, std::get<job_arrival>(tra.second).task_id);
+                if (std::holds_alternative<JobArrival>(tra.second)) {
+                        max_tid = std::max(max_tid, std::get<JobArrival>(tra.second).task_id);
                 }
         }
 
@@ -66,7 +66,7 @@ void close_execution_zone(
     std::map<std::size_t, std::pair<double, std::size_t>>& start_times,
     double stop,
     std::size_t tid,
-    gantt& chart,
+    Gantt& chart,
     double freq,
     double freq_max,
     double freq_min)
@@ -75,7 +75,7 @@ void close_execution_zone(
                 const auto start = search->second.first;
                 const auto cpu = search->second.second;
                 chart.commands.emplace_back(
-                    execution{tid, cpu, start, stop, freq, freq_max, freq_min});
+                    Execution{tid, cpu, start, stop, freq, freq_max, freq_min});
                 start_times.erase(tid);
         }
 }
@@ -89,27 +89,27 @@ void open_extra_budget_zone(
 }
 
 void close_extra_budget_zone(
-    std::map<std::size_t, double>& extra_budget_times, double time, std::size_t tid, gantt& chart)
+    std::map<std::size_t, double>& extra_budget_times, double time, std::size_t tid, Gantt& chart)
 {
         if (auto search = extra_budget_times.find(tid); search != std::end(extra_budget_times)) {
-                chart.commands.emplace_back(active_non_cont{tid, search->second, time});
+                chart.commands.emplace_back(ActiveNonCont{tid, search->second, time});
                 extra_budget_times.erase(tid);
         }
 }
 
-void new_arrival(gantt& chart, double time, std::size_t tid)
+void new_arrival(Gantt& chart, double time, std::size_t tid)
 {
-        chart.commands.emplace_back(arrival{tid, time});
+        chart.commands.emplace_back(Arrival{tid, time});
 }
 
-void new_deadline(gantt& chart, double time, std::size_t tid)
+void new_deadline(Gantt& chart, double time, std::size_t tid)
 {
-        chart.commands.emplace_back(deadline{tid, time});
+        chart.commands.emplace_back(Deadline{tid, time});
 }
 
-void new_finished(gantt& chart, double time, std::size_t tid)
+void new_finished(Gantt& chart, double time, std::size_t tid)
 {
-        chart.commands.emplace_back(finished{tid, time});
+        chart.commands.emplace_back(Finished{tid, time});
 }
 
 auto get_proc_id(
@@ -127,7 +127,7 @@ auto get_proc_id(
 namespace outputs::gantt {
 auto generate_gantt(
     const std::vector<std::pair<double, protocols::traces::trace>>& logs,
-    const protocols::hardware::hardware& platform) -> gantt
+    const protocols::hardware::Hardware& platform) -> Gantt
 {
         namespace traces = protocols::traces;
         auto [plat_f_min, plat_f_max] = std::minmax_element(
@@ -138,7 +138,7 @@ auto generate_gantt(
         const auto f_min{(*plat_f_min == *plat_f_max ? 0 : *plat_f_min)};
         auto current_freq{f_max};
 
-        gantt chart;
+        Gantt chart;
 
         chart.nb_axis = count_tasks(logs);
         chart.duration = std::ceil(get_last_timestamp(logs));
@@ -151,16 +151,16 @@ auto generate_gantt(
                 const auto& event = tra.second;
                 std::visit(
                     overloaded{
-                        [&](traces::job_arrival evt) {
+                        [&](traces::JobArrival evt) {
                                 new_arrival(chart, timestamp, evt.task_id);
                         },
-                        [&](traces::serv_postpone evt) {
+                        [&](traces::ServPostpone evt) {
                                 new_deadline(chart, evt.deadline, evt.task_id);
                         },
-                        [&](traces::job_finished evt) {
+                        [&](traces::JobFinished evt) {
                                 new_finished(chart, timestamp, evt.task_id);
                         },
-                        [&](traces::serv_ready evt) {
+                        [&](traces::ServReady evt) {
                                 new_deadline(chart, evt.deadline, evt.task_id);
                                 close_extra_budget_zone(
                                     extra_budget_times, timestamp, evt.task_id, chart);
@@ -173,11 +173,11 @@ auto generate_gantt(
                                     f_max,
                                     f_min);
                         },
-                        [&](traces::task_scheduled evt) {
+                        [&](traces::TaskScheduled evt) {
                                 open_execution_zone(
                                     execution_times, timestamp, evt.task_id, evt.proc_id);
                         },
-                        [&](traces::task_preempted evt) {
+                        [&](traces::TaskPreempted evt) {
                                 close_execution_zone(
                                     execution_times,
                                     timestamp,
@@ -187,7 +187,7 @@ auto generate_gantt(
                                     f_max,
                                     f_min);
                         },
-                        [&](traces::serv_non_cont evt) {
+                        [&](traces::ServNonCont evt) {
                                 close_execution_zone(
                                     execution_times,
                                     timestamp,
@@ -198,7 +198,7 @@ auto generate_gantt(
                                     f_min);
                                 open_extra_budget_zone(extra_budget_times, timestamp, evt.task_id);
                         },
-                        [&](traces::serv_inactive evt) {
+                        [&](traces::ServInactive evt) {
                                 close_execution_zone(
                                     execution_times,
                                     timestamp,
@@ -210,7 +210,7 @@ auto generate_gantt(
                                 close_extra_budget_zone(
                                     extra_budget_times, timestamp, evt.task_id, chart);
                         },
-                        [&](traces::frequency_update evt) {
+                        [&](traces::FrequencyUpdate evt) {
                                 std::set<std::size_t> tasks;
                                 std::transform(
                                     execution_times.begin(),
@@ -241,23 +241,23 @@ auto generate_gantt(
 }
 
 void close_proc_mode_zone(
-    std::size_t mode, double start, double stop, std::size_t proc_id, gantt& chart)
+    std::size_t mode, double start, double stop, std::size_t proc_id, Gantt& chart)
 {
-        if (mode == 0) { chart.commands.emplace_back(proc_mode_idle{proc_id, start, stop}); }
+        if (mode == 0) { chart.commands.emplace_back(ProcModeIdle{proc_id, start, stop}); }
         else if (mode == 1) {
-                chart.commands.emplace_back(proc_mode_running{proc_id, start, stop});
+                chart.commands.emplace_back(ProcModeRunning{proc_id, start, stop});
         }
         else if (mode == 2) {
-                chart.commands.emplace_back(proc_mode_sleep{proc_id, start, stop});
+                chart.commands.emplace_back(ProcModeSleep{proc_id, start, stop});
         }
 }
 
 auto generate_proc_mode(
     const std::vector<std::pair<double, protocols::traces::trace>>& logs,
-    const protocols::hardware::hardware& platform) -> gantt
+    const protocols::hardware::Hardware& platform) -> Gantt
 {
         namespace traces = protocols::traces;
-        gantt chart;
+        Gantt chart;
 
         chart.nb_axis = platform.clusters.at(0).nb_procs;
         chart.duration = std::ceil(get_last_timestamp(logs));
@@ -270,7 +270,7 @@ auto generate_proc_mode(
                 const auto& event = tra.second;
                 std::visit(
                     overloaded{
-                        [&](traces::proc_idled evt) {
+                        [&](traces::ProcIdled evt) {
                                 if (auto search = last_state_times.find(evt.proc_id);
                                     search != std::end(last_state_times)) {
                                         const auto& [mode, last_time] = search->second;
@@ -280,7 +280,7 @@ auto generate_proc_mode(
                                 }
                                 last_state_times.insert({evt.proc_id, {0, timestamp}});
                         },
-                        [&](traces::proc_activated evt) {
+                        [&](traces::ProcActivated evt) {
                                 if (auto search = last_state_times.find(evt.proc_id);
                                     search != std::end(last_state_times)) {
                                         const auto& [mode, last_time] = search->second;
@@ -290,7 +290,7 @@ auto generate_proc_mode(
                                 }
                                 last_state_times.insert({evt.proc_id, {1, timestamp}});
                         },
-                        [&](traces::proc_sleep evt) {
+                        [&](traces::ProcSleep evt) {
                                 if (auto search = last_state_times.find(evt.proc_id);
                                     search != std::end(last_state_times)) {
                                         const auto& [mode, last_time] = search->second;
@@ -300,8 +300,8 @@ auto generate_proc_mode(
                                 }
                                 last_state_times.insert({evt.proc_id, {2, timestamp}});
                         },
-                        [&](traces::proc_change evt [[maybe_unused]]) {},
-                        [&](traces::sim_finished) {
+                        [&](traces::ProcChange evt [[maybe_unused]]) {},
+                        [&](traces::SimFinished) {
                                 for (auto const& last_state : last_state_times) {
                                         const auto& id = last_state.first;
                                         const auto& [mode, last_time] = last_state.second;

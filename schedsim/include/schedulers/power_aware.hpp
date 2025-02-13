@@ -15,7 +15,7 @@ class PowerAware : public Parallel {
          * @brief Constructs a parallel scheduler with a weak pointer to the engine.
          * @param sim Weak pointer to the engine.
          */
-        explicit PowerAware(const std::weak_ptr<engine>& sim) : Parallel(sim){};
+        explicit PowerAware(const std::weak_ptr<Engine>& sim) : Parallel(sim){};
 
         void update_platform() override;
 };

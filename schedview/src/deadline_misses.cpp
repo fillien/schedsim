@@ -17,14 +17,14 @@ template <class... Ts> struct overloaded : Ts... {
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 namespace {
-struct job_finished {
+struct JobFinished {
         std::size_t tid;
 };
 struct job_deadline {
         std::size_t tid;
 };
 
-using job_events = std::variant<job_finished, job_deadline>;
+using job_events = std::variant<JobFinished, job_deadline>;
 
 /**
  * @brief Checks if a job with the specified timestamp and task ID has passed admission test.
@@ -44,7 +44,7 @@ auto is_accepted_job(
         namespace traces = protocols::traces;
 
         for (const auto& tra : logs) {
-                if (const auto* const evt = std::get_if<traces::task_rejected>(&tra.second)) {
+                if (const auto* const evt = std::get_if<traces::TaskRejected>(&tra.second)) {
                         if (evt->task_id == tid && tra.first == timestamp) { return true; }
                 }
         }
@@ -71,7 +71,7 @@ auto filter_logs(const outputs::stats::logs_type& unfiltered_logs)
         // Iterate through unfiltered logs and apply filtering criteria
         for (auto itr = std::begin(unfiltered_logs); itr != std::end(unfiltered_logs); ++itr) {
                 const auto& timestamp{(*itr).first};
-                if (auto* const evt = std::get_if<traces::job_arrival>(&(itr->second))) {
+                if (auto* const evt = std::get_if<traces::JobArrival>(&(itr->second))) {
                         // Detect if the task has passed the admission test
                         if (is_accepted_job(unfiltered_logs, timestamp, evt->task_id)) {
                                 // Insert the absolute deadline event
@@ -79,9 +79,9 @@ auto filter_logs(const outputs::stats::logs_type& unfiltered_logs)
                                     {evt->deadline, job_deadline{.tid = evt->task_id}});
                         }
                 }
-                else if (auto* const evt = std::get_if<traces::job_finished>(&(itr->second))) {
-                        // Just transfert job_finished event to the output
-                        filtered_input.insert({timestamp, job_finished{.tid = evt->task_id}});
+                else if (auto* const evt = std::get_if<traces::JobFinished>(&(itr->second))) {
+                        // Just transfert JobFinished event to the output
+                        filtered_input.insert({timestamp, JobFinished{.tid = evt->task_id}});
                 }
         }
 
@@ -158,12 +158,12 @@ auto detect_deadline_misses(const outputs::stats::logs_type& logs) -> deadline_t
 
         // Build stats
         for (const auto& [timestamp, event] : filtered_logs) {
-                if (const auto* evt = std::get_if<job_finished>(&event)) {
+                if (const auto* evt = std::get_if<JobFinished>(&event)) {
                         remove_next_event<job_deadline>(filtered_logs, timestamp, evt->tid);
                         increase_deadline_stats(evt->tid, tasks_deadline_rate, false);
                 }
                 else if (const auto* evt = std::get_if<job_deadline>(&event)) {
-                        remove_next_event<job_finished>(filtered_logs, timestamp, evt->tid);
+                        remove_next_event<JobFinished>(filtered_logs, timestamp, evt->tid);
                         increase_deadline_stats(evt->tid, tasks_deadline_rate, true);
                 }
         }

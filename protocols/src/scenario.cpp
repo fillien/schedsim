@@ -12,7 +12,7 @@
 
 namespace protocols::scenario {
 void to_json(
-    const job& job, rapidjson::Document::AllocatorType& allocator, rapidjson::Value& job_json)
+    const Job& job, rapidjson::Document::AllocatorType& allocator, rapidjson::Value& job_json)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -23,7 +23,7 @@ void to_json(
 }
 
 void to_json(
-    const task& task, rapidjson::Document::AllocatorType& allocator, rapidjson::Value& task_json)
+    const Task& task, rapidjson::Document::AllocatorType& allocator, rapidjson::Value& task_json)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -43,7 +43,7 @@ void to_json(
 }
 
 void to_json(
-    const setting& setting,
+    const Setting& setting,
     rapidjson::Document::AllocatorType& allocator,
     rapidjson::Value& setting_json)
 {
@@ -60,7 +60,7 @@ void to_json(
         setting_json.AddMember("tasks", tasks_json, allocator);
 }
 
-auto from_json_job(const rapidjson::Value& json_job) -> job
+auto from_json_job(const rapidjson::Value& json_job) -> Job
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -72,12 +72,12 @@ auto from_json_job(const rapidjson::Value& json_job) -> job
         if (!json_job.HasMember("duration") || !json_job["duration"].IsDouble()) {
                 throw std::runtime_error("Invalid or missing 'duration' field");
         }
-        return job{
+        return Job{
             .arrival = json_job["arrival"].GetDouble(),
             .duration = json_job["duration"].GetDouble()};
 }
 
-auto from_json_task(const rapidjson::Value& json_task) -> task
+auto from_json_task(const rapidjson::Value& json_task) -> Task
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -94,7 +94,7 @@ auto from_json_task(const rapidjson::Value& json_task) -> task
         if (!json_task.HasMember("jobs") || !json_task["jobs"].IsArray()) {
                 throw std::runtime_error("Invalid or missing 'jobs' field");
         }
-        task parsed_task{
+        Task parsed_task{
             .id = json_task["id"].GetUint64(),
             .utilization = json_task["utilization"].GetDouble(),
             .period = json_task["period"].GetDouble(),
@@ -108,7 +108,7 @@ auto from_json_task(const rapidjson::Value& json_task) -> task
         return parsed_task;
 }
 
-auto from_json_setting(const rapidjson::Value& json_setting) -> setting
+auto from_json_setting(const rapidjson::Value& json_setting) -> Setting
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -117,15 +117,15 @@ auto from_json_setting(const rapidjson::Value& json_setting) -> setting
                 throw std::runtime_error("Invalid or missing 'tasks' field");
         }
 
-        std::vector<task> tasks;
+        std::vector<Task> tasks;
         const rapidjson::Value& tasks_json = json_setting["tasks"];
         for (rapidjson::SizeType i = 0; i < tasks_json.Size(); ++i) {
                 tasks.push_back(from_json_task(tasks_json[i]));
         }
-        return setting{tasks};
+        return Setting{tasks};
 }
 
-void write_file(const std::filesystem::path& file, const setting& setting)
+void write_file(const std::filesystem::path& file, const Setting& setting)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -142,7 +142,7 @@ void write_file(const std::filesystem::path& file, const setting& setting)
         doc.Accept(writer);
 }
 
-auto read_file(const std::filesystem::path& file) -> setting
+auto read_file(const std::filesystem::path& file) -> Setting
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;

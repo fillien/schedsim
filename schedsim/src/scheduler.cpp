@@ -30,7 +30,7 @@ auto Scheduler::chip() const -> std::shared_ptr<Cluster> { return attached_clust
 
 void Scheduler::call_resched()
 {
-        sim()->add_trace(protocols::traces::resched{});
+        sim()->add_trace(protocols::traces::Resched{});
         on_resched();
 }
 
@@ -49,7 +49,7 @@ auto Scheduler::u_max() const -> double
         return (*max_server)->utilization();
 }
 
-auto Scheduler::is_this_my_event(const events::event& evt) -> bool
+auto Scheduler::is_this_my_event(const events::Event& evt) -> bool
 {
         using namespace events;
 
@@ -60,20 +60,20 @@ auto Scheduler::is_this_my_event(const events::event& evt) -> bool
                     });
         };
 
-        if (std::holds_alternative<job_finished>(evt)) {
-                return matches_server(std::get<job_finished>(evt).server_of_job);
+        if (std::holds_alternative<JobFinished>(evt)) {
+                return matches_server(std::get<JobFinished>(evt).server_of_job);
         }
-        if (std::holds_alternative<serv_budget_exhausted>(evt)) {
-                return matches_server(std::get<serv_budget_exhausted>(evt).serv);
+        if (std::holds_alternative<ServBudgetExhausted>(evt)) {
+                return matches_server(std::get<ServBudgetExhausted>(evt).serv);
         }
-        if (std::holds_alternative<serv_inactive>(evt)) {
-                return matches_server(std::get<serv_inactive>(evt).serv);
+        if (std::holds_alternative<ServInactive>(evt)) {
+                return matches_server(std::get<ServInactive>(evt).serv);
         }
-        if (std::holds_alternative<job_arrival>(evt)) {
-                const auto& [task, duration] = std::get<job_arrival>(evt);
+        if (std::holds_alternative<JobArrival>(evt)) {
+                const auto& [task, duration] = std::get<JobArrival>(evt);
                 return task->has_server() && matches_server(task->get_server());
         }
-        if (std::holds_alternative<timer_isr>(evt)) { return true; }
+        if (std::holds_alternative<TimerIsr>(evt)) { return true; }
 
         throw std::runtime_error("Unknown event");
 }
@@ -147,7 +147,7 @@ void Scheduler::detach_server_if_needed(const std::shared_ptr<Task>& inactive_ta
 #endif
         // Check if there is a future job arrival
         auto search = std::ranges::find_if(sim()->future_list, [inactive_task](auto& evt) {
-                if (const auto& new_task = std::get_if<events::job_arrival>(&evt.second)) {
+                if (const auto& new_task = std::get_if<events::JobArrival>(&evt.second)) {
                         return (new_task->task_of_job == inactive_task);
                 }
                 return false;
@@ -161,7 +161,7 @@ void Scheduler::detach_server_if_needed(const std::shared_ptr<Task>& inactive_ta
         }
 }
 
-void Scheduler::handle(const events::event& evt)
+void Scheduler::handle(const events::Event& evt)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -171,19 +171,19 @@ void Scheduler::handle(const events::event& evt)
         std::visit(
             [this](auto&& arg) {
                     using T = std::decay_t<decltype(arg)>;
-                    if constexpr (std::is_same_v<T, job_finished>) {
+                    if constexpr (std::is_same_v<T, JobFinished>) {
                             on_job_finished(arg.server_of_job, arg.is_there_new_job);
                     }
-                    else if constexpr (std::is_same_v<T, serv_budget_exhausted>) {
+                    else if constexpr (std::is_same_v<T, ServBudgetExhausted>) {
                             on_serv_budget_exhausted(arg.serv);
                     }
-                    else if constexpr (std::is_same_v<T, serv_inactive>) {
+                    else if constexpr (std::is_same_v<T, ServInactive>) {
                             on_serv_inactive(arg.serv);
                     }
-                    else if constexpr (std::is_same_v<T, job_arrival>) {
+                    else if constexpr (std::is_same_v<T, JobArrival>) {
                             on_job_arrival(arg.task_of_job, arg.job_duration);
                     }
-                    else if constexpr (std::is_same_v<T, timer_isr>) {
+                    else if constexpr (std::is_same_v<T, TimerIsr>) {
                             arg.target_timer->fire();
                     }
                     else {
@@ -221,11 +221,11 @@ void Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const doub
 #endif
         namespace traces = protocols::traces;
         sim()->add_trace(
-            traces::job_arrival{new_task->id, job_duration, sim()->time() + new_task->period});
+            traces::JobArrival{new_task->id, job_duration, sim()->time() + new_task->period});
 
         if (!new_task->has_server()) {
                 if (!admission_test(*new_task)) {
-                        sim()->add_trace(traces::task_rejected{new_task->id});
+                        sim()->add_trace(traces::TaskRejected{new_task->id});
                         return;
                 }
 
@@ -264,7 +264,7 @@ void Scheduler::on_job_finished(const std::shared_ptr<Server>& serv, bool is_the
         using enum Server::state;
 
         assert(serv->current_state != inactive);
-        sim()->add_trace(protocols::traces::job_finished{serv->id()});
+        sim()->add_trace(protocols::traces::JobFinished{serv->id()});
 
         // Update virtual time and remaining execution time
         update_server_times(serv);
@@ -299,7 +299,7 @@ void Scheduler::on_serv_budget_exhausted(const std::shared_ptr<Server>& serv)
         ZoneScoped;
 #endif
         namespace traces = protocols::traces;
-        sim()->add_trace(traces::serv_budget_exhausted{serv->id()});
+        sim()->add_trace(traces::ServBudgetExhausted{serv->id()});
         update_server_times(serv);
 
         // Check if the job as been completed at the same time
@@ -307,7 +307,7 @@ void Scheduler::on_serv_budget_exhausted(const std::shared_ptr<Server>& serv)
                 serv->postpone(); // If no, postpone the deadline
         }
         else {
-                sim()->add_trace(traces::job_finished{serv->id()}); // If yes, trace it
+                sim()->add_trace(traces::JobFinished{serv->id()}); // If yes, trace it
         }
 
         sim()->get_sched()->call_resched(shared_from_this());
@@ -324,10 +324,10 @@ void Scheduler::update_server_times(const std::shared_ptr<Server>& serv)
         const double running_time = sim()->time() - serv->last_update;
 
         // Be careful about floating point computation near 0
-        assert((serv->get_task()->get_remaining_time() - running_time) >= -engine::ZERO_ROUNDED);
+        assert((serv->get_task()->get_remaining_time() - running_time) >= -Engine::ZERO_ROUNDED);
 
         serv->virtual_time = get_server_virtual_time(*serv, running_time);
-        sim()->add_trace(traces::virtual_time_update{serv->get_task()->id, serv->virtual_time});
+        sim()->add_trace(traces::VirtualTimeUpdate{serv->get_task()->id, serv->virtual_time});
 
         serv->get_task()->consume_time(running_time);
         serv->last_update = sim()->time();
@@ -342,10 +342,10 @@ void Scheduler::cancel_alarms(const Server& serv)
         using namespace events;
         const auto tid = serv.id();
         std::erase_if(sim()->future_list, [tid](const auto& entry) {
-                if (const auto& evt = std::get_if<serv_budget_exhausted>(&entry.second)) {
+                if (const auto& evt = std::get_if<ServBudgetExhausted>(&entry.second)) {
                         return evt->serv->id() == tid;
                 }
-                if (const auto& evt = std::get_if<job_finished>(&entry.second)) {
+                if (const auto& evt = std::get_if<JobFinished>(&entry.second)) {
                         return evt->server_of_job->id() == tid;
                 }
                 return false;
@@ -368,13 +368,13 @@ void Scheduler::set_alarms(const std::shared_ptr<Server>& serv)
         assert(new_budget >= 0);
         assert(remaining_time >= 0);
 
-        sim()->add_trace(traces::serv_budget_replenished{serv->id(), new_budget});
+        sim()->add_trace(traces::ServBudgetReplenished{serv->id(), new_budget});
 
         if (new_budget < remaining_time) {
-                sim()->add_event(serv_budget_exhausted{serv}, sim()->time() + new_budget);
+                sim()->add_event(ServBudgetExhausted{serv}, sim()->time() + new_budget);
         }
         else {
-                sim()->add_event(job_finished{serv}, sim()->time() + remaining_time);
+                sim()->add_event(JobFinished{serv}, sim()->time() + remaining_time);
         }
 }
 
@@ -387,7 +387,7 @@ void Scheduler::resched_proc(
         namespace traces = protocols::traces;
         if (proc->has_running_task()) {
                 cancel_alarms(*(proc->get_task()->get_server()));
-                sim()->add_trace(traces::task_preempted{proc->get_task()->id});
+                sim()->add_trace(traces::TaskPreempted{proc->get_task()->id});
                 proc->get_task()->get_server()->change_state(Server::state::ready);
                 proc->clear_task();
         }

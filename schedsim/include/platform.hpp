@@ -19,7 +19,7 @@ class Cluster : public Entity, public std::enable_shared_from_this<Cluster> {
         double current_freq;
         double perf_score;
 
-        std::shared_ptr<timer> dvfs_timer;
+        std::shared_ptr<Timer> dvfs_timer;
         double dvfs_target;
 
         std::weak_ptr<scheds::Scheduler> attached_scheduler;
@@ -33,7 +33,7 @@ class Cluster : public Entity, public std::enable_shared_from_this<Cluster> {
         std::vector<std::shared_ptr<Processor>> processors;
 
         explicit Cluster(
-            const std::weak_ptr<engine>& sim,
+            const std::weak_ptr<Engine>& sim,
             const std::size_t id,
             const std::vector<double>& frequencies,
             const double& effective_freq,
@@ -73,7 +73,7 @@ class Platform : public Entity {
          * @brief A constructor who create the number of processors set in parameters
          * @param nb_proc Number of processors for the platform
          */
-        explicit Platform(const std::weak_ptr<engine>& sim, bool freescaling_allowed);
+        explicit Platform(const std::weak_ptr<Engine>& sim, bool freescaling_allowed);
         [[nodiscard]] auto isfreescaling() const -> bool { return freescaling; };
         auto reserve_next_id() -> std::size_t { return cpt_id++; };
 };

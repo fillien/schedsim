@@ -11,7 +11,7 @@ TEST_F(Schedview, EnergyCpuToCluster)
 {
         using namespace protocols::hardware;
 
-        const protocols::hardware::hardware hw{
+        const protocols::hardware::Hardware hw{
             {{2, {1.0}, 1.0, {0.1, 0.2, 0.3, 0.4}, 1.0},
              {2, {1.0}, 1.0, {0.1, 0.2, 0.3, 0.4}, 0.5},
              {2, {1.0}, 1.0, {0.1, 0.2, 0.3, 0.4}, 0.33}}};

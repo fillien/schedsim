@@ -47,15 +47,15 @@ auto print_order(const outputs::gantt::command& first, const outputs::gantt::com
 {
         using namespace outputs::gantt;
         constexpr auto get_z_index = overload{
-            [](const finished&) { return 2; },
-            [](const arrival&) { return 1; },
-            [](const deadline&) { return 1; },
+            [](const Finished&) { return 2; },
+            [](const Arrival&) { return 1; },
+            [](const Deadline&) { return 1; },
             [](const auto&) { return 0; }};
 
         return std::visit(get_z_index, first) < std::visit(get_z_index, second);
 }
 
-auto operator<<(std::ostream& out, const outputs::gantt::arrival& evt) -> std::ostream&
+auto operator<<(std::ostream& out, const outputs::gantt::Arrival& evt) -> std::ostream&
 {
         const double OFFSET_Y{AXIS_HEIGHT * static_cast<double>(evt.index)};
         out << "<line class='event' x1='" << OFFSET_X + TIME_UNIT * evt.timestamp << "' x2='"
@@ -65,7 +65,7 @@ auto operator<<(std::ostream& out, const outputs::gantt::arrival& evt) -> std::o
         return out;
 }
 
-auto operator<<(std::ostream& out, const outputs::gantt::deadline& evt) -> std::ostream&
+auto operator<<(std::ostream& out, const outputs::gantt::Deadline& evt) -> std::ostream&
 {
         const double OFFSET_Y{AXIS_HEIGHT * static_cast<double>(evt.index)};
         out << "<line class='event' x1='" << OFFSET_X + TIME_UNIT * evt.timestamp << "' x2='"
@@ -75,7 +75,7 @@ auto operator<<(std::ostream& out, const outputs::gantt::deadline& evt) -> std::
         return out;
 }
 
-auto operator<<(std::ostream& out, const outputs::gantt::finished& evt) -> std::ostream&
+auto operator<<(std::ostream& out, const outputs::gantt::Finished& evt) -> std::ostream&
 {
         const double TIMESTAMP{OFFSET_X + TIME_UNIT * evt.timestamp};
         const double INDEX{AXIS_HEIGHT * static_cast<double>(evt.index)};
@@ -84,7 +84,7 @@ auto operator<<(std::ostream& out, const outputs::gantt::finished& evt) -> std::
         return out;
 }
 
-auto operator<<(std::ostream& out, const outputs::gantt::execution& evt) -> std::ostream&
+auto operator<<(std::ostream& out, const outputs::gantt::Execution& evt) -> std::ostream&
 {
         auto normalize = [&evt](double freq) -> double {
                 return (freq - evt.frequency_min) / (evt.frequency_max - evt.frequency_min);
@@ -105,7 +105,7 @@ auto operator<<(std::ostream& out, const outputs::gantt::execution& evt) -> std:
         return out;
 }
 
-auto operator<<(std::ostream& out, const outputs::gantt::active_non_cont& evt) -> std::ostream&
+auto operator<<(std::ostream& out, const outputs::gantt::ActiveNonCont& evt) -> std::ostream&
 {
         constexpr double TASK_HEIGHT_MAX{30};
         const double TASK_OFFSET_Y{static_cast<double>(evt.index - 1) * AXIS_HEIGHT + 33};
@@ -120,7 +120,7 @@ auto operator<<(std::ostream& out, const outputs::gantt::active_non_cont& evt) -
         return out;
 }
 
-auto operator<<(std::ostream& out, const outputs::gantt::proc_mode_idle& evt) -> std::ostream&
+auto operator<<(std::ostream& out, const outputs::gantt::ProcModeIdle& evt) -> std::ostream&
 {
         constexpr double TASK_HEIGHT_MAX{30};
         const double TASK_OFFSET_Y{static_cast<double>(evt.index - 1) * AXIS_HEIGHT + 33};
@@ -135,7 +135,7 @@ auto operator<<(std::ostream& out, const outputs::gantt::proc_mode_idle& evt) ->
         return out;
 }
 
-auto operator<<(std::ostream& out, const outputs::gantt::proc_mode_running& evt) -> std::ostream&
+auto operator<<(std::ostream& out, const outputs::gantt::ProcModeRunning& evt) -> std::ostream&
 {
         constexpr double TASK_HEIGHT_MAX{30};
         const double TASK_OFFSET_Y{static_cast<double>(evt.index - 1) * AXIS_HEIGHT + 33};
@@ -150,7 +150,7 @@ auto operator<<(std::ostream& out, const outputs::gantt::proc_mode_running& evt)
         return out;
 }
 
-auto operator<<(std::ostream& out, const outputs::gantt::proc_mode_sleep& evt) -> std::ostream&
+auto operator<<(std::ostream& out, const outputs::gantt::ProcModeSleep& evt) -> std::ostream&
 {
         constexpr double TASK_HEIGHT_MAX{30};
         const double TASK_OFFSET_Y{static_cast<double>(evt.index - 1) * AXIS_HEIGHT + 33};
@@ -180,11 +180,11 @@ template <typename T> auto operator<<(std::ostream& out, const std::vector<T>& v
 }
 }; // namespace
 
-auto outputs::gantt::svg::draw(const outputs::gantt::gantt& input) -> std::string
+auto outputs::gantt::svg::draw(const outputs::gantt::Gantt& input) -> std::string
 {
         std::stringstream out;
 
-        outputs::gantt::gantt chart = input;
+        outputs::gantt::Gantt chart = input;
 
         std::sort(chart.commands.begin(), chart.commands.end(), print_order);
 
@@ -218,7 +218,7 @@ auto outputs::gantt::svg::draw(const outputs::gantt::gantt& input) -> std::strin
         return out.str();
 }
 
-auto outputs::gantt::html::draw(const outputs::gantt::gantt& chart) -> std::string
+auto outputs::gantt::html::draw(const outputs::gantt::Gantt& chart) -> std::string
 {
         constexpr auto HTML_HEADER{"<!DOCTYPE html><html><head></head><body>"};
         constexpr auto HTML_FOOTER{"</body></html>"};

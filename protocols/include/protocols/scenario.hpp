@@ -6,37 +6,37 @@
 #include <vector>
 
 namespace protocols::scenario {
-struct job {
+struct Job {
         double arrival;
         double duration;
 };
 
-struct task {
+struct Task {
         uint64_t id;
         double utilization;    // Utilization factor
         double period;         // Period of the task
-        std::vector<job> jobs; // Jobs of the task
+        std::vector<Job> jobs; // Jobs of the task
 };
 
-struct setting {
-        std::vector<task> tasks;
+struct Setting {
+        std::vector<Task> tasks;
 };
 
 void to_json(
-    const job& job, rapidjson::Document::AllocatorType& allocator, rapidjson::Value& job_json);
+    const Job& job, rapidjson::Document::AllocatorType& allocator, rapidjson::Value& job_json);
 void to_json(
-    const task& task, rapidjson::Document::AllocatorType& allocator, rapidjson::Value& task_json);
+    const Task& task, rapidjson::Document::AllocatorType& allocator, rapidjson::Value& task_json);
 void to_json(
-    const setting& setting,
+    const Setting& setting,
     rapidjson::Document::AllocatorType& allocator,
     rapidjson::Value& setting_json);
 
-auto from_json_job(const rapidjson::Value& json_job) -> job;
-auto from_json_task(const rapidjson::Value& json_task) -> task;
-auto from_json_setting(const rapidjson::Value& json_setting) -> setting;
+auto from_json_job(const rapidjson::Value& json_job) -> Job;
+auto from_json_task(const rapidjson::Value& json_task) -> Task;
+auto from_json_setting(const rapidjson::Value& json_setting) -> Setting;
 
-void write_file(const std::filesystem::path& file, const setting& tasks);
-auto read_file(const std::filesystem::path& file) -> setting;
+void write_file(const std::filesystem::path& file, const Setting& tasks);
+auto read_file(const std::filesystem::path& file) -> Setting;
 } // namespace protocols::scenario
 
 #endif

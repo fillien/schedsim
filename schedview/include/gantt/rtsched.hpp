@@ -5,7 +5,7 @@
 #include <string>
 
 namespace outputs::gantt::rtsched {
-auto draw(const outputs::gantt::gantt& chart) -> std::string;
+auto draw(const outputs::gantt::Gantt& chart) -> std::string;
 };
 
 #endif

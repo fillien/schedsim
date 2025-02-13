@@ -42,7 +42,7 @@ class Server : public Entity, public std::enable_shared_from_this<Server> {
          * @brief Constructs a server with a weak pointer to the engine.
          * @param sim Weak pointer to the engine.
          */
-        explicit Server(const std::weak_ptr<engine>& sim);
+        explicit Server(const std::weak_ptr<Engine>& sim);
 
         /**
          * @brief Retrieves the ID of the attached task.

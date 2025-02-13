@@ -23,7 +23,7 @@ auto outputs::frequency::track_frequency_changes(
         for (const auto& [timestamp, tra] : input) {
                 std::visit(
                     overloaded{
-                        [&](frequency_update evt) {
+                        [&](FrequencyUpdate evt) {
                                 if (timestamp > last_timestamp) {
                                         last_timestamp = timestamp;
                                         if (!table["freq"].empty()) {
@@ -33,7 +33,7 @@ auto outputs::frequency::track_frequency_changes(
                                         table["start"].push_back(timestamp);
                                 }
                         },
-                        [&](sim_finished) { table["stop"].push_back(timestamp); },
+                        [&](SimFinished) { table["stop"].push_back(timestamp); },
                         [](auto) {}},
                     tra);
         }
@@ -61,22 +61,22 @@ auto outputs::frequency::track_cores_changes(
                 }
                 std::visit(
                     overloaded{
-                        [&](protocols::traces::proc_activated evt) {
+                        [&](protocols::traces::ProcActivated evt) {
                                 if (!active_cores.contains(evt.proc_id)) {
                                         active_cores.insert(evt.proc_id);
                                 }
                         },
-                        [&](protocols::traces::proc_idled evt) {
+                        [&](protocols::traces::ProcIdled evt) {
                                 if (!active_cores.contains(evt.proc_id)) {
                                         active_cores.insert(evt.proc_id);
                                 }
                         },
-                        [&](protocols::traces::proc_sleep evt) {
+                        [&](protocols::traces::ProcSleep evt) {
                                 if (active_cores.contains(evt.proc_id)) {
                                         active_cores.erase(evt.proc_id);
                                 }
                         },
-                        [&](protocols::traces::sim_finished) {
+                        [&](protocols::traces::SimFinished) {
                                 table["stop"].push_back(timestamp);
                         },
                         [](auto) {}},
@@ -115,17 +115,17 @@ auto outputs::frequency::track_config_changes(
                 }
                 std::visit(
                     overloaded{
-                        [&](protocols::traces::proc_activated evt) {
+                        [&](protocols::traces::ProcActivated evt) {
                                 if (!active_cores.contains(evt.proc_id)) {
                                         active_cores.insert(evt.proc_id);
                                 }
                         },
-                        [&](protocols::traces::proc_idled evt) {
+                        [&](protocols::traces::ProcIdled evt) {
                                 if (!active_cores.contains(evt.proc_id)) {
                                         active_cores.insert(evt.proc_id);
                                 }
                         },
-                        [&](protocols::traces::proc_sleep evt) {
+                        [&](protocols::traces::ProcSleep evt) {
                                 if (active_cores.contains(evt.proc_id)) {
                                         active_cores.erase(evt.proc_id);
                                 }
@@ -135,8 +135,8 @@ auto outputs::frequency::track_config_changes(
                         //                 active_cores.erase(evt.proc_id);
                         //         }
                         // },
-                        [&](protocols::traces::frequency_update evt) { new_freq = evt.frequency; },
-                        [&](protocols::traces::sim_finished) {
+                        [&](protocols::traces::FrequencyUpdate evt) { new_freq = evt.frequency; },
+                        [&](protocols::traces::SimFinished) {
                                 table["stop"].push_back(timestamp);
                         },
                         [](auto) {}},
