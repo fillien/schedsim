@@ -2,42 +2,60 @@
   description = "Schedsim is a C++ scheduling simulator";
 
   inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs";
     utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, ... }@inputs: inputs.utils.lib.eachSystem [
-    "x86_64-linux"
-    "i686-linux"
-    "aarch64-darwin"
-    "x86_64-darwin"
-  ]
-    (system:
+  outputs = { self, nixpkgs, utils, ... }:
+    utils.lib.eachDefaultSystem (system:
       let
-        pkgs = import nixpkgs {
-          inherit system;
-        };
-      in
-      {
-        formatter = pkgs.nixpkgs-fmt;
-        devShells.default = pkgs.mkShell {
+        pkgs = import nixpkgs { inherit system; };
+
+        schedsim = pkgs.stdenv.mkDerivation {
           name = "schedsim";
-          packages = with pkgs; [
-            (python312.withPackages (ps: with ps; [ pandas polars pyarrow ]))
-            bash
-            black
-            clang-tools
-            cmake
-            doxygen
-            gnuplot
-            graphviz
-            gtest
-            lldb
-            ninja
-            shellcheck
-            tracy
-          ];
+          src = ./.;
+          buildInputs = with pkgs; [ cmake ninja doxygen graphviz gtest ];
+          cmakeFlags = [ "-GNinja" ];
+          doCheck = false;
         };
 
-        packages.default = pkgs.callPackage ./package.nix { };
+        schedsimTest = pkgs.stdenv.mkDerivation {
+          name = "schedsim-test";
+          src = ./.;
+          buildInputs = with pkgs; [ cmake ninja doxygen graphviz gtest ];
+          cmakeFlags = [ "-GNinja" "-DCMAKE_BUILD_TYPE=Debug" ];
+          doCheck = true;
+          buildPhase = ''
+            cmake --build . --target tests
+          '';
+          checkPhase = ''
+            ctest --output-on-failure
+          '';
+        };
+
+        devShellInputs = with pkgs; [
+          (python312.withPackages (ps: with ps; [ pandas polars pyarrow ]))
+          bash
+          black
+          clang-tools
+          cmake
+          doxygen
+          gnuplot
+          graphviz
+          gtest
+          lldb
+          ninja
+          shellcheck
+          tracy
+        ];
+      in
+      {
+        packages.default = schedsim;
+        checks.default = schedsimTest;
+        devShells.default = pkgs.mkShell {
+          name = "schedsim-shell";
+          buildInputs = devShellInputs;
+        };
+        formatter = pkgs.nixpkgs-fmt;
       });
 }
