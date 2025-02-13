@@ -150,10 +150,8 @@ void parallel::on_resched()
         // Set next job finish or budget exhausted event for each proc with a task
         for (auto proc : chip()->processors) {
                 if (proc->get_state() == sleep) { continue; }
-                else if (proc->get_state() == change) {
-                        continue;
-                }
-                else if (proc->has_running_task()) {
+                if (proc->get_state() == change) { continue; }
+                if (proc->has_running_task()) {
                         cancel_alarms(*proc->get_task()->get_server());
                         set_alarms(proc->get_task()->get_server());
                         proc->change_state(running);
