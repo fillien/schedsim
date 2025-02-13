@@ -6,7 +6,6 @@
 #include <task.hpp>
 #include <timer.hpp>
 
-class server;
 class cluster;
 
 /**

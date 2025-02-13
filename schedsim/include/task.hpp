@@ -7,7 +7,7 @@
 #include <queue>
 
 class processor;
-class server;
+class Server;
 class engine;
 
 /**
@@ -88,13 +88,13 @@ class task : public entity, public std::enable_shared_from_this<task> {
         /**
          * @brief Returns the server to which the task is attached.
          */
-        [[nodiscard]] auto get_server() const -> std::shared_ptr<server> { return attached_serv; };
+        [[nodiscard]] auto get_server() const -> std::shared_ptr<Server> { return attached_serv; };
 
         /**
          * @brief Sets the server to which the task is attached.
          * @param serv_to_attach The server to attach the task to.
          */
-        void set_server(const std::shared_ptr<server>& serv_to_attach);
+        void set_server(const std::shared_ptr<Server>& serv_to_attach);
 
         /**
          * @brief Unsets the server from the task.
@@ -124,7 +124,7 @@ class task : public entity, public std::enable_shared_from_this<task> {
         /**
          * @brief The server to which the task is attached.
          */
-        std::shared_ptr<server> attached_serv{};
+        std::shared_ptr<Server> attached_serv{};
 };
 
 #endif

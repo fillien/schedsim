@@ -19,7 +19,7 @@ auto task::is_attached() const -> bool { return (attached_proc != nullptr); }
 
 auto task::has_server() const -> bool { return (attached_serv.use_count() > 0); };
 
-void task::set_server(const std::shared_ptr<server>& serv_to_attach)
+void task::set_server(const std::shared_ptr<Server>& serv_to_attach)
 {
         attached_serv = serv_to_attach;
         serv_to_attach->set_task(shared_from_this());

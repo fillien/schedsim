@@ -12,7 +12,7 @@ class processor;
 /**
  * @brief An entity attached to a task that ensures resources are reserved for this task.
  */
-class server : public entity, public std::enable_shared_from_this<server> {
+class Server : public entity, public std::enable_shared_from_this<Server> {
       private:
         /**
          * @brief The task to ensure time isolation.
@@ -42,7 +42,7 @@ class server : public entity, public std::enable_shared_from_this<server> {
          * @brief Constructs a server with a weak pointer to the engine.
          * @param sim Weak pointer to the engine.
          */
-        explicit server(const std::weak_ptr<engine>& sim);
+        explicit Server(const std::weak_ptr<engine>& sim);
 
         /**
          * @brief Retrieves the ID of the attached task.
@@ -115,7 +115,7 @@ class server : public entity, public std::enable_shared_from_this<server> {
  * @param serv Server instance to output.
  * @return Reference to the output stream.
  */
-auto operator<<(std::ostream& out, const server& serv) -> std::ostream&;
+auto operator<<(std::ostream& out, const Server& serv) -> std::ostream&;
 
 /**
  * @brief Overloaded stream insertion operator for the server::state enumeration.
@@ -123,6 +123,6 @@ auto operator<<(std::ostream& out, const server& serv) -> std::ostream&;
  * @param serv_state Server state enumeration value.
  * @return Reference to the output stream.
  */
-auto operator<<(std::ostream& out, const server::state& serv_state) -> std::ostream&;
+auto operator<<(std::ostream& out, const Server::state& serv_state) -> std::ostream&;
 
 #endif // SERVER_HPP

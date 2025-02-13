@@ -50,7 +50,7 @@ auto parallel::get_nb_active_procs([[maybe_unused]] const double& new_utilizatio
         return chip()->processors.size();
 }
 
-auto parallel::get_server_budget(const server& serv) const -> double
+auto parallel::get_server_budget(const Server& serv) const -> double
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -60,7 +60,7 @@ auto parallel::get_server_budget(const server& serv) const -> double
         return serv.utilization() / bandwidth * (serv.relative_deadline - serv.virtual_time);
 }
 
-auto parallel::get_server_virtual_time(const server& serv, const double& running_time) -> double
+auto parallel::get_server_virtual_time(const Server& serv, const double& running_time) -> double
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -86,7 +86,7 @@ void parallel::remove_task_from_cpu(const std::shared_ptr<processor>& proc)
         if (proc->has_running_task()) {
                 cancel_alarms(*(proc->get_task()->get_server()));
 
-                proc->get_task()->get_server()->change_state(server::state::ready);
+                proc->get_task()->get_server()->change_state(Server::state::ready);
                 proc->clear_task();
         }
 }
@@ -110,7 +110,7 @@ void parallel::on_resched()
 
         while (cpt_scheduled_proc < get_nb_active_procs()) {
                 // refresh active servers list
-                auto ready_servers = servers | filter(from_shared<server>(is_ready_server));
+                auto ready_servers = servers | filter(from_shared<Server>(is_ready_server));
                 auto available_procs =
                     chip()->processors | filter([](const auto& proc) {
                             return proc->get_state() == idle || proc->get_state() == running;
@@ -123,7 +123,7 @@ void parallel::on_resched()
                 // Get the server with the earliest deadline
                 // Get the processeur that is idle or with the maximum deadline
                 auto highest_priority_server =
-                    min(ready_servers, from_shared<server>(deadline_order));
+                    min(ready_servers, from_shared<Server>(deadline_order));
                 auto leastest_priority_processor =
                     min(available_procs, from_shared<processor>(processor_order));
 

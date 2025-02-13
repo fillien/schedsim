@@ -21,7 +21,7 @@ struct job_arrival {
  * @brief Represents an event for the completion of a job on a server.
  */
 struct job_finished {
-        std::shared_ptr<server> server_of_job; /**< The server where the job is completed. */
+        std::shared_ptr<Server> server_of_job; /**< The server where the job is completed. */
         bool is_there_new_job =
             false; /**< Give info about a job_finished event at the same timestep. */
 };
@@ -30,14 +30,14 @@ struct job_finished {
  * @brief Represents an event for the exhaustion of the budget on a server.
  */
 struct serv_budget_exhausted {
-        std::shared_ptr<server> serv; /**< The server with an exhausted budget. */
+        std::shared_ptr<Server> serv; /**< The server with an exhausted budget. */
 };
 
 /**
  * @brief Represents an event for the inactivity of a server.
  */
 struct serv_inactive {
-        std::shared_ptr<server> serv; /**< The inactive server. */
+        std::shared_ptr<Server> serv; /**< The inactive server. */
 };
 
 struct timer_isr {

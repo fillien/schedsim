@@ -11,18 +11,18 @@
 #include <tracy/Tracy.hpp>
 #endif
 
-server::server(const std::weak_ptr<engine>& sim) : entity(sim){};
+Server::Server(const std::weak_ptr<engine>& sim) : entity(sim){};
 
-void server::set_task(const std::shared_ptr<task>& task_to_attach)
+void Server::set_task(const std::shared_ptr<task>& task_to_attach)
 {
         attached_task = task_to_attach;
 }
 
-void server::unset_task() { attached_task.reset(); }
+void Server::unset_task() { attached_task.reset(); }
 
-auto server::remaining_exec_time() const -> double { return get_task()->get_remaining_time(); }
+auto Server::remaining_exec_time() const -> double { return get_task()->get_remaining_time(); }
 
-void server::change_state(const state& new_state)
+void Server::change_state(const state& new_state)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -98,7 +98,7 @@ void server::change_state(const state& new_state)
         }
 }
 
-void server::postpone()
+void Server::postpone()
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -108,15 +108,15 @@ void server::postpone()
         sim()->add_trace(traces::serv_postpone{shared_from_this()->id(), relative_deadline});
 }
 
-auto operator<<(std::ostream& out, const server& serv) -> std::ostream&
+auto operator<<(std::ostream& out, const Server& serv) -> std::ostream&
 {
         return out << "S" << serv.id() << " P=" << serv.period() << " U=" << serv.utilization()
                    << " D=" << serv.relative_deadline << " V=" << serv.virtual_time;
 }
 
-auto operator<<(std::ostream& out, const server::state& serv_state) -> std::ostream&
+auto operator<<(std::ostream& out, const Server::state& serv_state) -> std::ostream&
 {
-        using enum server::state;
+        using enum Server::state;
         switch (serv_state) {
         case inactive: return out << "inactive";
         case ready: return out << "ready";
