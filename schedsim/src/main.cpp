@@ -110,7 +110,7 @@ auto main(const int argc, const char** argv) -> int
 
                 // Insert the platform configured through the scenario file, in the simulation
                 // engine
-                auto plat = make_shared<platform>(sim, FREESCALING_ALLOWED);
+                auto plat = make_shared<Platform>(sim, FREESCALING_ALLOWED);
                 sim->set_platform(plat);
 
                 std::shared_ptr<allocators::allocator> sched;

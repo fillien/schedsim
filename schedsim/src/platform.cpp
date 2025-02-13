@@ -100,7 +100,7 @@ void Cluster::dvfs_change_freq(const double& next_freq)
         }
 }
 
-platform::platform(const std::weak_ptr<engine>& sim, bool freescaling_allowed)
+Platform::Platform(const std::weak_ptr<engine>& sim, bool freescaling_allowed)
     : entity(sim), freescaling(freescaling_allowed)
 {
 }

@@ -61,7 +61,7 @@ class Cluster : public entity, public std::enable_shared_from_this<Cluster> {
 /**
  * @brief A platform is a component that contains processors, for example an SoC.
  */
-class platform : public entity {
+class Platform : public entity {
       private:
         bool freescaling;
         std::size_t cpt_id{0};
@@ -73,7 +73,7 @@ class platform : public entity {
          * @brief A constructor who create the number of processors set in parameters
          * @param nb_proc Number of processors for the platform
          */
-        explicit platform(const std::weak_ptr<engine>& sim, bool freescaling_allowed);
+        explicit Platform(const std::weak_ptr<engine>& sim, bool freescaling_allowed);
         [[nodiscard]] auto isfreescaling() const -> bool { return freescaling; };
         auto reserve_next_id() -> std::size_t { return cpt_id++; };
 };

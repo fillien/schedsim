@@ -53,7 +53,7 @@ class engine {
          * @brief A model of the platform on which the scheduler will operate.
          * @TODO Maybe refactor this as a unique_ptr, as it will be alone all the running time
          */
-        std::shared_ptr<platform> current_platform;
+        std::shared_ptr<Platform> current_platform;
 
         /**
          * @brief The list of past events, a pair of the timestamp of the event and the event
@@ -90,7 +90,7 @@ class engine {
          * @brief Setter to attach a platform.
          * @param new_platform The new platform to attach.
          */
-        void set_platform(const std::shared_ptr<platform>& new_platform)
+        void set_platform(const std::shared_ptr<Platform>& new_platform)
         {
                 current_platform = new_platform;
         };
@@ -103,7 +103,7 @@ class engine {
         /**
          * @return The current platform attached to the engine.
          */
-        [[nodiscard]] auto chip() const -> std::shared_ptr<platform> { return current_platform; };
+        [[nodiscard]] auto chip() const -> std::shared_ptr<Platform> { return current_platform; };
 
         /**
          * @return The current simulation time.
