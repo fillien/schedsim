@@ -8,7 +8,7 @@ namespace scheds {
 
 csf::csf(const std::weak_ptr<engine>& sim) : parallel(sim) {}
 
-void csf::set_cluster(const std::weak_ptr<cluster>& clu)
+void csf::set_cluster(const std::weak_ptr<Cluster>& clu)
 {
         attached_cluster = clu;
         nb_active_procs = chip()->processors.size();

@@ -6,7 +6,7 @@
 #include <task.hpp>
 #include <timer.hpp>
 
-class cluster;
+class Cluster;
 
 /**
  * @brief Represents a processor model, composed of a state, and a running task.
@@ -27,7 +27,7 @@ class processor : public entity, public std::enable_shared_from_this<processor> 
          */
         explicit processor(
             const std::weak_ptr<engine>& sim,
-            const std::weak_ptr<cluster>& clu,
+            const std::weak_ptr<Cluster>& clu,
             const std::size_t cpu_id);
 
         auto get_cluster() { return attached_cluster; };
@@ -87,7 +87,7 @@ class processor : public entity, public std::enable_shared_from_this<processor> 
          */
         std::weak_ptr<Task> running_task;
 
-        std::weak_ptr<cluster> attached_cluster;
+        std::weak_ptr<Cluster> attached_cluster;
 
         /**
          * @brief Current state of the processor, initialized as idle by default.

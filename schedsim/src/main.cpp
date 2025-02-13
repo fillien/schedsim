@@ -118,7 +118,7 @@ auto main(const int argc, const char** argv) -> int
 
                 std::size_t cluster_id_cpt{1};
                 for (const protocols::hardware::cluster& clu : platform_config.clusters) {
-                        plat->clusters.push_back(std::make_shared<cluster>(
+                        plat->clusters.push_back(std::make_shared<Cluster>(
                             sim,
                             cluster_id_cpt,
                             clu.frequencies,

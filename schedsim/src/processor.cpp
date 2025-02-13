@@ -13,7 +13,7 @@
 #endif
 
 processor::processor(
-    const std::weak_ptr<engine>& sim, const std::weak_ptr<cluster>& clu, const std::size_t cpu_id)
+    const std::weak_ptr<engine>& sim, const std::weak_ptr<Cluster>& clu, const std::size_t cpu_id)
     : entity(sim), id(cpu_id), attached_cluster(clu)
 {
         using namespace protocols::traces;

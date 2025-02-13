@@ -7,7 +7,7 @@
 namespace scheds {
 ffa::ffa(const std::weak_ptr<engine>& sim) : parallel(sim) {}
 
-void ffa::set_cluster(const std::weak_ptr<cluster>& clu)
+void ffa::set_cluster(const std::weak_ptr<Cluster>& clu)
 {
         attached_cluster = clu;
         nb_active_procs = chip()->processors.size();

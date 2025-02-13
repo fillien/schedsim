@@ -26,7 +26,7 @@
 
 namespace scheds {
 
-auto scheduler::chip() const -> std::shared_ptr<cluster> { return attached_cluster.lock(); }
+auto scheduler::chip() const -> std::shared_ptr<Cluster> { return attached_cluster.lock(); }
 
 void scheduler::call_resched()
 {

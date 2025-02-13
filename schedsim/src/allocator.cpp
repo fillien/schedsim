@@ -17,7 +17,7 @@
 
 namespace allocators {
 
-void allocator::add_child_sched(const std::weak_ptr<cluster>& clu)
+void allocator::add_child_sched(const std::weak_ptr<Cluster>& clu)
 {
         schedulers.push_back(std::make_shared<scheds::parallel>(sim()));
         clu.lock()->set_sched(schedulers.back()->weak_from_this());

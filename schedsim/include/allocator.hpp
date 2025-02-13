@@ -23,7 +23,7 @@ class allocator : public entity {
         explicit allocator(const std::weak_ptr<engine>& sim) : entity(sim){};
         virtual ~allocator() = default;
 
-        void add_child_sched(const std::weak_ptr<cluster>& clu);
+        void add_child_sched(const std::weak_ptr<Cluster>& clu);
         void handle(std::vector<events::event> evts);
         void call_resched(const std::shared_ptr<scheds::scheduler>& index)
         {

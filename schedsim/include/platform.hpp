@@ -11,7 +11,7 @@ namespace scheds {
 class scheduler;
 }
 
-class cluster : public entity, public std::enable_shared_from_this<cluster> {
+class Cluster : public entity, public std::enable_shared_from_this<Cluster> {
       private:
         std::size_t id;
         std::vector<double> frequencies;
@@ -32,7 +32,7 @@ class cluster : public entity, public std::enable_shared_from_this<cluster> {
          */
         std::vector<std::shared_ptr<processor>> processors;
 
-        explicit cluster(
+        explicit Cluster(
             const std::weak_ptr<engine>& sim,
             const std::size_t id,
             const std::vector<double>& frequencies,
@@ -67,7 +67,7 @@ class platform : public entity {
         std::size_t cpt_id{0};
 
       public:
-        std::vector<std::shared_ptr<cluster>> clusters;
+        std::vector<std::shared_ptr<Cluster>> clusters;
 
         /**
          * @brief A constructor who create the number of processors set in parameters

@@ -11,7 +11,7 @@
 #include <protocols/traces.hpp>
 #include <vector>
 
-cluster::cluster(
+Cluster::Cluster(
     const std::weak_ptr<engine>& sim,
     const std::size_t cid,
     const std::vector<double>& frequencies,
@@ -33,7 +33,7 @@ cluster::cluster(
         dvfs_timer = std::make_shared<timer>(sim, [this]() { set_freq(dvfs_target); });
 }
 
-void cluster::create_procs(const std::size_t nb_procs)
+void Cluster::create_procs(const std::size_t nb_procs)
 {
         assert(nb_procs > 0);
         processors.reserve(nb_procs);
@@ -44,7 +44,7 @@ void cluster::create_procs(const std::size_t nb_procs)
         }
 }
 
-void cluster::set_freq(const double& new_freq)
+void Cluster::set_freq(const double& new_freq)
 {
         if (new_freq < 0 || new_freq > freq_max()) {
                 throw std::domain_error("This frequency is not available");
@@ -58,7 +58,7 @@ void cluster::set_freq(const double& new_freq)
         }
 }
 
-auto cluster::ceil_to_mode(const double& freq) -> double
+auto Cluster::ceil_to_mode(const double& freq) -> double
 {
         assert(!frequencies.empty());
         auto last = *(frequencies.begin());
@@ -70,7 +70,7 @@ auto cluster::ceil_to_mode(const double& freq) -> double
         return freq_min();
 }
 
-void cluster::dvfs_change_freq(const double& next_freq)
+void Cluster::dvfs_change_freq(const double& next_freq)
 {
         using enum processor::state;
 

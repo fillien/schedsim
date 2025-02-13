@@ -29,7 +29,7 @@ class csf : public parallel {
 
       public:
         explicit csf(const std::weak_ptr<engine>& sim);
-        void set_cluster(const std::weak_ptr<cluster>& clu);
+        void set_cluster(const std::weak_ptr<Cluster>& clu);
         void update_platform() override;
 };
 } // namespace scheds

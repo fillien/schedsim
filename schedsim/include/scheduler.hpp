@@ -58,9 +58,9 @@ class scheduler : public entity, public std::enable_shared_from_this<scheduler> 
         void detach_server_if_needed(const std::shared_ptr<Task>& inactive_task);
 
       protected:
-        std::weak_ptr<cluster> attached_cluster;
+        std::weak_ptr<Cluster> attached_cluster;
 
-        [[nodiscard]] auto chip() const -> std::shared_ptr<cluster>;
+        [[nodiscard]] auto chip() const -> std::shared_ptr<Cluster>;
 
         /**
          * @brief A vector to track and own server objects.
@@ -203,8 +203,8 @@ class scheduler : public entity, public std::enable_shared_from_this<scheduler> 
 
         auto is_this_my_event(const events::event& evt) -> bool;
 
-        void set_cluster(const std::weak_ptr<cluster> clu) { attached_cluster = clu; };
-        auto get_cluster() -> std::shared_ptr<cluster> { return attached_cluster.lock(); };
+        void set_cluster(const std::weak_ptr<Cluster> clu) { attached_cluster = clu; };
+        auto get_cluster() -> std::shared_ptr<Cluster> { return attached_cluster.lock(); };
 
         auto u_max() const -> double;
 
