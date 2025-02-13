@@ -17,9 +17,9 @@
 
 namespace scheds {
 
-auto parallel::processor_order(const processor& first, const processor& second) -> bool
+auto parallel::processor_order(const Processor& first, const Processor& second) -> bool
 {
-        using enum processor::state;
+        using enum Processor::state;
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
@@ -81,7 +81,7 @@ auto parallel::admission_test(const Task& new_task) const -> bool
         return (NEW_TOTAL_UTILIZATION <= (NB_PROCS - (NB_PROCS - 1) * U_MAX));
 }
 
-void parallel::remove_task_from_cpu(const std::shared_ptr<processor>& proc)
+void parallel::remove_task_from_cpu(const std::shared_ptr<Processor>& proc)
 {
         if (proc->has_running_task()) {
                 cancel_alarms(*(proc->get_task()->get_server()));
@@ -97,7 +97,7 @@ void parallel::on_resched()
         using std::ranges::max;
         using std::ranges::min;
         using std::views::filter;
-        using enum processor::state;
+        using enum Processor::state;
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
@@ -125,7 +125,7 @@ void parallel::on_resched()
                 auto highest_priority_server =
                     min(ready_servers, from_shared<Server>(deadline_order));
                 auto leastest_priority_processor =
-                    min(available_procs, from_shared<processor>(processor_order));
+                    min(available_procs, from_shared<Processor>(processor_order));
 
                 if (leastest_priority_processor->get_state() == sleep) {
                         assert(!leastest_priority_processor->has_running_task());

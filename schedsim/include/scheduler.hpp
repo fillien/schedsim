@@ -21,7 +21,7 @@ auto compare_events(const events::event& ev1, const events::event& ev2) -> bool;
 /**
  * @brief A class that handles the events of the system according to a scheduling policy.
  */
-class scheduler : public entity, public std::enable_shared_from_this<scheduler> {
+class Scheduler : public Entity, public std::enable_shared_from_this<Scheduler> {
       private:
         double total_utilization{0}; /**< Total utilization of the system. */
 
@@ -115,7 +115,7 @@ class scheduler : public entity, public std::enable_shared_from_this<scheduler> 
          * @param server_to_execute The server to be executed on the processor.
          */
         void resched_proc(
-            const std::shared_ptr<processor>& proc_with_server,
+            const std::shared_ptr<Processor>& proc_with_server,
             const std::shared_ptr<Server>& server_to_execute);
 
         /**
@@ -179,12 +179,12 @@ class scheduler : public entity, public std::enable_shared_from_this<scheduler> 
          * @brief Constructs a scheduler with a weak pointer to the engine.
          * @param sim Weak pointer to the engine.
          */
-        explicit scheduler(const std::weak_ptr<engine> sim) : entity(sim){};
+        explicit Scheduler(const std::weak_ptr<engine> sim) : Entity(sim){};
 
         /**
          * @brief Virtual destructor for the scheduler class.
          */
-        virtual ~scheduler() = default;
+        virtual ~Scheduler() = default;
 
         /**
          * @brief Performs an admission test for a new task.

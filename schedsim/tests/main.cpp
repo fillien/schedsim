@@ -35,7 +35,7 @@ TEST_F(Schedsim, ProcessorOrder)
         plat->clusters.push_back(std::make_shared<cluster>(sim, 1, freqs, EFF_FREQ));
         plat->clusters.back()->create_procs(NB_PROCS);
 
-        std::shared_ptr<scheduler> sched = std::make_shared<sched_parallel>(sim);
+        std::shared_ptr<Scheduler> sched = std::make_shared<sched_parallel>(sim);
         sim->set_scheduler(sched);
 
         auto s0 = std::make_shared<server>(sim);

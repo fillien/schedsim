@@ -12,9 +12,9 @@
 #include <tracy/Tracy.hpp>
 #endif
 
-processor::processor(
+Processor::Processor(
     const std::weak_ptr<engine>& sim, const std::weak_ptr<Cluster>& clu, const std::size_t cpu_id)
-    : entity(sim), id(cpu_id), attached_cluster(clu)
+    : Entity(sim), id(cpu_id), attached_cluster(clu)
 {
         using namespace protocols::traces;
 
@@ -44,7 +44,7 @@ processor::processor(
         });
 };
 
-void processor::set_task(const std::weak_ptr<Task>& task_to_execute)
+void Processor::set_task(const std::weak_ptr<Task>& task_to_execute)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -61,7 +61,7 @@ void processor::set_task(const std::weak_ptr<Task>& task_to_execute)
             protocols::traces::task_scheduled{shared_task->id, shared_from_this()->id});
 }
 
-void processor::clear_task()
+void Processor::clear_task()
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -71,7 +71,7 @@ void processor::clear_task()
         this->running_task.reset();
 }
 
-void processor::change_state(const processor::state& next_state)
+void Processor::change_state(const Processor::state& next_state)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -104,7 +104,7 @@ void processor::change_state(const processor::state& next_state)
         }
 }
 
-void processor::update_state()
+void Processor::update_state()
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -115,7 +115,7 @@ void processor::update_state()
         }
 }
 
-void processor::dvfs_change_state(const double& delay)
+void Processor::dvfs_change_state(const double& delay)
 {
         assert(sim()->is_delay_active());
 
@@ -133,7 +133,7 @@ void processor::dvfs_change_state(const double& delay)
         }
 }
 
-void processor::dpm_change_state(const state& next_state)
+void Processor::dpm_change_state(const state& next_state)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;

@@ -27,7 +27,7 @@ auto ffa::get_nb_active_procs([[maybe_unused]] const double& new_utilization = 0
 {
         auto is_active = [](const auto& proc) {
                 auto state = proc->get_state();
-                return state == processor::state::idle || state == processor::state::running;
+                return state == Processor::state::idle || state == Processor::state::running;
         };
 
         const auto& processors = chip()->processors;
@@ -35,17 +35,17 @@ auto ffa::get_nb_active_procs([[maybe_unused]] const double& new_utilization = 0
 }
 
 void ffa::change_state_proc(
-    const processor::state& next_state, const std::shared_ptr<processor>& proc)
+    const Processor::state& next_state, const std::shared_ptr<Processor>& proc)
 {
         assert(next_state != proc->get_state());
-        assert(proc->get_state() != processor::state::change);
+        assert(proc->get_state() != Processor::state::change);
         remove_task_from_cpu(proc);
         proc->dpm_change_state(next_state);
 }
 
 void ffa::activate_next_core()
 {
-        using enum processor::state;
+        using enum Processor::state;
         auto& processors = chip()->processors;
         auto itr = std::find_if(processors.begin(), processors.end(), [](const auto& proc) {
                 return proc->get_state() == sleep;
@@ -59,7 +59,7 @@ void ffa::activate_next_core()
 
 void ffa::put_next_core_to_bed()
 {
-        using enum processor::state;
+        using enum Processor::state;
         auto& processors = chip()->processors;
         auto itr = std::find_if(processors.begin(), processors.end(), [](const auto& proc) {
                 return proc->get_state() == idle || proc->get_state() == running;

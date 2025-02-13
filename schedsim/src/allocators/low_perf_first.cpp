@@ -4,7 +4,7 @@
 #include <optional>
 
 auto allocators::low_perf_first::where_to_put_the_task(const std::shared_ptr<Task>& new_task)
-    -> std::optional<std::shared_ptr<scheds::scheduler>>
+    -> std::optional<std::shared_ptr<scheds::Scheduler>>
 {
         for (auto itr = std::rbegin(schedulers); itr != std::rend(schedulers); ++itr) {
                 if ((*itr)->admission_test(*new_task)) { return *itr; }

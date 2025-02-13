@@ -7,10 +7,10 @@
 
 class engine;
 
-class timer : public entity, public std::enable_shared_from_this<timer> {
+class timer : public Entity, public std::enable_shared_from_this<timer> {
       public:
         timer(const std::weak_ptr<engine>& sim, std::function<void()> callback)
-            : entity(sim), callback(callback){};
+            : Entity(sim), callback(callback){};
         void set(const double& duration);
         void cancel();
         auto is_active() -> bool { return active; };

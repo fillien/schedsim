@@ -13,7 +13,7 @@ namespace scheds {
 /**
  * @brief A class implementing a parallel scheduler, derived from the base scheduler class.
  */
-class parallel : public scheduler {
+class parallel : public Scheduler {
         /**
          * @brief Retrieves the inactive bandwidth of the system.
          * @return Inactive bandwidth of the system.
@@ -33,7 +33,7 @@ class parallel : public scheduler {
          * @brief Constructs a parallel scheduler with a weak pointer to the engine.
          * @param sim Weak pointer to the engine.
          */
-        explicit parallel(const std::weak_ptr<engine>& sim) : scheduler(sim){};
+        explicit parallel(const std::weak_ptr<engine>& sim) : Scheduler(sim){};
 
         /**
          * @brief Compares two processors based on their order.
@@ -42,9 +42,9 @@ class parallel : public scheduler {
          * @return True if the first processor should be scheduled before the second, false
          * otherwise.
          */
-        static auto processor_order(const processor& first, const processor& second) -> bool;
+        static auto processor_order(const Processor& first, const Processor& second) -> bool;
 
-        void remove_task_from_cpu(const std::shared_ptr<processor>& proc);
+        void remove_task_from_cpu(const std::shared_ptr<Processor>& proc);
 
         /**
          * @brief Retrieves the budget of a server for the parallel scheduler.

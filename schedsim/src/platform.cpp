@@ -17,7 +17,7 @@ Cluster::Cluster(
     const std::vector<double>& frequencies,
     const double& effective_freq,
     const double& perf_score)
-    : entity(sim), id(cid), frequencies(std::move(frequencies)), effective_freq(effective_freq),
+    : Entity(sim), id(cid), frequencies(std::move(frequencies)), effective_freq(effective_freq),
       current_freq(0), perf_score(perf_score)
 {
         assert(std::all_of(
@@ -40,7 +40,7 @@ void Cluster::create_procs(const std::size_t nb_procs)
 
         for (std::size_t i = 0; i < nb_procs; ++i) {
                 auto id = sim()->chip()->reserve_next_id();
-                processors.push_back(std::make_shared<processor>(sim(), shared_from_this(), id));
+                processors.push_back(std::make_shared<Processor>(sim(), shared_from_this(), id));
         }
 }
 
@@ -72,7 +72,7 @@ auto Cluster::ceil_to_mode(const double& freq) -> double
 
 void Cluster::dvfs_change_freq(const double& next_freq)
 {
-        using enum processor::state;
+        using enum Processor::state;
 
         if (next_freq < 0 || next_freq > freq_max()) {
                 throw std::domain_error("This frequency is not available");
@@ -95,12 +95,12 @@ void Cluster::dvfs_change_freq(const double& next_freq)
         }
         else {
                 for (const auto& proc : processors) {
-                        assert(proc->get_state() == processor::state::change);
+                        assert(proc->get_state() == Processor::state::change);
                 }
         }
 }
 
 Platform::Platform(const std::weak_ptr<engine>& sim, bool freescaling_allowed)
-    : entity(sim), freescaling(freescaling_allowed)
+    : Entity(sim), freescaling(freescaling_allowed)
 {
 }

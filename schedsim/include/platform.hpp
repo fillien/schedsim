@@ -8,10 +8,10 @@
 #include <vector>
 
 namespace scheds {
-class scheduler;
+class Scheduler;
 }
 
-class Cluster : public entity, public std::enable_shared_from_this<Cluster> {
+class Cluster : public Entity, public std::enable_shared_from_this<Cluster> {
       private:
         std::size_t id;
         std::vector<double> frequencies;
@@ -22,7 +22,7 @@ class Cluster : public entity, public std::enable_shared_from_this<Cluster> {
         std::shared_ptr<timer> dvfs_timer;
         double dvfs_target;
 
-        std::weak_ptr<scheds::scheduler> attached_scheduler;
+        std::weak_ptr<scheds::Scheduler> attached_scheduler;
 
       public:
         static constexpr double DVFS_DELAY{0.5};
@@ -30,7 +30,7 @@ class Cluster : public entity, public std::enable_shared_from_this<Cluster> {
         /**
          * @brief Processors of the platform.
          */
-        std::vector<std::shared_ptr<processor>> processors;
+        std::vector<std::shared_ptr<Processor>> processors;
 
         explicit Cluster(
             const std::weak_ptr<engine>& sim,
@@ -51,8 +51,8 @@ class Cluster : public entity, public std::enable_shared_from_this<Cluster> {
         auto ceil_to_mode(const double& freq) -> double;
         void dvfs_change_freq(const double& next_freq);
         void create_procs(const std::size_t nb_procs);
-        auto get_sched() const -> std::weak_ptr<scheds::scheduler> { return attached_scheduler; };
-        void set_sched(const std::weak_ptr<scheds::scheduler>& sched)
+        auto get_sched() const -> std::weak_ptr<scheds::Scheduler> { return attached_scheduler; };
+        void set_sched(const std::weak_ptr<scheds::Scheduler>& sched)
         {
                 attached_scheduler = sched;
         };
@@ -61,7 +61,7 @@ class Cluster : public entity, public std::enable_shared_from_this<Cluster> {
 /**
  * @brief A platform is a component that contains processors, for example an SoC.
  */
-class Platform : public entity {
+class Platform : public Entity {
       private:
         bool freescaling;
         std::size_t cpt_id{0};

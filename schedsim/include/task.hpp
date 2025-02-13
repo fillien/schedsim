@@ -6,14 +6,14 @@
 #include <memory>
 #include <queue>
 
-class processor;
+class Processor;
 class Server;
 class engine;
 
 /**
  * @brief Represents a model of a user code that is executed by a processor.
  */
-class Task : public entity, public std::enable_shared_from_this<Task> {
+class Task : public Entity, public std::enable_shared_from_this<Task> {
       public:
         /**
          * @brief A unique ID for the task.
@@ -33,7 +33,7 @@ class Task : public entity, public std::enable_shared_from_this<Task> {
         /**
          * @brief The processor on which the task is executed.
          */
-        std::shared_ptr<processor> attached_proc{};
+        std::shared_ptr<Processor> attached_proc{};
 
         /**
          * @brief A constructor with a unique ID, the period, and the utilization.

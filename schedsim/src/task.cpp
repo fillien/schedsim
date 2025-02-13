@@ -11,7 +11,7 @@ Task::Task(
     const std::size_t tid,
     const double& period,
     const double& utilization)
-    : entity(sim), id(tid), period(period), utilization(utilization)
+    : Entity(sim), id(tid), period(period), utilization(utilization)
 {
 }
 

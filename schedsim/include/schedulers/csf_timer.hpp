@@ -17,7 +17,7 @@ class csf_timer : public parallel {
         std::size_t nb_active_procs{1};
 
         static constexpr double DVFS_COOLDOWN{Cluster::DVFS_DELAY * 2};
-        static constexpr double DPM_COOLDOWN{processor::DPM_DELAY * 2};
+        static constexpr double DPM_COOLDOWN{Processor::DPM_DELAY * 2};
 
         std::shared_ptr<timer> timer_dvfs_cooldown;
         std::vector<std::shared_ptr<timer>> timers_dpm_cooldown;
@@ -35,7 +35,7 @@ class csf_timer : public parallel {
         void activate_next_core();
         void put_next_core_to_bed();
         void change_state_proc(
-            const processor::state& next_state, const std::shared_ptr<processor>& proc);
+            const Processor::state& next_state, const std::shared_ptr<Processor>& proc);
         void adjust_active_processors(std::size_t target_processors);
 
       protected:

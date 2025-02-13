@@ -11,7 +11,7 @@
 #include <tracy/Tracy.hpp>
 #endif
 
-Server::Server(const std::weak_ptr<engine>& sim) : entity(sim){};
+Server::Server(const std::weak_ptr<engine>& sim) : Entity(sim){};
 
 void Server::set_task(const std::shared_ptr<Task>& task_to_attach)
 {

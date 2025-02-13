@@ -11,7 +11,7 @@ class Cluster;
 /**
  * @brief Represents a processor model, composed of a state, and a running task.
  */
-class processor : public entity, public std::enable_shared_from_this<processor> {
+class Processor : public Entity, public std::enable_shared_from_this<Processor> {
       public:
         static constexpr double DPM_DELAY{0.5};
 
@@ -25,7 +25,7 @@ class processor : public entity, public std::enable_shared_from_this<processor> 
          * @param sim Weak pointer to the engine.
          * @param cpu_id The unique ID of the processor.
          */
-        explicit processor(
+        explicit Processor(
             const std::weak_ptr<engine>& sim,
             const std::weak_ptr<Cluster>& clu,
             const std::size_t cpu_id);

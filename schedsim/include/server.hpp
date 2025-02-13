@@ -7,12 +7,12 @@
 #include <ostream>
 #include <task.hpp>
 
-class processor;
+class Processor;
 
 /**
  * @brief An entity attached to a task that ensures resources are reserved for this task.
  */
-class Server : public entity, public std::enable_shared_from_this<Server> {
+class Server : public Entity, public std::enable_shared_from_this<Server> {
       private:
         /**
          * @brief The task to ensure time isolation.
