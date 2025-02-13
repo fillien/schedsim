@@ -77,7 +77,7 @@ auto parallel::admission_test(const task& new_task) const -> bool
 #endif
         const auto NB_PROCS{static_cast<double>(chip()->processors.size())};
         const auto U_MAX{std::max(u_max(), new_task.utilization)};
-        const auto NEW_TOTAL_UTILIZATION{get_total_utilization() + new_task.utilization};
+        const auto NEW_TOTAL_UTILIZATION{get_active_bandwidth() + new_task.utilization};
         return (NEW_TOTAL_UTILIZATION <= (NB_PROCS - (NB_PROCS - 1) * U_MAX));
 }
 

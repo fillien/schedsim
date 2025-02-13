@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <allocator.hpp>
 #include <allocators/smart_ass.hpp>
+#include <memory>
 #include <optional>
 #include <scheduler.hpp>
 
@@ -15,21 +16,19 @@ auto allocators::smart_ass::where_to_put_the_task(const std::shared_ptr<task>& n
         auto sorted_scheds{schedulers};
         std::sort(sorted_scheds.begin(), sorted_scheds.end(), compare_perf);
 
+        std::optional<std::shared_ptr<scheds::scheduler>> next_sched;
+
         // Look for a cluster to place the task
         for (auto& sched : sorted_scheds) {
-                if (std::max(new_task->utilization, sched->get_umax()) <
-                        sched->get_cluster()->perf() &&
-                    sched->admission_test(*new_task)) {
-                        return sched;
+                const auto clu = sched->get_cluster();
+                if (new_task->utilization / clu->perf() < sched->u_max() / clu->perf()) {
+                        if (sched->admission_test(*new_task)) {
+                                next_sched = sched;
+                                break;
+                        }
                 }
         }
 
-        // If no scheduler have been found, the allocator try to place the task on the most
-        // powerfull cluster
-        if (schedulers.at(0)->admission_test(*new_task)) {
-                return schedulers.at(0)->shared_from_this();
-        }
-
         // Otherwise return that the allocator didn't found a cluster to place the task
-        return {};
+        return next_sched;
 }
