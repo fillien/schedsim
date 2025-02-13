@@ -9,7 +9,7 @@
 #include <schedulers/parallel.hpp>
 
 namespace scheds {
-class csf : public Parallel {
+class Csf : public Parallel {
       private:
         std::size_t nb_active_procs{1};
 
@@ -28,7 +28,7 @@ class csf : public Parallel {
         auto get_nb_active_procs(const double& new_utilization) const -> std::size_t override;
 
       public:
-        explicit csf(const std::weak_ptr<engine>& sim);
+        explicit Csf(const std::weak_ptr<engine>& sim);
         void set_cluster(const std::weak_ptr<Cluster>& clu);
         void update_platform() override;
 };

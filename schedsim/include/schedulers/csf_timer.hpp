@@ -12,7 +12,7 @@
 
 namespace scheds {
 
-class csf_timer : public Parallel {
+class CsfTimer : public Parallel {
       private:
         std::size_t nb_active_procs{1};
 
@@ -42,7 +42,7 @@ class csf_timer : public Parallel {
         auto get_nb_active_procs(const double& new_utilization) const -> std::size_t override;
 
       public:
-        explicit csf_timer(const std::weak_ptr<engine>& sim);
+        explicit CsfTimer(const std::weak_ptr<engine>& sim);
         void update_platform() override;
 };
 } // namespace scheds

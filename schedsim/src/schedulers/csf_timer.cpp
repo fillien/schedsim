@@ -5,7 +5,7 @@
 #include <stdexcept>
 
 namespace scheds {
-csf_timer::csf_timer(const std::weak_ptr<engine>& sim) : Parallel(sim)
+CsfTimer::CsfTimer(const std::weak_ptr<engine>& sim) : Parallel(sim)
 {
         if (!sim.lock()->is_delay_active()) {
                 throw std::runtime_error(
@@ -27,7 +27,7 @@ csf_timer::csf_timer(const std::weak_ptr<engine>& sim) : Parallel(sim)
         });
 }
 
-auto csf_timer::compute_freq_min(
+auto CsfTimer::compute_freq_min(
     const double& freq_max,
     const double& total_util,
     const double& max_util,
@@ -36,7 +36,7 @@ auto csf_timer::compute_freq_min(
         return (freq_max * (total_util + (nb_procs - 1) * max_util)) / nb_procs;
 }
 
-auto csf_timer::get_nb_active_procs([[maybe_unused]] const double& new_utilization = 0) const
+auto CsfTimer::get_nb_active_procs([[maybe_unused]] const double& new_utilization = 0) const
     -> std::size_t
 {
         auto is_active = [](const auto& proc) {
@@ -48,7 +48,7 @@ auto csf_timer::get_nb_active_procs([[maybe_unused]] const double& new_utilizati
         return std::count_if(processors.begin(), processors.end(), is_active);
 }
 
-void csf_timer::change_state_proc(
+void CsfTimer::change_state_proc(
     const Processor::state& next_state, const std::shared_ptr<Processor>& proc)
 {
         assert(next_state != proc->get_state());
@@ -57,7 +57,7 @@ void csf_timer::change_state_proc(
         proc->dpm_change_state(next_state);
 }
 
-auto csf_timer::cores_on_sleep() -> std::size_t
+auto CsfTimer::cores_on_sleep() -> std::size_t
 {
         using enum Processor::state;
 
@@ -67,7 +67,7 @@ auto csf_timer::cores_on_sleep() -> std::size_t
             });
 }
 
-void csf_timer::activate_next_core()
+void CsfTimer::activate_next_core()
 {
         using enum Processor::state;
         auto& processors = chip()->processors;
@@ -81,7 +81,7 @@ void csf_timer::activate_next_core()
         change_state_proc(idle, *itr);
 }
 
-void csf_timer::put_next_core_to_bed()
+void CsfTimer::put_next_core_to_bed()
 {
         using enum Processor::state;
         auto& processors = chip()->processors;
@@ -92,7 +92,7 @@ void csf_timer::put_next_core_to_bed()
         change_state_proc(sleep, *itr);
 }
 
-void csf_timer::adjust_active_processors(std::size_t target_processors)
+void CsfTimer::adjust_active_processors(std::size_t target_processors)
 {
         if (target_processors > get_nb_active_procs()) {
                 for (std::size_t i = 0; i < target_processors - get_nb_active_procs(); ++i) {
@@ -106,7 +106,7 @@ void csf_timer::adjust_active_processors(std::size_t target_processors)
         }
 }
 
-void csf_timer::update_platform()
+void CsfTimer::update_platform()
 {
 
         const double total_util{get_active_bandwidth()};
