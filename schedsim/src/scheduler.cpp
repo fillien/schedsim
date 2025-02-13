@@ -140,7 +140,7 @@ auto scheduler::get_active_bandwidth() const -> double
         return active_bandwidth;
 }
 
-void scheduler::detach_server_if_needed(const std::shared_ptr<task>& inactive_task)
+void scheduler::detach_server_if_needed(const std::shared_ptr<Task>& inactive_task)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -214,7 +214,7 @@ void scheduler::on_serv_inactive(const std::shared_ptr<Server>& serv)
         sim()->get_sched()->call_resched(shared_from_this());
 }
 
-void scheduler::on_job_arrival(const std::shared_ptr<task>& new_task, const double& job_duration)
+void scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const double& job_duration)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;

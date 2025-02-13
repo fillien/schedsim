@@ -30,7 +30,7 @@ class scheduler : public entity, public std::enable_shared_from_this<scheduler> 
          * @param new_task The newly arrived task.
          * @param job_duration The duration of the job.
          */
-        void on_job_arrival(const std::shared_ptr<task>& new_task, const double& job_duration);
+        void on_job_arrival(const std::shared_ptr<Task>& new_task, const double& job_duration);
 
         /**
          * @brief Handles the completion of a job on a server.
@@ -55,7 +55,7 @@ class scheduler : public entity, public std::enable_shared_from_this<scheduler> 
          * @brief Detaches a server if needed, i.e., if its attached task is inactive.
          * @param inactive_task The inactive task associated with the server.
          */
-        void detach_server_if_needed(const std::shared_ptr<task>& inactive_task);
+        void detach_server_if_needed(const std::shared_ptr<Task>& inactive_task);
 
       protected:
         std::weak_ptr<cluster> attached_cluster;
@@ -191,7 +191,7 @@ class scheduler : public entity, public std::enable_shared_from_this<scheduler> 
          * @param new_task The new task to test for admission.
          * @return True if the new task is admitted, false otherwise.
          */
-        virtual auto admission_test(const task& new_task) const -> bool = 0;
+        virtual auto admission_test(const Task& new_task) const -> bool = 0;
 
         /**
          * @brief Handles a vector of events according to the scheduling policy.

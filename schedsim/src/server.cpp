@@ -13,7 +13,7 @@
 
 Server::Server(const std::weak_ptr<engine>& sim) : entity(sim){};
 
-void Server::set_task(const std::shared_ptr<task>& task_to_attach)
+void Server::set_task(const std::shared_ptr<Task>& task_to_attach)
 {
         attached_task = task_to_attach;
 }

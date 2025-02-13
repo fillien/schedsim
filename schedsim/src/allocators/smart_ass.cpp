@@ -5,7 +5,7 @@
 #include <optional>
 #include <scheduler.hpp>
 
-auto allocators::smart_ass::where_to_put_the_task(const std::shared_ptr<task>& new_task)
+auto allocators::smart_ass::where_to_put_the_task(const std::shared_ptr<Task>& new_task)
     -> std::optional<std::shared_ptr<scheds::scheduler>>
 {
         const auto compare_perf = [](const auto& first, const auto& second) {

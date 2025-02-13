@@ -16,7 +16,7 @@ class allocator : public entity {
 
       protected:
         std::vector<std::shared_ptr<scheds::scheduler>> schedulers;
-        virtual auto where_to_put_the_task(const std::shared_ptr<task>& new_task)
+        virtual auto where_to_put_the_task(const std::shared_ptr<Task>& new_task)
             -> std::optional<std::shared_ptr<scheds::scheduler>> = 0;
 
       public:

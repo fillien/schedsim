@@ -17,7 +17,7 @@ class Server : public entity, public std::enable_shared_from_this<Server> {
         /**
          * @brief The task to ensure time isolation.
          */
-        std::weak_ptr<task> attached_task{};
+        std::weak_ptr<Task> attached_task{};
 
       public:
         /**
@@ -89,13 +89,13 @@ class Server : public entity, public std::enable_shared_from_this<Server> {
          * @brief Retrieves the attached task.
          * @return Shared pointer to the attached task.
          */
-        auto get_task() const -> std::shared_ptr<task> { return attached_task.lock(); };
+        auto get_task() const -> std::shared_ptr<Task> { return attached_task.lock(); };
 
         /**
          * @brief Sets the attached task.
          * @param task_to_attach Task to attach to the server.
          */
-        void set_task(const std::shared_ptr<task>& task_to_attach);
+        void set_task(const std::shared_ptr<Task>& task_to_attach);
 
         /**
          * @brief Unsets the attached task.

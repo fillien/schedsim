@@ -44,7 +44,7 @@ processor::processor(
         });
 };
 
-void processor::set_task(const std::weak_ptr<task>& task_to_execute)
+void processor::set_task(const std::weak_ptr<Task>& task_to_execute)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;

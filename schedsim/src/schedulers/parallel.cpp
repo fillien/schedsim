@@ -70,7 +70,7 @@ auto parallel::get_server_virtual_time(const Server& serv, const double& running
         return serv.virtual_time + bandwidth / serv.utilization() * running_time;
 }
 
-auto parallel::admission_test(const task& new_task) const -> bool
+auto parallel::admission_test(const Task& new_task) const -> bool
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;

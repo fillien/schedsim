@@ -32,11 +32,11 @@ class processor : public entity, public std::enable_shared_from_this<processor> 
 
         auto get_cluster() { return attached_cluster; };
 
-        void set_task(const std::weak_ptr<task>& task_to_execute);
+        void set_task(const std::weak_ptr<Task>& task_to_execute);
 
         void clear_task();
 
-        auto get_task() const -> std::shared_ptr<task>
+        auto get_task() const -> std::shared_ptr<Task>
         {
                 assert(!running_task.expired());
                 return this->running_task.lock();
@@ -85,7 +85,7 @@ class processor : public entity, public std::enable_shared_from_this<processor> 
         /**
          * @brief Weak pointer to the task currently running on the processor.
          */
-        std::weak_ptr<task> running_task;
+        std::weak_ptr<Task> running_task;
 
         std::weak_ptr<cluster> attached_cluster;
 

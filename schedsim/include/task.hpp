@@ -13,7 +13,7 @@ class engine;
 /**
  * @brief Represents a model of a user code that is executed by a processor.
  */
-class task : public entity, public std::enable_shared_from_this<task> {
+class Task : public entity, public std::enable_shared_from_this<Task> {
       public:
         /**
          * @brief A unique ID for the task.
@@ -42,7 +42,7 @@ class task : public entity, public std::enable_shared_from_this<task> {
          * @param period The period of the task.
          * @param utilization The utilization taken when active.
          */
-        task(
+        Task(
             const std::weak_ptr<engine>& sim,
             std::size_t tid,
             const double& period,

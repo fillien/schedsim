@@ -67,7 +67,7 @@ class parallel : public scheduler {
          * @param new_task The new task to test for admission.
          * @return True if the new task is admitted, false otherwise.
          */
-        auto admission_test(const task& new_task) const -> bool override;
+        auto admission_test(const Task& new_task) const -> bool override;
 
         /**
          * @brief Implements the custom scheduling logic for the parallel scheduler.

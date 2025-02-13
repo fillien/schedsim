@@ -150,11 +150,11 @@ auto main(const int argc, const char** argv) -> int
                 // }
                 sim->set_scheduler(sched);
 
-                std::vector<std::shared_ptr<task>> tasks{taskset.tasks.size()};
+                std::vector<std::shared_ptr<Task>> tasks{taskset.tasks.size()};
 
                 // Create tasks and job arrival events
                 for (auto input_task : taskset.tasks) {
-                        auto new_task = make_shared<task>(
+                        auto new_task = make_shared<Task>(
                             sim, input_task.id, input_task.period, input_task.utilization);
 
                         // For each job of tasks add a "job arrival" event in the future list

@@ -13,7 +13,7 @@ namespace events {
  * @brief Represents an event for the arrival of a job.
  */
 struct job_arrival {
-        std::shared_ptr<task> task_of_job; /**< The task associated with the arrived job. */
+        std::shared_ptr<Task> task_of_job; /**< The task associated with the arrived job. */
         double job_duration;               /**< The duration of the arrived job. */
 };
 
