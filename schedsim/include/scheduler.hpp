@@ -206,11 +206,7 @@ class scheduler : public entity, public std::enable_shared_from_this<scheduler> 
         void set_cluster(const std::weak_ptr<cluster> clu) { attached_cluster = clu; };
         auto get_cluster() -> std::shared_ptr<cluster> { return attached_cluster.lock(); };
 
-        auto get_max_utilization(
-            const std::vector<std::shared_ptr<server>>& servers,
-            const double& new_utilization = 0) const -> double;
-
-        auto get_umax() const -> double { return get_max_utilization(this->servers, 0); };
+        auto u_max() const -> double;
 
         /**
          * @brief Retrieves the active bandwidth of the system.

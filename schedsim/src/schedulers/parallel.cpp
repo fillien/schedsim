@@ -37,9 +37,8 @@ auto parallel::get_inactive_bandwidth() const -> double
         ZoneScoped;
 #endif
         const auto TOTAL_UTILIZATION{get_total_utilization()};
-        const auto MAX_UTILIZATION{get_max_utilization(servers)};
         const auto NB_PROCS{static_cast<double>(get_nb_active_procs())};
-        return NB_PROCS - (NB_PROCS - 1) * MAX_UTILIZATION - TOTAL_UTILIZATION;
+        return NB_PROCS - (NB_PROCS - 1) * u_max() - TOTAL_UTILIZATION;
 }
 
 auto parallel::get_nb_active_procs([[maybe_unused]] const double& new_utilization) const
@@ -77,7 +76,7 @@ auto parallel::admission_test(const task& new_task) const -> bool
         ZoneScoped;
 #endif
         const auto NB_PROCS{static_cast<double>(chip()->processors.size())};
-        const auto U_MAX{get_max_utilization(servers, new_task.utilization)};
+        const auto U_MAX{std::max(u_max(), new_task.utilization)};
         const auto NEW_TOTAL_UTILIZATION{get_total_utilization() + new_task.utilization};
         return (NEW_TOTAL_UTILIZATION <= (NB_PROCS - (NB_PROCS - 1) * U_MAX));
 }

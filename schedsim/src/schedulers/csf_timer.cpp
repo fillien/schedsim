@@ -110,7 +110,7 @@ void csf_timer::update_platform()
 {
 
         const double total_util{get_active_bandwidth()};
-        const double max_util{get_max_utilization(servers)};
+        const double max_util{u_max()};
         const double max_procs{static_cast<double>(chip()->processors.size())};
         const auto freq_eff{chip()->freq_eff()};
         const auto freq_max{chip()->freq_max()};

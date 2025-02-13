@@ -85,7 +85,7 @@ void ffa::adjust_active_processors(const std::size_t target_processors)
 void ffa::update_platform()
 {
         const double total_util{get_active_bandwidth()};
-        const double max_util{get_max_utilization(servers)};
+        const double max_util{u_max()};
         const double max_procs{static_cast<double>(chip()->processors.size())};
         const double freq_eff{chip()->freq_eff()};
         const double freq_max{chip()->freq_max()};

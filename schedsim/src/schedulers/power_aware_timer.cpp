@@ -29,11 +29,10 @@ void power_aware_timer::update_platform()
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        const double U_MAX{get_max_utilization(servers)};
         const double NB_PROCS{static_cast<double>(chip()->processors.size())};
         const double TOTAL_U{get_total_utilization()};
         const double F_MAX{chip()->freq_max()};
-        const double new_freq{(F_MAX * ((NB_PROCS - 1) * U_MAX + TOTAL_U)) / NB_PROCS};
+        const double new_freq{(F_MAX * ((NB_PROCS - 1) * u_max() + TOTAL_U)) / NB_PROCS};
 
         assert(new_freq <= chip()->freq_max());
         if (chip()->freq() != chip()->ceil_to_mode(new_freq)) {

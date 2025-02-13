@@ -34,25 +34,19 @@ void scheduler::call_resched()
         on_resched();
 }
 
-auto scheduler::get_max_utilization(
-    const std::vector<std::shared_ptr<server>>& servers, const double& new_utilization) const
-    -> double
+auto scheduler::u_max() const -> double
 {
-
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        if (std::distance(std::begin(servers), std::end(servers)) > 0) {
-                auto u_max = std::max_element(
-                    std::begin(servers),
-                    std::end(servers),
-                    [](const std::shared_ptr<server>& first,
-                       const std::shared_ptr<server>& second) {
-                            return (first->utilization() < second->utilization());
-                    });
-                return std::max((*u_max)->utilization(), new_utilization);
-        }
-        return new_utilization;
+        if (servers.empty()) { return 0.0; }
+
+        const auto max_server =
+            std::max_element(servers.begin(), servers.end(), [](const auto& a, const auto& b) {
+                    return a->utilization() < b->utilization();
+            });
+
+        return (*max_server)->utilization();
 }
 
 auto scheduler::is_this_my_event(const events::event& evt) -> bool

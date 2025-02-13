@@ -14,7 +14,7 @@ class ffa : public parallel {
       private:
         std::size_t nb_active_procs{1};
 
-        auto compute_freq_min(
+        static auto compute_freq_min(
             const double& freq_max,
             const double& total_util,
             const double& max_util,
