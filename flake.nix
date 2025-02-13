@@ -27,6 +27,7 @@
           doCheck = true;
           buildPhase = ''
             cmake --build . --target tests
+            cmake --build . --target schedview_tests
           '';
           checkPhase = ''
             ctest --output-on-failure
