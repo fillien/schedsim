@@ -5,6 +5,18 @@ project("Schedsim"
 
 include(CTest)
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options(-fcolor-diagnostics)
+endif()
+
+if (CMAKE_GENERATOR MATCHES "Ninja")
+    set(CMAKE_COLOR_MAKEFILE ON)
+    add_compile_definitions(CLICOLOR=1)
+    add_compile_definitions(CLICOLOR_FORCE=1)
+endif()
+
+set(CMAKE_VERBOSE_MAKEFILE ON)
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
