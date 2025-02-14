@@ -1,7 +1,6 @@
 #ifndef META_SCHEDULER_HPP
 #define META_SCHEDULER_HPP
 
-#include <cstddef>
 #include <entity.hpp>
 #include <event.hpp>
 #include <memory>

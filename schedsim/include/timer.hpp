@@ -13,15 +13,15 @@ class Timer : public Entity, public std::enable_shared_from_this<Timer> {
             : Entity(sim), callback(callback) {};
         void set(const double& duration);
         void cancel();
-        auto is_active() -> bool { return active; };
+        auto is_active() -> bool { return active_; };
         void fire();
-        auto get_deadline() -> double { return deadline; };
+        auto deadline() -> double { return deadline_; };
 
         std::function<void()> callback;
 
       private:
-        bool active{false};
-        double deadline{0};
+        bool active_{false};
+        double deadline_{0};
 };
 
 #endif

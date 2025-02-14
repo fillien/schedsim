@@ -57,7 +57,7 @@ void Processor::set_task(const std::weak_ptr<Task>& task_to_execute)
         running_task = std::move(shared_task);
         shared_task->attached_proc = shared_from_this();
 
-        sim()->add_trace(protocols::traces::TaskScheduled{shared_task->id, shared_from_this()->id});
+        sim()->add_trace(protocols::traces::TaskScheduled{.task_id=shared_task->id, .proc_id=shared_from_this()->id});
 }
 
 void Processor::clear_task()
@@ -119,7 +119,7 @@ void Processor::dvfs_change_state(const double& delay)
         assert(sim()->is_delay_activated());
 
         if (current_state == state::change) {
-                if (coretimer->get_deadline() < (sim()->time() + delay)) {
+                if (coretimer->deadline() < (sim()->time() + delay)) {
                         coretimer->cancel();
                         dpm_target = state::idle;
                         coretimer->set(delay);
@@ -145,7 +145,7 @@ void Processor::dpm_change_state(const state& next_state)
         }
 
         if (current_state == state::change) {
-                if (coretimer->get_deadline() < (sim()->time() + DPM_DELAY)) {
+                if (coretimer->deadline() < (sim()->time() + DPM_DELAY)) {
                         coretimer->cancel();
                         dpm_target = next_state;
                         coretimer->set(DPM_DELAY);

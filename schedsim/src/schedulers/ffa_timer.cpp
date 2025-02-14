@@ -148,7 +148,7 @@ void FfaTimer::update_platform()
                             timers_dpm_cooldown.begin(),
                             timers_dpm_cooldown.end(),
                             [](const std::shared_ptr<Timer>& a, const std::shared_ptr<Timer>& b) {
-                                    return a->get_deadline() < b->get_deadline();
+                                    return a->deadline() < b->deadline();
                             });
 
                         for (int i = 0; i < diff_dpm; ++i) {
