@@ -27,8 +27,8 @@ auto Csf::get_nb_active_procs([[maybe_unused]] const double& new_utilization = 0
     -> std::size_t
 {
         auto is_active = [](const auto& proc) {
-                auto state = proc->get_state();
-                return state == Processor::state::idle || state == Processor::state::running;
+                auto state = proc->state();
+                return state == Processor::State::Idle || state == Processor::State::Running;
         };
 
         const auto& processors = chip()->processors;
@@ -36,37 +36,36 @@ auto Csf::get_nb_active_procs([[maybe_unused]] const double& new_utilization = 0
 }
 
 void Csf::change_state_proc(
-    const Processor::state& next_state, const std::shared_ptr<Processor>& proc)
+    const Processor::State& next_state, const std::shared_ptr<Processor>& proc)
 {
-        assert(next_state != proc->get_state());
-        assert(proc->get_state() != Processor::state::change);
+        assert(next_state != proc->state());
+        assert(proc->state() != Processor::State::Change);
         remove_task_from_cpu(proc);
         proc->dpm_change_state(next_state);
 }
 
 void Csf::activate_next_core()
 {
-        using enum Processor::state;
+        using enum Processor::State;
         auto& processors = chip()->processors;
-        auto itr = std::find_if(processors.begin(), processors.end(), [](const auto& proc) {
-                return proc->get_state() == sleep;
-        });
+        auto itr = std::ranges::find_if(
+            processors, [](const auto& proc) { return proc->state() == Sleep; });
         if (itr == processors.end()) {
                 return;
         } // No sleeping core found, there
           // is core in change state.
-        change_state_proc(idle, *itr);
+        change_state_proc(Idle, *itr);
 }
 
 void Csf::put_next_core_to_bed()
 {
-        using enum Processor::state;
+        using enum Processor::State;
         auto& processors = chip()->processors;
-        auto itr = std::find_if(processors.begin(), processors.end(), [](const auto& proc) {
-                return proc->get_state() == idle || proc->get_state() == running;
+        auto itr = std::ranges::find_if(processors, [](const auto& proc) {
+                return proc->state() == Idle || proc->state() == Running;
         });
         assert(itr != processors.end());
-        change_state_proc(sleep, *itr);
+        change_state_proc(Sleep, *itr);
 }
 
 void Csf::adjust_active_processors(const std::size_t target_processors)

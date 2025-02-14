@@ -2,7 +2,6 @@
 #include <allocator.hpp>
 #include <cstddef>
 #include <event.hpp>
-#include <map>
 #include <platform.hpp>
 #include <protocols/traces.hpp>
 #include <scheduler.hpp>
@@ -41,7 +40,7 @@ void Allocator::handle(std::vector<events::Event> evts)
 {
         using namespace events;
 
-        std::sort(std::begin(evts), std::end(evts), compare_events);
+        std::ranges::sort(evts, compare_events);
 
         // Looking for JOB_ARRIVAL events at the same time for this server
         auto has_matching_job_arrival = [&evts](const auto& server) {

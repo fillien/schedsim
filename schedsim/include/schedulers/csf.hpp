@@ -22,7 +22,7 @@ class Csf : public Parallel {
         void put_next_core_to_bed();
         void adjust_active_processors(std::size_t target_processors);
         void change_state_proc(
-            const Processor::state& next_state, const std::shared_ptr<Processor>& proc);
+            const Processor::State& next_state, const std::shared_ptr<Processor>& proc);
 
       protected:
         auto get_nb_active_procs(const double& new_utilization) const -> std::size_t override;

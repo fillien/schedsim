@@ -72,7 +72,7 @@ auto Cluster::ceil_to_mode(const double& freq) -> double
 
 void Cluster::dvfs_change_freq(const double& next_freq)
 {
-        using enum Processor::state;
+        using enum Processor::State;
 
         if (next_freq < 0 || next_freq > freq_max()) {
                 throw std::domain_error("This frequency is not available");
@@ -95,7 +95,7 @@ void Cluster::dvfs_change_freq(const double& next_freq)
         }
         else {
                 for (const auto& proc : processors) {
-                        assert(proc->get_state() == Processor::state::change);
+                        assert(proc->state() == Processor::State::Change);
                 }
         }
 }

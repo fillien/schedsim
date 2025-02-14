@@ -3,11 +3,9 @@
 
 #include <engine.hpp>
 #include <entity.hpp>
-#include <iostream>
 #include <memory>
 #include <processor.hpp>
 #include <scheduler.hpp>
-#include <vector>
 
 namespace scheds {
 /**

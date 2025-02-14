@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <engine.hpp>
 #include <event.hpp>
-#include <iterator>
 #include <memory>
 #include <processor.hpp>
 #include <protocols/traces.hpp>
@@ -19,16 +18,13 @@ namespace scheds {
 
 auto Parallel::processor_order(const Processor& first, const Processor& second) -> bool
 {
-        using enum Processor::state;
+        using enum Processor::State;
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        if (!first.has_running_task()) { return (first.get_state() == idle); }
-        if (!second.has_running_task()) {
-                return (second.get_state() == sleep || second.get_state() == change);
-        }
-        return deadline_order(
-            *(first.get_task()->get_server()), *(second.get_task()->get_server()));
+        if (!first.has_task()) { return (first.state() == Idle); }
+        if (!second.has_task()) { return (second.state() == Sleep || second.state() == Change); }
+        return deadline_order(*(first.task()->get_server()), *(second.task()->get_server()));
 }
 
 auto Parallel::get_inactive_bandwidth() const -> double
@@ -83,10 +79,10 @@ auto Parallel::admission_test(const Task& new_task) const -> bool
 
 void Parallel::remove_task_from_cpu(const std::shared_ptr<Processor>& proc)
 {
-        if (proc->has_running_task()) {
-                cancel_alarms(*(proc->get_task()->get_server()));
+        if (proc->has_task()) {
+                cancel_alarms(*(proc->task()->get_server()));
 
-                proc->get_task()->get_server()->change_state(Server::state::ready);
+                proc->task()->get_server()->change_state(Server::state::ready);
                 proc->clear_task();
         }
 }
@@ -97,7 +93,7 @@ void Parallel::on_resched()
         using std::ranges::max;
         using std::ranges::min;
         using std::views::filter;
-        using enum Processor::state;
+        using enum Processor::State;
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
@@ -113,7 +109,7 @@ void Parallel::on_resched()
                 auto ready_servers = servers | filter(from_shared<Server>(is_ready_server));
                 auto available_procs =
                     chip()->processors | filter([](const auto& proc) {
-                            return proc->get_state() == idle || proc->get_state() == running;
+                            return proc->state() == Idle || proc->state() == Running;
                     });
 
                 // Check if there are servers in ready or running state
@@ -127,17 +123,17 @@ void Parallel::on_resched()
                 auto leastest_priority_processor =
                     min(available_procs, from_shared<Processor>(processor_order));
 
-                if (leastest_priority_processor->get_state() == sleep) {
-                        assert(!leastest_priority_processor->has_running_task());
+                if (leastest_priority_processor->state() == Sleep) {
+                        assert(!leastest_priority_processor->has_task());
                 }
 
-                if ((!(leastest_priority_processor->get_state() == change)) ||
-                    !leastest_priority_processor->has_running_task() ||
+                if ((!(leastest_priority_processor->state() == Change)) ||
+                    !leastest_priority_processor->has_task() ||
                     deadline_order(
                         *highest_priority_server,
-                        *leastest_priority_processor->get_task()->get_server())) {
+                        *leastest_priority_processor->task()->get_server())) {
 
-                        assert(leastest_priority_processor->get_state() != sleep);
+                        assert(leastest_priority_processor->state() != Sleep);
                         resched_proc(leastest_priority_processor, highest_priority_server);
 
                         cpt_scheduled_proc++;
@@ -149,15 +145,15 @@ void Parallel::on_resched()
 
         // Set next job finish or budget exhausted event for each proc with a task
         for (auto proc : chip()->processors) {
-                if (proc->get_state() == sleep) { continue; }
-                if (proc->get_state() == change) { continue; }
-                if (proc->has_running_task()) {
-                        cancel_alarms(*proc->get_task()->get_server());
-                        set_alarms(proc->get_task()->get_server());
-                        proc->change_state(running);
+                if (proc->state() == Sleep) { continue; }
+                if (proc->state() == Change) { continue; }
+                if (proc->has_task()) {
+                        cancel_alarms(*proc->task()->get_server());
+                        set_alarms(proc->task()->get_server());
+                        proc->change_state(Running);
                 }
                 else {
-                        proc->change_state(idle);
+                        proc->change_state(Idle);
                 }
         }
 }

@@ -34,7 +34,7 @@ class FfaTimer : public Parallel {
         void activate_next_core();
         void put_next_core_to_bed();
         void change_state_proc(
-            const Processor::state& next_state, const std::shared_ptr<Processor>& proc);
+            const Processor::State& next_state, const std::shared_ptr<Processor>& proc);
         void adjust_active_processors(std::size_t target_processors);
 
       protected:

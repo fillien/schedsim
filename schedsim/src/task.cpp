@@ -1,7 +1,5 @@
 #include <cassert>
 #include <engine.hpp>
-#include <iostream>
-#include <limits>
 #include <memory>
 #include <server.hpp>
 #include <task.hpp>
@@ -45,14 +43,14 @@ void Task::add_job(const double& duration)
 
 auto Task::get_remaining_time() const -> double
 {
-        return remaining_execution_time / attached_proc->get_cluster().lock()->speed();
+        return remaining_execution_time / attached_proc->cluster()->speed();
 };
 
 void Task::consume_time(const double& duration)
 {
         assert(duration >= 0);
 
-        remaining_execution_time -= duration * attached_proc->get_cluster().lock()->speed();
+        remaining_execution_time -= duration * attached_proc->cluster()->speed();
         assert(sim()->round_zero(remaining_execution_time) >= 0);
 }
 

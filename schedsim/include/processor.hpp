@@ -9,92 +9,98 @@
 class Cluster;
 
 /**
- * @brief Represents a processor model, composed of a state, and a running task.
+ * @brief Represents a processor model with a state and a running task.
  */
 class Processor : public Entity, public std::enable_shared_from_this<Processor> {
       public:
-        static constexpr double DPM_DELAY{0.5};
+        static constexpr double DPM_DELAY = 0.5;
 
         /**
-         * @brief Possible states of a processor.
+         * @brief Possible processor states.
          */
-        enum class state { sleep, idle, running, change };
+        enum class State { Sleep, Idle, Running, Change };
 
         /**
-         * @brief Class constructor.
+         * @brief Constructs a Processor.
          * @param sim Weak pointer to the engine.
-         * @param cpu_id The unique ID of the processor.
+         * @param cluster Weak pointer to the cluster.
+         * @param cpu_id Unique ID of the processor.
          */
         explicit Processor(
-            const std::weak_ptr<Engine>& sim,
-            const std::weak_ptr<Cluster>& clu,
-            const std::size_t cpu_id);
+            std::weak_ptr<Engine> sim, std::weak_ptr<Cluster> cluster, std::size_t cpu_id);
 
-        auto get_cluster() { return attached_cluster; };
+        /**
+         * @brief Gets the cluster associated with the processor.
+         * @return Shared pointer to the cluster.
+         */
+        [[nodiscard]] auto cluster() const -> std::shared_ptr<Cluster> { return cluster_.lock(); }
 
-        void set_task(const std::weak_ptr<Task>& task_to_execute);
+        /**
+         * @brief Assigns a task to the processor.
+         * @param task_to_execute Weak pointer to the task.
+         */
+        void task(std::weak_ptr<Task> task_to_execute);
 
+        /**
+         * @brief Clears the current task.
+         */
         void clear_task();
 
-        auto get_task() const -> std::shared_ptr<Task>
-        {
-                assert(!running_task.expired());
-                return this->running_task.lock();
-        };
-
-        auto has_running_task() const -> bool { return !running_task.expired(); };
-
         /**
-         * @brief Updates the state of the processor based on its current activities.
+         * @brief Retrieves the current task.
+         * @return Shared pointer to the current task.
          */
-        void update_state();
+        [[nodiscard]] auto task() const -> std::shared_ptr<Task>;
 
         /**
-         * @brief Retrieves the current state of the processor.
-         * @return Current state of the processor.
+         * @brief Checks if the processor has an assigned task.
+         * @return True if a task is assigned, false otherwise.
          */
-        auto get_state() const -> state { return current_state; };
+        [[nodiscard]] auto has_task() const -> bool { return !task_.expired(); }
 
         /**
-         * @brief Retrieves the unique ID of the processor.
-         * @return Unique ID of the processor.
+         * @brief Updates the processor state based on current activities.
          */
-        auto get_id() const -> std::size_t { return id; };
+        void update_state() { change_state(has_task() ? State::Running : State::Idle); }
 
         /**
-         * @brief Changes the state of the processor to the specified next state.
+         * @brief Retrieves the current processor state.
+         * @return Current processor state.
+         */
+        [[nodiscard]] auto state() const -> State { return current_state_; }
+
+        /**
+         * @brief Retrieves the processor's unique ID.
+         * @return Processor's unique ID.
+         */
+        [[nodiscard]] auto id() const -> std::size_t { return id_; }
+
+        /**
+         * @brief Changes the processor state.
          * @param next_state The state to transition to.
          */
-        void change_state(const state& next_state);
+        void change_state(const State& next_state);
 
-        void dpm_change_state(const state& next_state);
+        /**
+         * @brief Performs a DPM state transition.
+         * @param next_state The state to transition to.
+         */
+        void dpm_change_state(const State& next_state);
 
-        void dvfs_change_state(const double& delay);
+        /**
+         * @brief Performs a DVFS state transition with a delay.
+         * @param delay The delay in seconds.
+         */
+        void dvfs_change_state(double delay);
 
       private:
-        /**
-         * @brief Unique ID of the processor.
-         */
-        std::size_t id;
+        std::size_t id_;                   ///< Unique ID of the processor.
+        State current_state_{State::Idle}; ///< Current processor state.
+        State dpm_target_{State::Idle};    ///< Target state for DPM.
 
-        /**
-         * @brief Next the DPM will have to be in
-         */
-        state dpm_target;
-
-        /**
-         * @brief Weak pointer to the task currently running on the processor.
-         */
-        std::weak_ptr<Task> running_task;
-
-        std::weak_ptr<Cluster> attached_cluster;
-
-        /**
-         * @brief Current state of the processor, initialized as idle by default.
-         */
-        state current_state{state::idle};
-
-        std::shared_ptr<Timer> coretimer;
+        std::weak_ptr<Task> task_;          ///< Currently running task.
+        std::weak_ptr<Cluster> cluster_;    ///< Cluster containing this processor.
+        std::shared_ptr<Timer> core_timer_; ///< Timer for processor operations.
 };
 
 #endif // PROCESSOR_HPP

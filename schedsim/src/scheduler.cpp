@@ -3,11 +3,9 @@
 #include <engine.hpp>
 #include <entity.hpp>
 #include <event.hpp>
-#include <iostream>
 #include <iterator>
 #include <map>
 #include <memory>
-#include <ostream>
 #include <platform.hpp>
 #include <processor.hpp>
 #include <protocols/traces.hpp>
@@ -41,10 +39,9 @@ auto Scheduler::u_max() const -> double
 #endif
         if (servers.empty()) { return 0.0; }
 
-        const auto max_server =
-            std::max_element(servers.begin(), servers.end(), [](const auto& a, const auto& b) {
-                    return a->utilization() < b->utilization();
-            });
+        const auto max_server = std::ranges::max_element(servers, [](const auto& a, const auto& b) {
+                return a->utilization() < b->utilization();
+        });
 
         return (*max_server)->utilization();
 }
@@ -81,9 +78,7 @@ auto Scheduler::is_this_my_event(const events::Event& evt) -> bool
 void Scheduler::update_running_servers()
 {
         for (const auto& proc : chip()->processors) {
-                if (proc->has_running_task()) {
-                        update_server_times(proc->get_task()->get_server());
-                }
+                if (proc->has_task()) { update_server_times(proc->task()->get_server()); }
         }
 };
 
@@ -386,10 +381,10 @@ void Scheduler::resched_proc(
         ZoneScoped;
 #endif
         namespace traces = protocols::traces;
-        if (proc->has_running_task()) {
-                cancel_alarms(*(proc->get_task()->get_server()));
-                sim()->add_trace(traces::TaskPreempted{proc->get_task()->id});
-                proc->get_task()->get_server()->change_state(Server::state::ready);
+        if (proc->has_task()) {
+                cancel_alarms(*(proc->task()->get_server()));
+                sim()->add_trace(traces::TaskPreempted{proc->task()->id});
+                proc->task()->get_server()->change_state(Server::state::ready);
                 proc->clear_task();
         }
 
@@ -397,7 +392,7 @@ void Scheduler::resched_proc(
                 server_to_execute->change_state(Server::state::running);
         }
 
-        proc->set_task(server_to_execute->get_task());
+        proc->task(server_to_execute->get_task());
 }
 
 auto Scheduler::clamp(const double& nb_procs) -> double
