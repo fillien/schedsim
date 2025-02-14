@@ -6,12 +6,13 @@
 #include <memory>
 #include <server.hpp>
 #include <task.hpp>
+#include <variant>
 
 #ifdef TRACY_ENABLE
 #include <tracy/Tracy.hpp>
 #endif
 
-Server::Server(const std::weak_ptr<Engine>& sim) : Entity(sim){};
+Server::Server(const std::weak_ptr<Engine>& sim) : Entity(sim) {};
 
 void Server::set_task(const std::shared_ptr<Task>& task_to_attach)
 {
@@ -49,10 +50,10 @@ void Server::change_state(const state& new_state)
                         // Remove all future events of type SERV_INACTIVE
                         /// TODO Replace events insertion and deletion by a timer mechanism.
                         auto const& serv_id = id();
-                        std::erase_if(sim()->future_list, [serv_id](const auto& evt) {
-                                if (holds_alternative<events::ServInactive>(evt.second)) {
-                                        auto knowned = std::get<events::ServInactive>(evt.second);
-                                        return knowned.serv->id() == serv_id;
+                        sim()->remove_event([serv_id](const auto& evt) {
+                                if (const auto& res =
+                                        std::get_if<events::ServInactive>(&evt.second)) {
+                                        return res->serv->id() == serv_id;
                                 }
                                 return false;
                         });

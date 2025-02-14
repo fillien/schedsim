@@ -145,14 +145,15 @@ void Scheduler::detach_server_if_needed(const std::shared_ptr<Task>& inactive_ta
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
+        const auto& future_list = sim()->future_list();
         // Check if there is a future job arrival
-        auto search = std::ranges::find_if(sim()->future_list, [inactive_task](auto& evt) {
+        auto search = std::ranges::find_if(future_list, [inactive_task](auto& evt) {
                 if (const auto& new_task = std::get_if<events::JobArrival>(&evt.second)) {
                         return (new_task->task_of_job == inactive_task);
                 }
                 return false;
         });
-        if (search == std::ranges::end(sim()->future_list)) {
+        if (search == std::end(future_list)) {
                 // If no job found, detach the server of the task
                 std::erase(servers, inactive_task->get_server());
                 inactive_task->unset_server();
@@ -211,7 +212,7 @@ void Scheduler::on_serv_inactive(const std::shared_ptr<Server>& serv)
                 update_server_times(serv);
         }
 
-        sim()->get_sched()->call_resched(shared_from_this());
+        sim()->sched()->call_resched(shared_from_this());
 }
 
 void Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const double& job_duration)
@@ -252,7 +253,7 @@ void Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const doub
             new_task->get_server()->current_state != Server::state::running) {
                 new_task->get_server()->change_state(Server::state::ready);
                 on_active_utilization_updated();
-                sim()->get_sched()->call_resched(shared_from_this());
+                sim()->sched()->call_resched(shared_from_this());
         }
 }
 
@@ -290,7 +291,7 @@ void Scheduler::on_job_finished(const std::shared_ptr<Server>& serv, bool is_the
                         on_active_utilization_updated();
                 }
         }
-        sim()->get_sched()->call_resched(shared_from_this());
+        sim()->sched()->call_resched(shared_from_this());
 }
 
 void Scheduler::on_serv_budget_exhausted(const std::shared_ptr<Server>& serv)
@@ -310,7 +311,7 @@ void Scheduler::on_serv_budget_exhausted(const std::shared_ptr<Server>& serv)
                 sim()->add_trace(traces::JobFinished{serv->id()}); // If yes, trace it
         }
 
-        sim()->get_sched()->call_resched(shared_from_this());
+        sim()->sched()->call_resched(shared_from_this());
 }
 
 void Scheduler::update_server_times(const std::shared_ptr<Server>& serv)
@@ -341,7 +342,7 @@ void Scheduler::cancel_alarms(const Server& serv)
         /// @TODO replace with iterator inside server and/or server if performance needed.
         using namespace events;
         const auto tid = serv.id();
-        std::erase_if(sim()->future_list, [tid](const auto& entry) {
+        sim()->remove_event([tid](const auto& entry) {
                 if (const auto& evt = std::get_if<ServBudgetExhausted>(&entry.second)) {
                         return evt->serv->id() == tid;
                 }

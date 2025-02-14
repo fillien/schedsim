@@ -122,9 +122,7 @@ void serialize(std::ostream& out, const protocols::traces::trace& tra)
                         color_arg(out, "frequency", tra.frequency);
                 },
                 [&out]([[maybe_unused]] traces::Resched tra) { color_name(out, "resched"); },
-                [&out]([[maybe_unused]] traces::SimFinished tra) {
-                        color_name(out, "sim_Gantt");
-                },
+                [&out]([[maybe_unused]] traces::SimFinished tra) { color_name(out, "sim_Gantt"); },
                 [&out](traces::TaskPlaced tra) {
                         color_name(out, "task_placed");
                         color_arg(out, "tid", tra.task_id);

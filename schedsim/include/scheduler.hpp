@@ -179,7 +179,7 @@ class Scheduler : public Entity, public std::enable_shared_from_this<Scheduler> 
          * @brief Constructs a scheduler with a weak pointer to the engine.
          * @param sim Weak pointer to the engine.
          */
-        explicit Scheduler(const std::weak_ptr<Engine> sim) : Entity(sim){};
+        explicit Scheduler(const std::weak_ptr<Engine> sim) : Entity(sim) {};
 
         /**
          * @brief Virtual destructor for the scheduler class.

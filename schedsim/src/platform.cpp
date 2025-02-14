@@ -81,7 +81,7 @@ void Cluster::dvfs_change_freq(const double& next_freq)
         double target_freq = sim()->chip()->isfreescaling() ? next_freq : ceil_to_mode(next_freq);
         if (target_freq == current_freq) { return; }
 
-        if (!sim()->is_delay_active()) {
+        if (!sim()->is_delay_activated()) {
                 set_freq(next_freq);
                 return;
         }

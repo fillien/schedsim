@@ -11,7 +11,7 @@ class SmartAss : public Allocator {
             -> std::optional<std::shared_ptr<scheds::Scheduler>> final;
 
       public:
-        explicit SmartAss(const std::weak_ptr<Engine>& sim) : Allocator(sim){};
+        explicit SmartAss(const std::weak_ptr<Engine>& sim) : Allocator(sim) {};
 };
 }; // namespace allocators
 

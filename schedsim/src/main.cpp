@@ -111,10 +111,10 @@ auto main(const int argc, const char** argv) -> int
                 // Insert the platform configured through the scenario file, in the simulation
                 // engine
                 auto plat = make_shared<Platform>(sim, FREESCALING_ALLOWED);
-                sim->set_platform(plat);
+                sim->platform(plat);
 
-                std::shared_ptr<allocators::Allocator> sched;
-                sched = std::make_shared<allocators::SmartAss>(sim);
+                std::shared_ptr<allocators::Allocator> sched =
+                    std::make_shared<allocators::SmartAss>(sim);
 
                 std::size_t cluster_id_cpt{1};
                 for (const protocols::hardware::Cluster& clu : PlatformConfig.clusters) {
@@ -148,7 +148,7 @@ auto main(const int argc, const char** argv) -> int
                 // else {
                 //         throw std::invalid_argument("Undefined scheduling policy");
                 // }
-                sim->set_scheduler(sched);
+                sim->scheduler(sched);
 
                 std::vector<std::shared_ptr<Task>> tasks{taskset.tasks.size()};
 

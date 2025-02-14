@@ -111,9 +111,7 @@ auto outputs::stats::track_change_state(
                                         changing_cores.erase(evt.proc_id);
                                 }
                         },
-                        [&](protocols::traces::SimFinished) {
-                                table["stop"].push_back(timestamp);
-                        },
+                        [&](protocols::traces::SimFinished) { table["stop"].push_back(timestamp); },
                         [](auto) {}},
                     tra);
         }

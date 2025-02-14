@@ -20,7 +20,7 @@ class Allocator : public Entity {
             -> std::optional<std::shared_ptr<scheds::Scheduler>> = 0;
 
       public:
-        explicit Allocator(const std::weak_ptr<Engine>& sim) : Entity(sim){};
+        explicit Allocator(const std::weak_ptr<Engine>& sim) : Entity(sim) {};
         virtual ~Allocator() = default;
 
         void add_child_sched(const std::weak_ptr<Cluster>& clu);

@@ -8,6 +8,7 @@
 #include <memory>
 #include <platform.hpp>
 #include <protocols/traces.hpp>
+#include <vector>
 
 template <class... Ts> struct overloaded : Ts... {
         using Ts::operator()...;
@@ -42,35 +43,35 @@ class Engine {
         /**
          * @brief A counter of the time passing.
          */
-        double current_timestamp{0};
+        double current_timestamp_{0};
 
         /**
          * @brief The attached scheduler.
          */
-        std::shared_ptr<allocators::Allocator> sched;
+        std::shared_ptr<allocators::Allocator> sched_;
 
         /**
          * @brief A model of the platform on which the scheduler will operate.
          * @TODO Maybe refactor this as a unique_ptr, as it will be alone all the running time
          */
-        std::shared_ptr<Platform> current_platform;
+        std::shared_ptr<Platform> platform_;
 
         /**
          * @brief The list of past events, a pair of the timestamp of the event and the event
          * itself.
          */
-        std::multimap<double, protocols::traces::trace> past_list{};
+        std::multimap<double, protocols::traces::trace> past_list_{};
 
-        bool active_delay{false};
-
-      public:
-        static constexpr double ZERO_ROUNDED = 0.0000001;
+        bool delay_activated_{false};
 
         /**
          * @brief The list of future events, a pair of the timestamp of the event and the event
          * itself.
          */
-        std::multimap<double, events::Event> future_list{};
+        std::multimap<double, events::Event> future_list_{};
+
+      public:
+        static constexpr double ZERO_ROUNDED = 0.0000001;
 
         /**
          * @brief A constructor to help generate the platform.
@@ -81,19 +82,13 @@ class Engine {
          * @brief Setter to attach a scheduler.
          * @param new_sched The new scheduler to attach.
          */
-        void set_scheduler(const std::shared_ptr<allocators::Allocator>& new_sched)
-        {
-                sched = new_sched;
-        }
+        void scheduler(const std::shared_ptr<allocators::Allocator>& sched) { sched_ = sched; }
 
         /**
          * @brief Setter to attach a platform.
          * @param new_platform The new platform to attach.
          */
-        void set_platform(const std::shared_ptr<Platform>& new_platform)
-        {
-                current_platform = new_platform;
-        };
+        void platform(const std::shared_ptr<Platform>& platform) { platform_ = platform; };
 
         /**
          * @brief The main function of the simulator engine, the event loop that handles the events.
@@ -103,19 +98,25 @@ class Engine {
         /**
          * @return The current platform attached to the engine.
          */
-        [[nodiscard]] auto chip() const -> std::shared_ptr<Platform> { return current_platform; };
+        [[nodiscard]] auto chip() const -> std::shared_ptr<Platform> { return platform_; };
 
         /**
          * @return The current simulation time.
          */
-        [[nodiscard]] auto time() const -> double { return current_timestamp; };
+        [[nodiscard]] auto time() const -> double { return current_timestamp_; };
 
         /**
          * @return The future list of events.
          */
-        [[nodiscard]] auto get_future_list() const -> std::multimap<double, events::Event>
+        [[nodiscard]] auto future_list() const -> std::multimap<double, events::Event>
         {
-                return this->future_list;
+                return future_list_;
+        };
+
+        auto remove_event(std::function<bool(const std::pair<double, events::Event>&)> pred)
+            -> std::size_t
+        {
+                return std::erase_if(future_list_, pred);
         };
 
         /**
@@ -145,11 +146,11 @@ class Engine {
         /**
          * @return The traces (past events) recorded by the engine.
          */
-        auto traces() { return past_list; };
+        auto traces() const { return past_list_; };
 
-        auto get_sched() -> std::shared_ptr<allocators::Allocator> { return sched; };
+        auto sched() -> std::shared_ptr<allocators::Allocator> { return sched_; };
 
-        [[nodiscard]] auto is_delay_active() const -> bool { return active_delay; };
+        [[nodiscard]] auto is_delay_activated() const -> bool { return delay_activated_; };
 };
 
 #endif

@@ -47,8 +47,7 @@ struct TimerIsr {
 /**
  * @brief A variant type representing different types of events.
  */
-using Event =
-    std::variant<JobArrival, JobFinished, ServBudgetExhausted, ServInactive, TimerIsr>;
+using Event = std::variant<JobArrival, JobFinished, ServBudgetExhausted, ServInactive, TimerIsr>;
 
 } // namespace events
 

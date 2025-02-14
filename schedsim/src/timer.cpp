@@ -23,7 +23,7 @@ void Timer::cancel()
 {
         assert(active != false);
         active = false;
-        auto cpt = std::erase_if(sim()->future_list, [&](const auto& entry) {
+        auto cpt = sim()->remove_event([&](const auto& entry) {
                 if (const auto& evt = std::get_if<events::TimerIsr>(&entry.second)) {
                         return evt->target_timer.get() == this;
                 }

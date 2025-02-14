@@ -7,7 +7,7 @@
 namespace scheds {
 CsfTimer::CsfTimer(const std::weak_ptr<Engine>& sim) : Parallel(sim)
 {
-        if (!sim.lock()->is_delay_active()) {
+        if (!sim.lock()->is_delay_activated()) {
                 throw std::runtime_error(
                     "Simulation without DVFS & DPM delays is not support for this scheduler");
         }

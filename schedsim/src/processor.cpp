@@ -39,7 +39,7 @@ Processor::Processor(
         coretimer = std::make_shared<Timer>(sim, [this, sim]() {
                 assert(this->current_state == state::change);
                 this->change_state(dpm_target);
-                sim.lock()->get_sched()->call_resched(attached_cluster.lock()->get_sched().lock());
+                sim.lock()->sched()->call_resched(attached_cluster.lock()->get_sched().lock());
                 assert(this->current_state != state::change);
         });
 };
@@ -57,8 +57,7 @@ void Processor::set_task(const std::weak_ptr<Task>& task_to_execute)
         running_task = std::move(shared_task);
         shared_task->attached_proc = shared_from_this();
 
-        sim()->add_trace(
-            protocols::traces::TaskScheduled{shared_task->id, shared_from_this()->id});
+        sim()->add_trace(protocols::traces::TaskScheduled{shared_task->id, shared_from_this()->id});
 }
 
 void Processor::clear_task()
@@ -117,7 +116,7 @@ void Processor::update_state()
 
 void Processor::dvfs_change_state(const double& delay)
 {
-        assert(sim()->is_delay_active());
+        assert(sim()->is_delay_activated());
 
         if (current_state == state::change) {
                 if (coretimer->get_deadline() < (sim()->time() + delay)) {
@@ -140,7 +139,7 @@ void Processor::dpm_change_state(const state& next_state)
 #endif
         assert(next_state != current_state);
 
-        if (!sim()->is_delay_active()) {
+        if (!sim()->is_delay_activated()) {
                 change_state(next_state);
                 return;
         }

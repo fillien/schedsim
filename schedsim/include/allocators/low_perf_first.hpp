@@ -11,7 +11,7 @@ class LowPerfFirst : public Allocator {
             -> std::optional<std::shared_ptr<scheds::Scheduler>> final;
 
       public:
-        explicit LowPerfFirst(const std::weak_ptr<Engine>& sim) : Allocator(sim){};
+        explicit LowPerfFirst(const std::weak_ptr<Engine>& sim) : Allocator(sim) {};
 };
 }; // namespace allocators
 

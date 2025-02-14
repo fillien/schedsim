@@ -76,9 +76,7 @@ auto outputs::frequency::track_cores_changes(
                                         active_cores.erase(evt.proc_id);
                                 }
                         },
-                        [&](protocols::traces::SimFinished) {
-                                table["stop"].push_back(timestamp);
-                        },
+                        [&](protocols::traces::SimFinished) { table["stop"].push_back(timestamp); },
                         [](auto) {}},
                     tra);
         }
@@ -136,9 +134,7 @@ auto outputs::frequency::track_config_changes(
                         //         }
                         // },
                         [&](protocols::traces::FrequencyUpdate evt) { new_freq = evt.frequency; },
-                        [&](protocols::traces::SimFinished) {
-                                table["stop"].push_back(timestamp);
-                        },
+                        [&](protocols::traces::SimFinished) { table["stop"].push_back(timestamp); },
                         [](auto) {}},
                     tra);
         }

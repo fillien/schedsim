@@ -113,7 +113,7 @@ void Ffa::update_platform()
                         remove_task_from_cpu(proc);
                 }
                 chip()->dvfs_change_freq(next_freq);
-                sim()->get_sched()->call_resched(shared_from_this());
+                sim()->sched()->call_resched(shared_from_this());
         }
 }
 

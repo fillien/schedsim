@@ -151,9 +151,7 @@ auto generate_gantt(
                 const auto& event = tra.second;
                 std::visit(
                     overloaded{
-                        [&](traces::JobArrival evt) {
-                                new_arrival(chart, timestamp, evt.task_id);
-                        },
+                        [&](traces::JobArrival evt) { new_arrival(chart, timestamp, evt.task_id); },
                         [&](traces::ServPostpone evt) {
                                 new_deadline(chart, evt.deadline, evt.task_id);
                         },
