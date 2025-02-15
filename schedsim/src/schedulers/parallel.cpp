@@ -24,7 +24,7 @@ auto Parallel::processor_order(const Processor& first, const Processor& second) 
 #endif
         if (!first.has_task()) { return (first.state() == Idle); }
         if (!second.has_task()) { return (second.state() == Sleep || second.state() == Change); }
-        return deadline_order(*(first.task()->get_server()), *(second.task()->get_server()));
+        return deadline_order(*(first.task()->server()), *(second.task()->server()));
 }
 
 auto Parallel::get_inactive_bandwidth() const -> double
@@ -34,7 +34,7 @@ auto Parallel::get_inactive_bandwidth() const -> double
 #endif
         const auto TOTAL_UTILIZATION{get_total_utilization()};
         const auto NB_PROCS{static_cast<double>(get_nb_active_procs())};
-        return NB_PROCS - (NB_PROCS - 1) * u_max() - TOTAL_UTILIZATION;
+        return NB_PROCS - ((NB_PROCS - 1) * u_max()) - TOTAL_UTILIZATION;
 }
 
 auto Parallel::get_nb_active_procs([[maybe_unused]] const double& new_utilization) const
@@ -63,7 +63,7 @@ auto Parallel::get_server_virtual_time(const Server& serv, const double& running
 #endif
         const double NB_ACTIVE_PROCS{static_cast<double>(get_nb_active_procs())};
         const auto bandwidth{1 - (get_inactive_bandwidth() / NB_ACTIVE_PROCS)};
-        return serv.virtual_time + bandwidth / serv.utilization() * running_time;
+        return serv.virtual_time + (bandwidth / serv.utilization() * running_time);
 }
 
 auto Parallel::admission_test(const Task& new_task) const -> bool
@@ -72,17 +72,17 @@ auto Parallel::admission_test(const Task& new_task) const -> bool
         ZoneScoped;
 #endif
         const auto NB_PROCS{static_cast<double>(chip()->processors.size())};
-        const auto U_MAX{std::max(u_max(), new_task.utilization)};
-        const auto NEW_TOTAL_UTILIZATION{get_active_bandwidth() + new_task.utilization};
+        const auto U_MAX{std::max(u_max(), new_task.utilization())};
+        const auto NEW_TOTAL_UTILIZATION{get_active_bandwidth() + new_task.utilization()};
         return (NEW_TOTAL_UTILIZATION <= (NB_PROCS - (NB_PROCS - 1) * U_MAX));
 }
 
 void Parallel::remove_task_from_cpu(const std::shared_ptr<Processor>& proc)
 {
         if (proc->has_task()) {
-                cancel_alarms(*(proc->task()->get_server()));
+                cancel_alarms(*(proc->task()->server()));
 
-                proc->task()->get_server()->change_state(Server::state::ready);
+                proc->task()->server()->change_state(Server::state::ready);
                 proc->clear_task();
         }
 }
@@ -131,7 +131,7 @@ void Parallel::on_resched()
                     !leastest_priority_processor->has_task() ||
                     deadline_order(
                         *highest_priority_server,
-                        *leastest_priority_processor->task()->get_server())) {
+                        *leastest_priority_processor->task()->server())) {
 
                         assert(leastest_priority_processor->state() != Sleep);
                         resched_proc(leastest_priority_processor, highest_priority_server);
@@ -148,8 +148,8 @@ void Parallel::on_resched()
                 if (proc->state() == Sleep) { continue; }
                 if (proc->state() == Change) { continue; }
                 if (proc->has_task()) {
-                        cancel_alarms(*proc->task()->get_server());
-                        set_alarms(proc->task()->get_server());
+                        cancel_alarms(*proc->task()->server());
+                        set_alarms(proc->task()->server());
                         proc->change_state(Running);
                 }
                 else {

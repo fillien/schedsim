@@ -21,7 +21,7 @@ void Server::set_task(const std::shared_ptr<Task>& task_to_attach)
 
 void Server::unset_task() { attached_task.reset(); }
 
-auto Server::remaining_exec_time() const -> double { return get_task()->get_remaining_time(); }
+auto Server::remaining_exec_time() const -> double { return get_task()->remaining_time(); }
 
 void Server::change_state(const state& new_state)
 {

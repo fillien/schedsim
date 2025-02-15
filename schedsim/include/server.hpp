@@ -48,19 +48,19 @@ class Server : public Entity, public std::enable_shared_from_this<Server> {
          * @brief Retrieves the ID of the attached task.
          * @return ID of the attached task.
          */
-        auto id() const -> std::size_t { return get_task()->id; }
+        auto id() const -> std::size_t { return get_task()->id(); }
 
         /**
          * @brief Retrieves the utilization of the attached task.
          * @return Utilization of the attached task.
          */
-        auto utilization() const -> double { return get_task()->utilization; };
+        auto utilization() const -> double { return get_task()->utilization(); };
 
         /**
          * @brief Retrieves the period of the attached task.
          * @return Period of the attached task.
          */
-        auto period() const -> double { return get_task()->period; };
+        auto period() const -> double { return get_task()->period(); };
 
         /**
          * @brief Retrieves the remaining execution time of the attached task.

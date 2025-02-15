@@ -68,7 +68,7 @@ auto Scheduler::is_this_my_event(const events::Event& evt) -> bool
         }
         if (std::holds_alternative<JobArrival>(evt)) {
                 const auto& [task, duration] = std::get<JobArrival>(evt);
-                return task->has_server() && matches_server(task->get_server());
+                return task->has_server() && matches_server(task->server());
         }
         if (std::holds_alternative<TimerIsr>(evt)) { return true; }
 
@@ -78,7 +78,7 @@ auto Scheduler::is_this_my_event(const events::Event& evt) -> bool
 void Scheduler::update_running_servers()
 {
         for (const auto& proc : chip()->processors) {
-                if (proc->has_task()) { update_server_times(proc->task()->get_server()); }
+                if (proc->has_task()) { update_server_times(proc->task()->server()); }
         }
 };
 
@@ -150,10 +150,10 @@ void Scheduler::detach_server_if_needed(const std::shared_ptr<Task>& inactive_ta
         });
         if (search == std::end(future_list)) {
                 // If no job found, detach the server of the task
-                std::erase(servers, inactive_task->get_server());
-                inactive_task->unset_server();
-                total_utilization -= inactive_task->utilization;
-                sim()->round_zero(total_utilization);
+                std::erase(servers, inactive_task->server());
+                inactive_task->clear_server();
+                total_utilization -= inactive_task->utilization();
+                Engine::round_zero(total_utilization);
         }
 }
 
@@ -217,11 +217,11 @@ void Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const doub
 #endif
         namespace traces = protocols::traces;
         sim()->add_trace(
-            traces::JobArrival{new_task->id, job_duration, sim()->time() + new_task->period});
+            traces::JobArrival{new_task->id(), job_duration, sim()->time() + new_task->period()});
 
         if (!new_task->has_server()) {
                 if (!admission_test(*new_task)) {
-                        sim()->add_trace(traces::TaskRejected{new_task->id});
+                        sim()->add_trace(traces::TaskRejected{new_task->id()});
                         return;
                 }
 
@@ -229,9 +229,9 @@ void Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const doub
                 update_running_servers();
 
                 auto new_server = std::make_shared<Server>(sim());
-                new_task->set_server(new_server);
+                new_task->server(new_server);
                 servers.push_back(new_server);
-                total_utilization += new_task->utilization;
+                total_utilization += new_task->utilization();
         }
 
         assert(new_task->has_server());
@@ -239,14 +239,14 @@ void Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const doub
         // Set the task remaining execution time with the WCET of the job
         new_task->add_job(job_duration);
 
-        if (new_task->get_server()->current_state == Server::state::inactive) {
+        if (new_task->server()->current_state == Server::state::inactive) {
                 update_running_servers();
-                new_task->get_server()->virtual_time = sim()->time();
+                new_task->server()->virtual_time = sim()->time();
         }
 
-        if (new_task->get_server()->current_state != Server::state::ready &&
-            new_task->get_server()->current_state != Server::state::running) {
-                new_task->get_server()->change_state(Server::state::ready);
+        if (new_task->server()->current_state != Server::state::ready &&
+            new_task->server()->current_state != Server::state::running) {
+                new_task->server()->change_state(Server::state::ready);
                 on_active_utilization_updated();
                 sim()->sched()->call_resched(shared_from_this());
         }
@@ -274,7 +274,7 @@ void Scheduler::on_job_finished(const std::shared_ptr<Server>& serv, bool is_the
                 serv->postpone();
         }
         else {
-                serv->get_task()->attached_proc->clear_task();
+                serv->get_task()->proc()->clear_task();
 
                 if ((serv->virtual_time - sim()->time()) > 0 &&
                     serv->virtual_time < serv->relative_deadline) {
@@ -299,7 +299,7 @@ void Scheduler::on_serv_budget_exhausted(const std::shared_ptr<Server>& serv)
         update_server_times(serv);
 
         // Check if the job as been completed at the same time
-        if (serv->get_task()->get_remaining_time() > 0) {
+        if (serv->get_task()->remaining_time() > 0) {
                 serv->postpone(); // If no, postpone the deadline
         }
         else {
@@ -320,10 +320,10 @@ void Scheduler::update_server_times(const std::shared_ptr<Server>& serv)
         const double running_time = sim()->time() - serv->last_update;
 
         // Be careful about floating point computation near 0
-        assert((serv->get_task()->get_remaining_time() - running_time) >= -Engine::ZERO_ROUNDED);
+        assert((serv->get_task()->remaining_time() - running_time) >= -Engine::ZERO_ROUNDED);
 
         serv->virtual_time = get_server_virtual_time(*serv, running_time);
-        sim()->add_trace(traces::VirtualTimeUpdate{serv->get_task()->id, serv->virtual_time});
+        sim()->add_trace(traces::VirtualTimeUpdate{serv->get_task()->id(), serv->virtual_time});
 
         serv->get_task()->consume_time(running_time);
         serv->last_update = sim()->time();
@@ -355,8 +355,8 @@ void Scheduler::set_alarms(const std::shared_ptr<Server>& serv)
 #endif
         using namespace events;
         namespace traces = protocols::traces;
-        const double new_budget{sim()->round_zero(get_server_budget(*serv))};
-        const double remaining_time{sim()->round_zero(serv->remaining_exec_time())};
+        const double new_budget{Engine::round_zero(get_server_budget(*serv))};
+        const double remaining_time{Engine::round_zero(serv->remaining_exec_time())};
 
 #ifdef TRACY_ENABLE
         TracyPlot("budget", new_budget);
@@ -382,9 +382,9 @@ void Scheduler::resched_proc(
 #endif
         namespace traces = protocols::traces;
         if (proc->has_task()) {
-                cancel_alarms(*(proc->task()->get_server()));
-                sim()->add_trace(traces::TaskPreempted{proc->task()->id});
-                proc->task()->get_server()->change_state(Server::state::ready);
+                cancel_alarms(*(proc->task()->server()));
+                sim()->add_trace(traces::TaskPreempted{proc->task()->id()});
+                proc->task()->server()->change_state(Server::state::ready);
                 proc->clear_task();
         }
 

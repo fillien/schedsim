@@ -2,129 +2,129 @@
 #define TASK_HPP
 
 #include <cstddef>
-#include <entity.hpp>
 #include <memory>
 #include <queue>
+
+#include "entity.hpp" // Adjust include path as needed
 
 class Processor;
 class Server;
 class Engine;
 
 /**
- * @brief Represents a model of a user code that is executed by a processor.
+ * @brief Represents a model of user code executed by a processor.
  */
 class Task : public Entity, public std::enable_shared_from_this<Task> {
       public:
         /**
-         * @brief A unique ID for the task.
+         * @brief Constructs a Task.
+         * @param engine Weak pointer to the engine.
+         * @param id Unique identifier for the task.
+         * @param period Task period.
+         * @param utilization Processor utilization when active.
          */
-        std::size_t id;
+        Task(std::weak_ptr<Engine> engine, std::size_t tid, double period, double utilization);
+
+        // Prevent copying/moving.
+        Task(const Task&) = delete;
+        Task& operator=(const Task&) = delete;
+        Task(Task&&) = delete;
+        Task& operator=(Task&&) = delete;
 
         /**
-         * @brief The period of the task.
+         * @brief Checks if the task is attached to a processor.
+         * @return true if attached; false otherwise.
          */
-        double period;
+        [[nodiscard]] auto is_attached() const noexcept -> bool
+        {
+                return (attached_proc_ != nullptr);
+        }
 
         /**
-         * @brief Utilization of the processor when the task is active.
+         * @brief Checks if the task has remaining execution time.
+         * @return true if there is remaining execution time; false otherwise.
          */
-        double utilization;
+        [[nodiscard]] auto has_remaining_time() const noexcept -> bool;
 
         /**
-         * @brief The processor on which the task is executed.
+         * @brief Adds a new job with the specified duration.
+         * @param duration Duration of the new job.
          */
-        std::shared_ptr<Processor> attached_proc{};
+        auto add_job(double duration) -> void;
 
         /**
-         * @brief A constructor with a unique ID, the period, and the utilization.
-         * @param sim Weak pointer to the engine.
-         * @param tid A unique ID.
-         * @param period The period of the task.
-         * @param utilization The utilization taken when active.
+         * @brief Consumes a specified duration from the remaining execution time.
+         * @param duration Duration to consume.
          */
-        Task(
-            const std::weak_ptr<Engine>& sim,
-            std::size_t tid,
-            const double& period,
-            const double& utilization);
-
-        /**
-         * @brief Returns true if the task is currently attached to a processor.
-         */
-        [[nodiscard]] auto is_attached() const -> bool;
-
-        /**
-         * @brief Returns true if the task has remaining time to be executed.
-         */
-        [[nodiscard]] auto has_remaining_time() const -> bool;
-
-        /**
-         * @brief Adds a new job to the queue.
-         * @param duration The duration of the new job.
-         */
-        void add_job(const double& duration);
-
-        /**
-         * @brief Consumes time from the remaining execution time.
-         * @param duration The duration to consume.
-         */
-        void consume_time(const double& duration);
+        auto consume_time(double duration) -> void;
 
         /**
          * @brief Returns the remaining execution time.
+         * @return The remaining execution time.
          */
-        [[nodiscard]] auto get_remaining_time() const -> double;
+        [[nodiscard]] auto remaining_time() const noexcept -> double;
 
         /**
-         * @brief Returns true if the task has a pending job.
+         * @brief Checks if there is a pending job.
+         * @return true if there is at least one pending job; false otherwise.
          */
-        [[nodiscard]] auto has_job() const -> bool { return !pending_jobs.empty(); };
+        [[nodiscard]] auto has_job() const noexcept -> bool { return !pending_jobs_.empty(); }
 
         /**
          * @brief Moves to the next job in the queue.
          */
-        void next_job();
+        auto next_job() -> void;
 
         /**
-         * @brief Returns the server to which the task is attached.
+         * @brief Retrieves the server the task is attached to.
+         * @return Shared pointer to the attached server.
          */
-        [[nodiscard]] auto get_server() const -> std::shared_ptr<Server> { return attached_serv; };
+        [[nodiscard]] auto server() const noexcept -> std::shared_ptr<Server>
+        {
+                return attached_serv_;
+        }
 
         /**
-         * @brief Sets the server to which the task is attached.
-         * @param serv_to_attach The server to attach the task to.
+         * @brief Attaches the task to a server.
+         * @param serv_to_attach The server to attach to.
          */
-        void set_server(const std::shared_ptr<Server>& serv_to_attach);
+        auto server(const std::shared_ptr<Server>& serv_to_attach) -> void;
 
         /**
-         * @brief Unsets the server from the task.
+         * @brief Detaches the server from the task.
          */
-        void unset_server();
+        auto clear_server() -> void;
 
         /**
-         * @brief Returns true if the task is attached to a server.
+         * @brief Checks if the task is attached to a server.
+         * @return true if a server is attached; false otherwise.
          */
-        [[nodiscard]] auto has_server() const -> bool;
+        [[nodiscard]] auto has_server() const noexcept -> bool
+        {
+                return static_cast<bool>(attached_serv_);
+        }
+
+        [[nodiscard]] auto id() const noexcept -> std::size_t { return id_; }
+
+        [[nodiscard]] auto utilization() const noexcept -> double { return utilization_; }
+
+        [[nodiscard]] auto period() const noexcept -> double { return period_; }
+
+        [[nodiscard]] auto proc() const noexcept -> std::shared_ptr<Processor> { return attached_proc_; }
+
+        auto proc(std::shared_ptr<Processor> receiver) -> void { attached_proc_ = receiver; }
 
       private:
-        /**
-         * @brief Remaining execution time that the processor has to execute.
-         * @description When a job arrives in the system, the value of this variable is increased by
-         * the duration of the job that arrived.
-         */
-        double remaining_execution_time{0};
+        std::size_t id_{0};                    ///< Unique identifier for the task.
+        double period_{0.0};                   ///< Task period.
+        double utilization_{0.0};              ///< Processor utilization when active.
+        double remaining_execution_time_{0.0}; ///< Remaining execution time.
 
-        /**
-         * @brief Queue of worst-case execution times (WCET) of the pending jobs.
-         * @description When a job arrives, its WCET is stored in the queue. When the task finishes
-         * a job, the remaining_execution_time is set to the WCET of the next job.
-         */
-        std::queue<double> pending_jobs;
+        std::queue<double> pending_jobs_; ///< Queue of pending job durations (WCETs).
 
-        /**
-         * @brief The server to which the task is attached.
-         */
-        std::shared_ptr<Server> attached_serv{};
+        std::shared_ptr<Processor> attached_proc_{
+            nullptr};                                    ///< Processor on which the task executes.
+        std::shared_ptr<Server> attached_serv_{nullptr}; ///< Server the task is attached to.
 };
 
-#endif
+#endif // TASK_HPP

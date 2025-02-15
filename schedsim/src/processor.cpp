@@ -44,10 +44,10 @@ void Processor::task(std::weak_ptr<Task> task_to_execute)
 
         // Set bidiretionnal relationship
         task_ = std::move(shared_task);
-        shared_task->attached_proc = shared_from_this();
+        shared_task->proc(shared_from_this());
 
         sim()->add_trace(protocols::traces::TaskScheduled{
-            .task_id = shared_task->id, .proc_id = shared_from_this()->id_});
+            .task_id = shared_task->id(), .proc_id = shared_from_this()->id_});
 }
 
 void Processor::clear_task()
@@ -55,7 +55,7 @@ void Processor::clear_task()
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        if (auto shared_task = task_.lock()) { shared_task->attached_proc.reset(); }
+        if (auto shared_task = task_.lock()) { shared_task->proc().reset(); }
         task_.reset();
 }
 

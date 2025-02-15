@@ -78,14 +78,14 @@ void Allocator::handle(std::vector<events::Event> evts)
                                 const auto& receiver = where_to_put_the_task(job_evt->task_of_job);
                                 if (receiver) {
                                         sim()->add_trace(protocols::traces::TaskPlaced{
-                                            job_evt->task_of_job->id,
+                                            job_evt->task_of_job->id(),
                                             receiver.value()->get_cluster()->get_id()});
                                         receiver.value()->handle(evt);
                                 }
                                 else {
                                         throw std::runtime_error(
                                             "Failed to place task: " +
-                                            std::to_string(job_evt->task_of_job->id));
+                                            std::to_string(job_evt->task_of_job->id()));
                                 }
                         }
                 }

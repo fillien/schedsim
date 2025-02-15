@@ -1,61 +1,56 @@
 #include <cassert>
-#include <engine.hpp>
 #include <memory>
-#include <server.hpp>
-#include <task.hpp>
+#include <stdexcept>
 
-Task::Task(
-    const std::weak_ptr<Engine>& sim,
-    const std::size_t tid,
-    const double& period,
-    const double& utilization)
-    : Entity(sim), id(tid), period(period), utilization(utilization)
+#include "engine.hpp"
+#include "server.hpp"
+#include "task.hpp"
+
+Task::Task(std::weak_ptr<Engine> engine, std::size_t tid, double period, double utilization)
+    : Entity(std::move(engine)), id_(tid), period_(period), utilization_(utilization)
 {
 }
 
-auto Task::is_attached() const -> bool { return (attached_proc != nullptr); }
-
-auto Task::has_server() const -> bool { return (attached_serv.use_count() > 0); };
-
-void Task::set_server(const std::shared_ptr<Server>& serv_to_attach)
+auto Task::has_remaining_time() const noexcept -> bool
 {
-        attached_serv = serv_to_attach;
+        return (Engine::round_zero(remaining_execution_time_) > 0);
+}
+
+auto Task::add_job(double duration) -> void
+{
+        assert(duration >= 0);
+        if (pending_jobs_.empty() && Engine::round_zero(remaining_execution_time_) <= 0) {
+                remaining_execution_time_ = duration;
+        }
+        else {
+                pending_jobs_.push(duration);
+        }
+}
+
+auto Task::remaining_time() const noexcept -> double
+{
+        return remaining_execution_time_ / attached_proc_->cluster()->speed();
+}
+
+auto Task::consume_time(double duration) -> void
+{
+        assert(duration >= 0);
+        remaining_execution_time_ -= duration * attached_proc_->cluster()->speed();
+        assert(sim()->round_zero(remaining_execution_time_) >= 0);
+}
+
+auto Task::next_job() -> void
+{
+        if (pending_jobs_.empty()) { throw std::runtime_error("no next job to execute"); }
+
+        remaining_execution_time_ = pending_jobs_.front();
+        pending_jobs_.pop();
+}
+
+auto Task::server(const std::shared_ptr<Server>& serv_to_attach) -> void
+{
+        attached_serv_ = serv_to_attach;
         serv_to_attach->set_task(shared_from_this());
 }
 
-void Task::unset_server() { attached_serv.reset(); }
-
-auto Task::has_remaining_time() const -> bool
-{
-        return (sim()->round_zero(this->remaining_execution_time) > 0);
-}
-
-void Task::add_job(const double& duration)
-{
-        assert(duration >= 0);
-        if (pending_jobs.empty() && sim()->round_zero(remaining_execution_time) <= 0) {
-                remaining_execution_time = duration;
-        }
-        else {
-                pending_jobs.push(duration);
-        }
-}
-
-auto Task::get_remaining_time() const -> double
-{
-        return remaining_execution_time / attached_proc->cluster()->speed();
-};
-
-void Task::consume_time(const double& duration)
-{
-        assert(duration >= 0);
-
-        remaining_execution_time -= duration * attached_proc->cluster()->speed();
-        assert(sim()->round_zero(remaining_execution_time) >= 0);
-}
-
-void Task::next_job()
-{
-        remaining_execution_time = pending_jobs.front();
-        pending_jobs.pop();
-}
+auto Task::clear_server() -> void { attached_serv_.reset(); }

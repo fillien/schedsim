@@ -21,7 +21,7 @@ auto allocators::SmartAss::where_to_put_the_task(const std::shared_ptr<Task>& ne
         // Look for a cluster to place the task
         for (auto& sched : sorted_scheds) {
                 const auto clu = sched->get_cluster();
-                if (new_task->utilization / clu->perf() < sched->u_max() / clu->perf()) {
+                if (new_task->utilization() / clu->perf() < sched->u_max() / clu->perf()) {
                         if (sched->admission_test(*new_task)) {
                                 next_sched = sched;
                                 break;
