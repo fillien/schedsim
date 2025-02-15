@@ -44,6 +44,7 @@
           gnuplot
           graphviz
           gtest
+          jd-diff-patch
           lldb
           ninja
           shellcheck

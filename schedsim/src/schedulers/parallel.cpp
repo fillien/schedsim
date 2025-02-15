@@ -130,8 +130,7 @@ void Parallel::on_resched()
                 if ((!(leastest_priority_processor->state() == Change)) ||
                     !leastest_priority_processor->has_task() ||
                     deadline_order(
-                        *highest_priority_server,
-                        *leastest_priority_processor->task()->server())) {
+                        *highest_priority_server, *leastest_priority_processor->task()->server())) {
 
                         assert(leastest_priority_processor->state() != Sleep);
                         resched_proc(leastest_priority_processor, highest_priority_server);

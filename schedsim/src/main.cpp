@@ -114,7 +114,7 @@ auto main(const int argc, const char** argv) -> int
                 sim->platform(plat);
 
                 std::shared_ptr<allocators::Allocator> sched =
-                    std::make_shared<allocators::SmartAss>(sim);
+                    std::make_shared<allocators::HighPerfFirst>(sim);
 
                 std::size_t cluster_id_cpt{1};
                 for (const protocols::hardware::Cluster& clu : PlatformConfig.clusters) {

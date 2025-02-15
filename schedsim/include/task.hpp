@@ -110,7 +110,10 @@ class Task : public Entity, public std::enable_shared_from_this<Task> {
 
         [[nodiscard]] auto period() const noexcept -> double { return period_; }
 
-        [[nodiscard]] auto proc() const noexcept -> std::shared_ptr<Processor> { return attached_proc_; }
+        [[nodiscard]] auto proc() const noexcept -> std::shared_ptr<Processor>
+        {
+                return attached_proc_;
+        }
 
         auto proc(std::shared_ptr<Processor> receiver) -> void { attached_proc_ = receiver; }
 
