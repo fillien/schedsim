@@ -27,9 +27,9 @@ class Task : public Entity, public std::enable_shared_from_this<Task> {
 
         // Prevent copying/moving.
         Task(const Task&) = delete;
-        Task& operator=(const Task&) = delete;
+        auto operator=(const Task&) -> Task& = delete;
         Task(Task&&) = delete;
-        Task& operator=(Task&&) = delete;
+        auto operator=(Task&&) -> Task& = delete;
 
         /**
          * @brief Checks if the task is attached to a processor.

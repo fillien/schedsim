@@ -46,7 +46,7 @@ void Allocator::handle(std::vector<events::Event> evts)
         auto has_matching_job_arrival = [&evts](const auto& server) {
                 return std::ranges::any_of(evts, [server](const auto& evt) {
                         if (const auto* job_evt = std::get_if<events::JobArrival>(&evt)) {
-                                return job_evt->task_of_job == server->get_task();
+                                return job_evt->task_of_job == server->task();
                         }
                         return false;
                 });

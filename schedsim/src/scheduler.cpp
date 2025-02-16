@@ -14,7 +14,6 @@
 #include <server.hpp>
 #include <stdexcept>
 #include <task.hpp>
-#include <type_traits>
 #include <variant>
 #include <vector>
 
@@ -84,23 +83,22 @@ void Scheduler::update_running_servers()
 
 auto Scheduler::is_running_server(const Server& serv) -> bool
 {
-        return serv.current_state == Server::state::running;
+        return serv.state() == Server::State::Running;
 }
 
 auto Scheduler::is_ready_server(const Server& serv) -> bool
 {
-        return serv.current_state == Server::state::ready;
+        return serv.state() == Server::State::Ready;
 }
 
 auto Scheduler::has_job_server(const Server& serv) -> bool
 {
-        return (serv.current_state == Server::state::ready) ||
-               (serv.current_state == Server::state::running);
+        return (serv.state() == Server::State::Ready) || (serv.state() == Server::State::Running);
 }
 
 auto Scheduler::is_active_server(const Server& serv) -> bool
 {
-        return serv.current_state != Server::state::inactive;
+        return serv.state() != Server::State::Inactive;
 }
 
 auto Scheduler::get_total_utilization() const -> double
@@ -115,12 +113,12 @@ auto Scheduler::get_total_utilization() const -> double
 /// Compare two servers and return true if the first have an highest priority
 auto Scheduler::deadline_order(const Server& first, const Server& second) -> bool
 {
-        if (first.relative_deadline == second.relative_deadline) {
-                if (first.current_state == Server::state::running) { return true; }
-                if (second.current_state == Server::state::running) { return false; }
+        if (first.deadline() == second.deadline()) {
+                if (first.state() == Server::State::Running) { return true; }
+                if (second.state() == Server::State::Running) { return false; }
                 return first.id() < second.id();
         }
-        return first.relative_deadline < second.relative_deadline;
+        return first.deadline() < second.deadline();
 }
 
 auto Scheduler::get_active_bandwidth() const -> double
@@ -195,10 +193,10 @@ void Scheduler::on_serv_inactive(const std::shared_ptr<Server>& serv)
         ZoneScoped;
 #endif
         // If a job arrived during this turn, do not change state to inactive
-        if (serv->cant_be_inactive) { return; }
+        if (serv->cant_be_inactive()) { return; }
 
-        serv->change_state(Server::state::inactive);
-        detach_server_if_needed(serv->get_task());
+        serv->change_state(Server::State::Inactive);
+        detach_server_if_needed(serv->task());
         on_active_utilization_updated();
 
         // Update running server if there is one
@@ -239,14 +237,14 @@ void Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const doub
         // Set the task remaining execution time with the WCET of the job
         new_task->add_job(job_duration);
 
-        if (new_task->server()->current_state == Server::state::inactive) {
+        if (new_task->server()->state() == Server::State::Inactive) {
                 update_running_servers();
-                new_task->server()->virtual_time = sim()->time();
+                new_task->server()->virtual_time(sim()->time());
         }
 
-        if (new_task->server()->current_state != Server::state::ready &&
-            new_task->server()->current_state != Server::state::running) {
-                new_task->server()->change_state(Server::state::ready);
+        if (new_task->server()->state() != Server::State::Ready &&
+            new_task->server()->state() != Server::State::Running) {
+                new_task->server()->change_state(Server::State::Ready);
                 on_active_utilization_updated();
                 sim()->sched()->call_resched(shared_from_this());
         }
@@ -257,16 +255,16 @@ void Scheduler::on_job_finished(const std::shared_ptr<Server>& serv, bool is_the
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        using enum Server::state;
+        using enum Server::State;
 
-        assert(serv->current_state != inactive);
+        assert(serv->state() != Inactive);
         sim()->add_trace(protocols::traces::JobFinished{serv->id()});
 
         // Update virtual time and remaining execution time
         update_server_times(serv);
 
-        if (serv->get_task()->has_job()) {
-                serv->get_task()->next_job();
+        if (serv->task()->has_job()) {
+                serv->task()->next_job();
                 serv->postpone();
         }
         else if (is_there_new_job) {
@@ -274,15 +272,15 @@ void Scheduler::on_job_finished(const std::shared_ptr<Server>& serv, bool is_the
                 serv->postpone();
         }
         else {
-                serv->get_task()->proc()->clear_task();
+                serv->task()->proc()->clear_task();
 
-                if ((serv->virtual_time - sim()->time()) > 0 &&
-                    serv->virtual_time < serv->relative_deadline) {
-                        serv->change_state(non_cont);
+                if ((serv->virtual_time() - sim()->time()) > 0 &&
+                    serv->virtual_time() < serv->deadline()) {
+                        serv->change_state(NonCont);
                 }
                 else {
-                        serv->change_state(inactive);
-                        detach_server_if_needed(serv->get_task());
+                        serv->change_state(Inactive);
+                        detach_server_if_needed(serv->task());
                         on_active_utilization_updated();
                 }
         }
@@ -299,7 +297,7 @@ void Scheduler::on_serv_budget_exhausted(const std::shared_ptr<Server>& serv)
         update_server_times(serv);
 
         // Check if the job as been completed at the same time
-        if (serv->get_task()->remaining_time() > 0) {
+        if (serv->task()->remaining_time() > 0) {
                 serv->postpone(); // If no, postpone the deadline
         }
         else {
@@ -315,18 +313,18 @@ void Scheduler::update_server_times(const std::shared_ptr<Server>& serv)
         ZoneScoped;
 #endif
         namespace traces = protocols::traces;
-        assert(serv->current_state == Server::state::running);
+        assert(serv->state() == Server::State::Running);
 
-        const double running_time = sim()->time() - serv->last_update;
+        const double rt = serv->running_time();
 
         // Be careful about floating point computation near 0
-        assert((serv->get_task()->remaining_time() - running_time) >= -Engine::ZERO_ROUNDED);
+        assert((serv->task()->remaining_time() - rt) >= -Engine::ZERO_ROUNDED);
 
-        serv->virtual_time = get_server_virtual_time(*serv, running_time);
-        sim()->add_trace(traces::VirtualTimeUpdate{serv->get_task()->id(), serv->virtual_time});
+        serv->virtual_time(get_server_virtual_time(*serv, rt));
+        sim()->add_trace(traces::VirtualTimeUpdate{serv->task()->id(), serv->virtual_time()});
 
-        serv->get_task()->consume_time(running_time);
-        serv->last_update = sim()->time();
+        serv->task()->consume_time(rt);
+        serv->update_time();
 }
 
 void Scheduler::cancel_alarms(const Server& serv)
@@ -356,7 +354,7 @@ void Scheduler::set_alarms(const std::shared_ptr<Server>& serv)
         using namespace events;
         namespace traces = protocols::traces;
         const double new_budget{Engine::round_zero(get_server_budget(*serv))};
-        const double remaining_time{Engine::round_zero(serv->remaining_exec_time())};
+        const double remaining_time{Engine::round_zero(serv->task()->remaining_time())};
 
 #ifdef TRACY_ENABLE
         TracyPlot("budget", new_budget);
@@ -384,15 +382,15 @@ void Scheduler::resched_proc(
         if (proc->has_task()) {
                 cancel_alarms(*(proc->task()->server()));
                 sim()->add_trace(traces::TaskPreempted{proc->task()->id()});
-                proc->task()->server()->change_state(Server::state::ready);
+                proc->task()->server()->change_state(Server::State::Ready);
                 proc->clear_task();
         }
 
-        if (server_to_execute->current_state != Server::state::running) {
-                server_to_execute->change_state(Server::state::running);
+        if (server_to_execute->state() != Server::State::Running) {
+                server_to_execute->change_state(Server::State::Running);
         }
 
-        proc->task(server_to_execute->get_task());
+        proc->task(server_to_execute->task());
 }
 
 auto Scheduler::clamp(const double& nb_procs) -> double

@@ -50,7 +50,7 @@ auto Task::next_job() -> void
 auto Task::server(const std::shared_ptr<Server>& serv_to_attach) -> void
 {
         attached_serv_ = serv_to_attach;
-        serv_to_attach->set_task(shared_from_this());
+        serv_to_attach->attach_task(shared_from_this());
 }
 
 auto Task::clear_server() -> void { attached_serv_.reset(); }

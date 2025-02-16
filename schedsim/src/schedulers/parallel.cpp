@@ -53,7 +53,7 @@ auto Parallel::get_server_budget(const Server& serv) const -> double
 #endif
         const double NB_ACTIVE_PROCS{static_cast<double>(get_nb_active_procs())};
         const auto bandwidth{1 - (get_inactive_bandwidth() / NB_ACTIVE_PROCS)};
-        return serv.utilization() / bandwidth * (serv.relative_deadline - serv.virtual_time);
+        return serv.utilization() / bandwidth * (serv.deadline() - serv.virtual_time());
 }
 
 auto Parallel::get_server_virtual_time(const Server& serv, const double& running_time) -> double
@@ -63,7 +63,7 @@ auto Parallel::get_server_virtual_time(const Server& serv, const double& running
 #endif
         const double NB_ACTIVE_PROCS{static_cast<double>(get_nb_active_procs())};
         const auto bandwidth{1 - (get_inactive_bandwidth() / NB_ACTIVE_PROCS)};
-        return serv.virtual_time + (bandwidth / serv.utilization() * running_time);
+        return serv.virtual_time() + (bandwidth / serv.utilization() * running_time);
 }
 
 auto Parallel::admission_test(const Task& new_task) const -> bool
@@ -82,7 +82,7 @@ void Parallel::remove_task_from_cpu(const std::shared_ptr<Processor>& proc)
         if (proc->has_task()) {
                 cancel_alarms(*(proc->task()->server()));
 
-                proc->task()->server()->change_state(Server::state::ready);
+                proc->task()->server()->change_state(Server::State::Ready);
                 proc->clear_task();
         }
 }
