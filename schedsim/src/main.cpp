@@ -118,14 +118,15 @@ auto main(const int argc, const char** argv) -> int
 
                 std::size_t cluster_id_cpt{1};
                 for (const protocols::hardware::Cluster& clu : PlatformConfig.clusters) {
-                        plat->clusters.push_back(std::make_shared<Cluster>(
+                        auto newclu = std::make_shared<Cluster>(
                             sim,
                             cluster_id_cpt,
                             clu.frequencies,
                             clu.effective_freq,
-                            clu.perf_score));
-                        plat->clusters.back()->create_procs(clu.nb_procs);
-                        sched->add_child_sched(plat->clusters.back());
+                            clu.perf_score);
+                        newclu->create_procs(clu.nb_procs);
+                        sched->add_child_sched(newclu);
+                        plat->add_cluster(newclu);
                         cluster_id_cpt++;
                 }
 

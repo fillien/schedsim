@@ -11,7 +11,7 @@ Csf::Csf(const std::weak_ptr<Engine>& sim) : Parallel(sim) {}
 void Csf::set_cluster(const std::weak_ptr<Cluster>& clu)
 {
         attached_cluster = clu;
-        nb_active_procs = chip()->processors.size();
+        nb_active_procs = chip()->processors().size();
 }
 
 auto Csf::compute_freq_min(
@@ -31,7 +31,7 @@ auto Csf::get_nb_active_procs([[maybe_unused]] const double& new_utilization = 0
                 return state == Processor::State::Idle || state == Processor::State::Running;
         };
 
-        const auto& processors = chip()->processors;
+        const auto& processors = chip()->processors();
         return std::count_if(processors.begin(), processors.end(), is_active);
 }
 
@@ -47,7 +47,7 @@ void Csf::change_state_proc(
 void Csf::activate_next_core()
 {
         using enum Processor::State;
-        auto& processors = chip()->processors;
+        const auto& processors = chip()->processors();
         auto itr = std::ranges::find_if(
             processors, [](const auto& proc) { return proc->state() == Sleep; });
         if (itr == processors.end()) {
@@ -60,7 +60,7 @@ void Csf::activate_next_core()
 void Csf::put_next_core_to_bed()
 {
         using enum Processor::State;
-        auto& processors = chip()->processors;
+        const auto& processors = chip()->processors();
         auto itr = std::ranges::find_if(processors, [](const auto& proc) {
                 return proc->state() == Idle || proc->state() == Running;
         });
@@ -86,7 +86,7 @@ void Csf::update_platform()
 {
         const double total_util{get_active_bandwidth()};
         const double max_util{u_max()};
-        const double max_procs{static_cast<double>(chip()->processors.size())};
+        const double max_procs{static_cast<double>(chip()->processors().size())};
         const double freq_eff{chip()->freq_eff()};
         const double freq_max{chip()->freq_max()};
         const double m_min{clamp(std::ceil((total_util - max_util) / (1 - max_util)))};
@@ -110,7 +110,7 @@ void Csf::update_platform()
 
         adjust_active_processors(static_cast<std::size_t>(next_active_procs));
         if (chip()->freq() != chip()->ceil_to_mode(next_freq)) {
-                for (const auto& proc : chip()->processors) {
+                for (const auto& proc : chip()->processors()) {
                         remove_task_from_cpu(proc);
                 }
                 chip()->dvfs_change_freq(next_freq);

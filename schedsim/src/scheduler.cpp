@@ -76,10 +76,10 @@ auto Scheduler::is_this_my_event(const events::Event& evt) -> bool
 
 void Scheduler::update_running_servers()
 {
-        for (const auto& proc : chip()->processors) {
+        for (const auto& proc : chip()->processors()) {
                 if (proc->has_task()) { update_server_times(proc->task()->server()); }
         }
-};
+}
 
 auto Scheduler::is_running_server(const Server& serv) -> bool
 {
@@ -214,8 +214,10 @@ void Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const doub
         ZoneScoped;
 #endif
         namespace traces = protocols::traces;
-        sim()->add_trace(
-            traces::JobArrival{new_task->id(), job_duration, sim()->time() + new_task->period()});
+        sim()->add_trace(traces::JobArrival{
+            .task_id = new_task->id(),
+            .duration = job_duration,
+            .deadline = sim()->time() + new_task->period()});
 
         if (!new_task->has_server()) {
                 if (!admission_test(*new_task)) {
@@ -321,7 +323,8 @@ void Scheduler::update_server_times(const std::shared_ptr<Server>& serv)
         assert((serv->task()->remaining_time() - rt) >= -Engine::ZERO_ROUNDED);
 
         serv->virtual_time(get_server_virtual_time(*serv, rt));
-        sim()->add_trace(traces::VirtualTimeUpdate{serv->task()->id(), serv->virtual_time()});
+        sim()->add_trace(traces::VirtualTimeUpdate{
+            .task_id = serv->task()->id(), .virtual_time = serv->virtual_time()});
 
         serv->task()->consume_time(rt);
         serv->update_time();
@@ -362,13 +365,15 @@ void Scheduler::set_alarms(const std::shared_ptr<Server>& serv)
         assert(new_budget >= 0);
         assert(remaining_time >= 0);
 
-        sim()->add_trace(traces::ServBudgetReplenished{serv->id(), new_budget});
+        sim()->add_trace(
+            traces::ServBudgetReplenished{.task_id = serv->id(), .budget = new_budget});
 
         if (new_budget < remaining_time) {
                 sim()->add_event(ServBudgetExhausted{serv}, sim()->time() + new_budget);
         }
         else {
-                sim()->add_event(JobFinished{serv}, sim()->time() + remaining_time);
+                sim()->add_event(
+                    JobFinished{.server_of_job = serv}, sim()->time() + remaining_time);
         }
 }
 
@@ -395,7 +400,7 @@ void Scheduler::resched_proc(
 
 auto Scheduler::clamp(const double& nb_procs) -> double
 {
-        return std::clamp(nb_procs, 1.0, static_cast<double>(chip()->processors.size()));
+        return std::clamp(nb_procs, 1.0, static_cast<double>(chip()->processors().size()));
 }
 
 } // namespace scheds

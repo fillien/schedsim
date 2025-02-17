@@ -19,7 +19,7 @@ namespace allocators {
 void Allocator::add_child_sched(const std::weak_ptr<Cluster>& clu)
 {
         schedulers.push_back(std::make_shared<scheds::Parallel>(sim()));
-        clu.lock()->set_sched(schedulers.back()->weak_from_this());
+        clu.lock()->scheduler(schedulers.back()->weak_from_this());
         schedulers.back()->set_cluster(clu.lock());
 }
 
@@ -79,7 +79,7 @@ void Allocator::handle(std::vector<events::Event> evts)
                                 if (receiver) {
                                         sim()->add_trace(protocols::traces::TaskPlaced{
                                             job_evt->task_of_job->id(),
-                                            receiver.value()->get_cluster()->get_id()});
+                                            receiver.value()->get_cluster()->id()});
                                         receiver.value()->handle(evt);
                                 }
                                 else {

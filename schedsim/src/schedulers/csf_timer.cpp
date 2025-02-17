@@ -13,13 +13,13 @@ CsfTimer::CsfTimer(const std::weak_ptr<Engine>& sim) : Parallel(sim)
         }
         using enum Processor::State;
 
-        const auto processors = chip()->processors;
+        const auto processors = chip()->processors();
         nb_active_procs = processors.size();
 
         freq_after_cooldown = chip()->freq_max();
         timer_dvfs_cooldown = std::make_shared<Timer>(sim, [this, sim]() {
                 if (chip()->freq() != chip()->ceil_to_mode(freq_after_cooldown)) {
-                        for (const auto& proc : chip()->processors) {
+                        for (const auto& proc : chip()->processors()) {
                                 remove_task_from_cpu(proc);
                         }
                         chip()->dvfs_change_freq(freq_after_cooldown);
@@ -44,7 +44,7 @@ auto CsfTimer::get_nb_active_procs([[maybe_unused]] const double& new_utilizatio
                 return state == Processor::State::Idle || state == Processor::State::Running;
         };
 
-        const auto& processors = chip()->processors;
+        const auto& processors = chip()->processors();
         return std::count_if(processors.begin(), processors.end(), is_active);
 }
 
@@ -62,7 +62,7 @@ auto CsfTimer::cores_on_sleep() -> std::size_t
         using enum Processor::State;
 
         return std::count_if(
-            chip()->processors.begin(), chip()->processors.end(), [](const auto& proc) {
+            chip()->processors().begin(), chip()->processors().end(), [](const auto& proc) {
                     return proc->state() == Sleep;
             });
 }
@@ -70,7 +70,7 @@ auto CsfTimer::cores_on_sleep() -> std::size_t
 void CsfTimer::activate_next_core()
 {
         using enum Processor::State;
-        auto& processors = chip()->processors;
+        const auto& processors = chip()->processors();
         auto itr = std::ranges::find_if(
             processors, [](const auto& proc) { return proc->state() == Sleep; });
         if (itr == processors.end()) {
@@ -83,7 +83,7 @@ void CsfTimer::activate_next_core()
 void CsfTimer::put_next_core_to_bed()
 {
         using enum Processor::State;
-        auto& processors = chip()->processors;
+        const auto& processors = chip()->processors();
         auto itr = std::ranges::find_if(processors, [](const auto& proc) {
                 return proc->state() == Idle || proc->state() == Running;
         });
@@ -110,7 +110,7 @@ void CsfTimer::update_platform()
 
         const double total_util{get_active_bandwidth()};
         const double max_util{u_max()};
-        const double max_procs{static_cast<double>(chip()->processors.size())};
+        const double max_procs{static_cast<double>(chip()->processors().size())};
         const auto freq_eff{chip()->freq_eff()};
         const auto freq_max{chip()->freq_max()};
 

@@ -43,7 +43,7 @@ auto Parallel::get_nb_active_procs([[maybe_unused]] const double& new_utilizatio
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        return chip()->processors.size();
+        return chip()->processors().size();
 }
 
 auto Parallel::get_server_budget(const Server& serv) const -> double
@@ -71,7 +71,7 @@ auto Parallel::admission_test(const Task& new_task) const -> bool
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        const auto NB_PROCS{static_cast<double>(chip()->processors.size())};
+        const auto NB_PROCS{static_cast<double>(chip()->processors().size())};
         const auto U_MAX{std::max(u_max(), new_task.utilization())};
         const auto NEW_TOTAL_UTILIZATION{get_active_bandwidth() + new_task.utilization()};
         return (NEW_TOTAL_UTILIZATION <= (NB_PROCS - (NB_PROCS - 1) * U_MAX));
@@ -108,7 +108,7 @@ void Parallel::on_resched()
                 // refresh active servers list
                 auto ready_servers = servers | filter(from_shared<Server>(is_ready_server));
                 auto available_procs =
-                    chip()->processors | filter([](const auto& proc) {
+                    chip()->processors() | filter([](const auto& proc) {
                             return proc->state() == Idle || proc->state() == Running;
                     });
 
@@ -143,7 +143,7 @@ void Parallel::on_resched()
         }
 
         // Set next job finish or budget exhausted event for each proc with a task
-        for (auto proc : chip()->processors) {
+        for (auto proc : chip()->processors()) {
                 if (proc->state() == Sleep) { continue; }
                 if (proc->state() == Change) { continue; }
                 if (proc->has_task()) {
@@ -157,6 +157,6 @@ void Parallel::on_resched()
         }
 }
 
-void Parallel::update_platform() { chip()->set_freq(chip()->freq_max()); }
+void Parallel::update_platform() { chip()->freq(chip()->freq_max()); }
 
 } // namespace scheds

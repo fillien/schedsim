@@ -24,7 +24,7 @@ Processor::Processor(std::weak_ptr<Engine> sim, std::weak_ptr<Cluster> clu, std:
                 change_state(dpm_target_);
 
                 if (auto clu = cluster_.lock()) {
-                        if (auto scheduler = clu->get_sched().lock()) {
+                        if (auto scheduler = clu->scheduler().lock()) {
                                 sim.lock()->sched()->call_resched(scheduler);
                         }
                 }
