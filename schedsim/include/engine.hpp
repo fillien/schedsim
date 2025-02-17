@@ -13,11 +13,8 @@
 template <class... Ts> struct overloaded : Ts... {
         using Ts::operator()...;
 };
-
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
-/// Define utility functions to convert functions operating on raw pointers to functions on shared
-/// pointers
 template <typename T>
 auto from_shared(std::function<bool(const T&)> func)
     -> std::function<bool(const std::shared_ptr<T>&)>
@@ -35,122 +32,125 @@ auto from_shared(std::function<bool(const T&, const T&)> func)
 }
 
 /**
- * @brief According to a platform and a scheduler, the class simulates, in order of time,
- * each event contained in the future list.
+ * @brief The Engine class simulates events over time on a given platform
+ *        and dispatches them to an attached scheduler.
  */
 class Engine {
-      private:
-        /**
-         * @brief A counter of the time passing.
-         */
-        double current_timestamp_{0};
-
-        /**
-         * @brief The attached scheduler.
-         */
-        std::shared_ptr<allocators::Allocator> sched_;
-
-        /**
-         * @brief A model of the platform on which the scheduler will operate.
-         * @TODO Maybe refactor this as a unique_ptr, as it will be alone all the running time
-         */
-        std::shared_ptr<Platform> platform_;
-
-        /**
-         * @brief The list of past events, a pair of the timestamp of the event and the event
-         * itself.
-         */
-        std::multimap<double, protocols::traces::trace> past_list_{};
-
-        bool delay_activated_{false};
-
-        /**
-         * @brief The list of future events, a pair of the timestamp of the event and the event
-         * itself.
-         */
-        std::multimap<double, events::Event> future_list_{};
-
       public:
         static constexpr double ZERO_ROUNDED = 0.0000001;
 
         /**
-         * @brief A constructor to help generate the platform.
+         * @brief Construct an Engine.
+         * @param is_there_delay Specifies if delay is activated.
          */
-        Engine(const bool is_there_delay);
+        explicit Engine(bool is_there_delay);
 
         /**
-         * @brief Setter to attach a scheduler.
-         * @param new_sched The new scheduler to attach.
+         * @brief Attach a scheduler to the engine.
+         * @param sched Shared pointer to the scheduler.
          */
-        void scheduler(const std::shared_ptr<allocators::Allocator>& sched) { sched_ = sched; }
+        auto scheduler(const std::shared_ptr<allocators::Allocator>& sched) -> void
+        {
+                sched_ = sched;
+        }
 
         /**
-         * @brief Setter to attach a platform.
-         * @param new_platform The new platform to attach.
+         * @brief Attach a platform to the engine.
+         * @param platform Shared pointer to the platform.
          */
-        void platform(const std::shared_ptr<Platform>& platform) { platform_ = platform; };
+        auto platform(const std::shared_ptr<Platform>& platform) -> void { platform_ = platform; }
 
         /**
-         * @brief The main function of the simulator engine, the event loop that handles the events.
+         * @brief Execute the simulation event loop.
          */
-        void simulation();
+        auto simulation() -> void;
 
         /**
-         * @return The current platform attached to the engine.
+         * @brief Get the current platform.
+         * @return Shared pointer to the platform.
          */
-        [[nodiscard]] auto chip() const -> std::shared_ptr<Platform> { return platform_; };
+        [[nodiscard]] auto chip() const -> const std::shared_ptr<Platform>& { return platform_; }
 
         /**
-         * @return The current simulation time.
+         * @brief Get the current simulation time.
+         * @return The current timestamp.
          */
-        [[nodiscard]] auto time() const -> double { return current_timestamp_; };
+        [[nodiscard]] auto time() const -> double { return current_timestamp_; }
 
         /**
-         * @return The future list of events.
+         * @brief Get the list of future events.
+         * @return Const reference to the future events multimap.
          */
-        [[nodiscard]] auto future_list() const -> std::multimap<double, events::Event>
+        [[nodiscard]] auto future_list() const -> const std::multimap<double, events::Event>&
         {
                 return future_list_;
-        };
+        }
 
-        auto remove_event(std::function<bool(const std::pair<double, events::Event>&)> pred)
+        /**
+         * @brief Remove events from the future list that satisfy a predicate.
+         * @param pred Predicate function that returns true for events to be removed.
+         * @return The number of events removed.
+         */
+        auto remove_event(const std::function<bool(const std::pair<double, events::Event>&)>& pred)
             -> std::size_t
         {
                 return std::erase_if(future_list_, pred);
-        };
+        }
 
         /**
-         * @brief Add a new event to the future list.
-         * @param new_event The new event to add.
-         * @param timestamp The timestamp at which the event should occur.
+         * @brief Schedule a new event.
+         * @param new_event The event to be scheduled.
+         * @param timestamp The time at which the event should occur.
          */
-        void add_event(const events::Event& new_event, const double& timestamp);
+        auto add_event(const events::Event& new_event, const double& timestamp) -> void;
 
         /**
-         * @brief Add a trace to the logs (past list).
+         * @brief Log a trace in the past events list.
          * @param new_trace The trace to add.
          */
-        void add_trace(const protocols::traces::trace& new_trace);
+        auto add_trace(const protocols::traces::trace& new_trace) -> void;
 
         /**
-         * @brief Round a double value to zero if it is within a small range.
+         * @brief Round a value to zero if it is within a small epsilon range.
          * @param value The value to round.
          * @return The rounded value.
          */
         static auto round_zero(const double& value) -> double
         {
-                if (value >= -ZERO_ROUNDED && value <= ZERO_ROUNDED) { return 0; }
-                return value;
+                return (value >= -ZERO_ROUNDED && value <= ZERO_ROUNDED) ? 0.0 : value;
         }
 
         /**
-         * @return The traces (past events) recorded by the engine.
+         * @brief Retrieve the past trace events.
+         * @return A multimap of timestamps and traces.
          */
-        auto traces() const { return past_list_; };
+        [[nodiscard]] auto traces() const -> const std::multimap<double, protocols::traces::trace>&
+        {
+                return past_list_;
+        }
 
-        auto sched() -> std::shared_ptr<allocators::Allocator> { return sched_; };
+        /**
+         * @brief Get the attached scheduler.
+         * @return Shared pointer to the scheduler.
+         */
+        [[nodiscard]] auto sched() const -> const std::shared_ptr<allocators::Allocator>&
+        {
+                return sched_;
+        }
 
-        [[nodiscard]] auto is_delay_activated() const -> bool { return delay_activated_; };
+        /**
+         * @brief Check whether delay is activated.
+         * @return True if delay is activated, false otherwise.
+         */
+        [[nodiscard]] auto is_delay_activated() const -> bool { return delay_activated_; }
+
+      private:
+        double current_timestamp_{0};                               ///< Simulation time counter.
+        std::shared_ptr<allocators::Allocator> sched_;              ///< Attached scheduler.
+        std::shared_ptr<Platform> platform_;                        ///< The simulation platform.
+        std::multimap<double, protocols::traces::trace> past_list_; ///< Log of past trace events.
+        bool delay_activated_{false}; ///< Flag indicating if delay is activated.
+        std::multimap<double, events::Event> future_list_; ///< List of future events.
 };
 
-#endif
+#endif // ENGINE_HPP

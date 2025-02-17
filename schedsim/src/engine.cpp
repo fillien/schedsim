@@ -27,26 +27,19 @@ void Engine::simulation()
         ZoneScoped;
 #endif
 
-        // Loop until all events have been executed
         while (!future_list_.empty()) {
-                // A vector to store all the event of the current timestamp
                 std::vector<events::Event> current_events;
 
-                // Update current timestamp
                 current_timestamp_ = future_list_.begin()->first;
 
-                // Loop until move all the event of the current timestamp
-                while (!future_list_.empty() && future_list_.begin()->first <= current_timestamp_) {
-                        // Take the next event, store it, and remove the event of the future list
-                        auto itr = future_list_.begin();
-                        current_events.push_back(std::move(itr->second));
-                        future_list_.erase(itr);
+                auto [range_begin, range_end] = future_list_.equal_range(current_timestamp_);
+                for (auto it = range_begin; it != range_end; ++it) {
+                        current_events.push_back(std::move(it->second));
                 }
+                future_list_.erase(range_begin, range_end);
 
-                // Pass the current events to the scheduler for handling
                 sched_->handle(current_events);
         }
 
-        // Add a simulation finished trace to the past list
         if (future_list_.empty()) { add_trace(protocols::traces::SimFinished{}); }
 }
