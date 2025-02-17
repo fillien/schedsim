@@ -29,7 +29,8 @@ class Csf : public Parallel {
 
       public:
         explicit Csf(const std::weak_ptr<Engine>& sim);
-        auto cluster(const std::weak_ptr<Cluster>& clu) -> void {
+        auto cluster(const std::weak_ptr<Cluster>& clu) -> void
+        {
                 Parallel::cluster(clu);
                 nb_active_procs = chip()->processors().size();
         }

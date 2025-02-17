@@ -13,7 +13,7 @@ auto allocators::SmartAss::where_to_put_the_task(const std::shared_ptr<Task>& ne
         };
 
         // Sort the schedulers by perf score
-        auto sorted_scheds{schedulers};
+        auto sorted_scheds{schedulers()};
         std::ranges::sort(sorted_scheds, compare_perf);
 
         std::optional<std::shared_ptr<scheds::Scheduler>> next_sched;

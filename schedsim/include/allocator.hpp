@@ -7,27 +7,40 @@
 #include <optional>
 #include <scheduler.hpp>
 #include <set>
+#include <vector>
 
 namespace allocators {
+
+/**
+ * @brief Base class for scheduling allocation.
+ */
 class Allocator : public Entity {
-      private:
-        std::set<std::shared_ptr<scheds::Scheduler>> rescheds;
+      public:
+        explicit Allocator(const std::weak_ptr<Engine>& sim) : Entity(sim) {}
+        virtual ~Allocator() = default;
+        Allocator(const Allocator&) = delete;
+        auto operator=(const Allocator&) -> Allocator& = delete;
+        Allocator(Allocator&&) noexcept = delete;
+        auto operator=(Allocator&&) noexcept -> Allocator& = delete;
+
+        auto add_child_sched(const std::weak_ptr<Cluster>& clu) -> void;
+        auto handle(std::vector<events::Event> evts) -> void;
+        auto call_resched(const std::shared_ptr<scheds::Scheduler>& index) -> void
+        {
+                rescheds_.insert(index);
+        }
 
       protected:
-        std::vector<std::shared_ptr<scheds::Scheduler>> schedulers;
         virtual auto where_to_put_the_task(const std::shared_ptr<Task>& new_task)
             -> std::optional<std::shared_ptr<scheds::Scheduler>> = 0;
 
-      public:
-        explicit Allocator(const std::weak_ptr<Engine>& sim) : Entity(sim) {};
-        virtual ~Allocator() = default;
+        [[nodiscard]] auto schedulers() const -> const std::vector<std::shared_ptr<scheds::Scheduler>>& { return schedulers_; }
 
-        void add_child_sched(const std::weak_ptr<Cluster>& clu);
-        void handle(std::vector<events::Event> evts);
-        void call_resched(const std::shared_ptr<scheds::Scheduler>& index)
-        {
-                rescheds.insert(index);
-        };
+      private:
+        std::vector<std::shared_ptr<scheds::Scheduler>> schedulers_;
+        std::set<std::shared_ptr<scheds::Scheduler>> rescheds_;
 };
+
 } // namespace allocators
-#endif
+
+#endif // META_SCHEDULER_HPP

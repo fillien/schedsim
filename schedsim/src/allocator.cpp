@@ -14,15 +14,7 @@
 #include <variant>
 #include <vector>
 
-namespace allocators {
-
-void Allocator::add_child_sched(const std::weak_ptr<Cluster>& clu)
-{
-        schedulers.push_back(std::make_shared<scheds::Parallel>(sim()));
-        clu.lock()->scheduler(schedulers.back()->weak_from_this());
-        schedulers.back()->cluster(clu.lock());
-}
-
+namespace {
 auto compare_events(const events::Event& ev1, const events::Event& ev2) -> bool
 {
         constexpr static int MIN_PRIORITY = 100;
@@ -35,8 +27,18 @@ auto compare_events(const events::Event& ev1, const events::Event& ev2) -> bool
 
         return std::visit(get_priority, ev1) < std::visit(get_priority, ev2);
 }
+} // namespace
 
-void Allocator::handle(std::vector<events::Event> evts)
+namespace allocators {
+
+auto Allocator::add_child_sched(const std::weak_ptr<Cluster>& clu) -> void
+{
+        schedulers_.push_back(std::make_shared<scheds::Parallel>(sim()));
+        clu.lock()->scheduler(schedulers_.back()->weak_from_this());
+        schedulers_.back()->cluster(clu.lock());
+}
+
+auto Allocator::handle(std::vector<events::Event> evts) -> void
 {
         using namespace events;
 
@@ -61,11 +63,11 @@ void Allocator::handle(std::vector<events::Event> evts)
         }
 
         // Reset all the calls to resched
-        rescheds.clear();
+        rescheds_.clear();
 
         for (const auto& evt : evts) {
                 bool handled = false;
-                for (const auto& scheduler : schedulers) {
+                for (const auto& scheduler : schedulers_) {
                         if (scheduler->is_this_my_event(evt)) {
                                 scheduler->handle(evt);
                                 handled = true;
@@ -78,8 +80,8 @@ void Allocator::handle(std::vector<events::Event> evts)
                                 const auto& receiver = where_to_put_the_task(job_evt->task_of_job);
                                 if (receiver) {
                                         sim()->add_trace(protocols::traces::TaskPlaced{
-                                            .task_id=job_evt->task_of_job->id(),
-                                            .cluster_id=receiver.value()->cluster()->id()});
+                                            .task_id = job_evt->task_of_job->id(),
+                                            .cluster_id = receiver.value()->cluster()->id()});
                                         receiver.value()->handle(evt);
                                 }
                                 else {
@@ -91,10 +93,10 @@ void Allocator::handle(std::vector<events::Event> evts)
                 }
         }
 
-        for (const auto& resch : rescheds) {
+        for (const auto& resch : rescheds_) {
                 resch->call_resched();
         }
-        rescheds.clear();
+        rescheds_.clear();
 }
 
 } // namespace allocators

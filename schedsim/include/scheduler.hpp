@@ -11,14 +11,6 @@
 
 namespace scheds {
 
-/**
- * @brief Compares two events based on their timestamps.
- * @param ev1 The first event.
- * @param ev2 The second event.
- * @return True if the first event occurs before the second, false otherwise.
- */
-auto compare_events(const events::Event& ev1, const events::Event& ev2) -> bool;
-
 class Scheduler : public Entity, public std::enable_shared_from_this<Scheduler> {
       public:
         /**
@@ -61,9 +53,7 @@ class Scheduler : public Entity, public std::enable_shared_from_this<Scheduler> 
          * @brief Sets the cluster.
          * @param clu Weak pointer to the cluster.
          */
-        auto cluster(const std::weak_ptr<Cluster> clu) -> void {
-                attached_cluster_ = clu;
-        }
+        auto cluster(const std::weak_ptr<Cluster> clu) -> void { attached_cluster_ = clu; }
 
         /**
          * @brief Retrieves the cluster.
@@ -179,7 +169,6 @@ class Scheduler : public Entity, public std::enable_shared_from_this<Scheduler> 
         virtual auto update_platform() -> void = 0;
 
         auto servers() const -> const std::vector<std::shared_ptr<Server>>& { return servers_; }
-
 
       private:
         /**

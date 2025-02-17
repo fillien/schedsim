@@ -6,8 +6,7 @@
 
 namespace scheds {
 
-Csf::Csf(const std::weak_ptr<Engine>& sim) : Parallel(sim) {
-}
+Csf::Csf(const std::weak_ptr<Engine>& sim) : Parallel(sim) {}
 
 auto Csf::compute_freq_min(
     const double& freq_max,
