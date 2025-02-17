@@ -10,10 +10,8 @@ FfaTimer::FfaTimer(const std::weak_ptr<Engine>& sim) : Parallel(sim)
                 throw std::runtime_error(
                     "Simulation without DVFS & DPM delays is not support for this scheduler");
         }
-        using enum Processor::State;
 
-        const auto processors = chip()->processors();
-        nb_active_procs = processors.size();
+        nb_active_procs = chip()->processors().size();
 
         freq_after_cooldown = chip()->freq_max();
         timer_dvfs_cooldown = std::make_shared<Timer>(sim, [this, sim]() {
@@ -106,7 +104,7 @@ void FfaTimer::adjust_active_processors(std::size_t target_processors)
 
 void FfaTimer::update_platform()
 {
-        const double total_util{get_active_bandwidth()};
+        const double total_util{active_bandwidth()};
         const double max_util{u_max()};
         const double max_procs{static_cast<double>(chip()->processors().size())};
         const double freq_eff{chip()->freq_eff()};

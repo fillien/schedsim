@@ -30,7 +30,7 @@ void PowerAwareTimer::update_platform()
         ZoneScoped;
 #endif
         const double NB_PROCS{static_cast<double>(chip()->processors().size())};
-        const double TOTAL_U{get_total_utilization()};
+        const double TOTAL_U{total_utilization()};
         const double F_MAX{chip()->freq_max()};
         const double new_freq{(F_MAX * ((NB_PROCS - 1) * u_max() + TOTAL_U)) / NB_PROCS};
 

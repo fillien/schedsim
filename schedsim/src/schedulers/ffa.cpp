@@ -7,12 +7,6 @@
 namespace scheds {
 Ffa::Ffa(const std::weak_ptr<Engine>& sim) : Parallel(sim) {}
 
-void Ffa::set_cluster(const std::weak_ptr<Cluster>& clu)
-{
-        attached_cluster = clu;
-        nb_active_procs = chip()->processors().size();
-}
-
 auto Ffa::compute_freq_min(
     const double& freq_max,
     const double& total_util,
@@ -83,7 +77,7 @@ void Ffa::adjust_active_processors(const std::size_t target_processors)
 
 void Ffa::update_platform()
 {
-        const double total_util{get_active_bandwidth()};
+        const double total_util{active_bandwidth()};
         const double max_util{u_max()};
         const double max_procs{static_cast<double>(chip()->processors().size())};
         const double freq_eff{chip()->freq_eff()};

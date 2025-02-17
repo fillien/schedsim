@@ -22,7 +22,7 @@ void PowerAware::update_platform()
         ZoneScoped;
 #endif
         const auto NB_PROCS{static_cast<double>(chip()->processors().size())};
-        const auto TOTAL_U{get_total_utilization()};
+        const auto TOTAL_U{total_utilization()};
         const auto F_MAX{chip()->freq_max()};
         const auto new_freq{(F_MAX * ((NB_PROCS - 1) * u_max() + TOTAL_U)) / NB_PROCS};
 

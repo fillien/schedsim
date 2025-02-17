@@ -6,12 +6,7 @@
 
 namespace scheds {
 
-Csf::Csf(const std::weak_ptr<Engine>& sim) : Parallel(sim) {}
-
-void Csf::set_cluster(const std::weak_ptr<Cluster>& clu)
-{
-        attached_cluster = clu;
-        nb_active_procs = chip()->processors().size();
+Csf::Csf(const std::weak_ptr<Engine>& sim) : Parallel(sim) {
 }
 
 auto Csf::compute_freq_min(
@@ -84,7 +79,7 @@ void Csf::adjust_active_processors(const std::size_t target_processors)
 
 void Csf::update_platform()
 {
-        const double total_util{get_active_bandwidth()};
+        const double total_util{active_bandwidth()};
         const double max_util{u_max()};
         const double max_procs{static_cast<double>(chip()->processors().size())};
         const double freq_eff{chip()->freq_eff()};

@@ -32,9 +32,8 @@ auto Parallel::get_inactive_bandwidth() const -> double
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        const auto TOTAL_UTILIZATION{get_total_utilization()};
         const auto NB_PROCS{static_cast<double>(get_nb_active_procs())};
-        return NB_PROCS - ((NB_PROCS - 1) * u_max()) - TOTAL_UTILIZATION;
+        return NB_PROCS - ((NB_PROCS - 1) * u_max()) - total_utilization();
 }
 
 auto Parallel::get_nb_active_procs([[maybe_unused]] const double& new_utilization) const
@@ -46,7 +45,7 @@ auto Parallel::get_nb_active_procs([[maybe_unused]] const double& new_utilizatio
         return chip()->processors().size();
 }
 
-auto Parallel::get_server_budget(const Server& serv) const -> double
+auto Parallel::server_budget(const Server& serv) const -> double
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -56,7 +55,7 @@ auto Parallel::get_server_budget(const Server& serv) const -> double
         return serv.utilization() / bandwidth * (serv.deadline() - serv.virtual_time());
 }
 
-auto Parallel::get_server_virtual_time(const Server& serv, const double& running_time) -> double
+auto Parallel::server_virtual_time(const Server& serv, const double& running_time) -> double
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -73,7 +72,7 @@ auto Parallel::admission_test(const Task& new_task) const -> bool
 #endif
         const auto NB_PROCS{static_cast<double>(chip()->processors().size())};
         const auto U_MAX{std::max(u_max(), new_task.utilization())};
-        const auto NEW_TOTAL_UTILIZATION{get_active_bandwidth() + new_task.utilization()};
+        const auto NEW_TOTAL_UTILIZATION{active_bandwidth() + new_task.utilization()};
         return (NEW_TOTAL_UTILIZATION <= (NB_PROCS - (NB_PROCS - 1) * U_MAX));
 }
 
@@ -104,9 +103,13 @@ void Parallel::on_resched()
         // Place task using global EDF
         std::size_t cpt_scheduled_proc{0};
 
+        const auto is_ready_server = [](const Server& serv) -> bool {
+                return serv.state() == Server::State::Ready;
+        };
+
         while (cpt_scheduled_proc < get_nb_active_procs()) {
                 // refresh active servers list
-                auto ready_servers = servers | filter(from_shared<Server>(is_ready_server));
+                auto ready_servers = servers() | filter(from_shared<Server>(is_ready_server));
                 auto available_procs =
                     chip()->processors() | filter([](const auto& proc) {
                             return proc->state() == Idle || proc->state() == Running;
@@ -148,7 +151,7 @@ void Parallel::on_resched()
                 if (proc->state() == Change) { continue; }
                 if (proc->has_task()) {
                         cancel_alarms(*proc->task()->server());
-                        set_alarms(proc->task()->server());
+                        activate_alarms(proc->task()->server());
                         proc->change_state(Running);
                 }
                 else {

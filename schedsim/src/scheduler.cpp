@@ -23,9 +23,9 @@
 
 namespace scheds {
 
-auto Scheduler::chip() const -> std::shared_ptr<Cluster> { return attached_cluster.lock(); }
+auto Scheduler::chip() const -> std::shared_ptr<Cluster> { return attached_cluster_.lock(); }
 
-void Scheduler::call_resched()
+auto Scheduler::call_resched() -> void
 {
         sim()->add_trace(protocols::traces::Resched{});
         on_resched();
@@ -36,12 +36,12 @@ auto Scheduler::u_max() const -> double
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        if (servers.empty()) { return 0.0; }
+        if (servers_.empty()) { return 0.0; }
 
-        const auto max_server = std::ranges::max_element(servers, [](const auto& a, const auto& b) {
-                return a->utilization() < b->utilization();
-        });
-
+        const auto max_server =
+            std::ranges::max_element(servers_, [](const auto& a, const auto& b) -> bool {
+                    return a->utilization() < b->utilization();
+            });
         return (*max_server)->utilization();
 }
 
@@ -49,10 +49,11 @@ auto Scheduler::is_this_my_event(const events::Event& evt) -> bool
 {
         using namespace events;
 
-        auto matches_server = [&](const auto& serv) {
-                return std::any_of(
-                    servers.begin(), servers.end(), [&](const std::shared_ptr<Server>& first) {
-                            return first->id() == serv->id();
+        // Returns true if the server from the event is in the scheduler's server list.
+        const auto matches_server = [this](const auto& serv) -> bool {
+                return std::ranges::any_of(
+                    servers_, [&serv](const std::shared_ptr<Server>& s) -> bool {
+                            return s->id() == serv->id();
                     });
         };
 
@@ -70,50 +71,35 @@ auto Scheduler::is_this_my_event(const events::Event& evt) -> bool
                 return task->has_server() && matches_server(task->server());
         }
         if (std::holds_alternative<TimerIsr>(evt)) { return true; }
-
         throw std::runtime_error("Unknown event");
 }
 
-void Scheduler::update_running_servers()
+auto Scheduler::update_running_servers() -> void
 {
+        // Update timing for servers that are running on any processor.
         for (const auto& proc : chip()->processors()) {
                 if (proc->has_task()) { update_server_times(proc->task()->server()); }
         }
 }
 
-auto Scheduler::is_running_server(const Server& serv) -> bool
-{
-        return serv.state() == Server::State::Running;
-}
-
-auto Scheduler::is_ready_server(const Server& serv) -> bool
-{
-        return serv.state() == Server::State::Ready;
-}
-
 auto Scheduler::has_job_server(const Server& serv) -> bool
 {
-        return (serv.state() == Server::State::Ready) || (serv.state() == Server::State::Running);
+        return serv.state() == Server::State::Ready || serv.state() == Server::State::Running;
 }
 
-auto Scheduler::is_active_server(const Server& serv) -> bool
+auto Scheduler::total_utilization() const -> double
 {
-        return serv.state() != Server::State::Inactive;
-}
-
-auto Scheduler::get_total_utilization() const -> double
-{
-        double total_u{0};
-        for (const auto& serv : servers) {
-                total_u += serv->utilization();
+        double total{0.0};
+        for (const auto& serv : servers_) {
+                total += serv->utilization();
         }
-        return total_u;
+        return total;
 }
 
-/// Compare two servers and return true if the first have an highest priority
 auto Scheduler::deadline_order(const Server& first, const Server& second) -> bool
 {
         if (first.deadline() == second.deadline()) {
+                // If deadlines are equal, running servers have higher priority.
                 if (first.state() == Server::State::Running) { return true; }
                 if (second.state() == Server::State::Running) { return false; }
                 return first.id() < second.id();
@@ -121,49 +107,52 @@ auto Scheduler::deadline_order(const Server& first, const Server& second) -> boo
         return first.deadline() < second.deadline();
 }
 
-auto Scheduler::get_active_bandwidth() const -> double
+auto Scheduler::active_bandwidth() const -> double
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        double active_bandwidth{0};
-        for (const auto& serv : servers) {
-                if (is_active_server(*serv)) { active_bandwidth += serv->utilization(); }
+        double bandwidth{0.0};
+        for (const auto& serv : servers_) {
+                if ((*serv).state() != Server::State::Inactive) {
+                        bandwidth += serv->utilization();
+                }
         }
-        return active_bandwidth;
+        return bandwidth;
 }
 
-void Scheduler::detach_server_if_needed(const std::shared_ptr<Task>& inactive_task)
+auto Scheduler::detach_server_if_needed(const std::shared_ptr<Task>& inactive_task) -> void
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
         const auto& future_list = sim()->future_list();
-        // Check if there is a future job arrival
-        auto search = std::ranges::find_if(future_list, [inactive_task](auto& evt) {
-                if (const auto& new_task = std::get_if<events::JobArrival>(&evt.second)) {
-                        return (new_task->task_of_job == inactive_task);
-                }
-                return false;
-        });
+        // Look for any future job arrival associated with this task.
+        const auto search =
+            std::ranges::find_if(future_list, [inactive_task](const auto& entry) -> bool {
+                    if (const auto new_task = std::get_if<events::JobArrival>(&entry.second)) {
+                            return new_task->task_of_job == inactive_task;
+                    }
+                    return false;
+            });
+
         if (search == std::end(future_list)) {
-                // If no job found, detach the server of the task
-                std::erase(servers, inactive_task->server());
+                // No pending job arrival: detach the task's server.
+                std::erase(servers_, inactive_task->server());
                 inactive_task->clear_server();
-                total_utilization -= inactive_task->utilization();
-                Engine::round_zero(total_utilization);
+                total_utilization_ -= inactive_task->utilization();
+                Engine::round_zero(total_utilization_);
         }
 }
 
-void Scheduler::handle(const events::Event& evt)
+auto Scheduler::handle(const events::Event& evt) -> void
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
         using namespace events;
-
         std::visit(
-            [this](auto&& arg) {
+            [this](auto&& arg) -> void {
                     using T = std::decay_t<decltype(arg)>;
                     if constexpr (std::is_same_v<T, JobFinished>) {
                             on_job_finished(arg.server_of_job, arg.is_there_new_job);
@@ -187,28 +176,32 @@ void Scheduler::handle(const events::Event& evt)
             evt);
 }
 
-void Scheduler::on_serv_inactive(const std::shared_ptr<Server>& serv)
+auto Scheduler::on_serv_inactive(const std::shared_ptr<Server>& serv) -> void
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        // If a job arrived during this turn, do not change state to inactive
+        // If the server cannot be marked inactive, do nothing.
         if (serv->cant_be_inactive()) { return; }
 
         serv->change_state(Server::State::Inactive);
         detach_server_if_needed(serv->task());
         on_active_utilization_updated();
 
-        // Update running server if there is one
-        auto running_servers = servers | std::views::filter(from_shared<Server>(is_running_server));
-        for (auto& serv : running_servers) {
-                update_server_times(serv);
+        // Update timing for all running servers.
+        for (const auto& itr :
+             servers_ | std::views::filter([](const std::shared_ptr<Server>& serv) {
+                     return serv->state() == Server::State::Running;
+             })) {
+                update_server_times(itr);
         }
 
+        // Trigger a rescheduling.
         sim()->sched()->call_resched(shared_from_this());
 }
 
-void Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const double& job_duration)
+auto Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const double& job_duration)
+    -> void
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -225,18 +218,18 @@ void Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const doub
                         return;
                 }
 
-                // Total utilization increased -> updates running servers
+                // Update servers since the total utilization increases.
                 update_running_servers();
 
-                auto new_server = std::make_shared<Server>(sim());
+                const auto new_server = std::make_shared<Server>(sim());
                 new_task->server(new_server);
-                servers.push_back(new_server);
-                total_utilization += new_task->utilization();
+                servers_.push_back(new_server);
+                total_utilization_ += new_task->utilization();
         }
 
         assert(new_task->has_server());
 
-        // Set the task remaining execution time with the WCET of the job
+        // Set the task's remaining execution time to the WCET of the job.
         new_task->add_job(job_duration);
 
         if (new_task->server()->state() == Server::State::Inactive) {
@@ -252,17 +245,16 @@ void Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const doub
         }
 }
 
-void Scheduler::on_job_finished(const std::shared_ptr<Server>& serv, bool is_there_new_job)
+auto Scheduler::on_job_finished(const std::shared_ptr<Server>& serv, bool is_there_new_job) -> void
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
         using enum Server::State;
-
         assert(serv->state() != Inactive);
         sim()->add_trace(protocols::traces::JobFinished{serv->id()});
 
-        // Update virtual time and remaining execution time
+        // Update virtual time and execution time.
         update_server_times(serv);
 
         if (serv->task()->has_job()) {
@@ -270,7 +262,7 @@ void Scheduler::on_job_finished(const std::shared_ptr<Server>& serv, bool is_the
                 serv->postpone();
         }
         else if (is_there_new_job) {
-                // Looking for another job arrival of the task at the same time
+                // Another job arrival is expected at the same time.
                 serv->postpone();
         }
         else {
@@ -289,7 +281,7 @@ void Scheduler::on_job_finished(const std::shared_ptr<Server>& serv, bool is_the
         sim()->sched()->call_resched(shared_from_this());
 }
 
-void Scheduler::on_serv_budget_exhausted(const std::shared_ptr<Server>& serv)
+auto Scheduler::on_serv_budget_exhausted(const std::shared_ptr<Server>& serv) -> void
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -298,18 +290,15 @@ void Scheduler::on_serv_budget_exhausted(const std::shared_ptr<Server>& serv)
         sim()->add_trace(traces::ServBudgetExhausted{serv->id()});
         update_server_times(serv);
 
-        // Check if the job as been completed at the same time
-        if (serv->task()->remaining_time() > 0) {
-                serv->postpone(); // If no, postpone the deadline
-        }
+        // If the job is not yet complete, postpone the deadline.
+        if (serv->task()->remaining_time() > 0) { serv->postpone(); }
         else {
-                sim()->add_trace(traces::JobFinished{serv->id()}); // If yes, trace it
+                sim()->add_trace(traces::JobFinished{serv->id()});
         }
-
         sim()->sched()->call_resched(shared_from_this());
 }
 
-void Scheduler::update_server_times(const std::shared_ptr<Server>& serv)
+auto Scheduler::update_server_times(const std::shared_ptr<Server>& serv) -> void
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
@@ -318,46 +307,43 @@ void Scheduler::update_server_times(const std::shared_ptr<Server>& serv)
         assert(serv->state() == Server::State::Running);
 
         const double rt = serv->running_time();
-
-        // Be careful about floating point computation near 0
+        // Ensure numerical stability.
         assert((serv->task()->remaining_time() - rt) >= -Engine::ZERO_ROUNDED);
 
-        serv->virtual_time(get_server_virtual_time(*serv, rt));
+        serv->virtual_time(server_virtual_time(*serv, rt));
         sim()->add_trace(traces::VirtualTimeUpdate{
             .task_id = serv->task()->id(), .virtual_time = serv->virtual_time()});
-
         serv->task()->consume_time(rt);
         serv->update_time();
 }
 
-void Scheduler::cancel_alarms(const Server& serv)
+auto Scheduler::cancel_alarms(const Server& serv) -> void
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        /// @TODO replace with iterator inside server and/or server if performance needed.
         using namespace events;
         const auto tid = serv.id();
-        sim()->remove_event([tid](const auto& entry) {
-                if (const auto& evt = std::get_if<ServBudgetExhausted>(&entry.second)) {
+        sim()->remove_event([tid](const auto& entry) -> bool {
+                if (const auto evt = std::get_if<ServBudgetExhausted>(&entry.second)) {
                         return evt->serv->id() == tid;
                 }
-                if (const auto& evt = std::get_if<JobFinished>(&entry.second)) {
+                if (const auto evt = std::get_if<JobFinished>(&entry.second)) {
                         return evt->server_of_job->id() == tid;
                 }
                 return false;
         });
 }
 
-void Scheduler::set_alarms(const std::shared_ptr<Server>& serv)
+auto Scheduler::activate_alarms(const std::shared_ptr<Server>& serv) -> void
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
         using namespace events;
         namespace traces = protocols::traces;
-        const double new_budget{Engine::round_zero(get_server_budget(*serv))};
-        const double remaining_time{Engine::round_zero(serv->task()->remaining_time())};
+        const double new_budget = Engine::round_zero(server_budget(*serv));
+        const double remaining_time = Engine::round_zero(serv->task()->remaining_time());
 
 #ifdef TRACY_ENABLE
         TracyPlot("budget", new_budget);
@@ -377,13 +363,15 @@ void Scheduler::set_alarms(const std::shared_ptr<Server>& serv)
         }
 }
 
-void Scheduler::resched_proc(
+auto Scheduler::resched_proc(
     const std::shared_ptr<Processor>& proc, const std::shared_ptr<Server>& server_to_execute)
+    -> void
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
         namespace traces = protocols::traces;
+
         if (proc->has_task()) {
                 cancel_alarms(*(proc->task()->server()));
                 sim()->add_trace(traces::TaskPreempted{proc->task()->id()});

@@ -20,7 +20,7 @@ void Allocator::add_child_sched(const std::weak_ptr<Cluster>& clu)
 {
         schedulers.push_back(std::make_shared<scheds::Parallel>(sim()));
         clu.lock()->scheduler(schedulers.back()->weak_from_this());
-        schedulers.back()->set_cluster(clu.lock());
+        schedulers.back()->cluster(clu.lock());
 }
 
 auto compare_events(const events::Event& ev1, const events::Event& ev2) -> bool
@@ -78,8 +78,8 @@ void Allocator::handle(std::vector<events::Event> evts)
                                 const auto& receiver = where_to_put_the_task(job_evt->task_of_job);
                                 if (receiver) {
                                         sim()->add_trace(protocols::traces::TaskPlaced{
-                                            job_evt->task_of_job->id(),
-                                            receiver.value()->get_cluster()->id()});
+                                            .task_id=job_evt->task_of_job->id(),
+                                            .cluster_id=receiver.value()->cluster()->id()});
                                         receiver.value()->handle(evt);
                                 }
                                 else {

@@ -10,6 +10,7 @@
 #include <vector>
 
 namespace scheds {
+
 /**
  * @brief Compares two events based on their timestamps.
  * @param ev1 The first event.
@@ -18,80 +19,84 @@ namespace scheds {
  */
 auto compare_events(const events::Event& ev1, const events::Event& ev2) -> bool;
 
-/**
- * @brief A class that handles the events of the system according to a scheduling policy.
- */
 class Scheduler : public Entity, public std::enable_shared_from_this<Scheduler> {
-      private:
-        double total_utilization{0}; /**< Total utilization of the system. */
+      public:
+        /**
+         * @brief Constructs a scheduler with a weak pointer to the engine.
+         * @param sim Weak pointer to the engine.
+         */
+        explicit Scheduler(const std::weak_ptr<Engine> sim) : Entity(sim) {}
+        virtual ~Scheduler() = default;
+        Scheduler(const Scheduler&) = delete;
+        auto operator=(const Scheduler&) -> Scheduler& = delete;
+        Scheduler(Scheduler&&) noexcept = delete;
+        auto operator=(Scheduler&&) noexcept -> Scheduler& = delete;
 
         /**
-         * @brief Handles the arrival of a job.
-         * @param new_task The newly arrived task.
-         * @param job_duration The duration of the job.
+         * @brief Performs an admission test for a new task.
+         * @param new_task The new task to test for admission.
+         * @return True if the new task is admitted, false otherwise.
          */
-        void on_job_arrival(const std::shared_ptr<Task>& new_task, const double& job_duration);
+        virtual auto admission_test(const Task& new_task) const -> bool = 0;
 
         /**
-         * @brief Handles the completion of a job on a server.
-         * @param serv The server where the job is completed.
-         * @param is_there_new_job Flag indicating if there is a new job to be scheduled.
+         * @brief Handles an event according to the scheduling policy.
+         * @param evt The event to handle.
          */
-        void on_job_finished(const std::shared_ptr<Server>& serv, bool is_there_new_job);
+        auto handle(const events::Event& evt) -> void;
 
         /**
-         * @brief Handles the exhaustion of the budget on a server.
-         * @param serv The server with an exhausted budget.
+         * @brief Triggers a rescheduling process.
          */
-        void on_serv_budget_exhausted(const std::shared_ptr<Server>& serv);
+        auto call_resched() -> void;
 
         /**
-         * @brief Handles the inactivity of a server.
-         * @param serv The inactive server.
+         * @brief Determines if the event belongs to this scheduler.
+         * @param evt The event to check.
+         * @return True if the event is handled by this scheduler, false otherwise.
          */
-        void on_serv_inactive(const std::shared_ptr<Server>& serv);
+        auto is_this_my_event(const events::Event& evt) -> bool;
 
         /**
-         * @brief Detaches a server if needed, i.e., if its attached task is inactive.
-         * @param inactive_task The inactive task associated with the server.
+         * @brief Sets the cluster.
+         * @param clu Weak pointer to the cluster.
          */
-        void detach_server_if_needed(const std::shared_ptr<Task>& inactive_task);
+        auto cluster(const std::weak_ptr<Cluster> clu) -> void {
+                attached_cluster_ = clu;
+        }
+
+        /**
+         * @brief Retrieves the cluster.
+         * @return A shared pointer to the cluster.
+         */
+        [[nodiscard]] auto cluster() const -> std::shared_ptr<Cluster>
+        {
+                return attached_cluster_.lock();
+        }
+
+        /**
+         * @brief Retrieves the maximum active utilization.
+         * @return The maximum active utilization.
+         */
+        auto u_max() const -> double;
+
+        /**
+         * @brief Retrieves the active bandwidth of the system.
+         * @return Active bandwidth of the system.
+         */
+        [[nodiscard]] auto active_bandwidth() const -> double;
 
       protected:
-        std::weak_ptr<Cluster> attached_cluster;
-
+        /**
+         * @brief Retrieves the chip (cluster) associated with the scheduler.
+         * @return A shared pointer to the cluster.
+         */
         [[nodiscard]] auto chip() const -> std::shared_ptr<Cluster>;
 
         /**
-         * @brief A vector to track and own server objects.
-         */
-        std::vector<std::shared_ptr<Server>> servers;
-
-        /**
-         * @brief Checks if a server is currently running.
+         * @brief Checks if a server has a scheduled job.
          * @param serv The server to check.
-         * @return True if the server is running, false otherwise.
-         */
-        static auto is_running_server(const Server& serv) -> bool;
-
-        /**
-         * @brief Checks if a server is ready for execution.
-         * @param serv The server to check.
-         * @return True if the server is ready, false otherwise.
-         */
-        static auto is_ready_server(const Server& serv) -> bool;
-
-        /**
-         * @brief Checks if a server has a job to execute.
-         * @param serv The server to check.
-         * @return True if the server has a job, false otherwise.
-         */
-        static auto is_active_server(const Server& serv) -> bool;
-
-        /**
-         * @brief Checks if a server has a job to execute.
-         * @param serv The server to check.
-         * @return True if the server has a job, false otherwise.
+         * @return True if the server has a job scheduled, false otherwise.
          */
         static auto has_job_server(const Server& serv) -> bool;
 
@@ -104,116 +109,118 @@ class Scheduler : public Entity, public std::enable_shared_from_this<Scheduler> 
         static auto deadline_order(const Server& first, const Server& second) -> bool;
 
         /**
-         * @brief Retrieves the total utilization of the system.
-         * @return Total utilization of the system.
+         * @brief Retrieves the total system utilization.
+         * @return Total utilization.
          */
-        auto get_total_utilization() const -> double;
+        auto total_utilization() const -> double;
 
         /**
-         * @brief Initiates a rescheduling process for a processor and server pair.
-         * @param proc_with_server The processor with a server.
-         * @param server_to_execute The server to be executed on the processor.
+         * @brief Initiates rescheduling for a processor and server pair.
+         * @param proc_with_server The processor holding a server.
+         * @param server_to_execute The server to be executed.
          */
-        void resched_proc(
+        auto resched_proc(
             const std::shared_ptr<Processor>& proc_with_server,
-            const std::shared_ptr<Server>& server_to_execute);
+            const std::shared_ptr<Server>& server_to_execute) -> void;
 
         /**
-         * @brief Updates the timing information for a server.
+         * @brief Updates timing information for a server.
          * @param serv The server to update.
          */
-        void update_server_times(const std::shared_ptr<Server>& serv);
+        auto update_server_times(const std::shared_ptr<Server>& serv) -> void;
 
         /**
-         * @brief Updates the list of running servers in the system.
+         * @brief Updates the list of running servers.
          */
-        void update_running_servers();
+        auto update_running_servers() -> void;
 
         /**
-         * @brief Cancels all future events of type BUDGET_EXHAUSTED and JOB_FINISHED for a given
-         * server.
-         * @param serv The server with alarms to cancel.
+         * @brief Cancels all future BUDGET_EXHAUSTED and JOB_FINISHED events for a server.
+         * @param serv The server whose alarms are canceled.
          */
-        void cancel_alarms(const Server& serv);
+        auto cancel_alarms(const Server& serv) -> void;
 
         /**
          * @brief Sets alarms for a server to track BUDGET_EXHAUSTED and JOB_FINISHED events.
-         * @param serv The server for which to set alarms.
+         * @param serv The server for which alarms are set.
          */
-        void set_alarms(const std::shared_ptr<Server>& serv);
+        auto activate_alarms(const std::shared_ptr<Server>& serv) -> void;
 
         /**
-         * @brief Clamp the number of processor between 1 and the maximum number of procs available
-         * @param nb_procs Asked number of active processors.
-         * @return number of active processors clamped.
+         * @brief Clamps the requested number of processors between 1 and the maximum available.
+         * @param nb_procs The requested number of processors.
+         * @return The clamped number.
          */
         auto clamp(const double& nb_procs) -> double;
 
         /**
-         * @brief Retrieves the virtual time of a server given its running time.
-         * @param serv The server for which to calculate virtual time.
-         * @param running_time The running time of the server.
-         * @return Calculated virtual time.
+         * @brief Retrieves the virtual time of a server based on its running time.
+         * @param serv The server.
+         * @param running_time The server's running time.
+         * @return The calculated virtual time.
          */
-        virtual auto get_server_virtual_time(const Server& serv, const double& running_time)
+        virtual auto server_virtual_time(const Server& serv, const double& running_time)
             -> double = 0;
 
         /**
          * @brief Retrieves the budget of a server.
-         * @param serv The server for which to retrieve the budget.
-         * @return Budget of the server.
+         * @param serv The server.
+         * @return The server's budget.
          */
-        virtual auto get_server_budget(const Server& serv) const -> double = 0;
+        virtual auto server_budget(const Server& serv) const -> double = 0;
 
         /**
          * @brief Custom scheduling logic to be implemented by derived classes.
          */
-        virtual void on_resched() = 0;
+        virtual auto on_resched() -> void = 0;
 
-        virtual void on_active_utilization_updated() = 0;
+        virtual auto on_active_utilization_updated() -> void = 0;
 
-        virtual void update_platform() = 0;
+        virtual auto update_platform() -> void = 0;
 
-      public:
+        auto servers() const -> const std::vector<std::shared_ptr<Server>>& { return servers_; }
+
+
+      private:
         /**
-         * @brief Constructs a scheduler with a weak pointer to the engine.
-         * @param sim Weak pointer to the engine.
+         * @brief Handles the arrival of a job.
+         * @param new_task The newly arrived task.
+         * @param job_duration The job's duration.
          */
-        explicit Scheduler(const std::weak_ptr<Engine> sim) : Entity(sim) {};
-
-        /**
-         * @brief Virtual destructor for the scheduler class.
-         */
-        virtual ~Scheduler() = default;
-
-        /**
-         * @brief Performs an admission test for a new task.
-         * @param new_task The new task to test for admission.
-         * @return True if the new task is admitted, false otherwise.
-         */
-        virtual auto admission_test(const Task& new_task) const -> bool = 0;
+        auto on_job_arrival(const std::shared_ptr<Task>& new_task, const double& job_duration)
+            -> void;
 
         /**
-         * @brief Handles a vector of events according to the scheduling policy.
-         * @param evts Vector of events to handle.
+         * @brief Handles the completion of a job on a server.
+         * @param serv The server where the job finished.
+         * @param is_there_new_job Flag indicating if a new job should be scheduled.
          */
-        void handle(const events::Event& evt);
-
-        void call_resched();
-
-        auto is_this_my_event(const events::Event& evt) -> bool;
-
-        void set_cluster(const std::weak_ptr<Cluster> clu) { attached_cluster = clu; };
-        auto get_cluster() -> std::shared_ptr<Cluster> { return attached_cluster.lock(); };
-
-        auto u_max() const -> double;
+        auto on_job_finished(const std::shared_ptr<Server>& serv, bool is_there_new_job) -> void;
 
         /**
-         * @brief Retrieves the active bandwidth of the system.
-         * @return Active bandwidth of the system.
+         * @brief Handles a server's budget exhaustion.
+         * @param serv The server with an exhausted budget.
          */
-        [[nodiscard]] auto get_active_bandwidth() const -> double;
+        auto on_serv_budget_exhausted(const std::shared_ptr<Server>& serv) -> void;
+
+        /**
+         * @brief Handles a server's inactivity.
+         * @param serv The inactive server.
+         */
+        auto on_serv_inactive(const std::shared_ptr<Server>& serv) -> void;
+
+        /**
+         * @brief Detaches a server if its associated task becomes inactive.
+         * @param inactive_task The inactive task.
+         */
+        auto detach_server_if_needed(const std::shared_ptr<Task>& inactive_task) -> void;
+
+        std::vector<std::shared_ptr<Server>> servers_;
+        std::weak_ptr<Cluster> attached_cluster_;
+
+        double total_utilization_{0.0};
 };
+
 } // namespace scheds
 
-#endif
+#endif // SCHEDULER_HPP

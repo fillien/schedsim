@@ -49,7 +49,7 @@ class Parallel : public Scheduler {
          * @param serv The server for which to retrieve the budget.
          * @return Budget of the server.
          */
-        auto get_server_budget(const Server& serv) const -> double override;
+        auto server_budget(const Server& serv) const -> double override;
 
         /**
          * @brief Retrieves the virtual time of a server for the parallel scheduler.
@@ -57,8 +57,7 @@ class Parallel : public Scheduler {
          * @param running_time The running time of the server.
          * @return Calculated virtual time.
          */
-        auto get_server_virtual_time(const Server& serv, const double& running_time)
-            -> double override;
+        auto server_virtual_time(const Server& serv, const double& running_time) -> double override;
 
         /**
          * @brief Performs an admission test for a new task in the parallel scheduler.
