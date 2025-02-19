@@ -62,12 +62,6 @@ class Cluster : public Entity, public std::enable_shared_from_this<Cluster> {
         [[nodiscard]] auto freq() const -> double { return current_freq_; }
 
         /**
-         * @brief Sets the current operating frequency.
-         * @param new_freq The new frequency.
-         */
-        void freq(const double& new_freq);
-
-        /**
          * @brief Calculates the relative speed with respect to the maximum frequency.
          * @return The relative speed.
          */
@@ -128,6 +122,12 @@ class Cluster : public Entity, public std::enable_shared_from_this<Cluster> {
         }
 
       private:
+        /**
+         * @brief Sets the current operating frequency.
+         * @param new_freq The new frequency.
+         */
+        void freq(const double& new_freq);
+
         std::vector<std::shared_ptr<Processor>> processors_;
         std::size_t id_;
         std::vector<double> frequencies_;

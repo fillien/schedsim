@@ -1,7 +1,6 @@
 #include "engine.hpp"
 #include "platform.hpp"
 #include "processor.hpp"
-#include "schedulers/parallel.hpp"
 #include "server.hpp"
 #include "task.hpp"
 #include <gtest/gtest.h>

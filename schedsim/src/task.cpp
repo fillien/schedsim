@@ -1,10 +1,9 @@
 #include <cassert>
+#include <engine.hpp>
 #include <memory>
+#include <server.hpp>
 #include <stdexcept>
-
-#include "engine.hpp"
-#include "server.hpp"
-#include "task.hpp"
+#include <task.hpp>
 
 Task::Task(std::weak_ptr<Engine> engine, std::size_t tid, double period, double utilization)
     : Entity(std::move(engine)), id_(tid), period_(period), utilization_(utilization)

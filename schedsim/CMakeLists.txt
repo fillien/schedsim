@@ -34,6 +34,7 @@ target_sources(schedsim PRIVATE
     src/schedulers/parallel.cpp
     src/schedulers/power_aware.cpp
     src/schedulers/power_aware_timer.cpp
+    src/schedulers/dpm_dvfs.cpp
     src/schedulers/ffa.cpp
     src/schedulers/ffa_timer.cpp
     src/schedulers/csf.cpp

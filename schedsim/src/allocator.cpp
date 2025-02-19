@@ -2,6 +2,7 @@
 #include <allocator.hpp>
 #include <cstddef>
 #include <event.hpp>
+#include <memory>
 #include <platform.hpp>
 #include <protocols/traces.hpp>
 #include <scheduler.hpp>
@@ -31,9 +32,10 @@ auto compare_events(const events::Event& ev1, const events::Event& ev2) -> bool
 
 namespace allocators {
 
-auto Allocator::add_child_sched(const std::weak_ptr<Cluster>& clu) -> void
+auto Allocator::add_child_sched(
+    const std::weak_ptr<Cluster>& clu, const std::shared_ptr<scheds::Scheduler>& sched) -> void
 {
-        schedulers_.push_back(std::make_shared<scheds::Parallel>(sim()));
+        schedulers_.push_back(std::move(sched));
         clu.lock()->scheduler(schedulers_.back()->weak_from_this());
         schedulers_.back()->cluster(clu.lock());
 }

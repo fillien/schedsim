@@ -28,7 +28,7 @@ Cluster::Cluster(
 
         freq(freq_max());
 
-        dvfs_timer_ = std::make_shared<Timer>(sim, [this]() { freq(dvfs_target_); });
+        dvfs_timer_ = std::make_shared<Timer>(sim, [this]() { this->freq(this->dvfs_target_); });
 }
 
 void Cluster::create_procs(const std::size_t nb_procs)
@@ -62,7 +62,7 @@ void Cluster::freq(const double& new_freq)
 auto Cluster::ceil_to_mode(const double& freq) -> double
 {
         assert(!frequencies_.empty());
-        const auto itr = std::ranges::lower_bound(frequencies_, freq, std::greater<>());
+        const auto itr = std::ranges::lower_bound(frequencies_, freq, std::greater_equal<>());
         if (itr == frequencies_.begin()) { return *itr; }
         if (itr == frequencies_.end()) { return freq_min(); }
         return *std::prev(itr);
@@ -81,7 +81,7 @@ void Cluster::dvfs_change_freq(const double& next_freq)
         if (target_freq == current_freq_) { return; }
 
         if (!sim()->is_delay_activated()) {
-                freq(next_freq);
+                freq(target_freq);
                 return;
         }
 

@@ -7,14 +7,7 @@
 
 namespace scheds {
 
-auto PowerAware::get_nb_active_procs([[maybe_unused]] const double& new_utilization) const
-    -> std::size_t
-{
-#ifdef TRACY_ENABLE
-        ZoneScoped;
-#endif
-        return chip()->processors().size();
-}
+auto PowerAware::nb_active_procs() const -> std::size_t { return chip()->processors().size(); }
 
 void PowerAware::update_platform()
 {
@@ -32,7 +25,7 @@ void PowerAware::update_platform()
                         remove_task_from_cpu(proc);
                 }
                 chip()->dvfs_change_freq(new_freq);
-                this->call_resched();
+                sim()->alloc()->call_resched(shared_from_this());
         }
 }
 

@@ -106,14 +106,14 @@ auto main(const int argc, const char** argv) -> int
                 auto PlatformConfig = protocols::hardware::read_file(config.platform_file);
 
                 // Create the simulation engine and attache to it a scheduler
-                auto sim = make_shared<Engine>(config.active_delay);
+                std::shared_ptr<Engine> sim = make_shared<Engine>(config.active_delay);
 
                 // Insert the platform configured through the scenario file, in the simulation
                 // engine
                 auto plat = make_shared<Platform>(sim, FREESCALING_ALLOWED);
                 sim->platform(plat);
 
-                std::shared_ptr<allocators::Allocator> sched =
+                std::shared_ptr<allocators::Allocator> alloc =
                     std::make_shared<allocators::HighPerfFirst>(sim);
 
                 std::size_t cluster_id_cpt{1};
@@ -125,31 +125,35 @@ auto main(const int argc, const char** argv) -> int
                             clu.effective_freq,
                             clu.perf_score);
                         newclu->create_procs(clu.nb_procs);
-                        sched->add_child_sched(newclu);
+
+                        std::shared_ptr<scheds::Scheduler> sched;
+
+                        if (config.sched == "grub") { sched = make_shared<scheds::Parallel>(sim); }
+                        else if (config.sched == "pa") {
+                                sched = make_shared<scheds::PowerAware>(sim);
+                        }
+                        else if (config.sched == "ffa") {
+                                sched = make_shared<scheds::Ffa>(sim);
+                        }
+                        else if (config.sched == "csf") {
+                                sched = make_shared<scheds::Csf>(sim);
+                        }
+                        else if (config.sched == "ffa_timer") {
+                                sched = make_shared<scheds::FfaTimer>(sim);
+                        }
+                        else if (config.sched == "csf_timer") {
+                                sched = make_shared<scheds::CsfTimer>(sim);
+                        }
+                        else {
+                                throw std::invalid_argument("Undefined scheduling policy");
+                        }
+
+                        alloc->add_child_sched(newclu, sched);
                         plat->add_cluster(newclu);
                         cluster_id_cpt++;
                 }
 
-                // if (config.sched == "grub") { sched = make_shared<sched_parallel>(sim); }
-                // else if (config.sched == "pa") {
-                //         sched = make_shared<sched_power_aware>(sim);
-                // }
-                // else if (config.sched == "ffa") {
-                //         sched = make_shared<ffa>(sim);
-                // }
-                // else if (config.sched == "csf") {
-                //         sched = make_shared<csf>(sim);
-                // }
-                // else if (config.sched == "ffa_timer") {
-                //         sched = make_shared<ffa_timer>(sim);
-                // }
-                // else if (config.sched == "csf_timer") {
-                //         sched = make_shared<csf_timer>(sim);
-                // }
-                // else {
-                //         throw std::invalid_argument("Undefined scheduling policy");
-                // }
-                sim->scheduler(sched);
+                sim->scheduler(alloc);
 
                 std::vector<std::shared_ptr<Task>> tasks{taskset.tasks.size()};
 

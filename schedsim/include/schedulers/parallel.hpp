@@ -8,30 +8,18 @@
 #include <scheduler.hpp>
 
 namespace scheds {
+
 /**
- * @brief A class implementing a parallel scheduler, derived from the base scheduler class.
+ * @brief A parallel scheduler that implements custom scheduling logic
+ *        for systems with parallel processing capabilities.
  */
 class Parallel : public Scheduler {
-        /**
-         * @brief Retrieves the inactive bandwidth of the system.
-         * @return Inactive bandwidth of the system.
-         */
-        auto get_inactive_bandwidth() const -> double;
-
-      protected:
-        /**
-         * @brief Retrieves the number of active processors in the system.
-         * @param new_utilization The additional utilization to consider (default is 0).
-         * @return Number of active processors.
-         */
-        virtual auto get_nb_active_procs(const double& new_utilization = 0) const -> std::size_t;
-
       public:
         /**
          * @brief Constructs a parallel scheduler with a weak pointer to the engine.
          * @param sim Weak pointer to the engine.
          */
-        explicit Parallel(const std::weak_ptr<Engine>& sim) : Scheduler(sim) {};
+        explicit Parallel(const std::weak_ptr<Engine>& sim) : Scheduler(sim) {}
 
         /**
          * @brief Compares two processors based on their order.
@@ -42,39 +30,65 @@ class Parallel : public Scheduler {
          */
         static auto processor_order(const Processor& first, const Processor& second) -> bool;
 
-        void remove_task_from_cpu(const std::shared_ptr<Processor>& proc);
+        /**
+         * @brief Removes the task from the specified processor.
+         * @param proc The processor from which the task will be removed.
+         */
+        auto remove_task_from_cpu(const std::shared_ptr<Processor>& proc) -> void;
 
         /**
          * @brief Retrieves the budget of a server for the parallel scheduler.
          * @param serv The server for which to retrieve the budget.
-         * @return Budget of the server.
+         * @return The budget of the server.
          */
         auto server_budget(const Server& serv) const -> double override;
 
         /**
-         * @brief Retrieves the virtual time of a server for the parallel scheduler.
-         * @param serv The server for which to calculate virtual time.
+         * @brief Calculates the virtual time of a server for the parallel scheduler.
+         * @param serv The server.
          * @param running_time The running time of the server.
-         * @return Calculated virtual time.
+         * @return The calculated virtual time.
          */
         auto server_virtual_time(const Server& serv, const double& running_time) -> double override;
 
         /**
          * @brief Performs an admission test for a new task in the parallel scheduler.
-         * @param new_task The new task to test for admission.
-         * @return True if the new task is admitted, false otherwise.
+         * @param new_task The task to test.
+         * @return True if the task is admitted, false otherwise.
          */
         auto admission_test(const Task& new_task) const -> bool override;
 
         /**
-         * @brief Implements the custom scheduling logic for the parallel scheduler.
+         * @brief Executes the custom scheduling logic.
          */
-        void on_resched() override;
+        auto on_resched() -> void override;
 
-        void on_active_utilization_updated() override {};
+        /**
+         * @brief Callback when active utilization is updated (no action required for parallel
+         * scheduling).
+         */
+        auto on_active_utilization_updated() -> void override {}
 
-        void update_platform() override;
+        /**
+         * @brief Updates the simulation platform.
+         */
+        auto update_platform() -> void override;
+
+      protected:
+        /**
+         * @brief Retrieves the inactive bandwidth of the system.
+         * @return The inactive bandwidth.
+         */
+        auto inactive_bandwidth() const -> double;
+
+        /**
+         * @brief Retrieves the number of active processors in the system.
+         * @param new_utilization The additional utilization to consider (default is 0).
+         * @return The number of active processors.
+         */
+        auto nb_active_procs() const -> std::size_t;
 };
+
 } // namespace scheds
 
-#endif
+#endif // SCHED_PARALLEL_HPP

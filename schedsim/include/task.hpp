@@ -2,10 +2,9 @@
 #define TASK_HPP
 
 #include <cstddef>
+#include <entity.hpp>
 #include <memory>
 #include <queue>
-
-#include "entity.hpp" // Adjust include path as needed
 
 class Processor;
 class Server;

@@ -1,6 +1,5 @@
 #include <engine.hpp>
 #include <event.hpp>
-#include <map>
 #include <timer.hpp>
 #include <variant>
 
@@ -8,7 +7,7 @@ void Timer::fire()
 {
         assert(active_);
         active_ = false;
-        callback();
+        callback_();
 }
 
 void Timer::set(const double& duration)

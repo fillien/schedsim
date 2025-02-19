@@ -23,7 +23,9 @@ class Allocator : public Entity {
         Allocator(Allocator&&) noexcept = delete;
         auto operator=(Allocator&&) noexcept -> Allocator& = delete;
 
-        auto add_child_sched(const std::weak_ptr<Cluster>& clu) -> void;
+        auto add_child_sched(
+            const std::weak_ptr<Cluster>& clu, const std::shared_ptr<scheds::Scheduler>& sched)
+            -> void;
         auto handle(std::vector<events::Event> evts) -> void;
         auto call_resched(const std::shared_ptr<scheds::Scheduler>& index) -> void
         {

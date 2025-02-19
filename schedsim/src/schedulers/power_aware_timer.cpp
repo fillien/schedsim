@@ -15,14 +15,7 @@ PowerAwareTimer::PowerAwareTimer(const std::weak_ptr<Engine>& sim) : Parallel(si
         }
 };
 
-auto PowerAwareTimer::get_nb_active_procs([[maybe_unused]] const double& new_utilization) const
-    -> std::size_t
-{
-#ifdef TRACY_ENABLE
-        ZoneScoped;
-#endif
-        return chip()->processors().size();
-}
+auto PowerAwareTimer::nb_active_procs() const -> std::size_t { return chip()->processors().size(); }
 
 void PowerAwareTimer::update_platform()
 {

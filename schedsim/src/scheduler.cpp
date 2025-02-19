@@ -197,7 +197,7 @@ auto Scheduler::on_serv_inactive(const std::shared_ptr<Server>& serv) -> void
         }
 
         // Trigger a rescheduling.
-        sim()->sched()->call_resched(shared_from_this());
+        sim()->alloc()->call_resched(shared_from_this());
 }
 
 auto Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const double& job_duration)
@@ -241,7 +241,7 @@ auto Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const doub
             new_task->server()->state() != Server::State::Running) {
                 new_task->server()->change_state(Server::State::Ready);
                 on_active_utilization_updated();
-                sim()->sched()->call_resched(shared_from_this());
+                sim()->alloc()->call_resched(shared_from_this());
         }
 }
 
@@ -278,7 +278,7 @@ auto Scheduler::on_job_finished(const std::shared_ptr<Server>& serv, bool is_the
                         on_active_utilization_updated();
                 }
         }
-        sim()->sched()->call_resched(shared_from_this());
+        sim()->alloc()->call_resched(shared_from_this());
 }
 
 auto Scheduler::on_serv_budget_exhausted(const std::shared_ptr<Server>& serv) -> void
@@ -295,7 +295,7 @@ auto Scheduler::on_serv_budget_exhausted(const std::shared_ptr<Server>& serv) ->
         else {
                 sim()->add_trace(traces::JobFinished{serv->id()});
         }
-        sim()->sched()->call_resched(shared_from_this());
+        sim()->alloc()->call_resched(shared_from_this());
 }
 
 auto Scheduler::update_server_times(const std::shared_ptr<Server>& serv) -> void

@@ -49,9 +49,9 @@ class Engine {
          * @brief Attach a scheduler to the engine.
          * @param sched Shared pointer to the scheduler.
          */
-        auto scheduler(const std::shared_ptr<allocators::Allocator>& sched) -> void
+        auto scheduler(const std::shared_ptr<allocators::Allocator>& alloc) -> void
         {
-                sched_ = sched;
+                alloc_ = alloc;
         }
 
         /**
@@ -133,9 +133,9 @@ class Engine {
          * @brief Get the attached scheduler.
          * @return Shared pointer to the scheduler.
          */
-        [[nodiscard]] auto sched() const -> const std::shared_ptr<allocators::Allocator>&
+        [[nodiscard]] auto alloc() const -> const std::shared_ptr<allocators::Allocator>&
         {
-                return sched_;
+                return alloc_;
         }
 
         /**
@@ -146,7 +146,7 @@ class Engine {
 
       private:
         double current_timestamp_{0};                               ///< Simulation time counter.
-        std::shared_ptr<allocators::Allocator> sched_;              ///< Attached scheduler.
+        std::shared_ptr<allocators::Allocator> alloc_;              ///< Attached scheduler.
         std::shared_ptr<Platform> platform_;                        ///< The simulation platform.
         std::multimap<double, protocols::traces::trace> past_list_; ///< Log of past trace events.
         bool delay_activated_{false}; ///< Flag indicating if delay is activated.

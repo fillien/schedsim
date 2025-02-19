@@ -38,7 +38,7 @@ void Engine::simulation()
                 }
                 future_list_.erase(range_begin, range_end);
 
-                sched_->handle(current_events);
+                alloc_->handle(current_events);
         }
 
         if (future_list_.empty()) { add_trace(protocols::traces::SimFinished{}); }

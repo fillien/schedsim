@@ -8,7 +8,7 @@
 namespace scheds {
 class PowerAware : public Parallel {
       protected:
-        auto get_nb_active_procs(const double& new_utilization) const -> std::size_t override;
+        auto nb_active_procs() const -> std::size_t;
 
       public:
         /**
