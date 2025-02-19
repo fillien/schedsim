@@ -2,7 +2,6 @@
 #include <cassert>
 #include <cmath>
 #include <schedulers/csf_timer.hpp>
-#include <schedulers/dpm_dvfs.hpp>
 #include <stdexcept>
 
 namespace scheds {
@@ -12,18 +11,6 @@ CsfTimer::CsfTimer(const std::weak_ptr<Engine>& sim) : DpmDvfs(sim)
                 throw std::runtime_error(
                     "Simulation without DVFS & DPM delays is not support for this scheduler");
         }
-
-        nb_active_procs_ = chip()->processors().size();
-
-        freq_after_cooldown = chip()->freq_max();
-        timer_dvfs_cooldown = std::make_shared<Timer>(sim, [this, sim]() {
-                if (chip()->freq() != chip()->ceil_to_mode(freq_after_cooldown)) {
-                        for (const auto& proc : chip()->processors()) {
-                                remove_task_from_cpu(proc);
-                        }
-                        chip()->dvfs_change_freq(freq_after_cooldown);
-                }
-        });
 }
 
 void CsfTimer::update_platform()
@@ -49,8 +36,6 @@ void CsfTimer::update_platform()
                 next_freq = chip()->ceil_to_mode(freq_min);
                 next_active_procs = max_procs;
         }
-
-        nb_active_procs_ = static_cast<std::size_t>(clamp(next_active_procs));
 
         if (freq_min < freq_eff) {
                 next_freq = freq_eff;
@@ -79,9 +64,8 @@ void CsfTimer::update_platform()
                 assert(couverture != 0);
                 if (couverture > 0) {
                         // Cancel youngest timers
-                        std::sort(
-                            timers_dpm_cooldown.begin(),
-                            timers_dpm_cooldown.end(),
+                        std::ranges::sort(
+                            timers_dpm_cooldown,
                             [](const std::shared_ptr<Timer>& a, const std::shared_ptr<Timer>& b) {
                                     return a->deadline() < b->deadline();
                             });

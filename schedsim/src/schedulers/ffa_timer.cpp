@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <schedulers/ffa_timer.hpp>
 
 namespace scheds {
@@ -9,18 +10,6 @@ FfaTimer::FfaTimer(const std::weak_ptr<Engine>& sim) : DpmDvfs(sim)
                 throw std::runtime_error(
                     "Simulation without DVFS & DPM delays is not support for this scheduler");
         }
-
-        nb_active_procs_ = chip()->processors().size();
-
-        freq_after_cooldown = chip()->freq_max();
-        timer_dvfs_cooldown = std::make_shared<Timer>(sim, [this, sim]() {
-                if (chip()->freq() != chip()->ceil_to_mode(freq_after_cooldown)) {
-                        for (const auto& proc : chip()->processors()) {
-                                remove_task_from_cpu(proc);
-                        }
-                        chip()->dvfs_change_freq(freq_after_cooldown);
-                }
-        });
 }
 
 void FfaTimer::update_platform()
@@ -62,9 +51,8 @@ void FfaTimer::update_platform()
                 assert(couverture != 0);
                 if (couverture > 0) {
                         // Cancel youngest timers
-                        std::sort(
-                            timers_dpm_cooldown.begin(),
-                            timers_dpm_cooldown.end(),
+                        std::ranges::sort(
+                            timers_dpm_cooldown,
                             [](const std::shared_ptr<Timer>& a, const std::shared_ptr<Timer>& b) {
                                     return a->deadline() < b->deadline();
                             });

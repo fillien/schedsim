@@ -10,9 +10,16 @@ class FfaTimer : public DpmDvfs {
         void update_platform() override;
 
       private:
-        std::shared_ptr<Timer> timer_dvfs_cooldown;
+        std::shared_ptr<Timer> timer_dvfs_cooldown = std::make_shared<Timer>(sim(), [this]() {
+                if (chip()->freq() != chip()->ceil_to_mode(freq_after_cooldown)) {
+                        for (const auto& proc : chip()->processors()) {
+                                remove_task_from_cpu(proc);
+                        }
+                        chip()->dvfs_change_freq(freq_after_cooldown);
+                }
+        });
         std::vector<std::shared_ptr<Timer>> timers_dpm_cooldown;
-        double freq_after_cooldown;
+        double freq_after_cooldown{0};
 };
 } // namespace scheds
 
