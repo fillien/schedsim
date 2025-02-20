@@ -28,12 +28,6 @@ if(CMAKE_EXPORT_COMPILE_COMMANDS)
     ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES})
 endif()
 
-if (CMAKE_BUILD_TYPE STREQUAL "Release")
-    set(ENABLE_TRACY OFF)
-else()
-    set(ENABLE_TRACY ON)
-endif()
-
 execute_process(
     COMMAND git rev-parse --short HEAD
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}

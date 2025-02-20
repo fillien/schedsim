@@ -31,6 +31,8 @@
 
 #ifdef TRACY_ENABLE
 #include <tracy/Tracy.hpp>
+#include <thread>
+#include <chrono>
 #endif
 
 namespace fs = std::filesystem;
@@ -174,6 +176,9 @@ auto main(const int argc, const char** argv) -> int
                 sim->simulation();
 
                 protocols::traces::write_log_file(sim->traces(), config.output_file);
+                #ifdef TRACY_ENABLE
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+                #endif
                 return EXIT_SUCCESS;
         }
         catch (const cxxopts::exceptions::parsing& e) {

@@ -2,18 +2,18 @@ add_executable(schedsim)
 
 target_compile_features(schedsim PRIVATE cxx_std_23)
 target_compile_options(schedsim PRIVATE -O3)
-target_compile_options(schedsim PRIVATE -fsanitize=address)
-target_link_options(schedsim PRIVATE -fsanitize=address)
+# target_compile_options(schedsim PRIVATE -fsanitize=address)
+# target_link_options(schedsim PRIVATE -fsanitize=address)
 if(NOT APPLE)
     target_compile_options(schedsim PRIVATE -fdiagnostics-color=always -fsanitize=address)
     target_link_options(schedsim PRIVATE -fsanitize=address)
 endif()
 
 # Set Tracy option based on build type
-if (ENABLE_TRACY)
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     message(STATUS "Tracy is enabled")
-    set(ENABLE_TRACY ON)
-    target_compile_options(TracyClient PRIVATE -Wno-unused-parameter -Wno-missing-field-initializers -Wno-c11-extensions)
+    target_compile_definitions(schedsim PRIVATE TRACY_ENABLE)
     target_link_libraries(schedsim PRIVATE TracyClient cxxopts protocols)
 else()
     message(STATUS "Tracy is disabled")
