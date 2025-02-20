@@ -1,12 +1,10 @@
 #!/usr/bin/env python
 
-import pandas as pd
 import subprocess
 import os
 import sys
 import shutil
 import concurrent.futures
-from datetime import datetime
 
 SCHEDSIM = "./build/schedsim/schedsim"
 PLATFORM = "./platforms/exynos5422LITTLE.json"
@@ -59,7 +57,7 @@ def run_scenario(schedsim, current_dir, scenario, sched_policy, datadir, log_dir
     ]
     if delay:
         command.extend(["--delay", "true"])
-    
+
     return subprocess.run(command, check=True)
 
 
