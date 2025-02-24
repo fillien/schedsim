@@ -345,9 +345,6 @@ auto Scheduler::activate_alarms(const std::shared_ptr<Server>& serv) -> void
         const double new_budget = Engine::round_zero(server_budget(*serv));
         const double remaining_time = Engine::round_zero(serv->task()->remaining_time());
 
-#ifdef TRACY_ENABLE
-        TracyPlot("budget", new_budget);
-#endif
         assert(new_budget >= 0);
         assert(remaining_time >= 0);
 
