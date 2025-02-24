@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <allocator.hpp>
+#include <cassert>
 #include <cstddef>
 #include <event.hpp>
 #include <memory>
@@ -12,6 +13,8 @@
 #include <server.hpp>
 #include <set>
 #include <stdexcept>
+#include <task.hpp>
+#include <tracy/Tracy.hpp>
 #include <variant>
 #include <vector>
 
@@ -40,9 +43,23 @@ auto Allocator::add_child_sched(
         schedulers_.back()->cluster(clu.lock());
 }
 
+auto Allocator::migrate_task(
+    const events::JobArrival& evt, const std::shared_ptr<scheds::Scheduler>& receiver) -> void
+{
+        ZoneScoped;
+        const auto serv = evt.task_of_job->server();
+        if (serv->state() == Server::State::Ready || serv->state() == Server::State::Running) {
+                serv->change_state(Server::State::NonCont);
+        }
+        evt.task_of_job->clear_server();
+        receiver->on_job_arrival(evt.task_of_job, evt.job_duration);
+}
+
 auto Allocator::handle(std::vector<events::Event> evts) -> void
 {
         using namespace events;
+
+        ZoneScoped;
 
         std::ranges::sort(evts, compare_events);
 
@@ -77,21 +94,31 @@ auto Allocator::handle(std::vector<events::Event> evts) -> void
                         }
                 }
 
-                if (!handled) {
-                        if (const auto* job_evt = std::get_if<JobArrival>(&evt)) {
-                                const auto& receiver = where_to_put_the_task(job_evt->task_of_job);
-                                if (receiver) {
-                                        sim()->add_trace(protocols::traces::TaskPlaced{
-                                            .task_id = job_evt->task_of_job->id(),
-                                            .cluster_id = receiver.value()->cluster()->id()});
-                                        receiver.value()->handle(evt);
-                                }
-                                else {
-                                        throw std::runtime_error(
-                                            "Failed to place task: " +
-                                            std::to_string(job_evt->task_of_job->id()));
-                                }
+                if (handled) { continue; }
+
+                // Here only JobArrival events are present
+                // assert((std::is_same_v<decltype(evt), JobArrival>));
+
+                const auto new_job = *(std::get_if<JobArrival>(&evt));
+                const auto& receiver = where_to_put_the_task(new_job.task_of_job);
+
+                if (receiver) {
+                        // A place have been found
+                        // Is the task already have a server ?
+                        if (new_job.task_of_job->has_server() && receiver.value() != new_job.task_of_job->server()->scheduler() && new_job.task_of_job->server()->state() != Server::State::Running) {
+                                // Yes -> do a migration
+                                migrate_task(new_job, receiver.value());
                         }
+                        else {
+                                // No -> Just insert the task in the new scheduler
+                                receiver.value()->on_job_arrival(
+                                    new_job.task_of_job, new_job.job_duration);
+                        }
+                }
+                else {
+                        // No place for this task
+                        throw std::runtime_error(
+                            "Failed to place task: " + std::to_string(new_job.task_of_job->id()));
                 }
         }
 

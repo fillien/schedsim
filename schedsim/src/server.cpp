@@ -1,3 +1,4 @@
+#include <scheduler.hpp>
 #include <cassert>
 #include <engine.hpp>
 #include <event.hpp>
@@ -10,7 +11,7 @@
 #include <tracy/Tracy.hpp>
 #endif
 
-Server::Server(const std::weak_ptr<Engine>& sim) : Entity(sim) {}
+Server::Server(const std::weak_ptr<Engine>& sim, const std::shared_ptr<scheds::Scheduler>& sched) : Entity(sim), attached_sched_(sched) {}
 
 auto Server::running_time() const -> double { return sim()->time() - last_update_; }
 

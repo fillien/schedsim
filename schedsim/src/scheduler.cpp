@@ -66,12 +66,9 @@ auto Scheduler::is_this_my_event(const events::Event& evt) -> bool
         if (std::holds_alternative<ServInactive>(evt)) {
                 return matches_server(std::get<ServInactive>(evt).serv);
         }
-        if (std::holds_alternative<JobArrival>(evt)) {
-                const auto& [task, duration] = std::get<JobArrival>(evt);
-                return task->has_server() && matches_server(task->server());
-        }
         if (std::holds_alternative<TimerIsr>(evt)) { return true; }
-        throw std::runtime_error("Unknown event");
+        if (!std::holds_alternative<JobArrival>(evt)) { throw std::runtime_error("Unknown event"); }
+        return false;
 }
 
 auto Scheduler::update_running_servers() -> void
@@ -127,21 +124,29 @@ auto Scheduler::detach_server_if_needed(const std::shared_ptr<Task>& inactive_ta
         ZoneScoped;
 #endif
         const auto& future_list = sim()->future_list();
-        // Look for any future job arrival associated with this task.
-        const auto search =
-            std::ranges::find_if(future_list, [inactive_task](const auto& entry) -> bool {
-                    if (const auto new_task = std::get_if<events::JobArrival>(&entry.second)) {
-                            return new_task->task_of_job == inactive_task;
-                    }
-                    return false;
-            });
 
-        if (search == std::end(future_list)) {
-                // No pending job arrival: detach the task's server.
+        if (inactive_task->has_server()) {
+                // Look for any future job arrival associated with this task.
+                const auto search =
+                    std::ranges::find_if(future_list, [inactive_task](const auto& entry) -> bool {
+                            if (const auto new_task =
+                                    std::get_if<events::JobArrival>(&entry.second)) {
+                                    return new_task->task_of_job == inactive_task;
+                            }
+                            return false;
+                    });
+
+                if (search == std::end(future_list)) {
+                        // No pending job arrival: detach the task's server.
+                        std::erase(servers_, inactive_task->server());
+                        inactive_task->clear_server();
+                        total_utilization_ -= inactive_task->utilization();
+                        Engine::round_zero(total_utilization_);
+                }
+        }
+        else {
                 std::erase(servers_, inactive_task->server());
-                inactive_task->clear_server();
                 total_utilization_ -= inactive_task->utilization();
-                Engine::round_zero(total_utilization_);
         }
 }
 
@@ -162,9 +167,6 @@ auto Scheduler::handle(const events::Event& evt) -> void
                     }
                     else if constexpr (std::is_same_v<T, ServInactive>) {
                             on_serv_inactive(arg.serv);
-                    }
-                    else if constexpr (std::is_same_v<T, JobArrival>) {
-                            on_job_arrival(arg.task_of_job, arg.job_duration);
                     }
                     else if constexpr (std::is_same_v<T, TimerIsr>) {
                             arg.target_timer->fire();
@@ -221,7 +223,7 @@ auto Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const doub
                 // Update servers since the total utilization increases.
                 update_running_servers();
 
-                const auto new_server = std::make_shared<Server>(sim());
+                const auto new_server = std::make_shared<Server>(sim(), shared_from_this());
                 new_task->server(new_server);
                 servers_.push_back(new_server);
                 total_utilization_ += new_task->utilization();

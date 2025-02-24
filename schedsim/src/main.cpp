@@ -167,7 +167,9 @@ auto main(const int argc, const char** argv) -> int
                         // For each job of tasks add a "job arrival" event in the future list
                         for (auto job : input_task.jobs) {
                                 sim->add_event(
-                                    events::JobArrival{new_task, job.duration}, job.arrival);
+                                    events::JobArrival{
+                                        .task_of_job = new_task, .job_duration = job.duration},
+                                    job.arrival);
                         }
                         tasks.push_back(std::move(new_task));
                 }

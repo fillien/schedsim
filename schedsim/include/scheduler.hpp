@@ -76,6 +76,14 @@ class Scheduler : public Entity, public std::enable_shared_from_this<Scheduler> 
          */
         [[nodiscard]] auto active_bandwidth() const -> double;
 
+        /**
+         * @brief Handles the arrival of a job.
+         * @param new_task The newly arrived task.
+         * @param job_duration The job's duration.
+         */
+        auto on_job_arrival(const std::shared_ptr<Task>& new_task, const double& job_duration)
+            -> void;
+
       protected:
         /**
          * @brief Retrieves the chip (cluster) associated with the scheduler.
@@ -171,14 +179,6 @@ class Scheduler : public Entity, public std::enable_shared_from_this<Scheduler> 
         auto servers() const -> const std::vector<std::shared_ptr<Server>>& { return servers_; }
 
       private:
-        /**
-         * @brief Handles the arrival of a job.
-         * @param new_task The newly arrived task.
-         * @param job_duration The job's duration.
-         */
-        auto on_job_arrival(const std::shared_ptr<Task>& new_task, const double& job_duration)
-            -> void;
-
         /**
          * @brief Handles the completion of a job on a server.
          * @param serv The server where the job finished.
