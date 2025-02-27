@@ -84,11 +84,13 @@ auto Allocator::handle(std::vector<events::Event> evts) -> void
         // Reset all the calls to resched
         rescheds_.clear();
 
+        std::cout << "new: " << sim()->time() << std::endl;
+
         for (const auto& evt : evts) {
                 bool handled = false;
-                for (const auto& scheduler : schedulers_) {
-                        if (scheduler->is_this_my_event(evt)) {
-                                scheduler->handle(evt);
+                for (const auto& sched : schedulers_) {
+                        if (sched->is_this_my_event(evt)) {
+                                sched->handle(evt);
                                 handled = true;
                                 break;
                         }
@@ -101,6 +103,8 @@ auto Allocator::handle(std::vector<events::Event> evts) -> void
 
                 const auto new_job = *(std::get_if<JobArrival>(&evt));
                 const auto& receiver = where_to_put_the_task(new_job.task_of_job);
+
+                std::cout << "\nt" << new_job.task_of_job->id() << ", u=" << new_job.task_of_job->utilization() << std::endl;
 
                 if (receiver) {
                         // A place have been found

@@ -35,7 +35,8 @@ class Cluster : public Entity, public std::enable_shared_from_this<Cluster> {
             const std::size_t cid,
             const std::vector<double>& frequencies,
             const double& effective_freq,
-            const double& perf_score);
+            const double& perf_score,
+            const double& u_target);
 
         /**
          * @brief Returns the maximum available frequency.
@@ -78,6 +79,9 @@ class Cluster : public Entity, public std::enable_shared_from_this<Cluster> {
          * @return The cluster id.
          */
         [[nodiscard]] auto id() const -> std::size_t { return id_; }
+
+        [[nodiscard]] auto u_target() const -> double { return u_target_; }
+
 
         /**
          * @brief Rounds a given frequency up to the nearest available mode.
@@ -134,6 +138,7 @@ class Cluster : public Entity, public std::enable_shared_from_this<Cluster> {
         double effective_freq_;
         double current_freq_;
         double perf_score_;
+        double u_target_;
         std::shared_ptr<Timer> dvfs_timer_;
         double dvfs_target_{0};
         std::weak_ptr<scheds::Scheduler> attached_scheduler_;

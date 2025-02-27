@@ -15,6 +15,7 @@ struct Cluster {
         double effective_freq;
         std::vector<double> power_model;
         double perf_score;
+        double u_target;
 };
 
 struct Hardware {

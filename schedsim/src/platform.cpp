@@ -15,14 +15,18 @@ Cluster::Cluster(
     const std::size_t cid,
     const std::vector<double>& frequencies,
     const double& effective_freq,
-    const double& perf_score)
+    const double& perf_score,
+    const double& u_target)
     : Entity(sim), id_(cid), frequencies_(std::move(frequencies)), effective_freq_(effective_freq),
-      current_freq_(0), perf_score_(perf_score)
+      current_freq_(0), perf_score_(perf_score), u_target_(u_target)
 {
         assert(std::ranges::all_of(frequencies_, [](double freq) { return freq > 0; }));
 
         assert(std::ranges::any_of(
             frequencies_, [this](double freq) { return freq == effective_freq_; }));
+
+        assert(0 < perf_score_ && perf_score_ <= 1);
+        assert(0 < u_target_ && perf_score_);
 
         std::ranges::sort(frequencies_, std::greater<>());
 

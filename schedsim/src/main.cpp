@@ -30,9 +30,9 @@
 #include <version.h>
 
 #ifdef TRACY_ENABLE
-#include <tracy/Tracy.hpp>
-#include <thread>
 #include <chrono>
+#include <thread>
+#include <tracy/Tracy.hpp>
 #endif
 
 namespace fs = std::filesystem;
@@ -101,6 +101,10 @@ auto main(const int argc, const char** argv) -> int
 
         const bool FREESCALING_ALLOWED{false};
 
+#ifdef TRACY_ENABLE
+        // std::this_thread::sleep_for(std::chrono::seconds(2));
+#endif
+
         try {
                 auto config = parse_args(argc, argv);
 
@@ -116,7 +120,7 @@ auto main(const int argc, const char** argv) -> int
                 sim->platform(plat);
 
                 std::shared_ptr<allocators::Allocator> alloc =
-                    std::make_shared<allocators::HighPerfFirst>(sim);
+                    std::make_shared<allocators::SmartAss>(sim);
 
                 std::size_t cluster_id_cpt{1};
                 for (const protocols::hardware::Cluster& clu : PlatformConfig.clusters) {
@@ -125,7 +129,8 @@ auto main(const int argc, const char** argv) -> int
                             cluster_id_cpt,
                             clu.frequencies,
                             clu.effective_freq,
-                            clu.perf_score);
+                            clu.perf_score,
+                            clu.u_target);
                         newclu->create_procs(clu.nb_procs);
 
                         std::shared_ptr<scheds::Scheduler> sched;
@@ -178,9 +183,7 @@ auto main(const int argc, const char** argv) -> int
                 sim->simulation();
 
                 protocols::traces::write_log_file(sim->traces(), config.output_file);
-                #ifdef TRACY_ENABLE
-                std::this_thread::sleep_for(std::chrono::seconds(1));
-                #endif
+
                 return EXIT_SUCCESS;
         }
         catch (const cxxopts::exceptions::parsing& e) {

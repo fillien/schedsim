@@ -7,7 +7,7 @@ import shutil
 import concurrent.futures
 
 SCHEDSIM = "./build/schedsim/schedsim"
-PLATFORM = "./platforms/exynos5422LITTLE.json"
+PLATFORM = "./platforms/exynos5422.json"
 
 
 def main(datadir, sched_policy, delay, suffix=""):
@@ -44,6 +44,8 @@ def main(datadir, sched_policy, delay, suffix=""):
                     future.result()
 
 def run_scenario(schedsim, current_dir, scenario, sched_policy, datadir, log_dir, delay):
+    env = os.environ.copy()
+    env["MallocNanoZone"] = "0"
     command = [
         schedsim,
         "-s",
@@ -58,7 +60,7 @@ def run_scenario(schedsim, current_dir, scenario, sched_policy, datadir, log_dir
     if delay:
         command.extend(["--delay", "true"])
 
-    return subprocess.run(command, check=True)
+    return subprocess.run(command, check=True, env=env)
 
 
 if __name__ == "__main__":

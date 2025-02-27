@@ -46,7 +46,7 @@ auto Server::change_state(State new_state) -> void
                         sim()->add_trace(traces::ServReady{
                             .task_id = self->id(),
                             .deadline = relative_deadline_,
-                            .utilization = utilization()});
+                            .utilization = utilization()/scheduler()->cluster()->perf()});
                         break;
                 }
                 case State::NonCont: {
@@ -63,7 +63,7 @@ auto Server::change_state(State new_state) -> void
                         sim()->add_trace(traces::ServReady{
                             .task_id = self->id(),
                             .deadline = relative_deadline_,
-                            .utilization = utilization()});
+                            .utilization = utilization()/scheduler()->cluster()->perf()});
                         break;
                 }
                 case State::Ready:
@@ -99,7 +99,7 @@ auto Server::change_state(State new_state) -> void
                 // Valid only from Running or NonCont.
                 assert(current_state_ == State::Running || current_state_ == State::NonCont);
                 sim()->add_trace(
-                    traces::ServInactive{.task_id = self->id(), .utilization = utilization()});
+                    traces::ServInactive{.task_id = self->id(), .utilization = utilization()/scheduler()->cluster()->perf()});
                 current_state_ = State::Inactive;
                 break;
         }
