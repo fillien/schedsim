@@ -12,7 +12,6 @@
 #include <schedulers/parallel.hpp>
 #include <server.hpp>
 #include <set>
-#include <stdexcept>
 #include <task.hpp>
 #include <tracy/Tracy.hpp>
 #include <variant>
@@ -84,8 +83,6 @@ auto Allocator::handle(std::vector<events::Event> evts) -> void
         // Reset all the calls to resched
         rescheds_.clear();
 
-        std::cout << "new: " << sim()->time() << std::endl;
-
         for (const auto& evt : evts) {
                 bool handled = false;
                 for (const auto& sched : schedulers_) {
@@ -104,8 +101,6 @@ auto Allocator::handle(std::vector<events::Event> evts) -> void
                 const auto new_job = *(std::get_if<JobArrival>(&evt));
                 const auto& receiver = where_to_put_the_task(new_job.task_of_job);
 
-                std::cout << "\nt" << new_job.task_of_job->id() << ", u=" << new_job.task_of_job->utilization() << std::endl;
-
                 if (receiver) {
                         // A place have been found
                         // Is the task already have a server ?
@@ -121,8 +116,7 @@ auto Allocator::handle(std::vector<events::Event> evts) -> void
                 }
                 else {
                         // No place for this task
-                        throw std::runtime_error(
-                            "Failed to place task: " + std::to_string(new_job.task_of_job->id()));
+                        sim()->add_trace(protocols::traces::TaskRejected{new_job.task_of_job->id()});
                 }
         }
 
