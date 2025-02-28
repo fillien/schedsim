@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
 
+SCEFILE=scenario.json
+MallocNanoZone=0
+
+RED="\e[31m"
+ENDCOLOR="\e[0m"
+# || echo -e "${RED}big_first failed${ENDCOLOR}"
+
 while true; do
-  echo "new"
-  ./build/schedgen/schedgen taskset -t 10 -u 3 -s 1 -c 1 -m 1  &&  ./build/schedsim/schedsim -s scenario.json --sched csf --delay -p platforms/exynos5422LITTLE.json
-  if [ $? -ne 0 ]; then
-    echo "Command failed. Exiting loop."
-    break
-  fi
+    ./build/schedgen/schedgen taskset -o $SCEFILE -t 10 -u 2 -s 1 -c 0.1 --umax 0.6
+    MallocNanoZone=0 ./build/schedsim/schedsim -i $SCEFILE -p platforms/exynos5422.json --alloc big_first --sched grub
+    MallocNanoZone=0 ./build/schedsim/schedsim -i $SCEFILE -p platforms/exynos5422.json --alloc little_first --sched grub
+    MallocNanoZone=0 ./build/schedsim/schedsim -i $SCEFILE -p platforms/exynos5422.json --alloc smart_ass --sched grub
+    if [ $? -ne 0 ]; then
+        echo "Command failed. Exiting loop."
+        break
+    fi
 done
