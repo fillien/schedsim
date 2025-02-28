@@ -75,8 +75,7 @@ auto Scheduler::update_running_servers() -> void
 {
         // Update timing for servers that are running on any processor.
         for (const auto& proc : chip()->processors()) {
-                if (proc->has_task()) {
-                        update_server_times(proc->task()->server()); }
+                if (proc->has_task()) { update_server_times(proc->task()->server()); }
         }
 }
 
@@ -91,7 +90,7 @@ auto Scheduler::total_utilization() const -> double
         for (const auto& serv : servers_) {
                 total += serv->utilization();
         }
-        return total/cluster()->perf();
+        return total / cluster()->perf();
 }
 
 auto Scheduler::deadline_order(const Server& first, const Server& second) -> bool
@@ -116,7 +115,7 @@ auto Scheduler::active_bandwidth() const -> double
                         bandwidth += serv->utilization();
                 }
         }
-        return bandwidth/cluster()->perf();
+        return bandwidth / cluster()->perf();
 }
 
 auto Scheduler::detach_server_if_needed(const std::shared_ptr<Task>& inactive_task) -> void
@@ -141,13 +140,18 @@ auto Scheduler::detach_server_if_needed(const std::shared_ptr<Task>& inactive_ta
                         // No pending job arrival: detach the task's server.
                         std::erase(servers_, inactive_task->server());
                         inactive_task->clear_server();
-                        total_utilization_ -= (inactive_task->utilization()/cluster()->perf());
+                        total_utilization_ -= (inactive_task->utilization() / cluster()->perf());
                         Engine::round_zero(total_utilization_);
+                }
+                else {
+                        std::erase(servers_, inactive_task->server());
+                        inactive_task->clear_server();
+                        total_utilization_ -= (inactive_task->utilization() / cluster()->perf());
                 }
         }
         else {
                 std::erase(servers_, inactive_task->server());
-                total_utilization_ -= (inactive_task->utilization()/cluster()->perf());
+                total_utilization_ -= (inactive_task->utilization() / cluster()->perf());
         }
 }
 
@@ -216,7 +220,8 @@ auto Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const doub
             .duration = job_duration,
             .deadline = sim()->time() + new_task->period()});
 
-        if (!new_task->has_server()) {
+        if (!new_task->has_server() ||
+            (new_task->has_server() && new_task->server()->scheduler() != shared_from_this())) {
                 if (!admission_test(*new_task)) {
                         sim()->add_trace(traces::TaskRejected{new_task->id()});
                         return;
@@ -228,7 +233,7 @@ auto Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const doub
                 const auto new_server = std::make_shared<Server>(sim(), shared_from_this());
                 new_task->server(new_server);
                 servers_.push_back(new_server);
-                total_utilization_ += (new_task->utilization()/cluster()->perf());
+                total_utilization_ += (new_task->utilization() / cluster()->perf());
         }
 
         assert(new_task->has_server());
@@ -310,12 +315,8 @@ auto Scheduler::update_server_times(const std::shared_ptr<Server>& serv) -> void
         namespace traces = protocols::traces;
         assert(serv->state() == Server::State::Running);
 
-        // std::cout << serv->
-        // if (serv->task()->server()->has_task()) { std::cout << "task not connected" << std::endl; }
-
         const double rt = serv->running_time();
         // Ensure numerical stability.
-        std::cout << serv->task()->remaining_time() - rt << std::endl;
         assert((serv->task()->remaining_time() - rt) >= -Engine::ZERO_ROUNDED);
 
         serv->virtual_time(server_virtual_time(*serv, rt));

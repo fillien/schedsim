@@ -82,7 +82,6 @@ class Cluster : public Entity, public std::enable_shared_from_this<Cluster> {
 
         [[nodiscard]] auto u_target() const -> double { return u_target_; }
 
-
         /**
          * @brief Rounds a given frequency up to the nearest available mode.
          * @param freq The frequency to round up.
@@ -188,7 +187,7 @@ class Platform : public Entity {
       private:
         std::vector<std::shared_ptr<Cluster>> clusters_;
         bool freescaling_;
-        std::size_t cpt_id_{0};
+        std::size_t cpt_id_{1};
 };
 
 #endif

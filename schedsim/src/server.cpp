@@ -1,8 +1,8 @@
-#include <scheduler.hpp>
 #include <cassert>
 #include <engine.hpp>
 #include <event.hpp>
 #include <memory>
+#include <scheduler.hpp>
 #include <server.hpp>
 #include <task.hpp>
 #include <variant>
@@ -11,7 +11,10 @@
 #include <tracy/Tracy.hpp>
 #endif
 
-Server::Server(const std::weak_ptr<Engine>& sim, const std::shared_ptr<scheds::Scheduler>& sched) : Entity(sim), attached_sched_(sched) {}
+Server::Server(const std::weak_ptr<Engine>& sim, const std::shared_ptr<scheds::Scheduler>& sched)
+    : Entity(sim), attached_sched_(sched)
+{
+}
 
 auto Server::running_time() const -> double { return sim()->time() - last_update_; }
 
@@ -46,7 +49,7 @@ auto Server::change_state(State new_state) -> void
                         sim()->add_trace(traces::ServReady{
                             .task_id = self->id(),
                             .deadline = relative_deadline_,
-                            .utilization = utilization()/scheduler()->cluster()->perf()});
+                            .utilization = utilization() / scheduler()->cluster()->perf()});
                         break;
                 }
                 case State::NonCont: {
@@ -63,7 +66,7 @@ auto Server::change_state(State new_state) -> void
                         sim()->add_trace(traces::ServReady{
                             .task_id = self->id(),
                             .deadline = relative_deadline_,
-                            .utilization = utilization()/scheduler()->cluster()->perf()});
+                            .utilization = utilization() / scheduler()->cluster()->perf()});
                         break;
                 }
                 case State::Ready:
@@ -98,8 +101,9 @@ auto Server::change_state(State new_state) -> void
         case State::Inactive: {
                 // Valid only from Running or NonCont.
                 assert(current_state_ == State::Running || current_state_ == State::NonCont);
-                sim()->add_trace(
-                    traces::ServInactive{.task_id = self->id(), .utilization = utilization()/scheduler()->cluster()->perf()});
+                sim()->add_trace(traces::ServInactive{
+                    .task_id = self->id(),
+                    .utilization = utilization() / scheduler()->cluster()->perf()});
                 current_state_ = State::Inactive;
                 break;
         }

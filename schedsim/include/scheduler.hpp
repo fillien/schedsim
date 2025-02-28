@@ -84,6 +84,8 @@ class Scheduler : public Entity, public std::enable_shared_from_this<Scheduler> 
         auto on_job_arrival(const std::shared_ptr<Task>& new_task, const double& job_duration)
             -> void;
 
+        auto servers() const -> const std::vector<std::shared_ptr<Server>>& { return servers_; }
+
       protected:
         /**
          * @brief Retrieves the chip (cluster) associated with the scheduler.
@@ -175,8 +177,6 @@ class Scheduler : public Entity, public std::enable_shared_from_this<Scheduler> 
         virtual auto on_active_utilization_updated() -> void = 0;
 
         virtual auto update_platform() -> void = 0;
-
-        auto servers() const -> const std::vector<std::shared_ptr<Server>>& { return servers_; }
 
       private:
         /**

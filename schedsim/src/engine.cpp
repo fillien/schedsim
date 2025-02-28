@@ -28,9 +28,9 @@ void Engine::simulation()
 #endif
 
         while (!future_list_.empty()) {
-                #ifdef TRACY_ENABLE
+#ifdef TRACY_ENABLE
                 FrameMark;
-                #endif
+#endif
                 std::vector<events::Event> current_events;
 
                 current_timestamp_ = future_list_.begin()->first;

@@ -42,6 +42,7 @@ struct AppConfig {
         fs::path scenario_file{"scenario.json"};
         fs::path platform_file{"platform.json"};
         std::string sched;
+        std::string alloc;
         bool active_delay;
 };
 
@@ -49,7 +50,7 @@ constexpr std::array<const char*, 6> policies{
     "grub - M-GRUB with global reclaiming",
     "pa   - M-GRUB-PA with global reclaiming",
     "ffa  - M-GRUB with minimum frequency",
-    "csf  - M-GRUB with minimum active processor"
+    "csf  - M-GRUB with minimum active processor",
     "ffa_timer",
     "csf_timer"};
 
@@ -62,10 +63,10 @@ auto parse_args(const int argc, const char** argv) -> AppConfig
 	options.add_options()
 	    ("h,help", "Show this help message.")
 	    ("v,version", "Show the build version")
-	    ("s,scenario", "Specify the scenario file.", cxxopts::value<std::string>())
+	    ("i,input", "Specify the scenario file.", cxxopts::value<std::string>())
 	    ("p,platform", "Specify the platform configuration file.", cxxopts::value<std::string>())
-	    ("sched", "Specify the scheduling policy to be used.", cxxopts::value<std::string>())
-	    ("scheds", "List the available schedulers.", cxxopts::value<bool>()->default_value("false"))
+	    ("a,alloc", "Specify the cluster allocator", cxxopts::value<std::string>())
+	    ("s,sched", "Specify the scheduling policy to be used.", cxxopts::value<std::string>())
             ("delay", "Activate delay during DVFS and DPM switch mode", cxxopts::value<bool>()->default_value("false"))
 	    ("o,output", "Specify the output file to write the simulation results.", cxxopts::value<std::string>());
         // clang-format on
@@ -77,19 +78,37 @@ auto parse_args(const int argc, const char** argv) -> AppConfig
                 exit(cli.arguments().empty() ? EXIT_FAILURE : EXIT_SUCCESS);
         }
 
-        if (cli.count("scheds")) {
-                std::cout << "Available schedulers:\n";
-                for (const auto& policy : policies) {
-                        std::cout << '\t' << policy << '\n';
-                }
-        }
-        if (cli.count("scenario")) { config.scenario_file = cli["scenario"].as<std::string>(); }
+        if (cli.count("input")) { config.scenario_file = cli["input"].as<std::string>(); }
         if (cli.count("platform")) { config.platform_file = cli["platform"].as<std::string>(); }
         if (cli.count("sched")) { config.sched = cli["sched"].as<std::string>(); }
+        if (cli.count("alloc")) { config.alloc = cli["alloc"].as<std::string>(); }
         if (cli.count("output")) { config.output_file = cli["output"].as<std::string>(); }
         if (cli.count("delay")) { config.active_delay = true; }
 
         return config;
+}
+
+auto select_alloc(const std::string& choice, const std::shared_ptr<Engine>& sim)
+    -> std::shared_ptr<allocators::Allocator>
+{
+        using namespace allocators;
+        if (choice == "big_first") { return std::make_shared<HighPerfFirst>(sim); }
+        if (choice == "little_first") { return std::make_shared<LowPerfFirst>(sim); }
+        if (choice == "smart_ass") { return std::make_shared<SmartAss>(sim); }
+        throw std::invalid_argument("Undefined allocation policy");
+}
+
+auto select_sched(const std::string& choice, const std::shared_ptr<Engine>& sim)
+    -> std::shared_ptr<scheds::Scheduler>
+{
+        using namespace scheds;
+        if (choice == "grub") { return std::make_shared<Parallel>(sim); }
+        if (choice == "pa") { return std::make_shared<PowerAware>(sim); }
+        if (choice == "ffa") { return std::make_shared<Ffa>(sim); }
+        if (choice == "csf") { return std::make_shared<Csf>(sim); }
+        if (choice == "ffa_timer") { return std::make_shared<FfaTimer>(sim); }
+        if (choice == "csf_timer") { return std::make_shared<CsfTimer>(sim); }
+        throw std::invalid_argument("Undefined scheduling policy");
 }
 
 auto main(const int argc, const char** argv) -> int
@@ -108,19 +127,18 @@ auto main(const int argc, const char** argv) -> int
         try {
                 auto config = parse_args(argc, argv);
 
-                auto taskset = protocols::scenario::read_file(config.scenario_file);
-                auto PlatformConfig = protocols::hardware::read_file(config.platform_file);
-
                 // Create the simulation engine and attache to it a scheduler
                 std::shared_ptr<Engine> sim = make_shared<Engine>(config.active_delay);
+
+                auto taskset = protocols::scenario::read_file(config.scenario_file);
+                auto PlatformConfig = protocols::hardware::read_file(config.platform_file);
 
                 // Insert the platform configured through the scenario file, in the simulation
                 // engine
                 auto plat = make_shared<Platform>(sim, FREESCALING_ALLOWED);
                 sim->platform(plat);
 
-                std::shared_ptr<allocators::Allocator> alloc =
-                    std::make_shared<allocators::SmartAss>(sim);
+                auto alloc = select_alloc(config.alloc, sim);
 
                 std::size_t cluster_id_cpt{1};
                 for (const protocols::hardware::Cluster& clu : PlatformConfig.clusters) {
@@ -133,27 +151,7 @@ auto main(const int argc, const char** argv) -> int
                             clu.u_target);
                         newclu->create_procs(clu.nb_procs);
 
-                        std::shared_ptr<scheds::Scheduler> sched;
-
-                        if (config.sched == "grub") { sched = make_shared<scheds::Parallel>(sim); }
-                        else if (config.sched == "pa") {
-                                sched = make_shared<scheds::PowerAware>(sim);
-                        }
-                        else if (config.sched == "ffa") {
-                                sched = make_shared<scheds::Ffa>(sim);
-                        }
-                        else if (config.sched == "csf") {
-                                sched = make_shared<scheds::Csf>(sim);
-                        }
-                        else if (config.sched == "ffa_timer") {
-                                sched = make_shared<scheds::FfaTimer>(sim);
-                        }
-                        else if (config.sched == "csf_timer") {
-                                sched = make_shared<scheds::CsfTimer>(sim);
-                        }
-                        else {
-                                throw std::invalid_argument("Undefined scheduling policy");
-                        }
+                        auto sched = select_sched(config.sched, sim);
 
                         alloc->add_child_sched(newclu, sched);
                         plat->add_cluster(newclu);

@@ -25,7 +25,8 @@ class Server : public Entity, public std::enable_shared_from_this<Server> {
          * @brief Constructs a server with a weak pointer to the engine.
          * @param sim Weak pointer to the engine.
          */
-        explicit Server(const std::weak_ptr<Engine>& sim, const std::shared_ptr<scheds::Scheduler>& sched);
+        explicit Server(
+            const std::weak_ptr<Engine>& sim, const std::shared_ptr<scheds::Scheduler>& sched);
 
         /**
          * @brief Retrieves the ID of the attached task.
@@ -158,10 +159,13 @@ class Server : public Entity, public std::enable_shared_from_this<Server> {
          */
         [[nodiscard]] auto has_task() const noexcept -> bool { return !attached_task_.expired(); }
 
-        [[nodiscard]] auto scheduler() const noexcept -> const std::shared_ptr<scheds::Scheduler> { return attached_sched_.lock();}
+        [[nodiscard]] auto scheduler() const noexcept -> const std::shared_ptr<scheds::Scheduler>
+        {
+                return attached_sched_.lock();
+        }
 
       private:
-        std::weak_ptr<Task> attached_task_;    ///< The task to ensure time isolation.
+        std::weak_ptr<Task> attached_task_; ///< The task to ensure time isolation.
         std::weak_ptr<scheds::Scheduler> attached_sched_;
         State current_state_{State::Inactive}; ///< Current state of the server.
         double relative_deadline_{0.0};        ///< Relative deadline for the attached task.

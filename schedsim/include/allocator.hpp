@@ -43,7 +43,9 @@ class Allocator : public Entity {
         }
 
       private:
-        static auto migrate_task(const events::JobArrival& evt, const std::shared_ptr<scheds::Scheduler>& receiver) -> void;
+        static auto migrate_task(
+            const events::JobArrival& evt, const std::shared_ptr<scheds::Scheduler>& receiver)
+            -> void;
 
         std::vector<std::shared_ptr<scheds::Scheduler>> schedulers_;
         std::set<std::shared_ptr<scheds::Scheduler>> rescheds_;
