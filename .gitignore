@@ -4,6 +4,7 @@
 /build_*
 /build_*.json
 /data_*
+/alloc*
 /vgcore.*
 /trace/stream
 /rtsched.sty
