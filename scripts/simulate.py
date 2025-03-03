@@ -10,8 +10,8 @@ SCHEDSIM = "./build/schedsim/schedsim"
 PLATFORM = "./platforms/exynos5422.json"
 
 
-def main(datadir, sched_policy, delay, suffix=""):
-    logs = datadir + "_logs_" + sched_policy + suffix
+def main(datadir, alloc, sched_policy, delay, suffix=""):
+    logs = datadir + "_logs_" + alloc + "_" + sched_policy + suffix
     if os.path.isdir(logs):
         shutil.rmtree(logs)
 
@@ -33,6 +33,7 @@ def main(datadir, sched_policy, delay, suffix=""):
                         SCHEDSIM,
                         current_dir,
                         scenario,
+                        alloc,
                         sched_policy,
                         datadir,
                         logs_dir,
@@ -43,7 +44,7 @@ def main(datadir, sched_policy, delay, suffix=""):
                 for future in concurrent.futures.as_completed(futures):
                     future.result()
 
-def run_scenario(schedsim, current_dir, scenario, sched_policy, datadir, log_dir, delay):
+def run_scenario(schedsim, current_dir, scenario, alloc_policy, sched_policy, datadir, log_dir, delay):
     env = os.environ.copy()
     env["MallocNanoZone"] = "0"
     command = [
@@ -52,6 +53,8 @@ def run_scenario(schedsim, current_dir, scenario, sched_policy, datadir, log_dir
         os.path.join(current_dir, scenario),
         "-p",
         PLATFORM,
+        "--alloc",
+        str(alloc_policy),
         "--sched",
         str(sched_policy),
         "-o",
@@ -65,12 +68,13 @@ def run_scenario(schedsim, current_dir, scenario, sched_policy, datadir, log_dir
 
 if __name__ == "__main__":
     if len(sys.argv) <= 3:
-        print("error: " + sys.argv[0] + " <tasksets> <sched_policy> <delay>")
+        print("error: " + sys.argv[0] + " <tasksets> <alloc_policy> <sched_policy> <delay>")
         exit()
 
     datadir = sys.argv[1]
-    sched_policy = sys.argv[2]
-    delay = sys.argv[3]
+    alloc_policy = sys.argv[2]
+    sched_policy = sys.argv[3]
+    delay = sys.argv[4]
 
     if delay == "true":
         print("delay is true")
@@ -79,4 +83,4 @@ if __name__ == "__main__":
         print("delay is false")
         delay = False
 
-    main(datadir, sched_policy, delay)
+    main(datadir, alloc_policy, sched_policy, delay)
