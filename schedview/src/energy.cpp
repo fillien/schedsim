@@ -4,9 +4,7 @@
 #include <cstddef>
 #include <protocols/traces.hpp>
 
-#include <array>
 #include <cassert>
-#include <iostream>
 #include <set>
 #include <utility>
 #include <variant>
@@ -18,79 +16,41 @@ template <class... Ts> struct overloaded : Ts... {
 
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
-auto outputs::energy::cpu_to_cluster(const protocols::hardware::Hardware& hw, std::size_t cpu)
-    -> std::size_t
-{
-        std::size_t min_cluster{0};
-        std::size_t index{hw.clusters.at(min_cluster).nb_procs};
-        while (cpu > index) {
-                min_cluster += 1;
-                index += hw.clusters.at(min_cluster).nb_procs;
-        }
-
-        return min_cluster;
-}
-
 auto parse_power_consumption(
     const std::vector<std::pair<double, protocols::traces::trace>>& input,
-    const protocols::hardware::Hardware& hw) -> std::vector<std::pair<double, double>>
+    const protocols::hardware::Hardware& hw) -> std::vector<std::pair<double, std::vector<double>>>
 {
-        std::vector<std::pair<double, double>> power_consumption;
+        std::vector<std::pair<double, std::vector<double>>> power_consumption;
 
-        std::set<std::size_t> active_cores;
-        std::size_t current_active_cores{0};
-        double current_freq{0};
-        double current_power{0};
-        double last_timestamp{0};
-
-        bool first{true};
+        std::vector<std::set<std::size_t>> active_cores_per_cluster(hw.clusters.size());
+        std::vector<double> freq_per_cluster(hw.clusters.size());
 
         for (const auto& [timestamp, tra] : input) {
-                assert(timestamp >= last_timestamp);
-                if (timestamp > last_timestamp) {
-                        if (!first) {
-                                first = false;
-                                power_consumption.emplace_back(last_timestamp, current_power);
-                        }
-                        current_power = energy::compute_power(current_freq, hw.clusters.at(0)) *
-                                        static_cast<double>(active_cores.size());
-                        power_consumption.emplace_back(last_timestamp, current_power);
-                        last_timestamp = timestamp;
-                }
-
                 std::visit(
                     overloaded{
                         [&](protocols::traces::ProcActivated evt) {
-                                if (!active_cores.contains(evt.proc_id)) {
-                                        active_cores.insert(evt.proc_id);
-                                        current_active_cores++;
-                                }
+                                active_cores_per_cluster[evt.cluster_id - 1].insert(evt.proc_id);
                         },
                         [&](protocols::traces::ProcIdled evt) {
-                                if (!active_cores.contains(evt.proc_id)) {
-                                        active_cores.insert(evt.proc_id);
-                                        current_active_cores++;
-                                }
+                                active_cores_per_cluster[evt.cluster_id - 1].insert(evt.proc_id);
                         },
                         [&](protocols::traces::ProcSleep evt) {
-                                if (active_cores.contains(evt.proc_id)) {
-                                        active_cores.erase(evt.proc_id);
-                                        current_active_cores--;
-                                }
+                                active_cores_per_cluster[evt.cluster_id - 1].erase(evt.proc_id);
                         },
                         [&](protocols::traces::FrequencyUpdate evt) {
-                                current_freq = evt.frequency;
+                                freq_per_cluster[evt.cluster_id - 1] = evt.frequency;
                         },
-                        [&](protocols::traces::SimFinished) {
-                                power_consumption.emplace_back(last_timestamp, current_power);
-                                current_power =
-                                    energy::compute_power(current_freq, hw.clusters.at(0)) *
-                                    static_cast<double>(active_cores.size());
-                                power_consumption.emplace_back(last_timestamp, current_power);
-                                last_timestamp = timestamp;
-                        },
-                        [](auto) {}},
+                        [](auto) {},
+                    },
                     tra);
+
+                std::vector<double> powers_per_cluster(hw.clusters.size());
+                for (std::size_t cluster = 0; cluster < hw.clusters.size(); ++cluster) {
+                        powers_per_cluster[cluster] =
+                            static_cast<double>(active_cores_per_cluster[cluster].size()) *
+                            energy::compute_power(freq_per_cluster[cluster], hw.clusters[cluster]);
+                }
+                power_consumption.emplace_back(timestamp, std::move(powers_per_cluster));
         }
 
         return power_consumption;
@@ -98,25 +58,38 @@ auto parse_power_consumption(
 
 auto outputs::energy::compute_energy_consumption(
     const std::vector<std::pair<double, protocols::traces::trace>>& input,
-    const protocols::hardware::Hardware& hw) -> double
+    const protocols::hardware::Hardware& hw) -> std::map<std::string, std::vector<std::any>>
 {
         const auto power_consumption = parse_power_consumption(input, hw);
 
-        std::vector<double> energy_timestamps;
-        std::vector<double> energy_measures;
+        std::vector<double> energy_per_cluster(hw.clusters.size(), 0.0);
 
-        double last_timestamp{0};
-        double cumulative_energy{0};
-
-        for (const auto& [timestamp, value] : power_consumption) {
-                if (timestamp > last_timestamp) {
-                        double delta{timestamp - last_timestamp};
-                        energy_timestamps.push_back(timestamp);
-                        cumulative_energy += delta * value;
-                        energy_measures.push_back(cumulative_energy);
-                        last_timestamp = timestamp;
+        if (!power_consumption.empty()) {
+                for (std::size_t i = 0; i < power_consumption.size() - 1; ++i) {
+                        double delta = power_consumption[i + 1].first - power_consumption[i].first;
+                        if (delta > 0) {
+                                for (std::size_t cluster = 0; cluster < hw.clusters.size();
+                                     ++cluster) {
+                                        energy_per_cluster[cluster] +=
+                                            power_consumption[i].second[cluster] * delta;
+                                }
+                        }
                 }
         }
 
-        return cumulative_energy;
+        // Create vectors for the table columns
+        std::vector<std::any> cluster_ids;
+        std::vector<std::any> energies;
+
+        // Populate the vectors
+        for (std::size_t i = 0; i < hw.clusters.size(); ++i) {
+                cluster_ids.push_back(i + 1);
+                energies.push_back(energy_per_cluster[i]);
+        }
+
+        std::map<std::string, std::vector<std::any>> result;
+        result["cluster_id"] = std::move(cluster_ids);
+        result["energy_consumption"] = std::move(energies);
+
+        return result;
 }

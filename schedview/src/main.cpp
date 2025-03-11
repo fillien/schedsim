@@ -1,5 +1,4 @@
 #include "deadline_misses.hpp"
-#include "energy.hpp"
 #include "frequency.hpp"
 #include "gantt/gantt.hpp"
 #include "gantt/rtsched.hpp"
@@ -8,6 +7,7 @@
 #include "stats.hpp"
 #include "textual.hpp"
 #include <any>
+#include <energy.hpp>
 #include <protocols/traces.hpp>
 
 #include <cstddef>
@@ -35,17 +35,19 @@ template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 auto is_args_ask_table_result(const cxxopts::ParseResult& cli) -> bool
 {
         return (
-            cli.count("energy") || cli.count("duration") || cli.count("preemptions") ||
-            cli.count("contextswitch") || cli.count("rejected") || cli.count("waiting") ||
-            cli.count("dpm-request") || cli.count("freq-request") || cli.count("deadlines-rates") ||
+            cli.count("duration") || cli.count("preemptions") || cli.count("contextswitch") ||
+            cli.count("rejected") || cli.count("waiting") || cli.count("arrivals") ||
+            cli.count("cluster_migration") || cli.count("dpm-request") ||
+            cli.count("freq-request") || cli.count("deadlines-rates") ||
             cli.count("deadlines-counts"));
 }
 
 auto is_args_ask_graph_result(const cxxopts::ParseResult& cli) -> bool
 {
         return (
-            cli.count("rtsched") || cli.count("frequency") || cli.count("config") ||
-            cli.count("svg") || cli.count("html") || cli.count("procmode") || cli.count("au"));
+            cli.count("rtsched") || cli.count("frequency") || cli.count("cores") ||
+            cli.count("energy") || cli.count("config") || cli.count("svg") || cli.count("html") ||
+            cli.count("procmode") || cli.count("au"));
 }
 
 auto any_to_string(const std::any& a) -> std::string
@@ -89,6 +91,7 @@ void handle_plots(const cxxopts::ParseResult& cli, const auto& parsed, const aut
 {
         using namespace outputs::gantt;
         using namespace outputs::frequency;
+        using namespace outputs::energy;
 
         if (cli.count("frequency")) {
                 print_table(track_frequency_changes(parsed), cli.count("index"));
@@ -98,6 +101,9 @@ void handle_plots(const cxxopts::ParseResult& cli, const auto& parsed, const aut
 
         if (cli.count("config")) { print_table(track_config_changes(parsed), cli.count("index")); }
 
+        if (cli.count("energy")) {
+                print_table(compute_energy_consumption(parsed, hw), cli.count("energy"));
+        }
         if (cli.count("rtsched")) {
                 Gantt chart{generate_gantt(parsed, hw)};
                 std::filesystem::path output_file(cli["rtsched"].as<std::string>());
@@ -131,14 +137,10 @@ void handle_table_args(
         ZoneScoped;
 #endif
         using namespace outputs::stats;
-        using namespace outputs::energy;
 
         table["file"].push_back(file);
         auto parsed = protocols::traces::read_log_file(file);
 
-        if (cli.count("energy")) {
-                table["energy"].push_back(compute_energy_consumption(parsed, hw));
-        }
         if (cli.count("preemptions")) {
                 table["preemptions"].push_back(count_nb_preemption(parsed));
         }
@@ -146,6 +148,10 @@ void handle_table_args(
                 table["contextswitch"].push_back(count_nb_contextswitch(parsed));
         }
         if (cli.count("rejected")) { table["rejected"].push_back(count_rejected(parsed)); }
+        if (cli.count("cluster_migration")) {
+                table["cluster_migration"].push_back(count_cluster_migration(parsed));
+        }
+        if (cli.count("arrivals")) { table["arrivals"].push_back(count_arrivals(parsed)); }
         if (cli.count("waiting")) {
                 table["waiting"].push_back(count_average_waiting_time(parsed));
         }
@@ -236,7 +242,9 @@ auto main(const int argc, const char** argv) -> int
                 ("duration", "Print task set execution duration.")
                 ("preemptions", "Print the number of preemptions.")
                 ("contextswitch", "Print the number of context switches.")
+                ("migration_cluster", "Print the number of cluster migration")
                 ("rejected", "Print the number of tasks rejected by the admission test.")
+                ("arrivals", "Print the number of job arrivals.")
                 ("dpm-request", "Print the number of requests to change core C-state.")
                 ("freq-request", "Print the number of requests to change frequency.")
                 ("deadlines-rates", "Print the rate of missed deadlines.", cxxopts::value<std::size_t>()->implicit_value("0"))

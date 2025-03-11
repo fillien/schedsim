@@ -125,6 +125,30 @@ auto count_rejected(const logs_type& input) -> std::size_t
         return cpt;
 }
 
+auto count_cluster_migration(const logs_type& input) -> std::size_t
+{
+        namespace traces = protocols::traces;
+        std::size_t cpt{0};
+
+        for (const auto& [_, event] : input) {
+                if (std::holds_alternative<traces::MigrationCluster>(event)) { cpt++; }
+        }
+
+        return cpt;
+}
+
+auto count_arrivals(const logs_type& input) -> std::size_t
+{
+        namespace traces = protocols::traces;
+        std::size_t cpt{0};
+
+        for (const auto& [_, event] : input) {
+                if (std::holds_alternative<traces::JobArrival>(event)) { cpt++; }
+        }
+
+        return cpt;
+}
+
 auto count_core_state_request(const logs_type& input) -> std::size_t
 {
         std::set<std::size_t> active_cores;

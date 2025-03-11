@@ -11,7 +11,7 @@ PLATFORM = "./platforms/exynos5422.json"
 
 
 def main(datadir, alloc, sched_policy, delay, suffix=""):
-    logs = datadir + "_logs_" + alloc + "_" + sched_policy + suffix
+    logs = datadir + "_logs_" + alloc + "_" + sched_policy + "_" + suffix
     if os.path.isdir(logs):
         shutil.rmtree(logs)
 
@@ -76,6 +76,11 @@ if __name__ == "__main__":
     sched_policy = sys.argv[3]
     delay = sys.argv[4]
 
+    if len(sys.argv) > 4:
+        prefix = sys.argv[5]
+    else:
+        prefix = ""
+    
     if delay == "true":
         print("delay is true")
         delay = True
@@ -83,4 +88,4 @@ if __name__ == "__main__":
         print("delay is false")
         delay = False
 
-    main(datadir, alloc_policy, sched_policy, delay)
+    main(datadir, alloc_policy, sched_policy, delay, prefix)
