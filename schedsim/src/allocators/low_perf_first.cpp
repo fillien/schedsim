@@ -8,7 +8,7 @@ auto allocators::LowPerfFirst::where_to_put_the_task(const std::shared_ptr<Task>
     -> std::optional<std::shared_ptr<scheds::Scheduler>>
 {
         const auto compare_perf = [](const auto& first, const auto& second) {
-                return first->cluster()->perf() < second->cluster()->perf();
+                return first->cluster()->perf() > second->cluster()->perf();
         };
 
         // Sort the schedulers by perf score
