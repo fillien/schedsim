@@ -168,7 +168,14 @@ auto generate_taskset(
                 throw std::invalid_argument("Success rate is not between 0 and 1");
         }
 
-        auto utilizations = uunifast_discard(nb_tasks, total_utilization, umax);
+        double sum_of_utils = 0;
+        std::vector<double> utilizations;
+        while ((total_utilization - 0.01) > sum_of_utils ||
+               sum_of_utils > (total_utilization + 0.01)) {
+                utilizations = uunifast_discard(nb_tasks, total_utilization, umax);
+                sum_of_utils = std::ranges::fold_left(utilizations, 0.0, std::plus<>());
+        }
+
         std::vector<int> periods{25200, 12600, 8400, 6300, 5040, 4200, 3600, 3150, 2800, 2520};
         // std::vector<int> periods{1, 2, 5, 10, 20, 50, 100, 200, 500, 1000};
         double hyperperiod{25200};
