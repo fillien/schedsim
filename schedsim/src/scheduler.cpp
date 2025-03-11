@@ -215,10 +215,6 @@ auto Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const doub
 #endif
 
         namespace traces = protocols::traces;
-        sim()->add_trace(traces::JobArrival{
-            .task_id = new_task->id(),
-            .duration = job_duration,
-            .deadline = sim()->time() + new_task->period()});
 
         if (!new_task->has_server() ||
             (new_task->has_server() && new_task->server()->scheduler() != shared_from_this())) {

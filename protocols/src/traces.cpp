@@ -178,6 +178,14 @@ void to_json(const trace& log, rapidjson::Writer<rapidjson::OStreamWrapper>& wri
                         writer.Uint64(tra.task_id);
                         writer.Key("cluster_id");
                         writer.Uint64(tra.cluster_id);
+                },
+                [&writer](const MigrationCluster& tra) {
+                        writer.Key("type");
+                        writer.String("migration_cluster");
+                        writer.Key("tid");
+                        writer.Uint64(tra.task_id);
+                        writer.Key("cluster_id");
+                        writer.Uint64(tra.cluster_id);
                 }},
             log);
 }
@@ -298,6 +306,11 @@ auto from_json(const rapidjson::Value& log) -> trace
                          .task_id = log["tid"].GetUint64(),
                          .cluster_id = log["cluster_id"].GetUint64()};
              }},
+            {"migration_cluster",
+             [](const rapidjson::Value& log) -> trace {
+                     return MigrationCluster{
+                         .task_id = log["tid"].GetUint64(),
+                         .cluster_id = log["cluster_id"].GetUint64()};
              }},
         };
 

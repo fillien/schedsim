@@ -1,7 +1,7 @@
 #include "textual.hpp"
 #include "../external/rang.hpp"
+#include <cstddef>
 #include <iomanip>
-#include <map>
 #include <ostream>
 #include <protocols/traces.hpp>
 #include <string>
@@ -141,11 +141,18 @@ void serialize(std::ostream& out, const protocols::traces::trace& tra)
                         out << ", ";
                         color_arg(out, "cluster_id", tra.cluster_id);
                 },
+                [&out](traces::MigrationCluster tra) {
+                        color_name(out, "migration_cluster");
+                        color_arg(out, "tid", tra.task_id);
+                        out << ", ";
+                        color_arg(out, "cluster_id", tra.cluster_id);
+                },
                 []([[maybe_unused]] auto&) {},
             },
             tra);
         out << '\n';
 }
+
 }; // namespace
 
 void outputs::textual::print(

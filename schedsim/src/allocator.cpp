@@ -2,6 +2,7 @@
 #include <allocator.hpp>
 #include <cassert>
 #include <cstddef>
+#include <engine.hpp>
 #include <event.hpp>
 #include <memory>
 #include <platform.hpp>
@@ -40,6 +41,7 @@ auto Allocator::add_child_sched(
         schedulers_.push_back(std::move(sched));
         clu.lock()->scheduler(schedulers_.back()->weak_from_this());
         schedulers_.back()->cluster(clu.lock());
+        call_resched(sched);
 }
 
 auto Allocator::migrate_task(
@@ -97,6 +99,12 @@ auto Allocator::handle(std::vector<events::Event> evts) -> void
                 if (handled) { continue; }
 
                 const auto new_job = *(std::get_if<JobArrival>(&evt));
+
+                sim()->add_trace(traces::JobArrival{
+                    .task_id = new_job.task_of_job->id(),
+                    .duration = new_job.job_duration,
+                    .deadline = sim()->time() + new_job.task_of_job->period()});
+
                 const auto& receiver = where_to_put_the_task(new_job.task_of_job);
 
                 if (receiver) {
@@ -113,6 +121,9 @@ auto Allocator::handle(std::vector<events::Event> evts) -> void
                             new_job.task_of_job->server()->state() != Server::State::Running &&
                             new_job.task_of_job->server()->state() != Server::State::Ready) {
                                 sim()->add_trace(traces::TaskPlaced{
+                                    .task_id = new_job.task_of_job->id(),
+                                    .cluster_id = receiver.value()->cluster()->id()});
+                                sim()->add_trace(traces::MigrationCluster{
                                     .task_id = new_job.task_of_job->id(),
                                     .cluster_id = receiver.value()->cluster()->id()});
                                 migrate_task(new_job, receiver.value());
