@@ -45,18 +45,26 @@ void serialize(std::ostream& out, const protocols::traces::trace& tra)
                 },
                 [&out](traces::ProcActivated tra) {
                         color_name(out, "proc_activated");
+                        color_arg(out, "cluster_id", tra.cluster_id);
+                        out << ", ";
                         color_arg(out, "cpu", tra.proc_id);
                 },
                 [&out](traces::ProcIdled tra) {
                         color_name(out, "proc_idled");
+                        color_arg(out, "cluster_id", tra.cluster_id);
+                        out << ", ";
                         color_arg(out, "cpu", tra.proc_id);
                 },
                 [&out](traces::ProcSleep tra) {
                         color_name(out, "proc_sleep");
+                        color_arg(out, "cluster_id", tra.cluster_id);
+                        out << ", ";
                         color_arg(out, "cpu", tra.proc_id);
                 },
                 [&out](traces::ProcChange tra) {
                         color_name(out, "proc_change");
+                        color_arg(out, "cluster_id", tra.cluster_id);
+                        out << ", ";
                         color_arg(out, "cpu", tra.proc_id);
                 },
                 [&out](traces::ServBudgetReplenished tra) {
@@ -119,10 +127,14 @@ void serialize(std::ostream& out, const protocols::traces::trace& tra)
                 },
                 [&out](traces::FrequencyUpdate tra) {
                         color_name(out, "frequency_update");
+                        color_arg(out, "cluster_id", tra.cluster_id);
+                        out << ", ";
                         color_arg(out, "frequency", tra.frequency);
                 },
                 [&out]([[maybe_unused]] traces::Resched tra) { color_name(out, "resched"); },
-                [&out]([[maybe_unused]] traces::SimFinished tra) { color_name(out, "sim_Gantt"); },
+                [&out]([[maybe_unused]] traces::SimFinished tra) {
+                        color_name(out, "sim_finished");
+                },
                 [&out](traces::TaskPlaced tra) {
                         color_name(out, "task_placed");
                         color_arg(out, "tid", tra.task_id);

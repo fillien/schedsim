@@ -42,28 +42,32 @@ struct JobFinished {
  * @brief Represents a processor activated event.
  */
 struct ProcActivated {
-        std::size_t proc_id; /**< ID of the processor. */
+        std::size_t proc_id;    /**< ID of the processor. */
+        std::size_t cluster_id; /**< ID of the cluster. */
 };
 
 /**
  * @brief Represents a processor idled event.
  */
 struct ProcIdled {
-        std::size_t proc_id; /**< ID of the processor. */
+        std::size_t proc_id;    /**< ID of the processor. */
+        std::size_t cluster_id; /**< ID of the cluster. */
 };
 
 /**
  * @brief Represents a processor activated event.
  */
 struct ProcSleep {
-        std::size_t proc_id; /**< ID of the processor. */
+        std::size_t proc_id;    /**< ID of the processor. */
+        std::size_t cluster_id; /**< ID of the cluster. */
 };
 
 /**
  * @brief Represents a processor change event.
  */
 struct ProcChange {
-        std::size_t proc_id; /**< ID of the processor. */
+        std::size_t proc_id;    /**< ID of the processor. */
+        std::size_t cluster_id; /**< ID of the cluster. */
 };
 
 /**
@@ -163,6 +167,11 @@ struct TaskPlaced {
         std::size_t cluster_id;
 };
 
+struct MigrationCluster {
+        std::size_t task_id;
+        std::size_t cluster_id;
+};
+
 /**
  * @brief Type representing various trace events.
  */
@@ -187,7 +196,8 @@ using trace = std::variant<
     TaskPreempted,
     TaskScheduled,
     TaskRejected,
-    TaskPlaced>;
+    TaskPlaced,
+    MigrationCluster>;
 
 /**
  * @brief Converts a trace event to JSON format.

@@ -17,7 +17,7 @@ Processor::Processor(std::weak_ptr<Engine> sim, std::weak_ptr<Cluster> clu, std:
         using namespace protocols::traces;
 
         assert(sim.lock());
-        sim.lock()->add_trace(ProcIdled{id_});
+        sim.lock()->add_trace(ProcIdled{.proc_id = id_, .cluster_id = cluster_.lock()->id()});
 
         core_timer_ = std::make_shared<Timer>(sim, [this, sim]() {
                 assert(current_state_ == State::Change);
@@ -73,12 +73,12 @@ void Processor::change_state(const State& next_state)
         if (auto engine = sim()) {
                 current_state_ = next_state;
                 switch (next_state) {
-                case Idle: engine->add_trace(ProcIdled{id_}); break;
-                case Running: engine->add_trace(ProcActivated{id_}); break;
-                case Sleep: engine->add_trace(ProcSleep{id_}); break;
+                case Idle: engine->add_trace(ProcIdled{id_, cluster()->id()}); break;
+                case Running: engine->add_trace(ProcActivated{id_, cluster()->id()}); break;
+                case Sleep: engine->add_trace(ProcSleep{id_, cluster()->id()}); break;
                 case Change:
                         assert(!has_task());
-                        engine->add_trace(ProcChange{id_});
+                        engine->add_trace(ProcChange{id_, cluster()->id()});
                         break;
                 }
         }

@@ -48,24 +48,32 @@ void to_json(const trace& log, rapidjson::Writer<rapidjson::OStreamWrapper>& wri
                         writer.String("proc_idled");
                         writer.Key("cpu");
                         writer.Uint(tra.proc_id);
+                        writer.Key("cluster_id");
+                        writer.Uint64(tra.cluster_id);
                 },
                 [&writer](const ProcActivated& tra) {
                         writer.Key("type");
                         writer.String("proc_activated");
                         writer.Key("cpu");
                         writer.Uint(tra.proc_id);
+                        writer.Key("cluster_id");
+                        writer.Uint64(tra.cluster_id);
                 },
                 [&writer](const ProcSleep& tra) {
                         writer.Key("type");
                         writer.String("proc_sleep");
                         writer.Key("cpu");
                         writer.Uint(tra.proc_id);
+                        writer.Key("cluster_id");
+                        writer.Uint64(tra.cluster_id);
                 },
                 [&writer](const ProcChange& tra) {
                         writer.Key("type");
                         writer.String("proc_change");
                         writer.Key("cpu");
                         writer.Uint(tra.proc_id);
+                        writer.Key("cluster_id");
+                        writer.Uint64(tra.cluster_id);
                 },
                 [&writer]([[maybe_unused]] const Resched& tra) {
                         writer.Key("type");
@@ -191,9 +199,9 @@ auto from_json(const rapidjson::Value& log) -> trace
             {"job_arrival",
              [](const rapidjson::Value& log) -> trace {
                      return JobArrival{
-                         log["tid"].GetUint64(),
-                         log["duration"].GetDouble(),
-                         log["deadline"].GetDouble()};
+                         .task_id = log["tid"].GetUint64(),
+                         .duration = log["duration"].GetDouble(),
+                         .deadline = log["deadline"].GetDouble()};
              }},
             {"job_finished",
              [](const rapidjson::Value& log) -> trace {
@@ -201,28 +209,38 @@ auto from_json(const rapidjson::Value& log) -> trace
              }},
             {"proc_activated",
              [](const rapidjson::Value& log) -> trace {
-                     return ProcActivated{log["cpu"].GetUint64()};
+                     return ProcActivated{
+                         .proc_id = log["cpu"].GetUint64(),
+                         .cluster_id = log["cluster_id"].GetUint64()};
              }},
             {"proc_sleep",
              [](const rapidjson::Value& log) -> trace {
-                     return ProcSleep{log["cpu"].GetUint64()};
+                     return ProcSleep{
+                         .proc_id = log["cpu"].GetUint64(),
+                         .cluster_id = log["cluster_id"].GetUint64()};
              }},
             {"proc_idled",
              [](const rapidjson::Value& log) -> trace {
-                     return ProcIdled{log["cpu"].GetUint64()};
+                     return ProcIdled{
+                         .proc_id = log["cpu"].GetUint64(),
+                         .cluster_id = log["cluster_id"].GetUint64()};
              }},
             {"proc_change",
              [](const rapidjson::Value& log) -> trace {
-                     return ProcChange{log["cpu"].GetUint64()};
+                     return ProcChange{
+                         .proc_id = log["cpu"].GetUint64(),
+                         .cluster_id = log["cluster_id"].GetUint64()};
              }},
             {"serv_budget_replenished",
              [](const rapidjson::Value& log) -> trace {
                      return ServBudgetReplenished{
-                         log["tid"].GetUint64(), log["budget"].GetDouble()};
+                         .task_id = log["tid"].GetUint64(), .budget = log["budget"].GetDouble()};
              }},
             {"serv_inactive",
              [](const rapidjson::Value& log) -> trace {
-                     return ServInactive{log["tid"].GetUint64(), log["utilization"].GetDouble()};
+                     return ServInactive{
+                         .task_id = log["tid"].GetUint64(),
+                         .utilization = log["utilization"].GetDouble()};
              }},
             {"serv_running",
              [](const rapidjson::Value& log) -> trace {
@@ -238,14 +256,16 @@ auto from_json(const rapidjson::Value& log) -> trace
              }},
             {"serv_postpone",
              [](const rapidjson::Value& log) -> trace {
-                     return ServPostpone{log["tid"].GetUint64(), log["deadline"].GetDouble()};
+                     return ServPostpone{
+                         .task_id = log["tid"].GetUint64(),
+                         .deadline = log["deadline"].GetDouble()};
              }},
             {"serv_ready",
              [](const rapidjson::Value& log) -> trace {
                      return ServReady{
-                         log["tid"].GetUint64(),
-                         log["deadline"].GetDouble(),
-                         log["utilization"].GetDouble()};
+                         .task_id = log["tid"].GetUint64(),
+                         .deadline = log["deadline"].GetDouble(),
+                         .utilization = log["utilization"].GetDouble()};
              }},
             {"task_preempted",
              [](const rapidjson::Value& log) -> trace {
@@ -253,7 +273,8 @@ auto from_json(const rapidjson::Value& log) -> trace
              }},
             {"task_scheduled",
              [](const rapidjson::Value& log) -> trace {
-                     return TaskScheduled{log["tid"].GetUint64(), log["cpu"].GetUint64()};
+                     return TaskScheduled{
+                         .task_id = log["tid"].GetUint64(), .proc_id = log["cpu"].GetUint64()};
              }},
             {"task_rejected",
              [](const rapidjson::Value& log) -> trace {
@@ -262,16 +283,21 @@ auto from_json(const rapidjson::Value& log) -> trace
             {"virtual_time_update",
              [](const rapidjson::Value& log) -> trace {
                      return VirtualTimeUpdate{
-                         log["tid"].GetUint64(), log["virtual_time"].GetDouble()};
+                         .task_id = log["tid"].GetUint64(),
+                         .virtual_time = log["virtual_time"].GetDouble()};
              }},
             {"frequency_update",
              [](const rapidjson::Value& log) -> trace {
                      return FrequencyUpdate{
-                         log["cluster_id"].GetUint64(), log["frequency"].GetDouble()};
+                         .cluster_id = log["cluster_id"].GetUint64(),
+                         .frequency = log["frequency"].GetDouble()};
              }},
             {"task_placed",
              [](const rapidjson::Value& log) -> trace {
-                     return TaskPlaced{log["tid"].GetUint64(), log["cluster_id"].GetUint64()};
+                     return TaskPlaced{
+                         .task_id = log["tid"].GetUint64(),
+                         .cluster_id = log["cluster_id"].GetUint64()};
+             }},
              }},
         };
 
