@@ -1,33 +1,33 @@
-#include <allocator.hpp>
-#include <allocators/high_perf_first.hpp>
-#include <allocators/low_perf_first.hpp>
-#include <allocators/smart_ass.hpp>
+#include <simulator/allocator.hpp>
+#include <simulator/allocators/high_perf_first.hpp>
+#include <simulator/allocators/low_perf_first.hpp>
+#include <simulator/allocators/smart_ass.hpp>
+#include <simulator/engine.hpp>
+#include <simulator/entity.hpp>
+#include <simulator/event.hpp>
+#include <simulator/platform.hpp>
+#include <protocols/hardware.hpp>
+#include <protocols/scenario.hpp>
+#include <protocols/traces.hpp>
+#include <simulator/scheduler.hpp>
+#include <simulator/schedulers/csf.hpp>
+#include <simulator/schedulers/csf_timer.hpp>
+#include <simulator/schedulers/ffa.hpp>
+#include <simulator/schedulers/ffa_timer.hpp>
+#include <simulator/schedulers/parallel.hpp>
+#include <simulator/schedulers/power_aware.hpp>
+#include <simulator/task.hpp>
+
 #include <cstdlib>
 #include <cxxopts.hpp>
-#include <engine.hpp>
-#include <entity.hpp>
-#include <event.hpp>
 #include <exception>
 #include <filesystem>
 #include <iostream>
 #include <memory>
 #include <ostream>
-#include <platform.hpp>
-#include <protocols/hardware.hpp>
-#include <protocols/scenario.hpp>
-#include <protocols/traces.hpp>
-#include <scheduler.hpp>
-#include <schedulers/csf.hpp>
-#include <schedulers/csf_timer.hpp>
-#include <schedulers/ffa.hpp>
-#include <schedulers/ffa_timer.hpp>
-#include <schedulers/parallel.hpp>
-#include <schedulers/power_aware.hpp>
 #include <stdexcept>
 #include <string>
-#include <task.hpp>
 #include <vector>
-#include <version.h>
 
 #ifdef TRACY_ENABLE
 #include <chrono>
@@ -62,7 +62,6 @@ auto parse_args(const int argc, const char** argv) -> AppConfig
 	cxxopts::Options options("schedsim", "GRUB Scheduler Simulation for a Given Task Set and Platform");
 	options.add_options()
 	    ("h,help", "Show this help message.")
-	    ("v,version", "Show the build version")
 	    ("i,input", "Specify the scenario file.", cxxopts::value<std::string>())
 	    ("p,platform", "Specify the platform configuration file.", cxxopts::value<std::string>())
 	    ("a,alloc", "Specify the cluster allocator", cxxopts::value<std::string>())
@@ -72,9 +71,8 @@ auto parse_args(const int argc, const char** argv) -> AppConfig
         // clang-format on
         const auto cli = options.parse(argc, argv);
 
-        if (cli.count("help") || cli.count("version") || cli.arguments().empty()) {
+        if (cli.count("help") || cli.arguments().empty()) {
                 if (cli.count("help")) { std::cout << options.help() << std::endl; }
-                if (cli.count("version")) { std::cout << GIT_COMMIT_HASH << std::endl; }
                 exit(cli.arguments().empty() ? EXIT_FAILURE : EXIT_SUCCESS);
         }
 

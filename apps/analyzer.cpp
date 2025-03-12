@@ -1,15 +1,15 @@
-#include "deadline_misses.hpp"
-#include "frequency.hpp"
-#include "gantt/gantt.hpp"
-#include "gantt/rtsched.hpp"
-#include "gantt/svg.hpp"
-#include "protocols/hardware.hpp"
-#include "stats.hpp"
-#include "textual.hpp"
-#include <any>
-#include <energy.hpp>
+#include <analyzers/deadline_misses.hpp>
+#include <analyzers/energy.hpp>
+#include <analyzers/frequency.hpp>
+#include <analyzers/gantt/gantt.hpp>
+#include <analyzers/gantt/rtsched.hpp>
+#include <analyzers/gantt/svg.hpp>
+#include <analyzers/stats.hpp>
+#include <analyzers/textual.hpp>
+#include <protocols/hardware.hpp>
 #include <protocols/traces.hpp>
 
+#include <any>
 #include <cstddef>
 #include <cstdlib>
 #include <cxxopts.hpp>
@@ -20,7 +20,6 @@
 #include <string>
 #include <typeinfo>
 #include <vector>
-#include <version.h>
 
 #ifdef TRACY_ENABLE
 #include <tracy/Tracy.hpp>
@@ -225,7 +224,6 @@ auto main(const int argc, const char** argv) -> int
         // clang-format off
         options.add_options()
                 ("h,help", "Show this help message.")
-                ("v,version", "Show the build version")
                 ("p,print", "Print the trace logs.")
                 ("d,directory", "Analyze all simulation traces within a directory.", cxxopts::value<std::string>())
                 ("i,index", "Add column names to table data.")
@@ -257,9 +255,8 @@ auto main(const int argc, const char** argv) -> int
                 options.parse_positional({"infile"});
                 const auto cli = options.parse(argc, argv);
 
-                if (cli.count("help") || cli.count("version") || cli.arguments().empty()) {
+                if (cli.count("help") || cli.arguments().empty()) {
                         if (cli.count("help")) { std::cout << options.help() << std::endl; }
-                        if (cli.count("version")) { std::cout << GIT_COMMIT_HASH << std::endl; }
                         exit(cli.arguments().empty() ? EXIT_FAILURE : EXIT_SUCCESS);
                 }
 

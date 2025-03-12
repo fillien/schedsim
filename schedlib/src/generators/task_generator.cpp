@@ -1,8 +1,8 @@
-#include "task_generator.hpp"
-#include <iterator>
+#include <generators/task_generator.hpp>
 #include <protocols/scenario.hpp>
 
 #include <algorithm>
+#include <iterator>
 #include <cassert>
 #include <chrono>
 #include <cmath>

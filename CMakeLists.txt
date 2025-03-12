@@ -41,12 +41,13 @@ configure_file(
     @ONLY
 )
 
-# add_subdirectory(external/cxxopts)
+add_subdirectory(external/cxxopts)
 add_subdirectory(external/json)
 add_subdirectory(external/rang)
-# add_subdirectory(external/tracy)
-add_subdirectory(doc)
+add_subdirectory(external/tracy)
 add_subdirectory(schedlib)
+add_subdirectory(apps)
+add_subdirectory(doc)
 
 # install(
 #   TARGETS schedsim schedview schedgen
