@@ -1,8 +1,9 @@
-#include "stats.hpp"
+#include "analyzers/stats.hpp"
+#include "protocols/traces.hpp"
+
 #include <cstddef>
 #include <iterator>
 #include <map>
-#include <protocols/traces.hpp>
 #include <set>
 #include <stdexcept>
 #include <variant>

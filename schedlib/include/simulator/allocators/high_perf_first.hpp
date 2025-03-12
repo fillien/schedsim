@@ -1,7 +1,7 @@
 #ifndef ALLOCATOR_HIGH_PERF_FIRST
 #define ALLOCATOR_HIGH_PERF_FIRST
 
-#include <allocator.hpp>
+#include <simulator/allocator.hpp>
 #include <optional>
 
 namespace allocators {

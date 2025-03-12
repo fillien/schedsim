@@ -1,8 +1,9 @@
 #ifndef STATS_HPP
 #define STATS_HPP
 
+#include "protocols/traces.hpp"
+
 #include <cstddef>
-#include <protocols/traces.hpp>
 #include <vector>
 
 namespace outputs::stats {

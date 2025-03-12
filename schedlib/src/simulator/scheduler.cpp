@@ -1,19 +1,19 @@
 #include <algorithm>
 #include <cassert>
-#include <engine.hpp>
-#include <entity.hpp>
-#include <event.hpp>
 #include <iterator>
 #include <map>
 #include <memory>
-#include <platform.hpp>
-#include <processor.hpp>
 #include <protocols/traces.hpp>
 #include <ranges>
-#include <scheduler.hpp>
-#include <server.hpp>
+#include <simulator/engine.hpp>
+#include <simulator/entity.hpp>
+#include <simulator/event.hpp>
+#include <simulator/platform.hpp>
+#include <simulator/processor.hpp>
+#include <simulator/scheduler.hpp>
+#include <simulator/server.hpp>
+#include <simulator/task.hpp>
 #include <stdexcept>
-#include <task.hpp>
 #include <variant>
 #include <vector>
 

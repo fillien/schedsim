@@ -1,7 +1,7 @@
 #ifndef OUTPUTS_SVG_HPP
 #define OUTPUTS_SVG_HPP
 
-#include "gantt.hpp"
+#include "analyzers/gantt/gantt.hpp"
 #include <string>
 
 namespace outputs::gantt::svg {

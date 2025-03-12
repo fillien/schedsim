@@ -1,20 +1,24 @@
+#include <protocols/traces.hpp>
+#include <simulator/allocator.hpp>
+#include <simulator/engine.hpp>
+#include <simulator/event.hpp>
+#include <simulator/platform.hpp>
+#include <simulator/scheduler.hpp>
+#include <simulator/schedulers/csf.hpp>
+#include <simulator/schedulers/ffa.hpp>
+#include <simulator/schedulers/parallel.hpp>
+#include <simulator/server.hpp>
+#include <simulator/task.hpp>
+
+#ifdef TRACY_ENABLE
+#include <tracy/Tracy.hpp>
+#endif
+
 #include <algorithm>
-#include <allocator.hpp>
 #include <cassert>
 #include <cstddef>
-#include <engine.hpp>
-#include <event.hpp>
 #include <memory>
-#include <platform.hpp>
-#include <protocols/traces.hpp>
-#include <scheduler.hpp>
-#include <schedulers/csf.hpp>
-#include <schedulers/ffa.hpp>
-#include <schedulers/parallel.hpp>
-#include <server.hpp>
 #include <set>
-#include <task.hpp>
-#include <tracy/Tracy.hpp>
 #include <variant>
 #include <vector>
 
@@ -47,7 +51,9 @@ auto Allocator::add_child_sched(
 auto Allocator::migrate_task(
     const events::JobArrival& evt, const std::shared_ptr<scheds::Scheduler>& receiver) -> void
 {
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
         const auto serv = evt.task_of_job->server();
         if (serv->state() == Server::State::Ready || serv->state() == Server::State::Running) {
                 serv->change_state(Server::State::NonCont);
@@ -61,7 +67,9 @@ auto Allocator::handle(std::vector<events::Event> evts) -> void
         using namespace events;
         using namespace protocols;
 
+#ifdef TRACY_ENABLE
         ZoneScoped;
+#endif
 
         std::ranges::sort(evts, compare_events);
 

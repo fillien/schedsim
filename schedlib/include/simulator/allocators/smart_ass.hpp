@@ -1,8 +1,8 @@
 #ifndef ALLOCATOR_SMART_ASS
 #define ALLOCATOR_SMART_ASS
 
-#include <allocator.hpp>
 #include <optional>
+#include <simulator/allocator.hpp>
 
 namespace allocators {
 class SmartAss : public Allocator {

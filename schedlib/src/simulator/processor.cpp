@@ -1,11 +1,12 @@
-#include <cassert>
-#include <engine.hpp>
-#include <memory>
-#include <platform.hpp>
-#include <processor.hpp>
 #include <protocols/traces.hpp>
-#include <server.hpp>
-#include <task.hpp>
+#include <simulator/engine.hpp>
+#include <simulator/platform.hpp>
+#include <simulator/processor.hpp>
+#include <simulator/server.hpp>
+#include <simulator/task.hpp>
+
+#include <cassert>
+#include <memory>
 
 #ifdef TRACY_ENABLE
 #include <tracy/Tracy.hpp>

@@ -1,5 +1,5 @@
-#include "energy_model.hpp"
-#include "protocols/hardware.hpp"
+#include <analyzers/energy_model.hpp>
+#include <protocols/hardware.hpp>
 
 auto energy::compute_power(const double& freq, const protocols::hardware::Cluster& hw) -> double
 {

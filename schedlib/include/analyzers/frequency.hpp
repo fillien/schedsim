@@ -1,8 +1,9 @@
 #ifndef FREQUENCY_HPP
 #define FREQUENCY_HPP
 
+#include "protocols/traces.hpp"
+
 #include <any>
-#include <protocols/traces.hpp>
 #include <vector>
 
 namespace outputs::frequency {

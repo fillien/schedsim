@@ -1,8 +1,9 @@
 #ifndef TASK_HPP
 #define TASK_HPP
 
+#include <simulator/entity.hpp>
+
 #include <cstddef>
-#include <entity.hpp>
 #include <memory>
 #include <queue>
 

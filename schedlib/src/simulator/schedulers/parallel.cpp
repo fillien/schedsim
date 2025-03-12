@@ -1,13 +1,13 @@
 #include <algorithm>
-#include <engine.hpp>
-#include <event.hpp>
 #include <memory>
-#include <processor.hpp>
 #include <protocols/traces.hpp>
 #include <ranges>
-#include <schedulers/parallel.hpp>
-#include <server.hpp>
-#include <task.hpp>
+#include <simulator/engine.hpp>
+#include <simulator/event.hpp>
+#include <simulator/processor.hpp>
+#include <simulator/schedulers/parallel.hpp>
+#include <simulator/server.hpp>
+#include <simulator/task.hpp>
 #include <vector>
 
 #ifdef TRACY_ENABLE

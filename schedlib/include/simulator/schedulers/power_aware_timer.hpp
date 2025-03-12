@@ -1,9 +1,10 @@
 #ifndef SCHED_POWER_AWARE_TIMER_HPP
 #define SCHED_POWER_AWARE_TIMER_HPP
 
-#include <entity.hpp>
+#include <simulator/entity.hpp>
+#include <simulator/schedulers/parallel.hpp>
+
 #include <memory>
-#include <schedulers/parallel.hpp>
 
 namespace scheds {
 class PowerAwareTimer : public Parallel {

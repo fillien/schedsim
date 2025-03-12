@@ -1,9 +1,10 @@
+#include <simulator/allocator.hpp>
+#include <simulator/allocators/smart_ass.hpp>
+#include <simulator/scheduler.hpp>
+
 #include <algorithm>
-#include <allocator.hpp>
-#include <allocators/smart_ass.hpp>
 #include <memory>
 #include <optional>
-#include <scheduler.hpp>
 
 auto allocators::SmartAss::where_to_put_the_task(const std::shared_ptr<Task>& new_task)
     -> std::optional<std::shared_ptr<scheds::Scheduler>>

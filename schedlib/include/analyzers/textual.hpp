@@ -1,9 +1,9 @@
 #ifndef OUTPUT_TEXTUAL_HPP
 #define OUTPUT_TEXTUAL_HPP
 
-#include <iostream>
-#include <map>
 #include <protocols/traces.hpp>
+
+#include <iostream>
 #include <vector>
 
 namespace outputs::textual {

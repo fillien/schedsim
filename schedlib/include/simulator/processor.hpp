@@ -1,10 +1,11 @@
 #ifndef PROCESSOR_HPP
 #define PROCESSOR_HPP
 
-#include <entity.hpp>
+#include <simulator/entity.hpp>
+#include <simulator/task.hpp>
+#include <simulator/timer.hpp>
+
 #include <memory>
-#include <task.hpp>
-#include <timer.hpp>
 
 class Cluster;
 

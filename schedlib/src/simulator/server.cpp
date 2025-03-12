@@ -1,10 +1,10 @@
 #include <cassert>
-#include <engine.hpp>
-#include <event.hpp>
+#include <simulator/engine.hpp>
+#include <simulator/event.hpp>
 #include <memory>
-#include <scheduler.hpp>
-#include <server.hpp>
-#include <task.hpp>
+#include <simulator/scheduler.hpp>
+#include <simulator/server.hpp>
+#include <simulator/task.hpp>
 #include <variant>
 
 #ifdef TRACY_ENABLE

@@ -1,5 +1,5 @@
 #include <algorithm>
-#include <schedulers/dpm_dvfs.hpp>
+#include <simulator/schedulers/dpm_dvfs.hpp>
 
 namespace scheds {
 auto DpmDvfs::compute_freq_min(

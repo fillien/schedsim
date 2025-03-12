@@ -1,9 +1,9 @@
 #ifndef SCHED_POWER_AWARE_HPP
 #define SCHED_POWER_AWARE_HPP
 
-#include <entity.hpp>
 #include <memory>
-#include <schedulers/parallel.hpp>
+#include <simulator/entity.hpp>
+#include <simulator/schedulers/parallel.hpp>
 
 namespace scheds {
 class PowerAware : public Parallel {

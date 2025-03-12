@@ -1,7 +1,7 @@
 #ifndef SCHED_FFA_HPP
 #define SCHED_FFA_HPP
 
-#include <schedulers/dpm_dvfs.hpp>
+#include <simulator/schedulers/dpm_dvfs.hpp>
 
 namespace scheds {
 class Ffa : public DpmDvfs {

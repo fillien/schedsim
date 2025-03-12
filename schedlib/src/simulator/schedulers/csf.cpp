@@ -1,7 +1,7 @@
 #include <cassert>
 #include <cmath>
 #include <memory>
-#include <schedulers/csf.hpp>
+#include <simulator/schedulers/csf.hpp>
 
 namespace scheds {
 

@@ -1,7 +1,7 @@
 #ifndef SCHED_DPMDVFS
 #define SCHED_DPMDVFS
 
-#include <schedulers/parallel.hpp>
+#include <simulator/schedulers/parallel.hpp>
 
 namespace scheds {
 

@@ -1,7 +1,7 @@
 #ifndef SCHED_CSF_HPP
 #define SCHED_CSF_HPP
 
-#include <schedulers/dpm_dvfs.hpp>
+#include <simulator/schedulers/dpm_dvfs.hpp>
 
 namespace scheds {
 class Csf : public DpmDvfs {

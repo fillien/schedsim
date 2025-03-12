@@ -1,5 +1,5 @@
+#include <analyzers/gantt/gantt.hpp>
 #include <exception>
-#include <gantt/gantt.hpp>
 #include <iterator>
 #include <ostream>
 #include <protocols/hardware.hpp>

@@ -1,8 +1,8 @@
-#include "energy.hpp"
-#include "energy_model.hpp"
+#include "analyzers/energy.hpp"
+#include "analyzers/energy_model.hpp"
 #include "protocols/hardware.hpp"
+#include "protocols/traces.hpp"
 #include <cstddef>
-#include <protocols/traces.hpp>
 
 #include <cassert>
 #include <set>

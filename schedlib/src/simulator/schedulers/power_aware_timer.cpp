@@ -1,5 +1,5 @@
 #include <cassert>
-#include <schedulers/power_aware_timer.hpp>
+#include <simulator/schedulers/power_aware_timer.hpp>
 
 #ifdef TRACY_ENABLE
 #include <tracy/Tracy.hpp>

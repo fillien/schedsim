@@ -1,9 +1,10 @@
 #ifndef EVENT_HPP
 #define EVENT_HPP
 
+#include <simulator/task.hpp>
+#include <simulator/timer.hpp>
+
 #include <memory>
-#include <task.hpp>
-#include <timer.hpp>
 #include <variant>
 
 class Server;

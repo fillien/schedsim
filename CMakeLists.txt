@@ -41,22 +41,18 @@ configure_file(
     @ONLY
 )
 
-add_subdirectory(external/cxxopts)
+# add_subdirectory(external/cxxopts)
 add_subdirectory(external/json)
-add_subdirectory(external/tracy)
-
+add_subdirectory(external/rang)
+# add_subdirectory(external/tracy)
 add_subdirectory(doc)
-add_subdirectory(protocols)
-add_subdirectory(schedview)
-add_subdirectory(schedgen)
-add_subdirectory(schedsim)
-add_subdirectory(tests)
+add_subdirectory(schedlib)
 
-install(
-  TARGETS schedsim schedview schedgen
-  EXPORT ${PROJECT_NAME}_Targets
-  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUEDIR}
-)
+# install(
+#   TARGETS schedsim schedview schedgen
+#   EXPORT ${PROJECT_NAME}_Targets
+#   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUEDIR}
+# )
 
 file(GLOB_RECURSE ALL_SOURCE_FILES "*.cpp" "*.hpp")
 list(FILTER ALL_SOURCE_FILES EXCLUDE REGEX "external/")

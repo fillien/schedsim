@@ -39,6 +39,7 @@
           bash
           black
           clang-tools
+          gource
           cmake
           doxygen
           gnuplot

@@ -1,9 +1,10 @@
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-#include "entity.hpp"
-#include "scheduler.hpp"
-#include "task.hpp"
+#include <simulator/entity.hpp>
+#include <simulator/scheduler.hpp>
+#include <simulator/task.hpp>
+
 #include <cassert>
 #include <cstddef>
 #include <memory>

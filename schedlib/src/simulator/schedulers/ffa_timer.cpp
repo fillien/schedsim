@@ -1,8 +1,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <cwchar>
-#include <schedulers/ffa_timer.hpp>
+#include <simulator/schedulers/ffa_timer.hpp>
 
 namespace scheds {
 FfaTimer::FfaTimer(const std::weak_ptr<Engine>& sim) : DpmDvfs(sim)

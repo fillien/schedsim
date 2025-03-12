@@ -1,10 +1,8 @@
-#include "deadline_misses.hpp"
+#include <analyzers/deadline_misses.hpp>
 #include <protocols/traces.hpp>
 
 #include <algorithm>
 #include <cstddef>
-#include <iomanip>
-#include <iostream>
 #include <map>
 #include <stdexcept>
 #include <utility>

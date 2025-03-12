@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <schedulers/csf_timer.hpp>
+#include <simulator/schedulers/csf_timer.hpp>
 #include <stdexcept>
 
 namespace scheds {

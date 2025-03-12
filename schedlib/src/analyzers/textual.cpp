@@ -1,9 +1,10 @@
-#include "textual.hpp"
-#include "../external/rang.hpp"
+#include <analyzers/textual.hpp>
+#include <protocols/traces.hpp>
+#include <rang/rang.hpp>
+
 #include <cstddef>
 #include <iomanip>
 #include <ostream>
-#include <protocols/traces.hpp>
 #include <string>
 
 template <class... Ts> struct overloaded : Ts... {

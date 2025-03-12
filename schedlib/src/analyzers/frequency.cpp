@@ -1,8 +1,9 @@
-#include "frequency.hpp"
+#include "analyzers/frequency.hpp"
+#include "protocols/traces.hpp"
+
 #include <any>
 #include <cstddef>
 #include <print>
-#include <protocols/traces.hpp>
 #include <set>
 #include <unordered_map>
 #include <variant>

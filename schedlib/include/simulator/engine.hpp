@@ -1,12 +1,13 @@
 #ifndef ENGINE_HPP
 #define ENGINE_HPP
 
-#include <allocator.hpp>
-#include <event.hpp>
+#include <simulator/allocator.hpp>
+#include <simulator/event.hpp>
+#include <simulator/platform.hpp>
+
 #include <functional>
 #include <map>
 #include <memory>
-#include <platform.hpp>
 #include <protocols/traces.hpp>
 #include <vector>
 

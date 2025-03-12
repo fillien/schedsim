@@ -1,13 +1,15 @@
-#ifndef META_SCHEDULER_HPP
-#define META_SCHEDULER_HPP
+#ifndef ALLOCATOR_HPP
+#define ALLOCATOR_HPP
 
-#include <entity.hpp>
-#include <event.hpp>
+#include <simulator/event.hpp>
+#include <simulator/scheduler.hpp>
+
 #include <memory>
 #include <optional>
-#include <scheduler.hpp>
 #include <set>
 #include <vector>
+
+class Engine;
 
 namespace allocators {
 
@@ -53,4 +55,4 @@ class Allocator : public Entity {
 
 } // namespace allocators
 
-#endif // META_SCHEDULER_HPP
+#endif // ALLOCATOR_HPP

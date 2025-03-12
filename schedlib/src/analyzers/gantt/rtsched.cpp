@@ -1,5 +1,5 @@
-#include <gantt/gantt.hpp>
-#include <gantt/rtsched.hpp>
+#include <analyzers/gantt/gantt.hpp>
+#include <analyzers/gantt/rtsched.hpp>
 #include <iostream>
 #include <sstream>
 #include <string>

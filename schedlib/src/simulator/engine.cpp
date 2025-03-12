@@ -1,9 +1,10 @@
-#include <allocator.hpp>
-#include <engine.hpp>
-#include <event.hpp>
-#include <map>
 #include <protocols/traces.hpp>
-#include <timer.hpp>
+#include <simulator/allocator.hpp>
+#include <simulator/engine.hpp>
+#include <simulator/event.hpp>
+#include <simulator/timer.hpp>
+
+#include <map>
 
 #ifdef TRACY_ENABLE
 #include <tracy/Tracy.hpp>

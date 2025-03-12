@@ -1,12 +1,13 @@
 #ifndef SCHEDULER_HPP
 #define SCHEDULER_HPP
 
-#include <entity.hpp>
-#include <event.hpp>
+#include <simulator/entity.hpp>
+#include <simulator/event.hpp>
+#include <simulator/platform.hpp>
+#include <simulator/processor.hpp>
+#include <simulator/server.hpp>
+
 #include <memory>
-#include <platform.hpp>
-#include <processor.hpp>
-#include <server.hpp>
 #include <vector>
 
 namespace scheds {

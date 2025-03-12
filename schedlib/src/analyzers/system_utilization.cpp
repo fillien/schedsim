@@ -1,6 +1,6 @@
-#include "system_utilization.hpp"
+#include "analyzers/system_utilization.hpp"
+#include "protocols/traces.hpp"
 #include <iostream>
-#include <protocols/traces.hpp>
 #include <variant>
 
 template <class... Ts> struct overloaded : Ts... {

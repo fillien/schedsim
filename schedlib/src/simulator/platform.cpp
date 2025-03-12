@@ -1,13 +1,14 @@
+#include <protocols/traces.hpp>
+#include <simulator/engine.hpp>
+#include <simulator/platform.hpp>
+#include <simulator/processor.hpp>
+
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
-#include <engine.hpp>
 #include <functional>
 #include <iterator>
 #include <memory>
-#include <platform.hpp>
-#include <processor.hpp>
-#include <protocols/traces.hpp>
 #include <vector>
 
 Cluster::Cluster(

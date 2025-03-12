@@ -1,10 +1,11 @@
 #ifndef PLATFORM_HPP
 #define PLATFORM_HPP
 
+#include "simulator/entity.hpp"
+#include "simulator/processor.hpp"
+
 #include <cstddef>
-#include <entity.hpp>
 #include <memory>
-#include <processor.hpp>
 #include <vector>
 
 namespace scheds {
