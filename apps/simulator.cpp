@@ -72,7 +72,7 @@ auto parse_args(const int argc, const char** argv) -> AppConfig
         const auto cli = options.parse(argc, argv);
 
         if (cli.count("help") || cli.arguments().empty()) {
-                if (cli.count("help")) { std::cout << options.help() << std::endl; }
+                std::cout << options.help() << std::endl;
                 exit(cli.arguments().empty() ? EXIT_FAILURE : EXIT_SUCCESS);
         }
 
