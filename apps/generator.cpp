@@ -1,4 +1,4 @@
-#include <generators/task_generator.hpp>
+#include <generators/uunifast_discard_weibull.hpp>
 #include <protocols/hardware.hpp>
 #include <protocols/scenario.hpp>
 
@@ -151,7 +151,7 @@ auto main(const int argc, const char** argv) -> int
                 std::string command{argv[1]};
                 if (command == "taskset") {
                         const auto config = parse_args_taskset(argc - 1, argv + 1);
-                        const auto taskset = generate_taskset(
+                        const auto taskset = generators::uunifast_discard_weibull(
                             config.nb_tasks,
                             config.total_utilization,
                             config.umax,

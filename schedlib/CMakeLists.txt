@@ -23,7 +23,7 @@ target_sources(schedlib PRIVATE
     src/analyzers/stats.cpp
     src/analyzers/system_utilization.cpp
     src/analyzers/textual.cpp
-    src/generators/task_generator.cpp
+    src/generators/uunifast_discard_weibull.cpp
     src/protocols/hardware.cpp
     src/protocols/scenario.cpp
     src/protocols/traces.cpp

@@ -1,8 +1,8 @@
 #ifndef ALLOCATOR_HIGH_PERF_FIRST
 #define ALLOCATOR_HIGH_PERF_FIRST
 
-#include <simulator/allocator.hpp>
 #include <optional>
+#include <simulator/allocator.hpp>
 
 namespace allocators {
 class HighPerfFirst : public Allocator {

@@ -1,7 +1,7 @@
 #include <cassert>
+#include <memory>
 #include <simulator/engine.hpp>
 #include <simulator/event.hpp>
-#include <memory>
 #include <simulator/scheduler.hpp>
 #include <simulator/server.hpp>
 #include <simulator/task.hpp>

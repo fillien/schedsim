@@ -1,3 +1,6 @@
+#include <protocols/hardware.hpp>
+#include <protocols/scenario.hpp>
+#include <protocols/traces.hpp>
 #include <simulator/allocator.hpp>
 #include <simulator/allocators/high_perf_first.hpp>
 #include <simulator/allocators/low_perf_first.hpp>
@@ -6,9 +9,6 @@
 #include <simulator/entity.hpp>
 #include <simulator/event.hpp>
 #include <simulator/platform.hpp>
-#include <protocols/hardware.hpp>
-#include <protocols/scenario.hpp>
-#include <protocols/traces.hpp>
 #include <simulator/scheduler.hpp>
 #include <simulator/schedulers/csf.hpp>
 #include <simulator/schedulers/csf_timer.hpp>

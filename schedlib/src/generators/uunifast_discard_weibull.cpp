@@ -1,13 +1,13 @@
-#include <generators/task_generator.hpp>
+#include <generators/uunifast_discard_weibull.hpp>
 #include <protocols/scenario.hpp>
 
 #include <algorithm>
-#include <iterator>
 #include <cassert>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <iostream>
+#include <iterator>
 #include <random>
 #include <stdexcept>
 #include <vector>
@@ -95,7 +95,6 @@ auto bounded_weibull(double min, double max) -> double
 
         return res;
 }
-} // namespace
 
 auto generate_jobs(std::vector<double>& durations, double period)
     -> std::vector<protocols::scenario::Job>
@@ -147,8 +146,10 @@ auto generate_task(
             .period = task_period,
             .jobs = generate_jobs(durations, task_period)};
 }
+} // namespace
 
-auto generate_taskset(
+namespace generators {
+auto uunifast_discard_weibull(
     std::size_t nb_tasks,
     double total_utilization,
     double umax,
@@ -197,3 +198,4 @@ auto generate_taskset(
 
         return Setting{.tasks = tasks};
 }
+} // namespace generators
