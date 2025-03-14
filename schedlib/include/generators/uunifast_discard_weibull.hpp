@@ -2,8 +2,8 @@
 #define TASK_GENERATOR_HPP
 
 #include <cstddef>
+#include <optional>
 #include <protocols/scenario.hpp>
-#include <vector>
 
 namespace generators {
 /**
@@ -35,7 +35,8 @@ auto uunifast_discard_weibull(
     double total_utilization,
     double umax,
     double success_rate,
-    double compression_rate) -> protocols::scenario::Setting;
+    double compression_rate,
+    std::optional<std::pair<double, double>> a_special_need) -> protocols::scenario::Setting;
 } // namespace generators
 
 #endif

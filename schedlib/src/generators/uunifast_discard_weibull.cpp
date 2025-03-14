@@ -1,4 +1,5 @@
 #include <generators/uunifast_discard_weibull.hpp>
+#include <optional>
 #include <protocols/scenario.hpp>
 
 #include <algorithm>
@@ -10,6 +11,7 @@
 #include <random>
 #include <span>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -37,11 +39,15 @@ static std::mt19937_64 random_gen(hr_clk::now().time_since_epoch().count());
  * @note The function will iterate and attempt to generate a uniform distribution of utilizations.
  * It may discard the current set and retry if the generated values are not realistic or feasible.
  */
-auto uunifast_discard(std::size_t nb_tasks, double total_utilization, double umax)
-    -> std::vector<double>
+auto uunifast_discard(
+    std::size_t nb_tasks,
+    double total_utilization,
+    double umax,
+    std::optional<std::pair<double, double>> a_special_need = std::nullopt) -> std::vector<double>
 {
         std::uniform_real_distribution<double> distribution(0, 1);
         std::vector<double> utilizations;
+        bool have_a_special_need = a_special_need.has_value();
 
         bool discard = false;
         do {
@@ -56,7 +62,9 @@ auto uunifast_discard(std::size_t nb_tasks, double total_utilization, double uma
                             std::pow(new_rand, 1.0 / static_cast<double>(nb_tasks - i));
                         double utilization = sum_utilization - next_sum_utilization;
 
-                        if (utilization > umax) {
+                        if (utilization > umax || (have_a_special_need &&
+                                                   (a_special_need.value().first > utilization ||
+                                                    utilization > a_special_need.value().second))) {
                                 discard = true;
                                 break;
                         }
@@ -175,7 +183,8 @@ auto uunifast_discard_weibull(
     double total_utilization,
     double umax,
     double success_rate,
-    double compression_rate) -> protocols::scenario::Setting
+    double compression_rate,
+    std::optional<std::pair<double, double>> a_special_need = std::nullopt) -> protocols::scenario::Setting
 {
         using namespace protocols::scenario;
         using std::round;
@@ -212,7 +221,7 @@ auto uunifast_discard_weibull(
         double sum_of_utils = 0;
         std::vector<double> utilizations;
         while (std::abs(sum_of_utils - total_utilization) > UTIL_ROUNDING) {
-                utilizations = uunifast_discard(nb_tasks, total_utilization, umax);
+                utilizations = uunifast_discard(nb_tasks, total_utilization, umax, a_special_need);
                 sum_of_utils = std::ranges::fold_left(utilizations, 0.0, std::plus<>());
         }
 
@@ -224,7 +233,6 @@ auto uunifast_discard_weibull(
                 const int nb_jobs = HYPERPERIOD / period;
                 const double util = utilizations.at(tid);
                 const double wcet = period * util;
-
                 tasks.push_back(
                     generate_task(tid, nb_jobs, success_rate, compression_rate, wcet, period));
         }
