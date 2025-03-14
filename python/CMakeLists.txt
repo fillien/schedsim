@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.20...3.25)
+project(pyschedlib)
+find_package(Python REQUIRED COMPONENTS Interpreter Development)
+find_package(pybind11 CONFIG REQUIRED)
+set(PYBIND11_PYTHON_VERSION 3.13)
+pybind11_add_module(pyschedlib MODULE src/pyschedlib.cpp)
+target_link_libraries(pyschedlib PUBLIC schedlib)
+install(TARGETS pyschedlib DESTINATION .)

@@ -35,7 +35,7 @@
         };
 
         devShellInputs = with pkgs; [
-          (python313.withPackages (ps: with ps; [ pandas polars pyarrow matplotlib jupyter ]))
+          (python313.withPackages (ps: with ps; [ pybind11 pandas polars pyarrow matplotlib jupyter ]))
           bash
           black
           clang-tools

@@ -28,25 +28,13 @@ if(CMAKE_EXPORT_COMPILE_COMMANDS)
     ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES})
 endif()
 
-execute_process(
-    COMMAND git rev-parse --short HEAD
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_COMMIT_HASH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-configure_file(
-    ${CMAKE_SOURCE_DIR}/external/version.h.in
-    ${CMAKE_BINARY_DIR}/generated/version.h
-    @ONLY
-)
-
 add_subdirectory(external/cxxopts)
 add_subdirectory(external/json)
 add_subdirectory(external/rang)
 add_subdirectory(external/tracy)
 add_subdirectory(schedlib)
 add_subdirectory(apps)
+add_subdirectory(python)
 add_subdirectory(doc)
 
 # install(
