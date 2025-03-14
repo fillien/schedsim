@@ -6,9 +6,9 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
-#include <iostream>
-#include <iterator>
+#include <limits>
 #include <random>
+#include <span>
 #include <stdexcept>
 #include <vector>
 
@@ -40,32 +40,45 @@ static std::mt19937_64 random_gen(hr_clk::now().time_since_epoch().count());
 auto uunifast_discard(std::size_t nb_tasks, double total_utilization, double umax)
     -> std::vector<double>
 {
-        constexpr std::size_t DISCARD_LIMIT{1000};
-        std::size_t discard_counter{0};
         std::uniform_real_distribution<double> distribution(0, 1);
         std::vector<double> utilizations;
-        double sum_utilization = total_utilization;
 
-        for (std::size_t i{1}; i < nb_tasks; ++i) {
-                double new_rand{distribution(random_gen)};
-                const double next_sum_utilization{
-                    sum_utilization * std::pow(new_rand, 1.0 / static_cast<double>(nb_tasks - i))};
+        bool discard = false;
+        do {
+                utilizations.clear();
+                double sum_utilization = total_utilization;
+                discard = false;
 
-                if ((sum_utilization - next_sum_utilization) > umax) {
-                        if (discard_counter > DISCARD_LIMIT) {
-                                throw std::runtime_error("The utilization generation has exceeded "
-                                                         "the limit of rejected task sets");
+                for (std::size_t i = 1; i < nb_tasks; ++i) {
+                        double new_rand = distribution(random_gen);
+                        double next_sum_utilization =
+                            sum_utilization *
+                            std::pow(new_rand, 1.0 / static_cast<double>(nb_tasks - i));
+                        double utilization = sum_utilization - next_sum_utilization;
+
+                        if (utilization > umax) {
+                                discard = true;
+                                break;
                         }
-                        discard_counter++;
-                        i = 0;
-                        utilizations.clear();
-                        continue;
+
+                        utilizations.push_back(utilization);
+                        sum_utilization = next_sum_utilization;
                 }
 
-                utilizations.push_back(sum_utilization - next_sum_utilization);
-                sum_utilization = next_sum_utilization;
-        }
-        utilizations.push_back(sum_utilization);
+                if (!discard) {
+                        double last_utilization = sum_utilization;
+                        if (last_utilization > umax) { discard = true; }
+                        else {
+                                utilizations.push_back(last_utilization);
+                        }
+                }
+        } while (discard);
+
+        constexpr double UTIL_ROUND{0.01};
+        double sum = std::accumulate(utilizations.begin(), utilizations.end(), 0.0);
+        assert(std::abs(sum - total_utilization) < UTIL_ROUND);
+        assert(std::ranges::all_of(utilizations, [umax](double u) { return u <= umax; }));
+        assert(utilizations.size() == nb_tasks);
 
         return utilizations;
 }
@@ -83,7 +96,7 @@ auto bounded_weibull(double min, double max) -> double
         constexpr double SCALE{2};
         constexpr double UPPER_BOUND_QUANT{0.99};
 
-        // Need a constexpr std::exp function to be evaluated at compile time
+        /// TODO Need a constexpr std::exp function to be evaluated at compile time
         const double UPPER_BOUND{inversed_weibull_cdf(SHAPE, SCALE, UPPER_BOUND_QUANT)};
         std::weibull_distribution<> dist(SHAPE, SCALE);
 
@@ -134,7 +147,7 @@ auto generate_task(
                 return bounded_weibull(compression_rate * wcet, wcet);
         });
 
-        std::sort(durations.begin(), durations.end());
+        std::ranges::sort(durations);
 
         const std::size_t index{static_cast<std::size_t>(ceil((nb_jobs - 1) * success_rate))};
         const double budget{durations.at(index)};
@@ -146,6 +159,14 @@ auto generate_task(
             .period = task_period,
             .jobs = generate_jobs(durations, task_period)};
 }
+
+auto pick_period(const std::span<const int>& periods) -> int
+{
+        assert(!periods.empty());
+        std::uniform_int_distribution<std::size_t> dis(0, periods.size() - 1);
+        return periods[dis(random_gen)];
+}
+
 } // namespace
 
 namespace generators {
@@ -159,37 +180,49 @@ auto uunifast_discard_weibull(
         using namespace protocols::scenario;
         using std::round;
 
-        assert(umax <= 1);
+        constexpr std::array<int, 10> PERIODS{
+            25200, 12600, 8400, 6300, 5040, 4200, 3600, 3150, 2800, 2520};
+        constexpr int HYPERPERIOD = PERIODS.at(0);
+        constexpr double UTIL_ROUNDING{0.01};
 
-        if (total_utilization <= 0) {
-                throw std::invalid_argument("Total utilization must be greater than 0");
+        if (1 > nb_tasks || nb_tasks > std::numeric_limits<std::size_t>::max()) {
+                throw std::invalid_argument(
+                    "uunifast_discard_weibull: nb_tasks is out of bounds 1..max_size_t");
         }
-
-        if (success_rate < 0 || success_rate > 1) {
-                throw std::invalid_argument("Success rate is not between 0 and 1");
+        if (0 > total_utilization || total_utilization > std::numeric_limits<double>::max()) {
+                throw std::invalid_argument(
+                    "uunifast_discard_weibull: total utilization is out of bounds 0..max_double");
+        }
+        if (0 > umax || umax > 1) {
+                throw std::invalid_argument("uunifast_discard_weibull: umax is out of bounds 0..1");
+        }
+        if (0 > success_rate || success_rate > 1) {
+                throw std::invalid_argument(
+                    "uunifast_discard_weibull: success_rate is out of bounds 0..1");
+        }
+        if (0 > compression_rate || compression_rate > 1) {
+                throw std::invalid_argument(
+                    "uunifast_discard_weibull: compression_rate is out of bounds 0..1");
+        }
+        if (static_cast<double>(nb_tasks) * umax < total_utilization) {
+                throw std::invalid_argument("uunifast_discard_weibull: can't acheive the total "
+                                            "utilization with those parameters");
         }
 
         double sum_of_utils = 0;
         std::vector<double> utilizations;
-        while ((total_utilization - 0.01) > sum_of_utils ||
-               sum_of_utils > (total_utilization + 0.01)) {
+        while (std::abs(sum_of_utils - total_utilization) > UTIL_ROUNDING) {
                 utilizations = uunifast_discard(nb_tasks, total_utilization, umax);
                 sum_of_utils = std::ranges::fold_left(utilizations, 0.0, std::plus<>());
         }
-
-        std::vector<int> periods{25200, 12600, 8400, 6300, 5040, 4200, 3600, 3150, 2800, 2520};
-        // std::vector<int> periods{1, 2, 5, 10, 20, 50, 100, 200, 500, 1000};
-        double hyperperiod{25200};
-        // double hyperperiod{1000};
 
         std::vector<Task> tasks;
         tasks.reserve(nb_tasks);
 
         for (size_t tid = 0; tid < nb_tasks; ++tid) {
-                std::shuffle(std::begin(periods), std::end(periods), random_gen);
+                const int period = pick_period(PERIODS);
+                const int nb_jobs = HYPERPERIOD / period;
                 const double util = utilizations.at(tid);
-                const double period = static_cast<double>(periods.at(tid));
-                const auto nb_jobs = hyperperiod / period;
                 const double wcet = period * util;
 
                 tasks.push_back(
