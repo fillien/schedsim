@@ -1,5 +1,4 @@
 #include <generators/uunifast_discard_weibull.hpp>
-#include <optional>
 #include <protocols/scenario.hpp>
 
 #include <algorithm>
@@ -7,10 +6,14 @@
 #include <chrono>
 #include <cmath>
 #include <cstddef>
+#include <filesystem>
 #include <limits>
+#include <optional>
 #include <random>
 #include <span>
 #include <stdexcept>
+#include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -174,7 +177,6 @@ auto pick_period(const std::span<const int>& periods) -> int
         std::uniform_int_distribution<std::size_t> dis(0, periods.size() - 1);
         return periods[dis(random_gen)];
 }
-
 } // namespace
 
 namespace generators {
@@ -184,7 +186,7 @@ auto uunifast_discard_weibull(
     double umax,
     double success_rate,
     double compression_rate,
-    std::optional<std::pair<double, double>> a_special_need = std::nullopt) -> protocols::scenario::Setting
+    const std::optional<std::pair<double, double>>& a_special_need) -> protocols::scenario::Setting
 {
         using namespace protocols::scenario;
         using std::round;
@@ -239,4 +241,56 @@ auto uunifast_discard_weibull(
 
         return Setting{.tasks = tasks};
 }
+
+auto generate_tasksets(
+    std::string path,
+    std::size_t nb_taskset,
+    std::size_t nb_tasks,
+    double total_utilization,
+    double umax,
+    double success_rate,
+    double compression_rate,
+    std::optional<std::pair<double, double>> a_special_need,
+    std::size_t nb_cores) -> void
+{
+        std::filesystem::path output_path = path;
+        if (!std::filesystem::exists(output_path) || !std::filesystem::is_directory(output_path)) {
+                throw std::invalid_argument(
+                    "generate_tasksets: output path does not exist or is not a directory");
+        }
+
+        std::size_t sets_per_thread = nb_taskset / nb_cores;
+        std::size_t extra = nb_taskset % nb_cores;
+
+        std::vector<std::thread> threads;
+        std::size_t current_start = 1;
+
+        for (std::size_t i = 0; i < nb_cores; ++i) {
+                std::size_t count = sets_per_thread + (i < extra ? 1 : 0);
+                if (count > 0) {
+                        threads.emplace_back([&, current_start, count]() {
+                                for (std::size_t j = 0; j < count; ++j) {
+                                        std::size_t index = current_start + j;
+
+                                        auto taskset = uunifast_discard_weibull(
+                                            nb_tasks,
+                                            total_utilization,
+                                            umax,
+                                            success_rate,
+                                            compression_rate,
+                                            a_special_need);
+                                        auto filename = std::to_string(index) + ".json";
+                                        std::filesystem::path filepath = output_path / filename;
+                                        protocols::scenario::write_file(filepath, taskset);
+                                }
+                        });
+                        current_start += count;
+                }
+        }
+
+        for (auto& thr : threads) {
+                thr.join();
+        }
+}
+
 } // namespace generators
