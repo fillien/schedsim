@@ -26,8 +26,8 @@ Cluster::Cluster(
         assert(std::ranges::any_of(
             frequencies_, [this](double freq) { return freq == effective_freq_; }));
 
-        assert(0 < perf_score_ && perf_score_ <= 1);
-        assert(0 < u_target_ && perf_score_);
+        assert(0 < perf_score && perf_score <= 1);
+        assert(0 < u_target && u_target <= perf_score);
 
         std::ranges::sort(frequencies_, std::greater<>());
 
