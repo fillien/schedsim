@@ -128,7 +128,7 @@ void handle_plots(const cxxopts::ParseResult& cli, const auto& parsed, const aut
 
 void handle_table_args(
     const cxxopts::ParseResult& cli,
-    const auto& hw,
+    const auto& hw [[maybe_unused]],
     std::map<std::string, std::vector<std::any>>& table,
     const std::string& file)
 {
