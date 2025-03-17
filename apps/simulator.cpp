@@ -1,3 +1,4 @@
+#include <optional>
 #include <protocols/hardware.hpp>
 #include <protocols/scenario.hpp>
 #include <protocols/traces.hpp>
@@ -43,7 +44,8 @@ struct AppConfig {
         fs::path platform_file{"platform.json"};
         std::string sched;
         std::string alloc;
-        bool active_delay;
+        bool active_delay{false};
+        std::optional<double> u_target;
 };
 
 constexpr std::array<const char*, 6> policies{
@@ -67,7 +69,8 @@ auto parse_args(const int argc, const char** argv) -> AppConfig
 	    ("a,alloc", "Specify the cluster allocator", cxxopts::value<std::string>())
 	    ("s,sched", "Specify the scheduling policy to be used.", cxxopts::value<std::string>())
             ("delay", "Activate delay during DVFS and DPM switch mode", cxxopts::value<bool>()->default_value("false"))
-	    ("o,output", "Specify the output file to write the simulation results.", cxxopts::value<std::string>());
+	    ("o,output", "Specify the output file to write the simulation results.", cxxopts::value<std::string>())
+	    ("target", "Specify u_target for the LITTLE cluster", cxxopts::value<double>()->default_value("1"));
         // clang-format on
         const auto cli = options.parse(argc, argv);
 
@@ -82,6 +85,7 @@ auto parse_args(const int argc, const char** argv) -> AppConfig
         if (cli.count("alloc")) { config.alloc = cli["alloc"].as<std::string>(); }
         if (cli.count("output")) { config.output_file = cli["output"].as<std::string>(); }
         if (cli.count("delay")) { config.active_delay = true; }
+        config.u_target = cli["target"].as<double>();
 
         return config;
 }
@@ -143,7 +147,7 @@ auto main(const int argc, const char** argv) -> int
                             clu.frequencies,
                             clu.effective_freq,
                             clu.perf_score,
-                            clu.u_target);
+                            (clu.perf_score < 1 ? config.u_target.value() : 1));
                         newclu->create_procs(clu.nb_procs);
 
                         auto sched = select_sched(config.sched, sim);

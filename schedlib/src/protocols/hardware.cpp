@@ -37,7 +37,6 @@ auto to_json(const Cluster& plat, rapidjson::Document::AllocatorType& allocator)
         }
         res.AddMember("power_model", power_model_array, allocator);
         res.AddMember("perf_score", plat.perf_score, allocator);
-        res.AddMember("u_target", plat.u_target, allocator);
 
         return res;
 }
@@ -99,11 +98,6 @@ auto from_json_cluster(const rapidjson::Value& value) -> Cluster
                 throw std::runtime_error("Invalid or missing 'perf_score' field");
         }
         clu.perf_score = value["perf_score"].GetDouble();
-
-        if (!value.HasMember("u_target") || !value["u_target"].IsDouble()) {
-                throw std::runtime_error("Invalid or missing 'u_target' field");
-        }
-        clu.u_target = value["u_target"].GetDouble();
 
         return clu;
 }
