@@ -113,14 +113,11 @@ auto main(const int argc, const char** argv) -> int
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
+        // std::this_thread::sleep_for(std::chrono::seconds(2));
 #endif
         using namespace std;
 
         const bool FREESCALING_ALLOWED{false};
-
-#ifdef TRACY_ENABLE
-        // std::this_thread::sleep_for(std::chrono::seconds(2));
-#endif
 
         try {
                 auto config = parse_args(argc, argv);
