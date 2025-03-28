@@ -43,10 +43,10 @@ auto Parallel::server_budget(const Server& serv) const -> double
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        const double nb_active_procs_val = static_cast<double>(nb_active_procs());
+        const auto nb_active_procs_val = static_cast<double>(nb_active_procs());
         const auto bandwidth = 1 - (inactive_bandwidth() / nb_active_procs_val);
-        return (serv.utilization() / cluster()->perf()) / bandwidth *
-               (serv.deadline() - serv.virtual_time());
+        const auto scaled_utilization = serv.utilization() / cluster()->perf();
+        return scaled_utilization / bandwidth * (serv.deadline() - serv.virtual_time());
 }
 
 auto Parallel::server_virtual_time(const Server& serv, const double& running_time) -> double
@@ -54,10 +54,10 @@ auto Parallel::server_virtual_time(const Server& serv, const double& running_tim
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        const double nb_active_procs_val = static_cast<double>(nb_active_procs());
+        const auto nb_active_procs_val = static_cast<double>(nb_active_procs());
         const auto bandwidth = 1 - (inactive_bandwidth() / nb_active_procs_val);
-        return serv.virtual_time() +
-               ((bandwidth / (serv.utilization() / cluster()->perf())) * running_time);
+        const auto scaled_utilization = serv.utilization() / cluster()->perf();
+        return serv.virtual_time() + ((bandwidth / scaled_utilization) * running_time);
 }
 
 auto Parallel::admission_test(const Task& new_task) const -> bool
@@ -66,9 +66,9 @@ auto Parallel::admission_test(const Task& new_task) const -> bool
         ZoneScoped;
 #endif
         const auto nb_procs = static_cast<double>(nb_active_procs());
-        const auto u_max_val = std::max(u_max(), (new_task.utilization() / cluster()->perf()));
-        const auto new_total_util =
-            active_bandwidth() + (new_task.utilization() / cluster()->perf());
+        const auto scaled_utilization = new_task.utilization() / cluster()->perf();
+        const auto u_max_val = std::max(u_max(), scaled_utilization);
+        const auto new_total_util = active_bandwidth() + scaled_utilization;
         return (new_total_util <= (nb_procs - ((nb_procs - 1) * u_max_val)));
 }
 
