@@ -36,9 +36,8 @@ auto is_args_ask_table_result(const cxxopts::ParseResult& cli) -> bool
         return (
             cli.count("duration") || cli.count("preemptions") || cli.count("contextswitch") ||
             cli.count("rejected") || cli.count("waiting") || cli.count("arrivals") ||
-            cli.count("cluster_migration") || cli.count("dpm-request") ||
-            cli.count("freq-request") || cli.count("deadlines-rates") ||
-            cli.count("deadlines-counts"));
+            cli.count("cmigration") || cli.count("dpm-request") || cli.count("freq-request") ||
+            cli.count("deadlines-rates") || cli.count("deadlines-counts"));
 }
 
 auto is_args_ask_graph_result(const cxxopts::ParseResult& cli) -> bool
@@ -147,8 +146,8 @@ void handle_table_args(
                 table["contextswitch"].push_back(count_nb_contextswitch(parsed));
         }
         if (cli.count("rejected")) { table["rejected"].push_back(count_rejected(parsed)); }
-        if (cli.count("cluster_migration")) {
-                table["cluster_migration"].push_back(count_cluster_migration(parsed));
+        if (cli.count("cmigration")) {
+                table["cmigration"].push_back(count_cluster_migration(parsed));
         }
         if (cli.count("arrivals")) { table["arrivals"].push_back(count_arrivals(parsed)); }
         if (cli.count("waiting")) {
@@ -240,7 +239,7 @@ auto main(const int argc, const char** argv) -> int
                 ("duration", "Print task set execution duration.")
                 ("preemptions", "Print the number of preemptions.")
                 ("contextswitch", "Print the number of context switches.")
-                ("migration_cluster", "Print the number of cluster migration")
+                ("cmigration", "Print the number of cluster migration")
                 ("rejected", "Print the number of tasks rejected by the admission test.")
                 ("arrivals", "Print the number of job arrivals.")
                 ("dpm-request", "Print the number of requests to change core C-state.")
