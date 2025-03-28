@@ -17,7 +17,9 @@ namespace fs = std::filesystem;
 
 struct TasksetConfig {
         fs::path output_filepath{"scenario.json"};
-        std::size_t nb_tasks{0};
+        fs::path output_dir{"scenarios"};
+        int nb_tasksets{0};
+        int nb_tasks{0};
         double total_utilization{1};
         double umax{1};
         double success_rate{1};
@@ -41,6 +43,8 @@ auto parse_args_taskset(const int argc, const char** argv) -> TasksetConfig
         cxxopts::Options options("schedgen taskset", "Task Set Generator for Mono-core and Multi-core Systems");
         options.add_options()
                 ("h,help", "Show this help message.")
+                ("dir", "Output directory of the sceanarios", cxxopts::value<std::string>())
+                ("T, tasksets", "The number of tasksets to generate", cxxopts::value<int>())
                 ("t,tasks", "Specify the number of tasks to generate.", cxxopts::value<int>())
                 ("u,totalu", "Set the total utilization of the task set.", cxxopts::value<double>())
                 ("m,umax", "Define the maximum utilization for a task (range: 0 to 1).", cxxopts::value<double>())
@@ -60,7 +64,17 @@ auto parse_args_taskset(const int argc, const char** argv) -> TasksetConfig
         config.success_rate = cli["success"].as<double>();
         config.umax = cli["umax"].as<double>();
         config.compression_rate = cli["compression"].as<double>();
+
+        if (cli.count("output") && cli.count("dir")) {
+                throw std::invalid_argument(
+                    "can't have output file and output directory specified at the same time.");
+        }
+
         if (cli.count("output")) { config.output_filepath = cli["output"].as<std::string>(); }
+        else if (cli.count("dir")) {
+                config.output_dir = cli["dir"].as<std::string>();
+                config.nb_tasksets = cli["tasksets"].as<int>();
+        }
 
         return config;
 }
