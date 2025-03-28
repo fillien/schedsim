@@ -5,13 +5,6 @@ import os
 from typing import Optional
 import concurrent.futures
 
-def print_progress_bar(iteration, total, length=50):
-    percent = (iteration / float(total)) * 100
-    filled = int(length * iteration // total)
-    bar = '█' * filled + '-' * (length - filled)
-    sys.stdout.write(f'\rProgress: |{bar}| {percent:.1f}% Complete')
-    sys.stdout.flush()
-
 class SchedSimRunner:
     def __init__(self, executable_path: str = "schedsim"):
         self.executable = executable_path
@@ -23,6 +16,7 @@ class SchedSimRunner:
                       scheduler: Optional[str] = None,
                       output_file: Optional[str] = None,
                       delay: bool = False,
+                      target: Optional[int] = 1,
                       show_help: bool = False,
                       show_version: bool = False) -> tuple[int, str, str]:
         cmd = [self.executable]
@@ -42,36 +36,40 @@ class SchedSimRunner:
                 cmd.extend(["--sched", scheduler])
             if output_file:
                 cmd.extend(["--output", output_file])
+            if target is not None:
+                cmd.extend(["--target", str(target)])
             if delay:
                 cmd.append("--delay")
 
         try:
             process = subprocess.run(
                 cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
                 text=True,
-                check=False
+                check=True
             )
             return process.returncode, process.stdout, process.stderr
 
+        except subprocess.CalledProcessError as e:
+            return -1, "", "Error: CalledProcessError"
         except FileNotFoundError:
-            return -1, "", f"Error: Executable '{self.executable}' not found"
+            print(f"Error: Executable '{self.executable}' not found")
+            return -1, "", "Error: Executable not found"
         except Exception as e:
+            print(f"Error: {str(e)}")
             return -1, "", f"Error: {str(e)}"
 
-    def simul(self, sce_dir, alloc, sched, platform, logs):
+    def simul(self, sce_dir, alloc, sched, platform, target, logs):
         if os.path.isdir(logs):
             shutil.rmtree(logs)
-    
+
         os.mkdir(logs)
-    
+
         for directory in sorted(os.listdir(sce_dir)):
             current_dir = os.path.join(sce_dir, directory)
             logs_dir = os.path.join(logs, directory)
             if not os.path.isdir(logs_dir):
                 os.mkdir(logs_dir)
-    
+
             if os.path.isdir(current_dir):
                 scenarios = sorted(os.listdir(current_dir))
                 with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -82,7 +80,9 @@ class SchedSimRunner:
                             platform,
                             alloc,
                             sched,
-                            os.path.join(logs_dir, scenario)
+                            os.path.join(logs_dir, scenario),
+                            False,
+                            target
                         )
                         for scenario in scenarios
                     ]
