@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cstddef>
 #include <functional>
+#include <iostream>
 #include <iterator>
 #include <memory>
 #include <vector>
@@ -102,4 +103,11 @@ void Cluster::dvfs_change_freq(const double& next_freq)
                         assert(proc->state() == Processor::State::Change);
                 }
         }
+}
+
+auto Cluster::speed() const -> double
+{
+        assert(current_freq_ / sim()->chip()->clusters().at(0)->freq_max() <= 1);
+        // std::cout << current_freq_ / sim()->chip()->clusters().at(0)->freq_max() << std::endl;
+        return current_freq_ / sim()->chip()->clusters().at(0)->freq_max();
 }

@@ -67,8 +67,7 @@ class Cluster : public Entity, public std::enable_shared_from_this<Cluster> {
          * @brief Calculates the relative speed with respect to the maximum frequency.
          * @return The relative speed.
          */
-        [[nodiscard]] auto speed() const -> double { return current_freq_ / freq_max(); }
-
+        [[nodiscard]] auto speed() const -> double;
         /**
          * @brief Returns the performance score.
          * @return The performance score.
