@@ -29,13 +29,21 @@ auto Task::add_job(double duration) -> void
 
 auto Task::remaining_time() const noexcept -> double
 {
-        return remaining_execution_time_ / attached_proc_->cluster()->speed();
+        const auto& FMAX_CHIP{sim()->chip()->clusters().at(0)->freq_max()};
+        const auto& FMAX_CLUSTER{attached_proc_->cluster()->freq_max()};
+        const auto& PERF{attached_proc_->cluster()->perf()};
+        const auto& SPEED{attached_proc_->cluster()->speed()};
+        return ((remaining_execution_time_ * (FMAX_CHIP / FMAX_CLUSTER)) / PERF) / SPEED;
 }
 
 auto Task::consume_time(double duration) -> void
 {
         assert(duration >= 0);
-        remaining_execution_time_ -= duration * attached_proc_->cluster()->speed();
+        const auto& FMAX_CHIP{sim()->chip()->clusters().at(0)->freq_max()};
+        const auto& FMAX_CLUSTER{attached_proc_->cluster()->freq_max()};
+        const auto& PERF{attached_proc_->cluster()->perf()};
+        const auto& SPEED{attached_proc_->cluster()->speed()};
+        remaining_execution_time_ -= ((duration / (FMAX_CHIP / FMAX_CLUSTER)) * PERF) * SPEED;
         assert(sim()->round_zero(remaining_execution_time_) >= 0);
 }
 

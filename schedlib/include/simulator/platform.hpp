@@ -74,6 +74,8 @@ class Cluster : public Entity, public std::enable_shared_from_this<Cluster> {
          */
         [[nodiscard]] auto perf() const -> double { return perf_score_; }
 
+        [[nodiscard]] auto scale_speed() const -> double;
+
         /**
          * @brief Returns the cluster identifier.
          * @return The cluster id.

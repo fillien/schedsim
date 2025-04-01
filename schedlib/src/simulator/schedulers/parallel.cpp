@@ -45,7 +45,8 @@ auto Parallel::server_budget(const Server& serv) const -> double
 #endif
         const auto nb_active_procs_val = static_cast<double>(nb_active_procs());
         const auto bandwidth = 1 - (inactive_bandwidth() / nb_active_procs_val);
-        const auto scaled_utilization = serv.utilization() / cluster()->perf();
+        const auto scaled_utilization =
+            (serv.utilization() * cluster()->scale_speed()) / cluster()->perf();
         return scaled_utilization / bandwidth * (serv.deadline() - serv.virtual_time());
 }
 
@@ -56,7 +57,8 @@ auto Parallel::server_virtual_time(const Server& serv, const double& running_tim
 #endif
         const auto nb_active_procs_val = static_cast<double>(nb_active_procs());
         const auto bandwidth = 1 - (inactive_bandwidth() / nb_active_procs_val);
-        const auto scaled_utilization = serv.utilization() / cluster()->perf();
+        const auto scaled_utilization =
+            (serv.utilization() * cluster()->scale_speed()) / cluster()->perf();
         return serv.virtual_time() + ((bandwidth / scaled_utilization) * running_time);
 }
 
@@ -66,7 +68,8 @@ auto Parallel::admission_test(const Task& new_task) const -> bool
         ZoneScoped;
 #endif
         const auto nb_procs = static_cast<double>(nb_active_procs());
-        const auto scaled_utilization = new_task.utilization() / cluster()->perf();
+        const auto scaled_utilization =
+            (new_task.utilization() * cluster()->scale_speed()) / cluster()->perf();
         const auto u_max_val = std::max(u_max(), scaled_utilization);
         const auto new_total_util = active_bandwidth() + scaled_utilization;
         return (new_total_util <= (nb_procs - ((nb_procs - 1) * u_max_val)));

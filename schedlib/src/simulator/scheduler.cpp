@@ -42,7 +42,7 @@ auto Scheduler::u_max() const -> double
             std::ranges::max_element(servers_, [](const auto& first, const auto& second) -> bool {
                     return first->utilization() < second->utilization();
             });
-        return (*max_server)->utilization() / cluster()->perf();
+        return ((*max_server)->utilization() * cluster()->scale_speed()) / cluster()->perf();
 }
 
 auto Scheduler::is_this_my_event(const events::Event& evt) -> bool
@@ -90,7 +90,7 @@ auto Scheduler::total_utilization() const -> double
         for (const auto& serv : servers_) {
                 total += serv->utilization();
         }
-        return total / cluster()->perf();
+        return (total * cluster()->scale_speed()) / cluster()->perf();
 }
 
 auto Scheduler::deadline_order(const Server& first, const Server& second) -> bool
@@ -115,7 +115,7 @@ auto Scheduler::active_bandwidth() const -> double
                         bandwidth += serv->utilization();
                 }
         }
-        return bandwidth / cluster()->perf();
+        return (bandwidth * cluster()->scale_speed()) / cluster()->perf();
 }
 
 auto Scheduler::detach_server_if_needed(const std::shared_ptr<Task>& inactive_task) -> void
@@ -140,18 +140,23 @@ auto Scheduler::detach_server_if_needed(const std::shared_ptr<Task>& inactive_ta
                         // No pending job arrival: detach the task's server.
                         std::erase(servers_, inactive_task->server());
                         inactive_task->clear_server();
-                        total_utilization_ -= (inactive_task->utilization() / cluster()->perf());
+                        total_utilization_ -=
+                            (inactive_task->utilization() * cluster()->scale_speed()) /
+                            cluster()->perf();
                         Engine::round_zero(total_utilization_);
                 }
                 else {
                         std::erase(servers_, inactive_task->server());
                         inactive_task->clear_server();
-                        total_utilization_ -= (inactive_task->utilization() / cluster()->perf());
+                        total_utilization_ -=
+                            (inactive_task->utilization() * cluster()->scale_speed()) /
+                            cluster()->perf();
                 }
         }
         else {
                 std::erase(servers_, inactive_task->server());
-                total_utilization_ -= (inactive_task->utilization() / cluster()->perf());
+                total_utilization_ -=
+                    (inactive_task->utilization() * cluster()->scale_speed()) / cluster()->perf();
         }
 }
 
@@ -229,7 +234,8 @@ auto Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const doub
                 const auto new_server = std::make_shared<Server>(sim(), shared_from_this());
                 new_task->server(new_server);
                 servers_.push_back(new_server);
-                total_utilization_ += (new_task->utilization() / cluster()->perf());
+                total_utilization_ +=
+                    (new_task->utilization() * cluster()->scale_speed()) / cluster()->perf();
         }
 
         assert(new_task->has_server());

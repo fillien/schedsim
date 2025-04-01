@@ -107,7 +107,12 @@ void Cluster::dvfs_change_freq(const double& next_freq)
 
 auto Cluster::speed() const -> double
 {
-        assert(current_freq_ / sim()->chip()->clusters().at(0)->freq_max() <= 1);
+        assert(current_freq_ / freq_max() <= 1);
         // std::cout << current_freq_ / sim()->chip()->clusters().at(0)->freq_max() << std::endl;
-        return current_freq_ / sim()->chip()->clusters().at(0)->freq_max();
+        return current_freq_ / freq_max();
+}
+
+auto Cluster::scale_speed() const -> double
+{
+        return sim()->chip()->clusters().at(0)->freq_max() / freq_max();
 }
