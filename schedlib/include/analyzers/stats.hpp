@@ -17,6 +17,7 @@ auto count_cluster_migration(const logs_type& input) -> std::size_t;
 auto count_arrivals(const logs_type& input) -> std::size_t;
 auto count_core_state_request(const logs_type& input) -> std::size_t;
 auto count_frequency_request(const logs_type& input) -> std::size_t;
+auto count_average_utilization(const logs_type& input) -> double;
 } // namespace outputs::stats
 
 #endif

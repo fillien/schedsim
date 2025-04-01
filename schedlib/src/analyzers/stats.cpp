@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <iterator>
+#include <list>
 #include <map>
 #include <set>
 #include <stdexcept>
@@ -196,6 +197,41 @@ auto count_frequency_request(const logs_type& input) -> std::size_t
                 }
         }
         return cpt;
+}
+
+auto count_average_utilization(const logs_type& input) -> double
+{
+        using namespace protocols::traces;
+        // duration, utilization
+        std::list<std::pair<double, double>> utilization_serie;
+        double last_utilization{0};
+        double last_timestamp{0};
+
+        const auto update = [&](const auto& timestamp) {
+                if (last_timestamp < timestamp) {
+                        utilization_serie.emplace_back(
+                            timestamp - last_timestamp, last_utilization);
+                        last_timestamp = timestamp;
+                }
+        };
+
+        for (const auto& tra : input) {
+                const auto& [timestamp, event] = tra;
+                if (const auto* evt = std::get_if<ServReady>(&event)) {
+                        update(timestamp);
+                        last_utilization += evt->utilization;
+                }
+                else if (const auto* evt = std::get_if<ServInactive>(&event)) {
+                        update(timestamp);
+                        last_utilization -= evt->utilization;
+                }
+        }
+
+        double total_utilization{0};
+        for (const auto& [duration, utilization] : utilization_serie) {
+                total_utilization += duration * utilization;
+        }
+        return total_utilization;
 }
 
 } // namespace outputs::stats

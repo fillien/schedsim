@@ -21,7 +21,6 @@ target_sources(schedlib PRIVATE
     src/analyzers/gantt/rtsched.cpp
     src/analyzers/gantt/svg.cpp
     src/analyzers/stats.cpp
-    src/analyzers/system_utilization.cpp
     src/analyzers/textual.cpp
     src/generators/uunifast_discard_weibull.cpp
     src/protocols/hardware.cpp
