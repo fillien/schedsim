@@ -27,7 +27,8 @@ constexpr auto color_arg = [](std::ostream& out, const std::string& name, const 
         out << rang::fg::cyan << name << rang::fg::reset << " = " << arg;
 };
 
-void serialize(std::ostream& out, const protocols::traces::trace& tra)
+}; // namespace
+void outputs::textual::serialize(std::ostream& out, const protocols::traces::trace& tra)
 {
         namespace traces = protocols::traces;
         std::visit(
@@ -153,8 +154,6 @@ void serialize(std::ostream& out, const protocols::traces::trace& tra)
             tra);
         out << '\n';
 }
-
-}; // namespace
 
 void outputs::textual::print(
     std::ostream& out, const std::vector<std::pair<double, protocols::traces::trace>>& in)
