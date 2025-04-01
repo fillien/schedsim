@@ -8,7 +8,9 @@
 #include <cstddef>
 #include <filesystem>
 #include <limits>
+#include <mutex>
 #include <optional>
+#include <queue>
 #include <random>
 #include <span>
 #include <stdexcept>
@@ -70,6 +72,10 @@ auto uunifast_discard(
                                                     utilization > a_special_need.value().second))) {
                                 discard = true;
                                 break;
+                        }
+                        if (have_a_special_need && (a_special_need.value().first <= utilization &&
+                                                    utilization <= a_special_need.value().second)) {
+                                have_a_special_need = false;
                         }
 
                         utilizations.push_back(utilization);
@@ -259,33 +265,52 @@ auto generate_tasksets(
                     "generate_tasksets: output path does not exist or is not a directory");
         }
 
-        std::size_t sets_per_thread = nb_taskset / nb_cores;
-        std::size_t extra = nb_taskset % nb_cores;
+        // Use a queue to hold the taskset indices.  This decouples generation from writing.
+        std::queue<std::size_t> taskset_indices;
+        for (std::size_t i = 1; i <= nb_taskset; ++i) {
+                taskset_indices.push(i);
+        }
+
+        // Mutex to protect access to the queue and potentially shared resources in
+        // uunifast_discard_weibull/write_file
+        std::mutex queue_mutex;
 
         std::vector<std::thread> threads;
-        std::size_t current_start = 1;
-
         for (std::size_t i = 0; i < nb_cores; ++i) {
-                std::size_t count = sets_per_thread + (i < extra ? 1 : 0);
-                if (count > 0) {
-                        threads.emplace_back([&, current_start, count]() {
-                                for (std::size_t j = 0; j < count; ++j) {
-                                        std::size_t index = current_start + j;
-
-                                        auto taskset = uunifast_discard_weibull(
-                                            nb_tasks,
-                                            total_utilization,
-                                            umax,
-                                            success_rate,
-                                            compression_rate,
-                                            a_special_need);
-                                        auto filename = std::to_string(index) + ".json";
-                                        std::filesystem::path filepath = output_path / filename;
-                                        protocols::scenario::write_file(filepath, taskset);
+                threads.emplace_back([&taskset_indices,
+                                      &queue_mutex,
+                                      nb_tasks,
+                                      total_utilization,
+                                      umax,
+                                      success_rate,
+                                      compression_rate,
+                                      a_special_need,
+                                      output_path]() {
+                        while (true) {
+                                std::size_t index;
+                                { // Scope for the lock
+                                        std::lock_guard<std::mutex> lock(queue_mutex);
+                                        if (taskset_indices.empty()) {
+                                                break; // Queue is empty, thread can exit
+                                        }
+                                        index = taskset_indices.front();
+                                        taskset_indices.pop();
                                 }
-                        });
-                        current_start += count;
-                }
+
+                                // Generate the taskset *after* acquiring the index from the queue.
+                                auto taskset = uunifast_discard_weibull(
+                                    nb_tasks,
+                                    total_utilization,
+                                    umax,
+                                    success_rate,
+                                    compression_rate,
+                                    a_special_need);
+
+                                auto filename = std::to_string(index) + ".json";
+                                std::filesystem::path filepath = output_path / filename;
+                                protocols::scenario::write_file(filepath, taskset);
+                        }
+                });
         }
 
         for (auto& thr : threads) {
