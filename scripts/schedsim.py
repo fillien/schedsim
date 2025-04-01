@@ -1,5 +1,4 @@
 import subprocess
-import sys
 import shutil
 import os
 from typing import Optional
@@ -50,6 +49,7 @@ class SchedSimRunner:
             return process.returncode, process.stdout, process.stderr
 
         except subprocess.CalledProcessError as e:
+            print(f"CalledProcessError: {str.join(" ", e.cmd)} | {e.stdout}")
             return -1, "", "Error: CalledProcessError"
         except FileNotFoundError:
             print(f"Error: Executable '{self.executable}' not found")

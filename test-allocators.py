@@ -20,11 +20,9 @@ import scripts.schedsim as sm
 import os
 import shutil
 import matplotlib.pyplot as plt
-from functools import reduce
 import polars as pl
 import subprocess
-import itertools
-import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
 
 pl.Config.set_tbl_rows(-1)
@@ -53,25 +51,22 @@ os.mkdir(DIR)
 
 util_steps = range(1, int(UTILIZATION*10)+1, 2)
 NB_JOBS = 100
-NB_TASK = 35
-UMAX    = LITTLE_PERF_SCORE
+NB_TASK = 40
+UMAX    = 0.3 #LITTLE_PERF_SCORE - 0.13334
 
 for i in util_steps:
     data_path = f"{DIR}/{str(i)}"
     os.mkdir(data_path)
     utilization = round(i * 0.1, 1)
     print(f"jobs = {NB_JOBS}, tasks = {NB_TASK}, umax = {UMAX}, utilization = {utilization}")
-    sc.generate_tasksets(data_path, NB_JOBS, NB_TASK, utilization, UMAX, success_rate = 1.0, compression_rate = 1.0)
+    sc.generate_tasksets(data_path, NB_JOBS, NB_TASK, utilization, UMAX, success_rate = 1.0, compression_rate = 1.0, nb_cores = 8, a_special_need=(0.0, min(targets)))
+
+print("== finished ==")
 
 # %% [markdown]
 # # Simulate the tasksets
 
 # %%
-# sched = "ffa"
-# for alloc in ["little_first", "big_first", "smart_ass"]:
-#     print(f"-> logs_{alloc}_{sched}")
-#     sim.simul(DIR, alloc, sched, PLATFORM, target, f"{DIR}_logs_{alloc}_{sched}")
-
 alloc = "smart_ass"
 sched = "grub"
 
@@ -79,234 +74,172 @@ for target in targets:
     print(f"-> logs_{alloc}_{sched}_{target}")
     sim.simul(DIR, alloc, sched, PLATFORM, target, f"{DIR}_logs_{alloc}_{sched}_{target}")
 
+print("== finished ==")
 
 # %% [markdown]
 # # Logs analysis
 
 # %%
-def call_cmpt(log, index):
-    args = [SCHEDVIEW, "--platform", PLATFORM, log, "--frequency"]
-    if index:
-        args.append("--index")
-    return subprocess.run(args, capture_output=True, text=True, check=True).stdout
+def compute_stats(logs_dir):
+    args = [SCHEDVIEW, "--platform", PLATFORM, "-d", logs_dir, "--index", "--arrivals", "--rejected", "--deadlines-counts", "--cmigration", "--transitions", "--duration"]
+    df_res = pl.read_csv(StringIO(subprocess.run(args, capture_output=True, text=True, check=True).stdout), separator=';')
+    df_res = df_res.with_columns((pl.col("file").str.extract(r"(\w+).json").cast(pl.Int32)).alias("id")).drop("file")
+    df_energy = pl.DataFrame({
+        "c1": [],
+        "c2": []
+    }, schema={"c1": pl.Float64, "c2": pl.Float64})
+    for i in range(1, 101):
+        args = [SCHEDVIEW, "--platform", PLATFORM, f"{logs_dir}/{i}.json", "--index", "--energy"]
+        df = pl.read_csv(StringIO(subprocess.run(args, capture_output=True, text=True, check=True).stdout), separator=';')
+        df = pl.DataFrame({"c1": df["energy_consumption"][0], "c2": df["energy_consumption"][1]})
+        df_energy = pl.concat([df_energy, df])
 
-def read_csv_to_dataframe(csv_data):
-    df = pl.read_csv(StringIO(csv_data), separator=';')
-    df = df.with_columns(
-        (pl.col('stop') - pl.col('start')).alias('duration')
-    )
+    return pl.concat([df_res, df_energy], how="horizontal")
 
-    return df
-
-def compute_cluster_stats(df):
-    distribution = df.group_by(['cluster_id', 'freq']).agg([
-        pl.col('duration').sum().alias('total_duration'),
-        pl.col('duration').mean().alias('avg_duration'),
-        pl.col('duration').count().alias('count'),
-        pl.col('duration').min().alias('min_duration'),
-        pl.col('duration').max().alias('max_duration')
-    ])
-
-    return distribution
-
-def combine_distributions(distribution_list):
-    combined_distribution = (
-        pl.concat(distribution_list)
-        .group_by(['cluster_id', 'freq'])
-        .agg([
-            pl.col('total_duration').sum().alias('total_duration'),
-            pl.col('count').sum().alias('count'),
-            pl.col('min_duration').min().alias('min_duration'),
-            pl.col('max_duration').max().alias('max_duration'),
-            (pl.col('total_duration').sum() / pl.col('count').sum()).alias('avg_duration')
-        ])
-        .sort(['cluster_id', 'freq'])
-    )
-
-    return combined_distribution
-
-def compute_avg_freq_by_utilization(results):
-    avg_freq_data = []
-
-    for util_step, distribution in enumerate(results, start=1):
-        utilization = util_step * 0.1
-        avg_freq_by_cluster = (
-            distribution
-            .group_by('cluster_id')
-            .agg([
-                ((pl.col('freq') * pl.col('total_duration')).sum() /
-                 pl.col('total_duration').sum()).alias('avg_frequency'),
-                pl.col('total_duration').sum().alias('total_duration_sum'),
-                pl.col('count').sum().alias('total_count')
-            ])
-        )
-
-        avg_freq_by_cluster = avg_freq_by_cluster.with_columns(
-            pl.lit(utilization).alias('utilization')
-        )
-        avg_freq_data.append(avg_freq_by_cluster)
-
-    final_df = (
-        pl.concat(avg_freq_data)
-        .select([
-            'utilization',
-            'cluster_id',
-            'avg_frequency',
-            'total_duration_sum',
-            'total_count'
-        ])
-        .sort(['utilization', 'cluster_id'])
-    )
-
-    return final_df
-
-def average_freq(logs_name):
-    results = []
-    UTILIZATION = 6.5
-    util_steps = range(1, int(UTILIZATION*10)+1, 2)
-    for j in util_steps:
-        util_results = []
-        for i in range(1, 101):
-            target = f"{logs_name}/{j}/{i}.json"
-            raw_data = read_csv_to_dataframe(call_cmpt(target, True))
-            util_results.append(compute_cluster_stats(raw_data))
-
-        results.append(combine_distributions(util_results))
-
-    return compute_avg_freq_by_utilization(results)
-
-
-# %%
-# allocations = ["smart_ass"]
-# schedulers = ["grub"]
-
-# combinations = list(itertools.product(allocations, schedulers))
-
-# def worker(alloc, sched):
-#     freq = average_freq(f"{DIR}_logs_{alloc}_{sched}").rename({"avg_frequency": f"avg_frequency_{alloc}_{sched}"})
-#     return (alloc, sched, freq)
-
-# with concurrent.futures.ThreadPoolExecutor() as executor:
-#     futures = [executor.submit(worker, alloc, sched) for alloc, sched in combinations]
-#     results = [future.result() for future in futures]
-
-# freqs = {}
-# for alloc, sched, freq in results:
-#     if alloc not in freqs:
-#         freqs[alloc] = {}
-#     freqs[alloc][sched] = freq
-
-
-# %%
-# for alloc, v in freqs.items():
-#     for sched, w in v.items():
-#         freqs[alloc][sched] = w.with_columns((pl.arange(1, w.height + 1)).alias("id"))
-
-# flatten_freqs = [value for subdict in freqs.values() for value in subdict.values()]
-
-# def fusion(left, right):
-#     return left.join(right, on="id", how="inner").select(
-#         pl.col("id"), pl.col("utilization"), pl.col("cluster_id"), pl.selectors.matches("avg_frequency")
-#     )
-
-# avg_freqs = reduce(fusion, flatten_freqs).select(pl.all().exclude("id"))
-
-# %%
-# plt.figure(figsize=(15, 6))
-
-# sched = "ffa"
-
-# fl = avg_freqs.filter(pl.col("cluster_id") == 1)
-# plt.subplot(1, 2, 1)
-# plt.plot(fl["utilization"], fl[f"avg_frequency_little_first_{sched}"], label="Little First", marker='o')
-# plt.plot(fl["utilization"], fl[f"avg_frequency_big_first_{sched}"], label="Big First", marker='s')
-# plt.plot(fl["utilization"], fl[f"avg_frequency_smart_ass_{sched}"], label="Smart Alloc", marker='^')
-# plt.xlabel("Utilization")
-# plt.ylabel("Average Frequency")
-# plt.title("Big Only")
-# plt.legend()
-# plt.grid(True)
-
-# fl = avg_freqs.filter(pl.col("cluster_id") == 2)
-# plt.subplot(1, 2, 2)
-# plt.plot(fl["utilization"], fl[f"avg_frequency_little_first_{sched}"], label="Little First", marker='o')
-# plt.plot(fl["utilization"], fl[f"avg_frequency_big_first_{sched}"], label="Big First", marker='s')
-# plt.plot(fl["utilization"], fl[f"avg_frequency_smart_ass_{sched}"], label="Smart Alloc", marker='^')
-# plt.xlabel("Utilization")
-# plt.ylabel("Average Frequency")
-# plt.title("Little Only")
-# plt.legend()
-# plt.grid(True)
-
-# plt.tight_layout()
-# plt.show()
-
-
-# %%
-def compute_accepted(logs_dir):
-    args = [SCHEDVIEW, "--platform", PLATFORM, "-d", logs_dir, "--index", "--rejected", "--arrivals"]
-    df = pl.read_csv(StringIO(subprocess.run(args, capture_output=True, text=True, check=True).stdout), separator=';')
-    return df.with_columns((1 - (pl.col("rejected") / pl.col("arrivals"))).alias("accepted-rates")).select(pl.col("accepted-rates")).mean()
-
-accepted_rates = {}
-alloc = "smart_ass"
-sched = "grub"
-
-print(targets)
-
+stats = {}
 for target in targets:
-    accepted_rates[target] = {}
-    accepted_df = []
-    UTILIZATION = 6.5
-    util_steps = range(1, int(UTILIZATION*10)+1, 2)
-    for i in util_steps:
-        accepted_df.append(compute_accepted(f"{DIR}_logs_{alloc}_{sched}_{target}/{i}").with_columns(utilizations=i/10))
+    print(f"-> target {target}")
+    stats[target] = {}
+    stats_df = []
+    util_steps = range(1, int(UTILIZATION * 10) + 1, 2)
 
-    accepted_rates[target] = pl.concat(accepted_df)
+    def compute_utilization_step(i):
+        return compute_stats(f"{DIR}_logs_{alloc}_{sched}_{target}/{i}").with_columns(utilizations=i / 10)
 
-print(accepted_rates)
+    with ThreadPoolExecutor() as executor:
+        stats_df = list(executor.map(compute_utilization_step, util_steps))
 
-fig, ax = plt.subplots()
+    stats[target] = pl.concat(stats_df).select(["utilizations", "id", pl.exclude(["utilizations", "id"])]).sort(["utilizations", "id"])
+
+print("== finished ==")
+
+# %%
+results = {}
 for target in targets:
-    ax.plot(accepted_rates[target]["utilizations"], accepted_rates[target]["accepted-rates"] * 100, label=f"u target = {str(target)}", marker='o')
+    results[target] = (stats[target].with_columns(
+        (1 - (pl.col("rejected") / pl.col("arrivals"))).alias("accepted-rates"),
+        (1 - (pl.col("deadlines-counts") / (pl.col("arrivals") - pl.col("rejected")))).alias("meet-rates"),
+        (pl.col("cmigration") / pl.col("transitions")).alias("migration-rates"),
+        (pl.col("c1") / pl.col("duration")).alias("c1-power"),
+        (pl.col("c2") / pl.col("duration")).alias("c2-power"),
+        (pl.col("c1") / pl.col("duration") + pl.col("c2") / pl.col("duration")).alias("total-power")
+    ).group_by("utilizations").agg(
+        pl.col("accepted-rates").mean(),
+        pl.col("meet-rates").mean(),
+        pl.col("migration-rates").mean(),
+        pl.col("c1-power").mean(),
+        pl.col("c2-power").mean(),
+        pl.col("total-power").mean()
+    ))
 
-ax.set_ylim(35, 105)
-ax.set_xlabel("Utilizations")
-ax.set_ylabel("Accepted Rates (%)")
-ax.set_title("Accepted Rates vs Utilizations")
-plt.legend()
-plt.grid(True)
+energy = pl.concat([
+  stats[target].select(["utilizations", "id", "c1", "c2"]).rename({"c1": f"c1-{str(target)}", "c2": f"c2-{str(target)}"}) for target in targets
+], how="align")
+
+energy_diff = energy.with_columns(
+    [(pl.col(f"{clu}-{target}") - pl.col(f"{clu}-0.1")).alias(f"{clu}-{target}-diff") for target in targets for clu in ["c1", "c2"]],
+).with_columns(
+    [(pl.col(f"c1-{target}-diff") + pl.col(f"c2-{target}-diff")).alias(f"{target}-diff") for target in targets]
+).group_by("utilizations").agg(
+    pl.exclude(["utilizations", "id"]).mean()
+)
+
+# %%
+fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(18, 6))
+ax1.plot(results[0.1]["utilizations"], results[0.1]["accepted-rates"] * 100, label="u target = 0.1", marker='D')
+ax1.plot(results[0.2]["utilizations"], results[0.2]["accepted-rates"] * 100, label="u target = 0.2", marker='s')
+ax1.plot(results[0.3]["utilizations"], results[0.3]["accepted-rates"] * 100, label="u target = 0.3", marker='.')
+ax1.set_ylim(0, 105)
+ax1.set_xlabel("Utilizations")
+ax1.set_ylabel("Accepted Rates (%)")
+ax1.set_title("Accepted Rates vs Utilizations")
+ax1.legend()
+ax1.grid(True)
+
+ax2.plot(results[0.1]["utilizations"], results[0.1]["meet-rates"] * 100, label="u target = 0.1", marker='D')
+ax2.plot(results[0.2]["utilizations"], results[0.2]["meet-rates"] * 100, label="u target = 0.2", marker='s')
+ax2.plot(results[0.3]["utilizations"], results[0.3]["meet-rates"] * 100, label="u target = 0.3", marker='.')
+ax2.set_ylim(0, 105)
+ax2.set_xlabel("Utilizations")
+ax2.set_ylabel("Deadline meet Rates (%)")
+ax2.set_title("Deadline meet Rates vs Utilizations")
+ax2.legend()
+ax2.grid(True)
+
+ax3.plot(results[0.1]["utilizations"], results[0.1]["migration-rates"] * 100, label="u target = 0.1", marker='D')
+ax3.plot(results[0.2]["utilizations"], results[0.2]["migration-rates"] * 100, label="u target = 0.2", marker='s')
+ax3.plot(results[0.3]["utilizations"], results[0.3]["migration-rates"] * 100, label="u target = 0.3", marker='.')
+ax3.set_xlabel("Utilizations")
+ax3.set_ylabel("Migration Rates (%)")
+ax3.set_title("Migration Rates vs Utilizations")
+ax3.legend()
+ax3.grid(True)
+
+plt.tight_layout()
 plt.show()
 
+# %%
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 6))
+ax1.plot(results[0.1]["utilizations"], results[0.1]["c1-power"], label="u target = 0.1", marker='D')
+ax1.plot(results[0.2]["utilizations"], results[0.2]["c1-power"], label="u target = 0.2", marker='s')
+ax1.plot(results[0.3]["utilizations"], results[0.3]["c1-power"], label="u target = 0.3", marker='.')
+ax1.set_ylim(0, max([results[x]["c1-power"].max() for x in targets]) * 1.05)
+ax1.set_xlabel("Utilizations")
+ax1.set_ylabel("Average Power Consumption")
+ax1.set_title("Average Power Consumption VS Utilizations on Big cluster")
+ax1.legend()
+ax1.grid(True)
+ax2.plot(results[0.1]["utilizations"], results[0.1]["c2-power"], label="u target = 0.1", marker='D')
+ax2.plot(results[0.2]["utilizations"], results[0.2]["c2-power"], label="u target = 0.2", marker='s')
+ax2.plot(results[0.3]["utilizations"], results[0.3]["c2-power"], label="u target = 0.3", marker='.')
+ax2.set_ylim(0, max([results[x]["c1-power"].max() for x in targets]) * 1.05)
+ax2.set_xlabel("Utilizations")
+ax2.set_ylabel("Average Power Consumption")
+ax2.set_title("Average Power Consumption VS Utilizations on LITTLE cluster")
+ax2.legend()
+ax2.grid(True)
+fig, (ax3) = plt.subplots(1, 1, figsize=(18, 6))
+ax3.plot(results[0.1]["utilizations"], results[0.1]["total-power"], label="u target = 0.1", marker='D')
+ax3.plot(results[0.2]["utilizations"], results[0.2]["total-power"], label="u target = 0.2", marker='s')
+ax3.plot(results[0.3]["utilizations"], results[0.3]["total-power"], label="u target = 0.3", marker='.')
+ax3.set_ylim(0, max([results[x]["total-power"].max() for x in targets]) * 1.05)
+ax3.set_xlabel("Utilizations")
+ax3.set_ylabel("Average Power Consumption")
+ax3.set_title("Total Average Power Consumption VS Utilizations")
+ax3.legend()
+ax3.grid(True)
 
 # %%
-def compute_migrated(logs_dir):
-    args = [SCHEDVIEW, "--platform", PLATFORM, "-d", logs_dir, "--index", "--cmigration", "--arrivals"]
-    df = pl.read_csv(StringIO(subprocess.run(args, capture_output=True, text=True, check=True).stdout), separator=';')
-    return df.with_columns((pl.col("cmigration") / pl.col("arrivals")).alias("migration-rates")).select(pl.col("migration-rates")).mean()
+min_y = min(energy_diff["0.2-diff"].min(), energy_diff["0.3-diff"].min()) * 1.10
+max_y = max(energy_diff["0.2-diff"].max(), energy_diff["0.3-diff"].max()) * 1.05
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(18, 6))
+ax1.plot(energy_diff["utilizations"], energy_diff["c1-0.1-diff"], label="u target = 0.1", marker='D')
+ax1.plot(energy_diff["utilizations"], energy_diff["c1-0.2-diff"], label="u target = 0.2", marker='s')
+ax1.plot(energy_diff["utilizations"], energy_diff["c1-0.3-diff"], label="u target = 0.3", marker='.')
+ax1.set_xlabel("Utilizations")
+ax1.set_ylabel("Difference Energy Consumption")
+ax1.set_title("Average Difference Energy Consumption of Big cluster VS Utilizations")
+ax1.set_ylim(min_y, max_y)
+ax1.legend()
+ax1.grid(True)
+ax2.plot(energy_diff["utilizations"], energy_diff["c2-0.1-diff"], label="u target = 0.1", marker='D')
+ax2.plot(energy_diff["utilizations"], energy_diff["c2-0.2-diff"], label="u target = 0.2", marker='s')
+ax2.plot(energy_diff["utilizations"], energy_diff["c2-0.3-diff"], label="u target = 0.3", marker='.')
+ax2.set_xlabel("Utilizations")
+ax2.set_ylabel("Difference Energy Consumption")
+ax2.set_title("Average Difference Energy Consumption of LITTLE cluster VS Utilizations")
+ax2.set_ylim(min_y, max_y)
+ax2.legend()
+ax2.grid(True)
+fig, (ax3) = plt.subplots(1, 1, figsize=(18, 6))
+ax3.plot(energy_diff["utilizations"], energy_diff["0.1-diff"], label="u target = 0.1", marker='D')
+ax3.plot(energy_diff["utilizations"], energy_diff["0.2-diff"], label="u target = 0.2", marker='s')
+ax3.plot(energy_diff["utilizations"], energy_diff["0.3-diff"], label="u target = 0.3", marker='.')
+ax3.set_xlabel("Utilizations")
+ax3.set_ylabel("Difference Energy Consumption")
+ax3.set_title("Total Average Difference Energy Consumption VS Utilizations")
+ax3.set_ylim(min_y, max_y)
+ax3.legend()
+ax3.grid(True)
 
-alloc = "smart_ass"
-sched = "grub"
-
-migration_rates = {}
-for target in targets:
-    migration_rates[target] = {}
-    for sched in ["grub"]:
-        migration_df = []
-        util_steps = range(1, int(UTILIZATION*10)+1, 2)
-        for i in util_steps:
-            migration_df.append(compute_migrated(f"{DIR}_logs_{alloc}_{sched}_{target}/{i}").with_columns(utilizations=i/10))
-
-        migration_rates[target] = pl.concat(migration_df)
-
-fig, ax = plt.subplots()
-for target in targets:
-    ax.plot(accepted_rates[target]["utilizations"], accepted_rates[target]["accepted-rates"] * 100, label=f"u target = {str(target)}", marker='o')
-
-ax.set_ylim(35, 105)
-ax.set_xlabel("Utilizations")
-ax.set_ylabel("Accepted Rates (%)")
-ax.set_title("Accepted Rates vs Utilizations")
-plt.legend()
-plt.grid(True)
-plt.show()
+# %%
