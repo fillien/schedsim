@@ -69,7 +69,7 @@ auto filter_logs(const outputs::stats::logs_type& unfiltered_logs)
         // Iterate through unfiltered logs and apply filtering criteria
         for (auto itr = std::begin(unfiltered_logs); itr != std::end(unfiltered_logs); ++itr) {
                 const auto& timestamp{(*itr).first};
-                if (auto* const evt = std::get_if<traces::JobArrival>(&(itr->second))) {
+                if (const auto* const evt = std::get_if<traces::JobArrival>(&(itr->second))) {
                         // Detect if the task has passed the admission test
                         if (is_accepted_job(unfiltered_logs, timestamp, evt->task_id)) {
                                 // Insert the absolute deadline event
@@ -77,7 +77,7 @@ auto filter_logs(const outputs::stats::logs_type& unfiltered_logs)
                                     {evt->deadline, job_deadline{.tid = evt->task_id}});
                         }
                 }
-                else if (auto* const evt = std::get_if<traces::JobFinished>(&(itr->second))) {
+                else if (const auto* const evt = std::get_if<traces::JobFinished>(&(itr->second))) {
                         // Just transfert JobFinished event to the output
                         filtered_input.insert({timestamp, JobFinished{.tid = evt->task_id}});
                 }
@@ -105,7 +105,7 @@ void remove_next_event(
         // Search for the next deadline event for the specified task ID after the given timestamp
         auto result = std::find_if(
             std::begin(logs), std::end(logs), [&](const std::pair<double, job_events>& future_evt) {
-                    if (auto next_evt = std::get_if<T>(&future_evt.second)) {
+                    if (const auto* const next_evt = std::get_if<T>(&future_evt.second)) {
                             return future_evt.first > timestamp && next_evt->tid == tid;
                     }
                     return false;

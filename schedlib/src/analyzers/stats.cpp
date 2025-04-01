@@ -5,8 +5,10 @@
 #include <iterator>
 #include <list>
 #include <map>
+#include <print>
 #include <set>
 #include <stdexcept>
+#include <unordered_map>
 #include <variant>
 
 template <class... Ts> struct overloaded : Ts... {
@@ -130,13 +132,40 @@ auto count_rejected(const logs_type& input) -> std::size_t
 auto count_cluster_migration(const logs_type& input) -> std::size_t
 {
         namespace traces = protocols::traces;
+        // map : tid, {nb_transition, last_cid}
+        // std::unordered_map<std::size_t, std::pair<std::size_t, std::size_t>> cpts;
+        std::unordered_map<std::size_t, std::size_t> last_cids;
+
         std::size_t cpt{0};
 
         for (const auto& [_, event] : input) {
-                if (std::holds_alternative<traces::MigrationCluster>(event)) { cpt++; }
+                if (const auto* evt = std::get_if<traces::TaskPlaced>(&event)) {
+                        auto cid = last_cids.find(evt->task_id);
+                        if (cid != last_cids.end() && cid->second != evt->cluster_id) {
+                                last_cids.insert_or_assign(evt->task_id, evt->cluster_id);
+                                cpt++;
+                        }
+                }
         }
 
         return cpt;
+}
+
+auto count_possible_transition(const logs_type& input) -> std::size_t
+{
+        using namespace protocols::traces;
+
+        std::unordered_map<std::size_t, std::size_t> cpts;
+        for (const auto& [_, event] : input) {
+                if (const auto* evt = std::get_if<TaskPlaced>(&event)) { cpts[evt->task_id]++; }
+        }
+
+        std::size_t sum = 0;
+        for (const auto& [_, cpt] : cpts) {
+                sum += cpt;
+        }
+
+        return sum;
 }
 
 auto count_arrivals(const logs_type& input) -> std::size_t
