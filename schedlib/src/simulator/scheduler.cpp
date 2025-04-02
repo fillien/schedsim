@@ -298,7 +298,7 @@ auto Scheduler::on_serv_budget_exhausted(const std::shared_ptr<Server>& serv) ->
         ZoneScoped;
 #endif
         namespace traces = protocols::traces;
-        sim()->add_trace(traces::ServBudgetExhausted{serv->id()});
+        sim()->add_trace(traces::ServBudgetExhausted{.sched_id = cluster()->id(), .task_id = serv->id()});
         update_server_times(serv);
 
         // If the job is not yet complete, postpone the deadline.
@@ -360,7 +360,7 @@ auto Scheduler::activate_alarms(const std::shared_ptr<Server>& serv) -> void
         assert(remaining_time >= 0);
 
         sim()->add_trace(
-            traces::ServBudgetReplenished{.task_id = serv->id(), .budget = new_budget});
+            traces::ServBudgetReplenished{.sched_id = cluster()->id(), .task_id = serv->id(), .budget = new_budget});
 
         if (new_budget < remaining_time) {
                 sim()->add_event(ServBudgetExhausted{serv}, sim()->time() + new_budget);

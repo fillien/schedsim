@@ -46,7 +46,7 @@ auto is_args_ask_graph_result(const cxxopts::ParseResult& cli) -> bool
         return (
             cli.count("rtsched") || cli.count("frequency") || cli.count("cores") ||
             cli.count("energy") || cli.count("config") || cli.count("svg") || cli.count("html") ||
-            cli.count("procmode") || cli.count("au"));
+            cli.count("procmode") || cli.count("util"));
 }
 
 auto any_to_string(const std::any& a) -> std::string
@@ -55,12 +55,10 @@ auto any_to_string(const std::any& a) -> std::string
         ZoneScoped;
 #endif
         if (a.type() == typeid(double)) { return std::to_string(std::any_cast<double>(a)); }
-        else if (a.type() == typeid(std::size_t)) {
+        if (a.type() == typeid(std::size_t)) {
                 return std::to_string(std::any_cast<std::size_t>(a));
         }
-        else if (a.type() == typeid(std::string)) {
-                return std::any_cast<std::string>(a);
-        }
+        if (a.type() == typeid(std::string)) { return std::any_cast<std::string>(a); }
         return "Unknown type";
 }
 
@@ -101,7 +99,10 @@ void handle_plots(const cxxopts::ParseResult& cli, const auto& parsed, const aut
         if (cli.count("config")) { print_table(track_config_changes(parsed), cli.count("index")); }
 
         if (cli.count("energy")) {
-                print_table(compute_energy_consumption(parsed, hw), cli.count("energy"));
+                print_table(compute_energy_consumption(parsed, hw), cli.count("index"));
+        }
+        if (cli.count("util")) {
+                print_table(outputs::stats::count_cores_utilization(parsed), cli.count("util"));
         }
         if (cli.count("rtsched")) {
                 Gantt chart{generate_gantt(parsed, hw)};
@@ -109,7 +110,6 @@ void handle_plots(const cxxopts::ParseResult& cli, const auto& parsed, const aut
                 std::ofstream fd(output_file);
                 fd << rtsched::draw(chart);
         }
-
         if (cli.count("procmode")) {
                 Gantt chart{generate_proc_mode(parsed, hw)};
                 std::cout << svg::draw(chart);
@@ -238,7 +238,7 @@ auto main(const int argc, const char** argv) -> int
                 ("procmode", "Generate RTSched LaTeX file with processor mode.")
                 ("s,svg", "Generate a GANTT chart in SVG format.")
                 ("html", "Generate a GANTT chart in HTML format.")
-                ("au", "Print active utilization metrics.")
+                ("util", "Print total utilization metrics.")
                 ("e,energy", "Print the energy used by the platform during the simulation.")
                 ("duration", "Print task set execution duration.")
                 ("preemptions", "Print the number of preemptions.")

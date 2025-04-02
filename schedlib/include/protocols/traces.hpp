@@ -74,54 +74,61 @@ struct ProcChange {
  * @brief Represents a service budget replenished event.
  */
 struct ServBudgetReplenished {
-        std::size_t task_id; /**< ID of the task. */
-        double budget;       /**< Replenished budget. */
+        std::size_t sched_id; /** ID of the scheduler */
+        std::size_t task_id;  /**< ID of the task. */
+        double budget;        /**< Replenished budget. */
 };
 
 /**
  * @brief Represents a service inactive event.
  */
 struct ServInactive {
-        std::size_t task_id; /**< ID of the task. */
-        double utilization;  /**< Utilization of the task. */
+        std::size_t sched_id; /** ID of the scheduler */
+        std::size_t task_id;  /**< ID of the task. */
+        double utilization;   /**< Utilization of the task. */
 };
 
 /**
  * @brief Represents a service budget exhausted event.
  */
 struct ServBudgetExhausted {
-        std::size_t task_id; /**< ID of the task. */
+        std::size_t sched_id; /** ID of the scheduler */
+        std::size_t task_id;  /**< ID of the task. */
 };
 
 /**
  * @brief Represents a non-continuous service event.
  */
 struct ServNonCont {
-        std::size_t task_id; /**< ID of the task. */
+        std::size_t sched_id; /** ID of the scheduler */
+        std::size_t task_id;  /**< ID of the task. */
 };
 
 /**
  * @brief Represents a service postpone event.
  */
 struct ServPostpone {
-        std::size_t task_id; /**< ID of the task. */
-        double deadline;     /**< New deadline after postponement. */
+        std::size_t sched_id; /** ID of the scheduler */
+        std::size_t task_id;  /**< ID of the task. */
+        double deadline;      /**< New deadline after postponement. */
 };
 
 /**
  * @brief Represents a service ready event.
  */
 struct ServReady {
-        std::size_t task_id; /**< ID of the task. */
-        double deadline;     /**< Deadline of the task. */
-        double utilization;  /**< Utilization of the task. */
+        std::size_t sched_id; /** ID of the scheduler */
+        std::size_t task_id;  /**< ID of the task. */
+        double deadline;      /**< Deadline of the task. */
+        double utilization;   /**< Utilization of the task. */
 };
 
 /**
  * @brief Represents a service running event.
  */
 struct ServRunning {
-        std::size_t task_id; /**< ID of the task. */
+        std::size_t sched_id; /** ID of the scheduler */
+        std::size_t task_id;  /**< ID of the task. */
 };
 
 /**

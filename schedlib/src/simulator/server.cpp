@@ -47,6 +47,7 @@ auto Server::change_state(State new_state) -> void
                         // Job arrival: compute new relative deadline.
                         relative_deadline_ = current_time + period();
                         sim()->add_trace(traces::ServReady{
+                            .sched_id = scheduler()->cluster()->id(),
                             .task_id = self->id(),
                             .deadline = relative_deadline_,
                             .utilization = (utilization() * scheduler()->cluster()->scale_speed()) /
@@ -65,6 +66,7 @@ auto Server::change_state(State new_state) -> void
                         });
                         cant_be_inactive_ = true;
                         sim()->add_trace(traces::ServReady{
+                            .sched_id = scheduler()->cluster()->id(),
                             .task_id = self->id(),
                             .deadline = relative_deadline_,
                             .utilization = (utilization() * scheduler()->cluster()->scale_speed()) /
@@ -83,7 +85,8 @@ auto Server::change_state(State new_state) -> void
         case State::Running: {
                 // Valid only if currently Ready or already Running.
                 assert(current_state_ == State::Ready || current_state_ == State::Running);
-                sim()->add_trace(traces::ServRunning{self->id()});
+                sim()->add_trace(traces::ServRunning{
+                    .sched_id = scheduler()->cluster()->id(), .task_id = self->id()});
                 last_update_ = current_time;
                 current_state_ = State::Running;
                 break;
@@ -91,7 +94,8 @@ auto Server::change_state(State new_state) -> void
         case State::NonCont: {
                 // Transition from Running to NonCont.
                 assert(current_state_ == State::Running);
-                sim()->add_trace(traces::ServNonCont{self->id()});
+                sim()->add_trace(traces::ServNonCont{
+                    .sched_id = scheduler()->cluster()->id(), .task_id = self->id()});
                 // Virtual time must be in the future.
                 assert(
                     virtual_time_ > current_time &&
@@ -104,6 +108,7 @@ auto Server::change_state(State new_state) -> void
                 // Valid only from Running or NonCont.
                 assert(current_state_ == State::Running || current_state_ == State::NonCont);
                 sim()->add_trace(traces::ServInactive{
+                    .sched_id = scheduler()->cluster()->id(),
                     .task_id = self->id(),
                     .utilization = (utilization() * scheduler()->cluster()->scale_speed()) /
                                    scheduler()->cluster()->perf()});
@@ -122,5 +127,7 @@ auto Server::postpone() -> void
         // Postpone the server by updating the relative deadline.
         relative_deadline_ += period();
         sim()->add_trace(traces::ServPostpone{
-            .task_id = shared_from_this()->id(), .deadline = relative_deadline_});
+            .sched_id = scheduler()->cluster()->id(),
+            .task_id = shared_from_this()->id(),
+            .deadline = relative_deadline_});
 }

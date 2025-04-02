@@ -71,32 +71,44 @@ void outputs::textual::serialize(std::ostream& out, const protocols::traces::tra
                 },
                 [&out](traces::ServBudgetReplenished tra) {
                         color_name(out, "serv_budget_replenished");
+                        color_arg(out, "sid", tra.sched_id);
+                        out << ", ";
                         color_arg(out, "tid", tra.task_id);
                         out << ", ";
                         color_arg(out, "budget", tra.budget);
                 },
                 [&out](traces::ServInactive tra) {
                         color_name(out, "serv_inactive");
+                        color_arg(out, "sid", tra.sched_id);
+                        out << ", ";
                         color_arg(out, "tid", tra.task_id);
                         out << ", ";
                         color_arg(out, "utilization", tra.utilization);
                 },
                 [&out](traces::ServBudgetExhausted tra) {
                         color_name(out, "serv_budget_exhausted");
+                        color_arg(out, "sid", tra.sched_id);
+                        out << ", ";
                         color_arg(out, "tid", tra.task_id);
                 },
                 [&out](traces::ServNonCont tra) {
                         color_name(out, "serv_non_cont");
+                        color_arg(out, "sid", tra.sched_id);
+                        out << ", ";
                         color_arg(out, "tid", tra.task_id);
                 },
                 [&out](traces::ServPostpone tra) {
                         color_name(out, "serv_postpone");
+                        color_arg(out, "sid", tra.sched_id);
+                        out << ", ";
                         color_arg(out, "tid", tra.task_id);
                         out << ", ";
                         color_arg(out, "deadline", tra.deadline);
                 },
                 [&out](traces::ServReady tra) {
                         color_name(out, "serv_ready");
+                        color_arg(out, "sid", tra.sched_id);
+                        out << ", ";
                         color_arg(out, "tid", tra.task_id);
                         out << ", ";
                         color_arg(out, "deadline", tra.deadline);
@@ -105,6 +117,8 @@ void outputs::textual::serialize(std::ostream& out, const protocols::traces::tra
                 },
                 [&out](traces::ServRunning tra) {
                         color_name(out, "serv_running");
+                        color_arg(out, "sid", tra.sched_id);
+                        out << ", ";
                         color_arg(out, "tid", tra.task_id);
                 },
                 [&out](traces::TaskPreempted tra) {

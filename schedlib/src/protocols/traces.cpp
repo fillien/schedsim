@@ -82,18 +82,24 @@ void to_json(const trace& log, rapidjson::Writer<rapidjson::OStreamWrapper>& wri
                 [&writer](const ServNonCont& tra) {
                         writer.Key("type");
                         writer.String("serv_non_cont");
+                        writer.Key("sid");
+                        writer.Uint(tra.sched_id);
                         writer.Key("tid");
                         writer.Uint(tra.task_id);
                 },
                 [&writer](const ServBudgetExhausted& tra) {
                         writer.Key("type");
                         writer.String("serv_budget_exhausted");
+                        writer.Key("sid");
+                        writer.Uint(tra.sched_id);
                         writer.Key("tid");
                         writer.Uint(tra.task_id);
                 },
                 [&writer](const ServBudgetReplenished& tra) {
                         writer.Key("type");
                         writer.String("serv_budget_replenished");
+                        writer.Key("sid");
+                        writer.Uint(tra.sched_id);
                         writer.Key("tid");
                         writer.Uint(tra.task_id);
                         writer.Key("budget");
@@ -102,6 +108,8 @@ void to_json(const trace& log, rapidjson::Writer<rapidjson::OStreamWrapper>& wri
                 [&writer](const ServInactive& tra) {
                         writer.Key("type");
                         writer.String("serv_inactive");
+                        writer.Key("sid");
+                        writer.Uint(tra.sched_id);
                         writer.Key("tid");
                         writer.Uint(tra.task_id);
                         writer.Key("utilization");
@@ -110,6 +118,8 @@ void to_json(const trace& log, rapidjson::Writer<rapidjson::OStreamWrapper>& wri
                 [&writer](const ServPostpone& tra) {
                         writer.Key("type");
                         writer.String("serv_postpone");
+                        writer.Key("sid");
+                        writer.Uint(tra.sched_id);
                         writer.Key("tid");
                         writer.Uint(tra.task_id);
                         writer.Key("deadline");
@@ -118,6 +128,8 @@ void to_json(const trace& log, rapidjson::Writer<rapidjson::OStreamWrapper>& wri
                 [&writer](const ServReady& tra) {
                         writer.Key("type");
                         writer.String("serv_ready");
+                        writer.Key("sid");
+                        writer.Uint(tra.sched_id);
                         writer.Key("tid");
                         writer.Uint(tra.task_id);
                         writer.Key("deadline");
@@ -128,6 +140,8 @@ void to_json(const trace& log, rapidjson::Writer<rapidjson::OStreamWrapper>& wri
                 [&writer](const ServRunning& tra) {
                         writer.Key("type");
                         writer.String("serv_running");
+                        writer.Key("sid");
+                        writer.Uint(tra.sched_id);
                         writer.Key("tid");
                         writer.Uint(tra.task_id);
                 },
@@ -242,35 +256,43 @@ auto from_json(const rapidjson::Value& log) -> trace
             {"serv_budget_replenished",
              [](const rapidjson::Value& log) -> trace {
                      return ServBudgetReplenished{
-                         .task_id = log["tid"].GetUint64(), .budget = log["budget"].GetDouble()};
+                         .sched_id = log["sid"].GetUint(),
+                         .task_id = log["tid"].GetUint64(),
+                         .budget = log["budget"].GetDouble()};
              }},
             {"serv_inactive",
              [](const rapidjson::Value& log) -> trace {
                      return ServInactive{
+                         .sched_id = log["sid"].GetUint(),
                          .task_id = log["tid"].GetUint64(),
                          .utilization = log["utilization"].GetDouble()};
              }},
             {"serv_running",
              [](const rapidjson::Value& log) -> trace {
-                     return ServRunning{log["tid"].GetUint64()};
+                     return ServRunning{
+                         .sched_id = log["sid"].GetUint(), .task_id = log["tid"].GetUint64()};
              }},
             {"serv_budget_exhausted",
              [](const rapidjson::Value& log) -> trace {
-                     return ServBudgetExhausted{log["tid"].GetUint64()};
+                     return ServBudgetExhausted{
+                         .sched_id = log["sid"].GetUint(), .task_id = log["tid"].GetUint64()};
              }},
             {"serv_non_cont",
              [](const rapidjson::Value& log) -> trace {
-                     return ServNonCont{log["tid"].GetUint64()};
+                     return ServNonCont{
+                         .sched_id = log["sid"].GetUint(), .task_id = log["tid"].GetUint64()};
              }},
             {"serv_postpone",
              [](const rapidjson::Value& log) -> trace {
                      return ServPostpone{
+                         .sched_id = log["sid"].GetUint(),
                          .task_id = log["tid"].GetUint64(),
                          .deadline = log["deadline"].GetDouble()};
              }},
             {"serv_ready",
              [](const rapidjson::Value& log) -> trace {
                      return ServReady{
+                         .sched_id = log["sid"].GetUint(),
                          .task_id = log["tid"].GetUint64(),
                          .deadline = log["deadline"].GetDouble(),
                          .utilization = log["utilization"].GetDouble()};

@@ -1,6 +1,8 @@
 #include "analyzers/stats.hpp"
 #include "protocols/traces.hpp"
+#include "simulator/platform.hpp"
 
+#include <any>
 #include <cstddef>
 #include <iterator>
 #include <list>
@@ -228,39 +230,54 @@ auto count_frequency_request(const logs_type& input) -> std::size_t
         return cpt;
 }
 
-auto count_average_utilization(const logs_type& input) -> double
+auto count_cores_utilization(const logs_type& input) -> std::map<std::string, std::vector<std::any>>
 {
         using namespace protocols::traces;
         // duration, utilization
-        std::list<std::pair<double, double>> utilization_serie;
-        double last_utilization{0};
-        double last_timestamp{0};
+        std::unordered_map<std::size_t, std::list<std::pair<double, double>>> utilization_series;
+        std::unordered_map<std::size_t, double> last_util;
+        std::unordered_map<std::size_t, double> last_times;
 
-        const auto update = [&](const auto& timestamp) {
-                if (last_timestamp < timestamp) {
-                        utilization_serie.emplace_back(
-                            timestamp - last_timestamp, last_utilization);
-                        last_timestamp = timestamp;
+        double sim_duration = 0;
+
+        const auto update = [&](const auto& timestamp, const auto& id) {
+                if (last_times[id] < timestamp) {
+                        utilization_series[id].emplace_back(
+                            timestamp - last_times[id], last_util[id]);
+                        last_times[id] = timestamp;
                 }
         };
 
         for (const auto& tra : input) {
                 const auto& [timestamp, event] = tra;
                 if (const auto* evt = std::get_if<ServReady>(&event)) {
-                        update(timestamp);
-                        last_utilization += evt->utilization;
+                        update(timestamp, evt->sched_id);
+                        last_util[evt->sched_id] += evt->utilization;
                 }
                 else if (const auto* evt = std::get_if<ServInactive>(&event)) {
-                        update(timestamp);
-                        last_utilization -= evt->utilization;
+                        update(timestamp, evt->sched_id);
+                        last_util[evt->sched_id] -= evt->utilization;
+                }
+                else if (std::holds_alternative<protocols::traces::SimFinished>(event)) {
+                        sim_duration = timestamp;
                 }
         }
 
-        double total_utilization{0};
-        for (const auto& [duration, utilization] : utilization_serie) {
-                total_utilization += duration * utilization;
+        std::vector<std::any> cluster_ids;
+        std::vector<std::any> square_utils;
+        for (std::size_t i = 1; i <= utilization_series.size(); ++i) {
+                cluster_ids.emplace_back(i);
+                double core_util = 0;
+                for (const auto& [duration, utilization] : utilization_series[i]) {
+                        core_util += duration * utilization;
+                }
+                square_utils.emplace_back(core_util / sim_duration);
         }
-        return total_utilization;
+
+        std::map<std::string, std::vector<std::any>> result;
+        result["cluster_id"] = std::move(cluster_ids);
+        result["util"] = std::move(square_utils);
+        return result;
 }
 
 } // namespace outputs::stats
