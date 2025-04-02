@@ -268,7 +268,8 @@ auto main(const int argc, const char** argv) -> int
                     cli.count("print")) {
                         throw std::runtime_error("cannot output graphs or table result, and logs");
                 }
-                else if (cli.count("print")) {
+
+                if (cli.count("print")) {
                         // Print and color the logs of the input file
                         fs::path input_filepath = cli["infile"].as<std::string>();
                         if (!fs::exists(input_filepath)) {

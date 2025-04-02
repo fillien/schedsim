@@ -14,20 +14,33 @@
         schedsim = pkgs.stdenv.mkDerivation {
           name = "schedsim";
           src = ./.;
-          buildInputs = with pkgs; [ cmake ninja doxygen graphviz gtest ];
-          cmakeFlags = [ "-GNinja" ];
+          buildInputs = with pkgs; [
+            cmake
+            ninja
+            doxygen
+            graphviz
+            gtest
+            (python312.withPackages (ps: with ps; [ pybind11 ]))
+          ];
+          cmakeFlags = [ "-GNinja" "-DCMAKE_BUILD_TYPE=Release"];
           doCheck = false;
         };
 
         schedsimTest = pkgs.stdenv.mkDerivation {
           name = "schedsim-test";
           src = ./.;
-          buildInputs = with pkgs; [ cmake ninja doxygen graphviz gtest ];
+          buildInputs = with pkgs; [
+                      cmake
+                      ninja
+                      doxygen
+                      graphviz
+                      gtest
+                      (python312.withPackages (ps: with ps; [ pybind11 ]))
+                    ];
           cmakeFlags = [ "-GNinja" "-DCMAKE_BUILD_TYPE=Debug" ];
           doCheck = true;
           buildPhase = ''
-            cmake --build . --target tests
-            cmake --build . --target schedview_tests
+            cmake --build . --target test
           '';
           checkPhase = ''
             ctest --output-on-failure

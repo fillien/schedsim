@@ -1,0 +1,18 @@
+image: nixpkgs/nix-flakes
+
+variables:
+  NIX_PATH: "nixpkgs=channel:nixos-unstable"
+
+build_and_test:
+  script:
+    - nix build
+    - nix flake check
+
+compare_output:
+  script:
+    - nix build
+    - ./result/bin/schedsim -p platforms/exynos5422.json -i tests/scenarios/ci-input.json --sched grub --alloc little_first
+    # - cat logs.json
+    # - nix develop --command "jq 'walk(if type == \"number\" then (.*1000000000 | floor) / 1000000000 else . end)' logs.json > norm1.json"
+    # - nix develop --command "jq 'walk(if type == \"number\" then (.*1000000000 | floor) / 1000000000 else . end)' tests/scenarios/ci-output.json > norm2.json"
+    # - nix develop --command "jd norm1.json norm2.json"

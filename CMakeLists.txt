@@ -16,7 +16,6 @@ if (CMAKE_GENERATOR MATCHES "Ninja")
 endif()
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
-
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -37,11 +36,11 @@ add_subdirectory(apps)
 add_subdirectory(python)
 add_subdirectory(doc)
 
-# install(
-#   TARGETS schedsim schedview schedgen
-#   EXPORT ${PROJECT_NAME}_Targets
-#   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUEDIR}
-# )
+install(
+  TARGETS schedsim schedview schedgen
+  EXPORT ${PROJECT_NAME}_Targets
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUEDIR}
+)
 
 file(GLOB_RECURSE ALL_SOURCE_FILES "*.cpp" "*.hpp")
 list(FILTER ALL_SOURCE_FILES EXCLUDE REGEX "external/")
