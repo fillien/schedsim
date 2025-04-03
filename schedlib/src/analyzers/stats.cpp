@@ -1,4 +1,5 @@
 #include "analyzers/stats.hpp"
+#include "protocols/hardware.hpp"
 #include "protocols/traces.hpp"
 #include "simulator/platform.hpp"
 
@@ -230,7 +231,7 @@ auto count_frequency_request(const logs_type& input) -> std::size_t
         return cpt;
 }
 
-auto count_cores_utilization(const logs_type& input) -> std::map<std::string, std::vector<std::any>>
+auto count_cores_utilization(const logs_type& input, const protocols::hardware::Hardware& hw) -> std::map<std::string, std::vector<std::any>>
 {
         using namespace protocols::traces;
         // duration, utilization
@@ -265,7 +266,7 @@ auto count_cores_utilization(const logs_type& input) -> std::map<std::string, st
 
         std::vector<std::any> cluster_ids;
         std::vector<std::any> square_utils;
-        for (std::size_t i = 1; i <= utilization_series.size(); ++i) {
+        for (std::size_t i = 1; i <= hw.clusters.size(); ++i) {
                 cluster_ids.emplace_back(i);
                 double core_util = 0;
                 for (const auto& [duration, utilization] : utilization_series[i]) {

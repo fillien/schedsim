@@ -102,7 +102,7 @@ void handle_plots(const cxxopts::ParseResult& cli, const auto& parsed, const aut
                 print_table(compute_energy_consumption(parsed, hw), cli.count("index"));
         }
         if (cli.count("util")) {
-                print_table(outputs::stats::count_cores_utilization(parsed), cli.count("util"));
+                print_table(outputs::stats::count_cores_utilization(parsed, hw), cli.count("util"));
         }
         if (cli.count("rtsched")) {
                 Gantt chart{generate_gantt(parsed, hw)};
