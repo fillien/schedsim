@@ -48,7 +48,7 @@
         };
 
         devShellInputs = with pkgs; [
-          (python312.withPackages (ps: with ps; [ pip jupytext pybind11 pandas polars pyarrow matplotlib jupyter jupyterlab jupyter-nbextensions-configurator ]))
+          (python312.withPackages (ps: with ps; [ pip jupytext pybind11 pandas polars pyarrow matplotlib jupyter jupyterlab jupyter-nbextensions-configurator sphinx sphinx-material breathe ]))
           bash
           black
           clang-tools

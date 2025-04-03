@@ -30,6 +30,7 @@ if(DOXYGEN_FOUND)
   set(DOXYGEN_TRANSPARENT YES)
   set(DOXYGEN_TAB_SIZE 8)
   set(DOXYGEN_GENERATE_TODOLIST YES)
+  set(DOXYGEN_GENERATE_XML YES)
   
   doxygen_add_docs(
     doxygen
