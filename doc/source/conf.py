@@ -26,5 +26,8 @@ breathe_default_project = "schedsim"
 
 html_theme = 'sphinx_material'
 html_static_path = ['_static']
+html_sidebars = {
+    "**": ["logo-text.html", "globaltoc.html", "localtoc.html", "searchbox.html"]
+}
 
 breathe_projects = {"schedsim": "../xml"}
