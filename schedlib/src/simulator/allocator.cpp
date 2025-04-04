@@ -38,6 +38,19 @@ auto compare_events(const events::Event& ev1, const events::Event& ev2) -> bool
 } // namespace
 
 namespace allocators {
+auto Allocator::where_to_put_the_task(const std::shared_ptr<Task>& new_task)
+    -> std::optional<std::shared_ptr<scheds::Scheduler>>
+{
+        const auto compare_perf = [](const auto& first, const auto& second) {
+                return first->cluster()->perf() > second->cluster()->perf();
+        };
+
+        // Sort the schedulers by perf score
+        auto sorted_scheds{schedulers()};
+        std::ranges::sort(sorted_scheds, compare_perf);
+        if (sorted_scheds.at(0)->admission_test(*new_task)) { return sorted_scheds.at(0); }
+        return {};
+}
 
 auto Allocator::add_child_sched(
     const std::weak_ptr<Cluster>& clu, const std::shared_ptr<scheds::Scheduler>& sched) -> void

@@ -35,8 +35,8 @@ class Allocator : public Entity {
         }
 
       protected:
-        virtual auto where_to_put_the_task(const std::shared_ptr<Task>& new_task)
-            -> std::optional<std::shared_ptr<scheds::Scheduler>> = 0;
+        auto where_to_put_the_task(const std::shared_ptr<Task>& new_task)
+            -> std::optional<std::shared_ptr<scheds::Scheduler>>;
 
         [[nodiscard]] auto schedulers() const
             -> const std::vector<std::shared_ptr<scheds::Scheduler>>&

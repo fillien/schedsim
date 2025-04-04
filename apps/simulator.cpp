@@ -85,7 +85,7 @@ auto parse_args(const int argc, const char** argv) -> AppConfig
         if (cli.count("alloc")) { config.alloc = cli["alloc"].as<std::string>(); }
         if (cli.count("output")) { config.output_file = cli["output"].as<std::string>(); }
         if (cli.count("delay")) { config.active_delay = true; }
-        config.u_target = cli["target"].as<double>();
+        if (cli.count("target")) { config.u_target = cli["target"].as<double>(); }
 
         return config;
 }
@@ -94,6 +94,7 @@ auto select_alloc(const std::string& choice, const std::shared_ptr<Engine>& sim)
     -> std::shared_ptr<allocators::Allocator>
 {
         using namespace allocators;
+        if (choice.empty() || choice == "default") { return std::make_shared<Allocator>(sim); }
         if (choice == "big_first") { return std::make_shared<HighPerfFirst>(sim); }
         if (choice == "little_first") { return std::make_shared<LowPerfFirst>(sim); }
         if (choice == "smart_ass") { return std::make_shared<SmartAss>(sim); }
@@ -104,7 +105,7 @@ auto select_sched(const std::string& choice, const std::shared_ptr<Engine>& sim)
     -> std::shared_ptr<scheds::Scheduler>
 {
         using namespace scheds;
-        if (choice == "grub") { return std::make_shared<Parallel>(sim); }
+        if (choice.empty() || choice == "grub") { return std::make_shared<Parallel>(sim); }
         if (choice == "pa") { return std::make_shared<PowerAware>(sim); }
         if (choice == "ffa") { return std::make_shared<Ffa>(sim); }
         if (choice == "csf") { return std::make_shared<Csf>(sim); }
@@ -147,7 +148,9 @@ auto main(const int argc, const char** argv) -> int
                             clu.frequencies,
                             clu.effective_freq,
                             clu.perf_score,
-                            (clu.perf_score < 1 ? config.u_target.value() : 1));
+                            (clu.perf_score < 1 && config.u_target.has_value()
+                                 ? config.u_target.value()
+                                 : clu.perf_score));
                         newclu->create_procs(clu.nb_procs);
 
                         auto sched = select_sched(config.sched, sim);

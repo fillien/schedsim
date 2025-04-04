@@ -231,7 +231,8 @@ auto count_frequency_request(const logs_type& input) -> std::size_t
         return cpt;
 }
 
-auto count_cores_utilization(const logs_type& input, const protocols::hardware::Hardware& hw) -> std::map<std::string, std::vector<std::any>>
+auto count_cores_utilization(const logs_type& input, const protocols::hardware::Hardware& hw)
+    -> std::map<std::string, std::vector<std::any>>
 {
         using namespace protocols::traces;
         // duration, utilization

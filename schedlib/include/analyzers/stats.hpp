@@ -4,9 +4,9 @@
 #include "protocols/hardware.hpp"
 #include "protocols/traces.hpp"
 
+#include <any>
 #include <cstddef>
 #include <vector>
-#include <any>
 
 namespace outputs::stats {
 using logs_type = std::vector<std::pair<double, protocols::traces::trace>>;
@@ -20,7 +20,8 @@ auto count_arrivals(const logs_type& input) -> std::size_t;
 auto count_possible_transition(const logs_type& input) -> std::size_t;
 auto count_core_state_request(const logs_type& input) -> std::size_t;
 auto count_frequency_request(const logs_type& input) -> std::size_t;
-auto count_cores_utilization(const logs_type& input, const protocols::hardware::Hardware& hw) -> std::map<std::string, std::vector<std::any>>;
+auto count_cores_utilization(const logs_type& input, const protocols::hardware::Hardware& hw)
+    -> std::map<std::string, std::vector<std::any>>;
 } // namespace outputs::stats
 
 #endif
