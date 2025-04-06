@@ -14,7 +14,7 @@ def main():
         print("Please pass the tasksets as an argument")
         return
 
-    PLATFORM = sys.argv[2]
+    PLATFORM = sys.argv[3]
     logs = sys.argv[1]
 
     utilizations = []
