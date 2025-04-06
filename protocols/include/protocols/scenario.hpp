@@ -1,6 +1,7 @@
 #ifndef SCENARIO_HPP
 #define SCENARIO_HPP
 
+#include <cstdint>
 #include <filesystem>
 #include <rapidjson/document.h>
 #include <vector>
@@ -12,7 +13,7 @@ struct job {
 };
 
 struct task {
-        std::size_t id;
+        uint64_t id;
         double utilization;    // Utilization factor
         double period;         // Period of the task
         std::vector<job> jobs; // Jobs of the task

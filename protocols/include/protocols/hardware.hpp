@@ -9,7 +9,7 @@
 
 namespace protocols::hardware {
 struct hardware {
-        std::size_t nb_procs;
+        uint64_t nb_procs;
         std::vector<double> frequencies;
         double effective_freq;
         std::vector<double> power_model;
