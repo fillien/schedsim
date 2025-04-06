@@ -1,16 +1,13 @@
 #!/usr/bin/env python
 
-import pandas as pd
 import subprocess
 import os
 import sys
 import shutil
 import concurrent.futures
-from datetime import datetime
 
 SCHEDSIM = "./build/schedsim/schedsim"
 PLATFORM = "./platforms/exynos5422LITTLE.json"
-
 
 def main():
     if len(sys.argv) <= 2:

@@ -4,9 +4,7 @@ import pandas as pd
 import subprocess
 import os
 import sys
-import shutil
 import concurrent.futures
-from datetime import datetime
 
 SCHEDVIEW = "./build/schedview/schedview"
 
@@ -41,8 +39,6 @@ def main():
 
 
 def simulate(logsdir, sched_policy):
-    util_paths = sorted(os.listdir(logsdir))
-
     utilization_results = []
     energy_results = []
     min_results = []

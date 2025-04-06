@@ -4,9 +4,7 @@ import pandas as pd
 import subprocess
 import os
 import sys
-import shutil
 import concurrent.futures
-from datetime import datetime
 
 SCHEDVIEW = "./build/schedview/schedview"
 

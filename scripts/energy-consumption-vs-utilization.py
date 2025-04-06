@@ -4,17 +4,15 @@ import pandas as pd
 import subprocess
 import os
 import sys
-import shutil
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
-from datetime import datetime
 
 SCHEDVIEW = "./build/schedview/schedview"
 PLATFORM = "./platforms/exynos5422LITTLE.json"
 
 def main():
     if len(sys.argv) <= 1:
-        print("Please pass the policies as an argument")
+        print("Please pass the tasksets as an argument")
         return
 
     logs = sys.argv[1]
@@ -38,7 +36,11 @@ def main():
     current_util = 0.1
 
     with ThreadPoolExecutor() as executor:
-        for directory in sorted(os.listdir(log_paths["grub"])):
+        folders = os.listdir(log_paths["grub"])
+        if ".DS_Store" in folders:
+            folders.remove(".DS_Store")
+
+        for directory in sorted(folders):
             print(directory)
             utilizations.append(current_util)
 
@@ -62,15 +64,12 @@ def main():
         "csf": csf,
     })
 
-    results.to_csv("data-energy.csv", index=False, sep=" ")
-    subprocess.run(["gnuplot", "-e",
-                    "output_file='energy_" + logs + ".png';input_file='data-energy.csv'",
-                    "./scripts/plot.gp"])
+    results.to_csv(sys.argv[2], index=False, sep=" ")
 
 
 def run_scenario(schedview, logs_path):
     output = subprocess.run(
-        [SCHEDVIEW, "--platform", PLATFORM, "--directory", logs_path, "--energy", "--duration"],
+        [SCHEDVIEW, "--platform", PLATFORM, "--directory", logs_path, "--energy", "--duration", "--index"],
         capture_output=True,
         text=True,
         check=True,

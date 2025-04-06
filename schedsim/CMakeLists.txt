@@ -1,9 +1,8 @@
 add_executable(schedsim)
 
 target_compile_features(schedsim PRIVATE cxx_std_23)
-target_compile_options(schedsim PRIVATE -fdiagnostics-color=always -fsanitize=address)
+target_compile_options(schedsim PRIVATE -fdiagnostics-color=always)
 target_compile_options(schedsim PRIVATE -O3)
-target_link_options(schedsim PRIVATE -fsanitize=address)
 
 # Set Tracy option based on build type
 if (ENABLE_TRACY)
