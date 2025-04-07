@@ -14,8 +14,9 @@ def main():
         print("Please pass the tasksets as an argument")
         return
 
-    PLATFORM = sys.argv[3]
+    platform = sys.argv[3]
     logs = sys.argv[1]
+    print(platform)
 
     utilizations = []
     grub = []
@@ -31,7 +32,7 @@ def main():
     }
 
     def process_scheduler(scheduler, directory):
-        return run_scenario(SCHEDVIEW, os.path.join(log_paths[scheduler], directory), PLATFORM)["power"].mean()
+        return run_scenario(SCHEDVIEW, os.path.join(log_paths[scheduler], directory), platform)["power"].mean()
 
     current_util = 0.1
 
@@ -64,6 +65,7 @@ def main():
         "csf": csf,
     })
 
+    print(sys.argv[2])
     results.to_csv(sys.argv[2], index=False, sep=" ")
 
 
