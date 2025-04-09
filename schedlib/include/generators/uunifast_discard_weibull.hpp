@@ -79,6 +79,10 @@ auto generate_tasksets(
     double compression_rate,
     std::optional<std::pair<double, double>> a_special_need = std::nullopt,
     std::size_t nb_cores = 1) -> void;
+
+auto add_taskets(
+    const protocols::scenario::Setting& first, const protocols::scenario::Setting& second)
+    -> protocols::scenario::Setting;
 } // namespace generators
 
 #endif

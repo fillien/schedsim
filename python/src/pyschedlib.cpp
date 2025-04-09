@@ -1,6 +1,7 @@
 #include <filesystem>
 #include <generators/uunifast_discard_weibull.hpp>
 #include <protocols/scenario.hpp>
+#include <pybind11/cast.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
@@ -24,6 +25,8 @@ PYBIND11_MODULE(pyschedlib, m)
         py::class_<protocols::scenario::Setting>(m, "Setting")
             .def_readonly(
                 "tasks", &protocols::scenario::Setting::tasks, "List of tasks in the task set");
+
+        m.def("add_tasksets", &generators::add_taskets, py::arg("first"), py::arg("second"));
 
         m.def(
             "uunifast_discard_weibull",

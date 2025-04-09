@@ -183,6 +183,7 @@ auto pick_period(const std::span<const int>& periods) -> int
         std::uniform_int_distribution<std::size_t> dis(0, periods.size() - 1);
         return periods[dis(random_gen)];
 }
+
 } // namespace
 
 namespace generators {
@@ -318,4 +319,46 @@ auto generate_tasksets(
         }
 }
 
+auto add_taskets(
+    const protocols::scenario::Setting& first, const protocols::scenario::Setting& second)
+    -> protocols::scenario::Setting
+{
+        protocols::scenario::Setting out;
+        std::size_t cpt{1};
+        for (const auto& task : first.tasks) {
+                auto to_insert = task;
+                to_insert.id = cpt;
+                out.tasks.emplace_back(to_insert);
+                cpt++;
+        }
+        for (const auto& task : second.tasks) {
+                auto to_insert = task;
+                to_insert.id = cpt;
+                out.tasks.emplace_back(to_insert);
+                cpt++;
+        }
+        return out;
+}
+
+auto histogram(const std::vector<double>& data, int num_bins, double min, double max)
+    -> std::vector<int>
+{
+        if (data.empty() || num_bins <= 0) { return {}; }
+
+        double width = (max - min) / num_bins;
+        std::vector<int> histogram(num_bins, 0);
+
+        for (double x : data) {
+                int bin_index;
+                if (width > 0) {
+                        bin_index = static_cast<int>((x - min) / width);
+                        if (bin_index >= num_bins) { bin_index = num_bins - 1; }
+                }
+                else {
+                        bin_index = 0;
+                }
+                histogram[bin_index]++;
+        }
+        return histogram;
+}
 } // namespace generators
