@@ -1,7 +1,7 @@
 .cache/
-/doc/html
-/doc/xml
-/doc/build
+/docs/html
+/docs/xml
+/docs/build
 /build
 /build_*
 /build_*.json
