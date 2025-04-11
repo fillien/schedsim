@@ -15,7 +15,7 @@ $ result/bin/schedgen
 $ result/bin/schedsim
 $ result/bin/schedview
 ```
-To compile the software using `cmake`: 
+To compile the software using `cmake`:
 
 ```
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -47,18 +47,18 @@ $ build/schedview/schedview
    utilization of 1.
 
    ```
-   ./build/schedgen/schedgen taskset -t 10 -u 3.9 -s 0.1 -c 0.1 --umax 1 -o scenario.json 
+   ./build/schedgen/schedgen taskset -t 10 -u 3.9 -s 0.1 -c 0.1 --umax 1 -o scenario.json
    ```
 
 2. Then, use `schedsim` to simulate the execution of your task set and specify a platform for it to run on.
 
-   > [!TIP]  
+   > [!TIP]
    > You can use the platforms provided in the `platforms/` folder.
 
    In the following example, we use the LITTLE cluster of the exynos5422 (composed of four cores) to run the previously generated task set, and we schedule it with GRUB.
 
-   ``` 
-   ./build/schedsim/schedsim -p platforms/exynos5422LITTLE.json --sched grub -s scenario.json 
+   ```
+   ./build/schedsim/schedsim -p platforms/exynos5422LITTLE.json --sched grub -s scenario.json
    ```
 
 3. Finally, use `schedview` to analyze the execution traces (in JSON) or generate graphs.
@@ -153,4 +153,3 @@ Usage: `schedview [OPTION...] infile`
   - `    --deadlines-rates`   Print the rate of missed deadlines.
   - `    --deadlines-counts`  Print the count of missed deadlines.
   - `    --platform arg`      Specify the hardware description file (default: platform.json).
-

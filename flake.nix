@@ -61,7 +61,7 @@
             jupyter-nbextensions-configurator
             pybind11-stubgen
             sphinx
-            sphinx-material
+            furo
             breathe
           ]))
           bash

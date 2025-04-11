@@ -1,0 +1,5 @@
+pyschedlib
+==
+
+.. automodule:: pyschedlib
+   :members:
