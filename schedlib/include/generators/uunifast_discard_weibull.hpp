@@ -80,6 +80,17 @@ auto generate_tasksets(
     std::optional<std::pair<double, double>> a_special_need = std::nullopt,
     std::size_t nb_cores = 1) -> void;
 
+/**
+ * @brief Adds two task sets together.
+ *
+ * This function combines the tasks from two `protocols::scenario::Setting` objects into a single
+ * `protocols::scenario::Setting`.  The resulting setting will contain all tasks from both input
+ * settings.
+ *
+ * @param first The first task set to add.
+ * @param second The second task set to add.
+ * @return A new `protocols::scenario::Setting` object containing the combined tasks.
+ */
 auto add_taskets(
     const protocols::scenario::Setting& first, const protocols::scenario::Setting& second)
     -> protocols::scenario::Setting;

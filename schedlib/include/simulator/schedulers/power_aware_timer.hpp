@@ -7,8 +7,16 @@
 #include <memory>
 
 namespace scheds {
+/**
+ * @class PowerAwareTimer
+ * @brief A parallel scheduler that considers power consumption.
+ */
 class PowerAwareTimer : public Parallel {
       protected:
+        /**
+         * @brief Returns the number of active processors.
+         * @return The number of active processors.
+         */
         auto nb_active_procs() const -> std::size_t;
 
       public:
@@ -18,6 +26,10 @@ class PowerAwareTimer : public Parallel {
          */
         explicit PowerAwareTimer(const std::weak_ptr<Engine>& sim);
 
+        /**
+         * @brief Updates the platform state based on power awareness.
+         * @override
+         */
         void update_platform() override;
 };
 } // namespace scheds

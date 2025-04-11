@@ -102,6 +102,12 @@ class Processor : public Entity, public std::enable_shared_from_this<Processor> 
         std::weak_ptr<Task> task_;          ///< Currently running task.
         std::weak_ptr<Cluster> cluster_;    ///< Cluster containing this processor.
         std::shared_ptr<Timer> core_timer_; ///< Timer for processor operations.
+
+        Processor(const Processor&) = default;
+        Processor& operator=(const Processor&) = default;
+        Processor(Processor&&) = default;
+        Processor& operator=(Processor&&) = default;
+        ~Processor() = default;
 };
 
 #endif // PROCESSOR_HPP

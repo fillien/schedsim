@@ -8,6 +8,10 @@
 namespace scheds {
 class PowerAware : public Parallel {
       protected:
+        /**
+         * @brief Returns the number of active processors.
+         * @return The number of active processors.
+         */
         auto nb_active_procs() const -> std::size_t;
 
       public:
@@ -17,6 +21,10 @@ class PowerAware : public Parallel {
          */
         explicit PowerAware(const std::weak_ptr<Engine>& sim) : Parallel(sim) {};
 
+        /**
+         * @brief Updates the platform state based on power awareness considerations.
+         * This function overrides the base class's update_platform method.
+         */
         void update_platform() override;
 };
 } // namespace scheds

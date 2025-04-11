@@ -12,6 +12,10 @@
 
 namespace scheds {
 
+/**
+ * @brief Represents a scheduler responsible for managing tasks and servers within a simulation
+ * environment.
+ */
 class Scheduler : public Entity, public std::enable_shared_from_this<Scheduler> {
       public:
         /**
