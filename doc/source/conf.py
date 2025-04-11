@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.abspath('../../build/python'))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'schedsim'
+project = 'SchedSim'
 copyright = '2025, François ILLIEN'
 author = 'François ILLIEN'
 release = '1.0'
@@ -27,10 +27,12 @@ extensions = [
 templates_path = ['_templates']
 exclude_patterns = []
 breathe_default_project = "schedsim"
+breathe_show_include = False
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'furo'
+pygments_style = 'default'
 html_static_path = []
 breathe_projects = {"schedsim": "../xml"}

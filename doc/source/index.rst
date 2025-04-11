@@ -4,10 +4,12 @@
    contain the root `toctree` directive.
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 3
     :hidden:
 
-    scenarios
+    self
+    api-cpp/api
+    api-python
 
 Schedsim
 ========
