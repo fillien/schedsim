@@ -78,6 +78,7 @@
           ninja
           shellcheck
           tracy
+          sphinx
         ];
       in
       {

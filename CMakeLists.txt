@@ -3,6 +3,7 @@ project("Schedsim"
   VERSION 2023.09
   DESCRIPTION "A scheduling simulator")
 
+set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 include(CTest)
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -34,7 +35,7 @@ add_subdirectory(external/tracy)
 add_subdirectory(schedlib)
 add_subdirectory(apps)
 add_subdirectory(python)
-add_subdirectory(doc)
+add_subdirectory(docs)
 
 install(
   TARGETS schedsim schedview schedgen
