@@ -166,37 +166,6 @@ class Server : public Entity, public std::enable_shared_from_this<Server> {
                 return attached_sched_.lock();
         }
 
-        /**
-         * @brief Default destructor.
-         */
-        ~Server() = default;
-
-        /**
-         * @brief Copy constructor.
-         * @param other The server to copy from.
-         */
-        Server(const Server& other) = default;
-
-        /**
-         * @brief Move constructor.
-         * @param other The server to move from.
-         */
-        Server(Server&& other) noexcept = default;
-
-        /**
-         * @brief Copy assignment operator.
-         * @param other The server to copy from.
-         * @return A reference to the current object.
-         */
-        auto operator=(const Server& other) -> Server& = default;
-
-        /**
-         * @brief Move assignment operator.
-         * @param other The server to move from.
-         * @return A reference to the current object.
-         */
-        auto operator=(Server&& other) noexcept -> Server& = default;
-
       private:
         std::weak_ptr<Task> attached_task_; ///< The task to ensure time isolation.
         std::weak_ptr<scheds::Scheduler> attached_sched_;
