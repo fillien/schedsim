@@ -20,9 +20,15 @@
             doxygen
             graphviz
             gtest
-            (python312.withPackages (ps: with ps; [ pybind11 ]))
+            (python312.withPackages (ps: with ps; [
+              pybind11
+              pybind11-stubgen
+              sphinx
+              furo
+              breathe
+            ]))
           ];
-          cmakeFlags = [ "-GNinja" "-DCMAKE_BUILD_TYPE=Release"];
+          cmakeFlags = [ "-GNinja" "-DCMAKE_BUILD_TYPE=Release" ];
           doCheck = false;
         };
 
@@ -30,13 +36,19 @@
           name = "schedsim-test";
           src = ./.;
           buildInputs = with pkgs; [
-                      cmake
-                      ninja
-                      doxygen
-                      graphviz
-                      gtest
-                      (python312.withPackages (ps: with ps; [ pybind11 ]))
-                    ];
+            cmake
+            ninja
+            doxygen
+            graphviz
+            gtest
+            (python312.withPackages (ps: with ps; [
+              pybind11
+              pybind11-stubgen
+              sphinx
+              furo
+              breathe
+            ]))
+          ];
           cmakeFlags = [ "-GNinja" "-DCMAKE_BUILD_TYPE=Debug" ];
           doCheck = true;
           buildPhase = ''
