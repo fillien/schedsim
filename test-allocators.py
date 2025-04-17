@@ -24,6 +24,7 @@ import polars as pl
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
+import numpy as np
 
 pl.Config.set_tbl_rows(-1)
 pl.Config.set_tbl_cols(-1)
@@ -43,15 +44,6 @@ alloc = "smart_ass"
 sched = "grub"
 
 print(targets)
-
-# %%
-t1 = sc.uunifast_discard_weibull(2, 0.25, 0.2, 1, 1)
-t2 = sc.uunifast_discard_weibull(2, 0.25, 0.2, 1, 1)
-
-t3 = sc.add_tasksets(t1, t2)
-
-# %%
-print(t3.tasks)
 
 # %% [markdown]
 # # Generate the tasksets
@@ -75,6 +67,42 @@ for i in util_steps:
     sc.generate_tasksets(data_path, NB_JOBS, NB_TASK, utilization, UMAX, success_rate = 1.0, compression_rate = 1.0, nb_cores = 16, a_special_need=(0.0, min(targets)))
 
 print("== finished ==")
+
+# %%
+bins = np.linspace(0, UMAX, num=61)
+values = []
+for i in range(1, 101):
+    lines = []
+    with open(f"{DIR}/65/{str(i)}.json", "r") as f:
+        lines = f.readlines()
+    file_values = [t.utilization for t in sc.from_json_setting(lines[0]).tasks]
+    values += file_values
+
+
+plt.figure(figsize=(8, 6))
+plt.hist(values, bins=bins, edgecolor='black', alpha=0.7)
+plt.xlabel('Value')
+plt.ylabel('Frequency')
+plt.title('Distribution of Float Values')
+plt.grid(True, alpha=0.3)
+plt.show()
+
+values = []
+for i in range(1, 101):
+    lines = []
+    with open(f"{DIR}/21/{str(i)}.json", "r") as f:
+        lines = f.readlines()
+    file_values = [t.utilization for t in sc.from_json_setting(lines[0]).tasks]
+    values += file_values
+
+
+plt.figure(figsize=(8, 6))
+plt.hist(values, bins=bins, edgecolor='black', alpha=0.7)
+plt.xlabel('Value')
+plt.ylabel('Frequency')
+plt.title('Distribution of Float Values')
+plt.grid(True, alpha=0.3)
+plt.show()
 
 # %% [markdown]
 # # Simulate the tasksets
