@@ -30,12 +30,6 @@ class Entity {
                 assert(!simulator.expired());
                 return simulator.lock();
         }
-
-        Entity(const Entity&) = default;
-        Entity& operator=(const Entity&) = default;
-        Entity(Entity&&) noexcept = default;
-        Entity& operator=(Entity&&) noexcept = default;
-        ~Entity() = default;
 };
 
 #endif
