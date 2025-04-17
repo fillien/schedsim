@@ -25,7 +25,7 @@ class Timer : public Entity, public std::enable_shared_from_this<Timer> {
          * @param callback The function to be called when the timer expires.  This is moved into the
          * Timer object.
          */
-        Timer(const std::weak_ptr<Engine>& sim, std::function<void()> callback);
+        Timer(const std::weak_ptr<Engine>& sim, std::function<void()> callback) : Entity(sim), callback_(std::move(callback)) {};
 
         /**
          * @brief Sets the timer for a specified duration.
@@ -49,7 +49,7 @@ class Timer : public Entity, public std::enable_shared_from_this<Timer> {
          *
          * @return `true` if the timer is active; otherwise, `false`.
          */
-        auto is_active() const -> bool;
+        auto is_active() const -> bool { return active_; };
 
         /**
          * @brief Fires the timer's callback function.
@@ -64,11 +64,11 @@ class Timer : public Entity, public std::enable_shared_from_this<Timer> {
          *
          * @return The absolute time at which the timer will expire.
          */
-        auto deadline() const -> double;
+        auto deadline() const -> double { return deadline_; };
 
       private:
-        bool active_;
-        double deadline_;
+        bool active_{false};
+        double deadline_{0};
         std::function<void()> callback_;
 };
 
