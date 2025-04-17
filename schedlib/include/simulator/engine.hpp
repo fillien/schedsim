@@ -152,12 +152,6 @@ class Engine {
         std::multimap<double, protocols::traces::trace> past_list_; ///< Log of past trace events.
         bool delay_activated_{false}; ///< Flag indicating if delay is activated.
         std::multimap<double, events::Event> future_list_; ///< List of future events.
-
-        ~Engine();
-        Engine(const Engine&) = delete;
-        Engine& operator=(const Engine&) = delete;
-        Engine(Engine&&) noexcept = default;
-        Engine& operator=(Engine&&) noexcept = default;
 };
 
 #endif // ENGINE_HPP
