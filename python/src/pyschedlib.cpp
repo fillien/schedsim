@@ -100,4 +100,28 @@ PYBIND11_MODULE(pyschedlib, m)
                 ValueError: If output_path does not exist or is not a directory, or if other
                     parameters are invalid (see uunifast_discard_weibull).
         )pbdoc");
+
+        m.def(
+            "from_json_setting",
+            [](const std::string& json_str) -> protocols::scenario::Setting {
+                    rapidjson::Document doc;
+                    if (doc.Parse(json_str.c_str()).HasParseError()) {
+                            throw py::value_error("Invalid JSON string");
+                    }
+                    if (!doc.IsObject()) { throw py::value_error("JSON must be an object"); }
+                    return protocols::scenario::from_json_setting(doc);
+            },
+            py::arg("json_str"),
+            R"pbdoc(
+                Creates a Setting object from a JSON string.
+
+                Args:
+                    json_str (str): A JSON string containing the serialized Setting data.
+
+                Returns:
+                    Setting: A Setting object created from the JSON data.
+
+                Raises:
+                    ValueError: If the JSON string is invalid or does not represent a valid object.
+                )pbdoc");
 }
