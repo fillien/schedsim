@@ -144,8 +144,6 @@ class Cluster : public Entity, public std::enable_shared_from_this<Cluster> {
         std::shared_ptr<Timer> dvfs_timer_;
         double dvfs_target_{0};
         std::weak_ptr<scheds::Scheduler> attached_scheduler_;
-
-        // Destructor, copy/move constructors and assignment operators are implicitly defined.
 };
 
 /**
@@ -193,8 +191,6 @@ class Platform : public Entity {
         std::vector<std::shared_ptr<Cluster>> clusters_;
         bool freescaling_;
         std::size_t cpt_id_{1};
-
-        // Destructor, copy/move constructors and assignment operators are implicitly defined.
 };
 
 #endif
