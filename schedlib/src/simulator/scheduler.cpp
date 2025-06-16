@@ -50,10 +50,10 @@ auto Scheduler::is_this_my_event(const events::Event& evt) -> bool
         using namespace events;
 
         // Returns true if the server from the event is in the scheduler's server list.
-        const auto matches_server = [this](const auto& serv) -> bool {
+        const auto matches_server = [this](const std::shared_ptr<Server>& serv) -> bool {
                 return std::ranges::any_of(
                     servers_, [&serv](const std::shared_ptr<Server>& s) -> bool {
-                            return s->id() == serv->id();
+                            return s == serv;
                     });
         };
 
@@ -75,7 +75,15 @@ auto Scheduler::update_running_servers() -> void
 {
         // Update timing for servers that are running on any processor.
         for (const auto& proc : chip()->processors()) {
-                if (proc->has_task()) { update_server_times(proc->task()->server()); }
+                if (proc->has_task()) {
+                        // std::print(
+                        //     "sched={0}, serv={1}, proc={2}\n",
+                        //     cluster()->id(),
+                        //     proc->task()->id(),
+                        //     proc->id());
+                        assert(proc->task()->has_server());
+                        update_server_times(proc->task()->server());
+                }
         }
 }
 
@@ -145,18 +153,21 @@ auto Scheduler::detach_server_if_needed(const std::shared_ptr<Task>& inactive_ta
                             cluster()->perf();
                         Engine::round_zero(total_utilization_);
                 }
-                else {
-                        std::erase(servers_, inactive_task->server());
-                        inactive_task->clear_server();
-                        total_utilization_ -=
-                            (inactive_task->utilization() * cluster()->scale_speed()) /
-                            cluster()->perf();
-                }
+                // else {
+                //         std::erase(servers_, inactive_task->server());
+                //         inactive_task->clear_server();
+                //         total_utilization_ -=
+                //             (inactive_task->utilization() * cluster()->scale_speed()) /
+                //             cluster()->perf();
+                //         Engine::round_zero(total_utilization_);
+                // }
         }
         else {
+                // std::print("erase serv={0}", inactive_task->server()->id());
                 std::erase(servers_, inactive_task->server());
                 total_utilization_ -=
                     (inactive_task->utilization() * cluster()->scale_speed()) / cluster()->perf();
+                Engine::round_zero(total_utilization_);
         }
 }
 
@@ -196,8 +207,17 @@ auto Scheduler::on_serv_inactive(const std::shared_ptr<Server>& serv) -> void
         // If the server cannot be marked inactive, do nothing.
         if (serv->cant_be_inactive()) { return; }
 
+        // std::print("on_serv_inactive serv={0} to inactive\n", serv->id());
         serv->change_state(Server::State::Inactive);
-        detach_server_if_needed(serv->task());
+        if (serv->been_migrated) {
+                std::erase(servers_, serv);
+                total_utilization_ -=
+                    (serv->utilization() * cluster()->scale_speed()) / cluster()->perf();
+                Engine::round_zero(total_utilization_);
+        }
+        else {
+                detach_server_if_needed(serv->task());
+        }
         on_active_utilization_updated();
 
         // Update timing for all running servers.

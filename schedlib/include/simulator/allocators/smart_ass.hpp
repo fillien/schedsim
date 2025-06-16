@@ -24,7 +24,7 @@ class SmartAss : public Allocator {
          * std::nullopt if no suitable scheduler is found.
          */
         auto where_to_put_the_task(const std::shared_ptr<Task>& new_task)
-            -> std::optional<std::shared_ptr<scheds::Scheduler>>;
+            -> std::optional<std::shared_ptr<scheds::Scheduler>> override;
 
       public:
         /**

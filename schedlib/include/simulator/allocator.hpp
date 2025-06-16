@@ -65,8 +65,8 @@ class Allocator : public Entity {
          * @return An optional shared pointer to the scheduler where the task should be placed, or
          * std::nullopt if no suitable scheduler is found.
          */
-        auto where_to_put_the_task(const std::shared_ptr<Task>& new_task)
-            -> std::optional<std::shared_ptr<scheds::Scheduler>>;
+        virtual auto where_to_put_the_task(const std::shared_ptr<Task>& new_task)
+            -> std::optional<std::shared_ptr<scheds::Scheduler>> = 0;
 
         /**
          * @brief Returns the list of schedulers managed by this allocator.

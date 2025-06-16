@@ -22,9 +22,11 @@ import shutil
 import matplotlib.pyplot as plt
 import polars as pl
 import subprocess
+from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
 import numpy as np
+import json as js
 
 pl.Config.set_tbl_rows(-1)
 pl.Config.set_tbl_cols(-1)
@@ -38,12 +40,18 @@ DIR = "alloc_tasksets"
 UTILIZATION = 6.5
 LITTLE_PERF_SCORE = 0.33334
 
-targets = [round(x*0.1, 1) for x in range(1, int(LITTLE_PERF_SCORE*10)+1)];
-targets = [0.05, 0.1, 0.15, 0.2]
+#targets = [round(x*0.1, 1) for x in range(1, int(LITTLE_PERF_SCORE*10)+1)];
+targets = [0.05, 0.1, 0.15, 0.2, 0.25, 0.3, LITTLE_PERF_SCORE]
 alloc = "smart_ass"
 sched = "grub"
-
 print(targets)
+
+# %%
+plat = {}
+with open(PLATFORM, 'r') as f:
+    plat = js.loads("".join(f.readlines()))
+
+plat
 
 # %% [markdown]
 # # Generate the tasksets
@@ -54,10 +62,10 @@ if os.path.isdir(DIR):
 
 os.mkdir(DIR)
 
-util_steps = reversed(range(1, int(UTILIZATION*10)+1, 2))
+util_steps = list(reversed(range(1, int(UTILIZATION*10)+1, 2)))
 NB_JOBS = 100
-NB_TASK = 200
-UMAX    = 0.1 #LITTLE_PERF_SCORE - 0.13334
+NB_TASK = 50
+UMAX    = 0.8 #LITTLE_PERF_SCORE - 0.13334
 
 for i in util_steps:
     data_path = f"{DIR}/{str(i)}"
@@ -83,7 +91,7 @@ plt.figure(figsize=(8, 6))
 plt.hist(values, bins=bins, edgecolor='black', alpha=0.7)
 plt.xlabel('Value')
 plt.ylabel('Frequency')
-plt.title('Distribution of Float Values')
+plt.title('Distribution of task\'s utilization at total utilization 6.5')
 plt.grid(True, alpha=0.3)
 plt.show()
 
@@ -100,7 +108,7 @@ plt.figure(figsize=(8, 6))
 plt.hist(values, bins=bins, edgecolor='black', alpha=0.7)
 plt.xlabel('Value')
 plt.ylabel('Frequency')
-plt.title('Distribution of Float Values')
+plt.title('Distribution of task\'s utilization at total utilization 2.1')
 plt.grid(True, alpha=0.3)
 plt.show()
 
@@ -112,6 +120,8 @@ for target in targets:
     print(f"-> logs_{alloc}_{sched}_{target}")
     sim.simul(DIR, alloc, sched, PLATFORM, target, f"{DIR}_logs_{alloc}_{sched}_{target}")
 
+print(f"-> logs_little_first_{sched}")
+sim.simul(DIR, "little_first", sched, PLATFORM, 0.2, f"{DIR}_logs_little_first_{sched}")
 print("== finished ==")
 
 # %% [markdown]
@@ -156,18 +166,30 @@ for target in targets:
     stats_df = []
 
     def compute_utilization_step(i):
-        return compute_stats(f"{DIR}_logs_{alloc}_{sched}_{target}/{i}").with_columns(utilizations=i / 10)
+        return compute_stats(f"{DIR}_logs_{alloc}_{sched}_{target}/{i}").with_columns(utilizations=i/10)
 
     with ThreadPoolExecutor() as executor:
         stats_df = list(executor.map(compute_utilization_step, util_steps))
 
     stats[target] = pl.concat(stats_df).select(["utilizations", "id", pl.exclude(["utilizations", "id"])]).sort(["utilizations", "id"])
 
+print(f"-> little_first")
+stats["little_first"] = {}
+stats_df = []
+
+def compute_utilization_step(i):
+    return compute_stats(f"{DIR}_logs_little_first_{sched}/{i}").with_columns(utilizations=i/10)
+
+with ThreadPoolExecutor() as executor:
+    stats_df = list(executor.map(compute_utilization_step, util_steps))
+
+stats["little_first"] = pl.concat(stats_df).select(["utilizations", "id", pl.exclude(["utilizations", "id"])]).sort(["utilizations", "id"])
+
 print("== finished ==")
 
 # %%
 results = {}
-for target in targets:
+for target in targets + ["little_first"]:
     results[target] = (stats[target].with_columns(
         (1 - (pl.col("rejected") / pl.col("arrivals"))).alias("accepted-rates"),
         (1 - (pl.col("deadlines-counts") / (pl.col("arrivals") - pl.col("rejected")))).alias("meet-rates"),
@@ -189,141 +211,143 @@ for target in targets:
     ))
 
 energy = pl.concat([
-  stats[t].select(["utilizations", "id", "c1-energy", "c2-energy"]).rename({"c1-energy": f"c1-energy-{str(t)}", "c2-energy": f"c2-energy-{str(t)}"}) for t in targets
+  stats[t].select(["utilizations", "id", "c1-energy", "c2-energy"]).rename({"c1-energy": f"c1-energy-{str(t)}", "c2-energy": f"c2-energy-{str(t)}"}) for t in targets+["little_first"]
 ], how="align")
 
 energy_diff = energy.with_columns(
-    [(pl.col(f"{clu}-energy-{t}") - pl.col(f"{clu}-energy-0.1")).alias(f"{clu}-energy-{t}-diff") for t in targets for clu in ["c1", "c2"]],
+    [(pl.col(f"{clu}-energy-{t}") - pl.col(f"{clu}-energy-little_first")).alias(f"{clu}-energy-{t}-diff") for t in targets+["little_first"] for clu in ["c1", "c2"]],
 ).with_columns(
-    [(pl.col(f"c1-energy-{target}-diff") + pl.col(f"c2-energy-{target}-diff")).alias(f"energy-{target}-diff") for target in targets]
+    [(pl.col(f"c1-energy-{target}-diff") + pl.col(f"c2-energy-{target}-diff")).alias(f"energy-{target}-diff") for target in targets+["little_first"]]
 ).group_by("utilizations").agg(
     pl.exclude(["utilizations", "id"]).mean()
 )
 
 # %%
-energy_diff
-
-# %%
-energy_diff.select(pl.col(r"^c1-energy.*diff$")).max().with_columns(pl.max_horizontal("*").alias("max"))["max"]
-
-# %%
-# Create a figure with 4 rows and 3 columns
 fig, axes = plt.subplots(4, 3, figsize=(18, 24))
-axes = axes.flatten()  # Flatten the 2D array of axes for easier indexing
+axes = axes.flatten()
 
-# First row: Accepted Rates, Deadline Meet Rates, Migration Rates
-for t in targets:
-    axes[0].plot(results[t]["utilizations"], results[t]["accepted-rates"] * 100, label=f"u target = {t}", marker='s')
-axes[0].set_ylim(0, 105)
-axes[0].set_xlabel("Utilizations")
-axes[0].set_ylabel("Accepted Rates (%)")
-axes[0].set_title("Accepted Rates vs Utilizations")
-axes[0].legend()
-axes[0].grid(True)
+axe=0
+for t in targets+["little_first"]:
+    axes[axe].plot(results[t]["utilizations"], results[t]["accepted-rates"] * 100, label=f"u target = {t}", marker='s')
+axes[axe].set_ylim(0, 105)
+axes[axe].set_xlabel("Utilizations")
+axes[axe].set_ylabel("Accepted Rates (%)")
+axes[axe].set_title("Accepted Rates vs Utilizations")
+axes[axe].legend()
+axes[axe].grid(True)
 
-for t in targets:
-    axes[1].plot(results[t]["utilizations"], results[t]["meet-rates"] * 100, label=f"u target = {t}", marker='s')
-axes[1].set_ylim(0, 105)
-axes[1].set_xlabel("Utilizations")
-axes[1].set_ylabel("Deadline meet Rates (%)")
-axes[1].set_title("Deadline meet Rates vs Utilizations")
-axes[1].legend()
-axes[1].grid(True)
+axe=1
+for t in targets+["little_first"]:
+    axes[axe].plot(results[t]["utilizations"], results[t]["meet-rates"] * 100, label=f"u target = {t}", marker='s')
+axes[axe].set_ylim(0, 105)
+axes[axe].set_xlabel("Utilizations")
+axes[axe].set_ylabel("Deadline meet Rates (%)")
+axes[axe].set_title("Deadline meet Rates vs Utilizations")
+axes[axe].legend()
+axes[axe].grid(True)
 
-for t in targets:
-    axes[2].plot(results[t]["utilizations"], results[t]["migration-rates"] * 100, label=f"u target = {t}", marker='s')
-axes[2].set_xlabel("Utilizations")
-axes[2].set_ylabel("Migration Rates (%)")
-axes[2].set_title("Migration Rates vs Utilizations")
-axes[2].legend()
-axes[2].grid(True)
+axe=2
+for t in targets+["little_first"]:
+    axes[axe].plot(results[t]["utilizations"], results[t]["migration-rates"] * 100, label=f"u target = {t}", marker='s')
+axes[axe].set_ylim(0, 105)
+axes[axe].set_xlabel("Utilizations")
+axes[axe].set_ylabel("Migration Rates (%)")
+axes[axe].set_title("Migration Rates vs Utilizations")
+axes[axe].legend()
+axes[axe].grid(True)
 
+axe=3
+for t in targets+["little_first"]:
+    axes[axe].plot(results[t]["utilizations"], results[t]["c1-util"], label=f"u target = {t}", marker='s')
+axes[axe].set_ylim(0, max([results[x]["c1-util"].max() for x in targets]) * 1.05)
+axes[axe].set_xlabel("Utilizations")
+axes[axe].set_ylabel("Average Total Utilization")
+axes[axe].set_title("Big Cluster Utilization")
+axes[axe].legend()
+axes[axe].grid(True)
 
-max_y = max(energy_diff.select(pl.col(r"^c1-energy.*diff$")).max().with_columns(pl.max_horizontal("*").alias("max"))["max"]) * 1.05
-min_y = max(energy_diff.select(pl.col(r"^c1-energy.*diff$")).min().with_columns(pl.min_horizontal("*").alias("min"))["min"]) * 1.10
+axe=4
+for t in targets+["little_first"]:
+    axes[axe].plot(results[t]["utilizations"], results[t]["c2-util"], label=f"u target = {t}", marker='s')
+axes[axe].set_ylim(0, max([results[x]["c1-util"].max() for x in targets]) * 1.05)
+axes[axe].set_xlabel("Utilizations")
+axes[axe].set_ylabel("Average Total Utilization")
+axes[axe].set_title("LITTLE Cluster Utilization")
+axes[axe].legend()
+axes[axe].grid(True)
 
-for t in targets:
-    axes[3].plot(energy_diff["utilizations"], energy_diff[f"c1-energy-{t}-diff"], label=f"u target = {t}", marker='s')
-axes[3].set_xlabel("Utilizations")
-axes[3].set_ylabel("Difference Energy Consumption")
-axes[3].set_title("Energy Diff - Big Cluster")
-axes[3].set_ylim(min_y, max_y)
-axes[3].legend()
-axes[3].grid(True)
+axe=5
+for t in targets+["little_first"]:
+    axes[axe].plot(results[t]["utilizations"], results[t]["total-util"], label=f"u target = {t}", marker='s')
+axes[axe].set_ylim(0, max([results[x]["total-util"].max() for x in targets]) * 1.05)
+axes[axe].set_xlabel("Utilizations")
+axes[axe].set_ylabel("Average Total Utilization")
+axes[axe].set_title("Total Utilization")
+axes[axe].legend()
+axes[axe].grid(True)
 
-max_y = max(energy_diff.select(pl.col(r"^c2-energy.*diff$")).max().with_columns(pl.max_horizontal("*").alias("max"))["max"]) * 1.05
-min_y = max(energy_diff.select(pl.col(r"^c2-energy.*diff$")).min().with_columns(pl.min_horizontal("*").alias("min"))["min"]) * 1.10
-for t in targets:
-    axes[4].plot(energy_diff["utilizations"], energy_diff[f"c2-energy-{t}-diff"], label=f"u target = {t}", marker='s')
-axes[4].set_xlabel("Utilizations")
-axes[4].set_ylabel("Difference Energy Consumption")
-axes[4].set_title("Energy Diff - LITTLE Cluster")
-axes[4].set_ylim(min_y, max_y)
-axes[4].legend()
-axes[4].grid(True)
+axe=6
+for t in targets+["little_first"]:
+    axes[axe].plot(results[t]["utilizations"], results[t]["c1-power"], label=f"u target = {t}", marker='s')
+axes[axe].set_ylim(0, max([results[x]["c1-power"].max() for x in targets]) * 1.05)
+axes[axe].set_xlabel("Utilizations")
+axes[axe].set_ylabel("Average Power Consumption")
+axes[axe].set_title("Power Consumption - Big Cluster")
+axes[axe].legend()
+axes[axe].grid(True)
 
-for t in targets:
-    axes[5].plot(energy_diff["utilizations"], energy_diff[f"energy-{t}-diff"], label=f"u target = {t}", marker='s')
-axes[5].set_xlabel("Utilizations")
-axes[5].set_ylabel("Difference Energy Consumption")
-axes[5].set_title("Total Energy Difference")
-axes[5].set_ylim(min_y, max_y)
-axes[5].legend()
-axes[5].grid(True)
+axe=7
+for t in targets+["little_first"]:
+    axes[axe].plot(results[t]["utilizations"], results[t]["c2-power"], label=f"u target = {t}", marker='s')
+axes[axe].set_ylim(0, max([results[x]["c1-power"].max() for x in targets]) * 1.05)
+axes[axe].set_xlabel("Utilizations")
+axes[axe].set_ylabel("Average Power Consumption")
+axes[axe].set_title("Power Consumption - LITTLE Cluster")
+axes[axe].legend()
+axes[axe].grid(True)
 
-for t in targets:
-    axes[6].plot(results[t]["utilizations"], results[t]["c1-util"], label=f"u target = {t}", marker='s')
-axes[6].set_ylim(0, max([results[x]["c1-util"].max() for x in targets]) * 1.05)
-axes[6].set_xlabel("Utilizations")
-axes[6].set_ylabel("Average Total Utilization")
-axes[6].set_title("Big Cluster Utilization")
-axes[6].legend()
-axes[6].grid(True)
+axe=8
+for t in targets+["little_first"]:
+    axes[axe].plot(results[t]["utilizations"], results[t]["total-power"], label=f"u target = {t}", marker='s')
+axes[axe].set_ylim(0, max([results[x]["total-power"].max() for x in targets]) * 1.05)
+axes[axe].set_xlabel("Utilizations")
+axes[axe].set_ylabel("Average Power Consumption")
+axes[axe].set_title("Total Power Consumption")
+axes[axe].legend()
+axes[axe].grid(True)
 
-for t in targets:
-    axes[7].plot(results[t]["utilizations"], results[t]["c2-util"], label=f"u target = {t}", marker='s')
-axes[7].set_ylim(0, max([results[x]["c1-util"].max() for x in targets]) * 1.05)
-axes[7].set_xlabel("Utilizations")
-axes[7].set_ylabel("Average Total Utilization")
-axes[7].set_title("LITTLE Cluster Utilization")
-axes[7].legend()
-axes[7].grid(True)
+max_y = max(energy_diff.select(pl.col(r"^energy.*diff$")).max().with_columns(pl.max_horizontal("*").alias("max"))["max"]) * 1.05
+min_y = max(energy_diff.select(pl.col(r"^energy.*diff$")).min().with_columns(pl.min_horizontal("*").alias("min"))["min"]) * 1.10
 
-for t in targets:
-    axes[8].plot(results[t]["utilizations"], results[t]["total-util"], label=f"u target = {t}", marker='s')
-axes[8].set_ylim(0, max([results[x]["total-util"].max() for x in targets]) * 1.05)
-axes[8].set_xlabel("Utilizations")
-axes[8].set_ylabel("Average Total Utilization")
-axes[8].set_title("Total Utilization")
-axes[8].legend()
-axes[8].grid(True)
+axe=9
+for t in targets+["little_first"]:
+    axes[axe].plot(energy_diff["utilizations"], energy_diff[f"c1-energy-{t}-diff"], label=f"u target = {t}", marker='s')
+axes[axe].set_xlabel("Utilizations")
+axes[axe].set_ylabel("Difference Energy Consumption")
+axes[axe].set_title("Energy Diff - Big Cluster")
+axes[axe].set_ylim(min_y, max_y)
+axes[axe].legend()
+axes[axe].grid(True)
 
-for t in targets:
-    axes[9].plot(results[t]["utilizations"], results[t]["c1-power"], label=f"u target = {t}", marker='s')
-axes[9].set_ylim(0, max([results[x]["c1-power"].max() for x in targets]) * 1.05)
-axes[9].set_xlabel("Utilizations")
-axes[9].set_ylabel("Average Power Consumption")
-axes[9].set_title("Power Consumption - Big Cluster")
-axes[9].legend()
-axes[9].grid(True)
+axe=10
+for t in targets+["little_first"]:
+    axes[axe].plot(energy_diff["utilizations"], energy_diff[f"c2-energy-{t}-diff"], label=f"u target = {t}", marker='s')
+axes[axe].set_xlabel("Utilizations")
+axes[axe].set_ylabel("Difference Energy Consumption")
+axes[axe].set_title("Energy Diff - LITTLE Cluster")
+axes[axe].set_ylim(min_y, max_y)
+axes[axe].legend()
+axes[axe].grid(True)
 
-for t in targets:
-    axes[10].plot(results[t]["utilizations"], results[t]["c2-power"], label=f"u target = {t}", marker='s')
-axes[10].set_ylim(0, max([results[x]["c1-power"].max() for x in targets]) * 1.05)
-axes[10].set_xlabel("Utilizations")
-axes[10].set_ylabel("Average Power Consumption")
-axes[10].set_title("Power Consumption - LITTLE Cluster")
-axes[10].legend()
-axes[10].grid(True)
-
-for t in targets:
-    axes[11].plot(results[t]["utilizations"], results[t]["total-power"], label=f"u target = {t}", marker='s')
-axes[11].set_ylim(0, max([results[x]["total-power"].max() for x in targets]) * 1.05)
-axes[11].set_xlabel("Utilizations")
-axes[11].set_ylabel("Average Power Consumption")
-axes[11].set_title("Total Power Consumption")
-axes[11].legend()
-axes[11].grid(True)
+axe=11
+for t in targets+["little_first"]:
+    axes[axe].plot(energy_diff["utilizations"], energy_diff[f"energy-{t}-diff"], label=f"u target = {t}", marker='s')
+axes[axe].set_xlabel("Utilizations")
+axes[axe].set_ylabel("Difference Energy Consumption")
+axes[axe].set_title("Total Energy Difference")
+axes[axe].set_ylim(min_y, max_y)
+axes[axe].legend()
+axes[axe].grid(True)
 
 plt.tight_layout()
 plt.show()

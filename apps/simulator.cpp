@@ -94,7 +94,7 @@ auto select_alloc(const std::string& choice, const std::shared_ptr<Engine>& sim)
     -> std::shared_ptr<allocators::Allocator>
 {
         using namespace allocators;
-        if (choice.empty() || choice == "default") { return std::make_shared<Allocator>(sim); }
+        // if (choice.empty() || choice == "default") { return std::make_shared<Allocator>(sim); }
         if (choice == "big_first") { return std::make_shared<HighPerfFirst>(sim); }
         if (choice == "little_first") { return std::make_shared<LowPerfFirst>(sim); }
         if (choice == "smart_ass") { return std::make_shared<SmartAss>(sim); }

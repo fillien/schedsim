@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cstddef>
 #include <memory>
+#include <print>
 
 class Engine;
 class Processor;
@@ -165,6 +166,8 @@ class Server : public Entity, public std::enable_shared_from_this<Server> {
         {
                 return attached_sched_.lock();
         }
+
+        bool been_migrated{false};
 
       private:
         std::weak_ptr<Task> attached_task_; ///< The task to ensure time isolation.

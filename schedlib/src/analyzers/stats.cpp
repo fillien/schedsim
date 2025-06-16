@@ -137,17 +137,20 @@ auto count_cluster_migration(const logs_type& input) -> std::size_t
         namespace traces = protocols::traces;
         // map : tid, {nb_transition, last_cid}
         // std::unordered_map<std::size_t, std::pair<std::size_t, std::size_t>> cpts;
-        std::unordered_map<std::size_t, std::size_t> last_cids;
+        // std::unordered_map<std::size_t, std::size_t> last_cids;
 
         std::size_t cpt{0};
 
         for (const auto& [_, event] : input) {
-                if (const auto* evt = std::get_if<traces::TaskPlaced>(&event)) {
-                        auto cid = last_cids.find(evt->task_id);
-                        if (cid != last_cids.end() && cid->second != evt->cluster_id) {
-                                last_cids.insert_or_assign(evt->task_id, evt->cluster_id);
-                                cpt++;
-                        }
+                // if (const auto* evt = std::get_if<traces::TaskPlaced>(&event)) {
+                //         auto cid = last_cids.find(evt->task_id);
+                //         if (cid != last_cids.end() && cid->second != evt->cluster_id) {
+                //                 last_cids.insert_or_assign(evt->task_id, evt->cluster_id);
+                //                 cpt++;
+                //         }
+                // }
+                if (const auto* evt = std::get_if<traces::MigrationCluster>(&event)) {
+                        cpt++;
                 }
         }
 

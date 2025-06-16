@@ -74,8 +74,14 @@ void close_execution_zone(
         if (auto search = start_times.find(tid); search != std::end(start_times)) {
                 const auto start = search->second.first;
                 const auto cpu = search->second.second;
-                chart.commands.emplace_back(
-                    Execution{tid, cpu, start, stop, freq, freq_max, freq_min});
+                chart.commands.emplace_back(Execution{
+                    .index = tid,
+                    .cpu = cpu,
+                    .start = start,
+                    .stop = stop,
+                    .frequency = freq,
+                    .frequency_max = freq_max,
+                    .frequency_min = freq_min});
                 start_times.erase(tid);
         }
 }
@@ -92,24 +98,25 @@ void close_extra_budget_zone(
     std::map<std::size_t, double>& extra_budget_times, double time, std::size_t tid, Gantt& chart)
 {
         if (auto search = extra_budget_times.find(tid); search != std::end(extra_budget_times)) {
-                chart.commands.emplace_back(ActiveNonCont{tid, search->second, time});
+                chart.commands.emplace_back(
+                    ActiveNonCont{.index = tid, .start = search->second, .stop = time});
                 extra_budget_times.erase(tid);
         }
 }
 
 void new_arrival(Gantt& chart, double time, std::size_t tid)
 {
-        chart.commands.emplace_back(Arrival{tid, time});
+        chart.commands.emplace_back(Arrival{.index = tid, .timestamp = time});
 }
 
 void new_deadline(Gantt& chart, double time, std::size_t tid)
 {
-        chart.commands.emplace_back(Deadline{tid, time});
+        chart.commands.emplace_back(Deadline{.index = tid, .timestamp = time});
 }
 
 void new_finished(Gantt& chart, double time, std::size_t tid)
 {
-        chart.commands.emplace_back(Finished{tid, time});
+        chart.commands.emplace_back(Finished{.index = tid, .timestamp = time});
 }
 
 auto get_proc_id(
@@ -241,12 +248,17 @@ auto generate_gantt(
 void close_proc_mode_zone(
     std::size_t mode, double start, double stop, std::size_t proc_id, Gantt& chart)
 {
-        if (mode == 0) { chart.commands.emplace_back(ProcModeIdle{proc_id, start, stop}); }
+        if (mode == 0) {
+                chart.commands.emplace_back(
+                    ProcModeIdle{.index = proc_id, .start = start, .stop = stop});
+        }
         else if (mode == 1) {
-                chart.commands.emplace_back(ProcModeRunning{proc_id, start, stop});
+                chart.commands.emplace_back(
+                    ProcModeRunning{.index = proc_id, .start = start, .stop = stop});
         }
         else if (mode == 2) {
-                chart.commands.emplace_back(ProcModeSleep{proc_id, start, stop});
+                chart.commands.emplace_back(
+                    ProcModeSleep{.index = proc_id, .start = start, .stop = stop});
         }
 }
 

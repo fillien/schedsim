@@ -3,31 +3,31 @@
   "tasks": [
     {
       "id": 1,
-      "period": 5,
+      "period": 5.0,
       "utilization": 0.5,
       "jobs": [
         {
-          "arrival": 0,
-          "duration": 5
+          "arrival": 0.0,
+          "duration": 5.0
         },
         {
-          "arrival": 10,
-          "duration": 5
+          "arrival": 10.0,
+          "duration": 5.0
         }
       ]
     },
     {
       "id": 2,
-      "period": 5,
+      "period": 5.0,
       "utilization": 0.5,
       "jobs": [
         {
-          "arrival": 0,
-          "duration": 5
+          "arrival": 0.0,
+          "duration": 5.0
         },
         {
-          "arrival": 10,
-          "duration": 5
+          "arrival": 10.0,
+          "duration": 5.0
         }
       ]
     }

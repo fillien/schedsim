@@ -25,7 +25,8 @@ class Timer : public Entity, public std::enable_shared_from_this<Timer> {
          * @param callback The function to be called when the timer expires.  This is moved into the
          * Timer object.
          */
-        Timer(const std::weak_ptr<Engine>& sim, std::function<void()> callback) : Entity(sim), callback_(std::move(callback)) {};
+        Timer(const std::weak_ptr<Engine>& sim, std::function<void()> callback)
+            : Entity(sim), callback_(std::move(callback)) {};
 
         /**
          * @brief Sets the timer for a specified duration.
