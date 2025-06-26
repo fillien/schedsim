@@ -91,6 +91,12 @@ class Scheduler : public Entity, public std::enable_shared_from_this<Scheduler> 
 
         auto servers() const -> const std::vector<std::shared_ptr<Server>>& { return servers_; }
 
+        /**
+         * @brief Retrieves the total system utilization.
+         * @return Total utilization.
+         */
+        auto total_utilization() const -> double;
+
       protected:
         /**
          * @brief Retrieves the chip (cluster) associated with the scheduler.
@@ -112,12 +118,6 @@ class Scheduler : public Entity, public std::enable_shared_from_this<Scheduler> 
          * @return True if the first server has an earlier deadline, false otherwise.
          */
         static auto deadline_order(const Server& first, const Server& second) -> bool;
-
-        /**
-         * @brief Retrieves the total system utilization.
-         * @return Total utilization.
-         */
-        auto total_utilization() const -> double;
 
         /**
          * @brief Initiates rescheduling for a processor and server pair.
