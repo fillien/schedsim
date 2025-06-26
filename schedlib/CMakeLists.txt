@@ -30,6 +30,7 @@ target_sources(schedlib PRIVATE
     src/simulator/allocators/high_perf_first.cpp
     src/simulator/allocators/low_perf_first.cpp
     src/simulator/allocators/smart_ass.cpp
+    src/simulator/allocators/ff_lb.cpp
     src/simulator/engine.cpp
     src/simulator/platform.cpp
     src/simulator/processor.cpp

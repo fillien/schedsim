@@ -3,6 +3,7 @@
 #include <protocols/scenario.hpp>
 #include <protocols/traces.hpp>
 #include <simulator/allocator.hpp>
+#include <simulator/allocators/ff_lb.hpp>
 #include <simulator/allocators/high_perf_first.hpp>
 #include <simulator/allocators/low_perf_first.hpp>
 #include <simulator/allocators/smart_ass.hpp>
@@ -98,6 +99,7 @@ auto select_alloc(const std::string& choice, const std::shared_ptr<Engine>& sim)
         if (choice == "big_first") { return std::make_shared<HighPerfFirst>(sim); }
         if (choice == "little_first") { return std::make_shared<LowPerfFirst>(sim); }
         if (choice == "smart_ass") { return std::make_shared<SmartAss>(sim); }
+        if (choice == "ff_lb") { return std::make_shared<FirstFitLoadBalancer>(sim); }
         throw std::invalid_argument("Undefined allocation policy");
 }
 
