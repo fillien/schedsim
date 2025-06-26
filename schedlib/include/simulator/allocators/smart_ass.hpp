@@ -35,6 +35,9 @@ class SmartAss : public Allocator {
          * @param sim A weak pointer to the simulation engine.
          */
         explicit SmartAss(const std::weak_ptr<Engine>& sim) : Allocator(sim) {};
+
+      private:
+        double last_little_cap{0};
 };
 }; // namespace allocators
 
