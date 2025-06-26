@@ -52,9 +52,8 @@ auto Scheduler::is_this_my_event(const events::Event& evt) -> bool
         // Returns true if the server from the event is in the scheduler's server list.
         const auto matches_server = [this](const std::shared_ptr<Server>& serv) -> bool {
                 return std::ranges::any_of(
-                    servers_, [&serv](const std::shared_ptr<Server>& s) -> bool {
-                            return s == serv;
-                    });
+                    servers_,
+                    [&serv](const std::shared_ptr<Server>& s) -> bool { return s == serv; });
         };
 
         if (std::holds_alternative<JobFinished>(evt)) {

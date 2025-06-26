@@ -149,9 +149,7 @@ auto count_cluster_migration(const logs_type& input) -> std::size_t
                 //                 cpt++;
                 //         }
                 // }
-                if (const auto* evt = std::get_if<traces::MigrationCluster>(&event)) {
-                        cpt++;
-                }
+                if (const auto* evt = std::get_if<traces::MigrationCluster>(&event)) { cpt++; }
         }
 
         return cpt;
