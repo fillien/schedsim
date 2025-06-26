@@ -85,6 +85,8 @@ class Cluster : public Entity, public std::enable_shared_from_this<Cluster> {
 
         [[nodiscard]] auto u_target() const -> double { return u_target_; }
 
+        void u_target(const double& target) { u_target_ = target; }
+
         /**
          * @brief Rounds a given frequency up to the nearest available mode.
          * @param freq The frequency to round up.
