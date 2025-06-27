@@ -18,6 +18,7 @@
 #include <cassert>
 #include <cstddef>
 #include <memory>
+#include <print>
 #include <set>
 #include <variant>
 #include <vector>
@@ -55,13 +56,39 @@ auto Allocator::migrate_task(
         ZoneScoped;
 #endif
         const auto serv = evt.task_of_job->server();
-        if (serv->state() == Server::State::Ready || serv->state() == Server::State::Running) {
-                serv->change_state(Server::State::NonCont);
-        }
+        assert(serv->state() != Server::State::Ready && serv->state() != Server::State::Running);
         serv->been_migrated = true;
         evt.task_of_job->clear_server();
 
         receiver->on_job_arrival(evt.task_of_job, evt.job_duration);
+}
+
+auto Allocator::need_to_place_task(const auto& new_job) -> void
+{
+        using namespace protocols::traces;
+
+        const auto& receiver = where_to_put_the_task(new_job.task_of_job);
+
+        if (!receiver.has_value()) {
+                sim()->add_trace(TaskRejected{new_job.task_of_job->id()});
+                return;
+        }
+
+        const auto& scheduler = receiver.value();
+        const auto& task = new_job.task_of_job;
+
+        sim()->add_trace(
+            TaskPlaced{.task_id = task->id(), .cluster_id = scheduler->cluster()->id()});
+
+        if (!task->has_server() || task->server()->scheduler() == scheduler) {
+                scheduler->on_job_arrival(task, new_job.job_duration);
+        }
+        else {
+                // The task is on another scheduler, so it needs to be migrated.
+                sim()->add_trace(MigrationCluster{
+                    .task_id = task->id(), .cluster_id = scheduler->cluster()->id()});
+                migrate_task(new_job, scheduler);
+        }
 }
 
 auto Allocator::handle(std::vector<events::Event> evts) -> void
@@ -93,7 +120,6 @@ auto Allocator::handle(std::vector<events::Event> evts) -> void
                 }
         }
 
-        // Reset all the calls to resched
         rescheds_.clear();
 
         for (const auto& evt : evts) {
@@ -109,43 +135,19 @@ auto Allocator::handle(std::vector<events::Event> evts) -> void
                 if (handled) { continue; }
 
                 const auto new_job = *(std::get_if<JobArrival>(&evt));
+                const auto& task = new_job.task_of_job;
 
                 sim()->add_trace(traces::JobArrival{
-                    .task_id = new_job.task_of_job->id(),
+                    .task_id = task->id(),
                     .duration = new_job.job_duration,
-                    .deadline = sim()->time() + new_job.task_of_job->period()});
+                    .deadline = sim()->time() + task->period()});
 
-                const auto& receiver = where_to_put_the_task(new_job.task_of_job);
-
-                if (receiver) {
-                        // A place have been found
-                        if (!new_job.task_of_job->has_server()) {
-                                sim()->add_trace(traces::TaskPlaced{
-                                    .task_id = new_job.task_of_job->id(),
-                                    .cluster_id = receiver.value()->cluster()->id()});
-                                receiver.value()->on_job_arrival(
-                                    new_job.task_of_job, new_job.job_duration);
-                        }
-                        else if (
-                            receiver.value() != new_job.task_of_job->server()->scheduler() &&
-                            new_job.task_of_job->server()->state() != Server::State::Running &&
-                            new_job.task_of_job->server()->state() != Server::State::Ready) {
-                                sim()->add_trace(traces::TaskPlaced{
-                                    .task_id = new_job.task_of_job->id(),
-                                    .cluster_id = receiver.value()->cluster()->id()});
-                                sim()->add_trace(traces::MigrationCluster{
-                                    .task_id = new_job.task_of_job->id(),
-                                    .cluster_id = receiver.value()->cluster()->id()});
-                                migrate_task(new_job, receiver.value());
-                        }
-                        else {
-                                new_job.task_of_job->server()->scheduler()->on_job_arrival(
-                                    new_job.task_of_job, new_job.job_duration);
-                        }
+                if (task->has_server() && (task->server()->state() == Server::State::Ready ||
+                                           task->server()->state() == Server::State::Running)) {
+                        task->server()->scheduler()->on_job_arrival(task, new_job.job_duration);
                 }
                 else {
-                        // No place for this task
-                        sim()->add_trace(traces::TaskRejected{new_job.task_of_job->id()});
+                        need_to_place_task(new_job);
                 }
         }
 

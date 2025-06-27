@@ -3,6 +3,7 @@
 #include <iterator>
 #include <map>
 #include <memory>
+#include <print>
 #include <protocols/traces.hpp>
 #include <ranges>
 #include <simulator/engine.hpp>
@@ -239,6 +240,14 @@ auto Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const doub
 #endif
 
         namespace traces = protocols::traces;
+
+        if (new_task->has_server() && new_task->server()->scheduler() != shared_from_this()) {
+                for (const auto& serv : servers_) {
+                        if (serv == new_task->server()) {
+                                std::println("A server can re-used his resevation !");
+                        }
+                }
+        }
 
         if (!new_task->has_server() ||
             (new_task->has_server() && new_task->server()->scheduler() != shared_from_this())) {

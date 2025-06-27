@@ -90,6 +90,8 @@ class Allocator : public Entity {
             const events::JobArrival& evt, const std::shared_ptr<scheds::Scheduler>& receiver)
             -> void;
 
+        auto need_to_place_task(const auto& new_job) -> void;
+
         std::vector<std::shared_ptr<scheds::Scheduler>> schedulers_;
         std::set<std::shared_ptr<scheds::Scheduler>> rescheds_;
 };
