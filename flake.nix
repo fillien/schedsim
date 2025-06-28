@@ -68,6 +68,7 @@
             polars
             pyarrow
             matplotlib
+            plotly
             jupyter
             jupyterlab
             jupyter-nbextensions-configurator

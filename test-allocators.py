@@ -19,7 +19,10 @@ import scripts.schedsim as sm
 
 import os
 import shutil
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
+import plotly.io as pio
 import polars as pl
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
@@ -27,6 +30,7 @@ from io import StringIO
 import numpy as np
 import json as js
 
+pio.renderers.default = "iframe"
 pl.Config.set_tbl_rows(-1)
 pl.Config.set_tbl_cols(-1)
 
@@ -39,8 +43,6 @@ DIR = "alloc_tasksets"
 UTILIZATION = 6.5
 LITTLE_PERF_SCORE = 0.33334
 
-#targets = [round(x*0.1, 1) for x in range(1, int(LITTLE_PERF_SCORE*10)+1)];
-#targets = [0.1, 0.2, 0.3, LITTLE_PERF_SCORE]
 configs = [
     ( "ff_lb", "grub", 0.22 ),
     ( "little_first", "grub", 0.22 ),
@@ -52,7 +54,6 @@ configs = [
     ( "smart_ass", "grub", 0.3 ),
     ( "smart_ass", "grub", 0.33334 )
 ]
-configs
 
 # %%
 plat = {}
@@ -94,13 +95,11 @@ for i in range(1, 101):
     file_values = [t.utilization for t in sc.from_json_setting(lines[0]).tasks]
     values += file_values
 
-plt.figure(figsize=(8, 6))
-plt.hist(values, bins=bins, edgecolor='black', alpha=0.7)
-plt.xlabel('Value')
-plt.ylabel('Frequency')
-plt.title('Distribution of task\'s utilization at total utilization 6.5')
-plt.grid(True, alpha=0.3)
-plt.show()
+fig = px.histogram(x=values, nbins=60,
+                   title="Distribution of task's utilization at total utilization 6.5")
+fig.update_layout(xaxis_title="Value", yaxis_title="Frequency")
+fig.update_traces(marker_line_width=1,marker_line_color="black", opacity=0.7)
+fig.show()
 
 values = []
 for i in range(1, 101):
@@ -110,13 +109,11 @@ for i in range(1, 101):
     file_values = [t.utilization for t in sc.from_json_setting(lines[0]).tasks]
     values += file_values
 
-plt.figure(figsize=(8, 6))
-plt.hist(values, bins=bins, edgecolor='black', alpha=0.7)
-plt.xlabel('Value')
-plt.ylabel('Frequency')
-plt.title('Distribution of task\'s utilization at total utilization 2.1')
-plt.grid(True, alpha=0.3)
-plt.show()
+fig = px.histogram(x=values, nbins=60,
+                   title="Distribution of task's utilization at total utilization 2.1")
+fig.update_layout(xaxis_title="Value", yaxis_title="Frequency")
+fig.update_traces(marker_line_width=1,marker_line_color="black", opacity=0.7)
+fig.show()
 
 # %% [markdown]
 # # Simulate the tasksets
@@ -215,133 +212,87 @@ energy_diff = energy.with_columns(
 )
 
 # %%
-fig, axes = plt.subplots(4, 3, figsize=(18, 24))
-axes = axes.flatten()
+plot_definitions = [
+    # Row 1
+    {'row': 1, 'col': 1, 'y_col': 'accepted-rates', 'y_scale': 100, 'y_range': [0, 105], 'title': 'Accepted Rates vs Utilizations', 'y_label': 'Accepted Rates (%)'},
+    {'row': 1, 'col': 2, 'y_col': 'meet-rates', 'y_scale': 100, 'y_range': [0, 105], 'title': 'Deadline meet Rates vs Utilizations', 'y_label': 'Deadline meet Rates (%)'},
+    {'row': 1, 'col': 3, 'y_col': 'migration-rates', 'y_scale': 100, 'y_range': [0, 105], 'title': 'Migration Rates vs Utilizations', 'y_label': 'Migration Rates (%)'},
+    # Row 2
+    {'row': 2, 'col': 1, 'y_col': 'c1-util', 'y_range_ref': 'total-util', 'title': 'Big Cluster Utilization', 'y_label': 'Average Total Utilization'},
+    {'row': 2, 'col': 2, 'y_col': 'c2-util', 'y_range_ref': 'total-util', 'title': 'LITTLE Cluster Utilization', 'y_label': 'Average Total Utilization'},
+    {'row': 2, 'col': 3, 'y_col': 'total-util', 'y_range_ref': 'total-util', 'title': 'Total Utilization', 'y_label': 'Average Total Utilization'},
+    # Row 3
+    {'row': 3, 'col': 1, 'y_col': 'c1-power', 'y_range_ref': 'c1-power', 'title': 'Power Consumption - Big Cluster', 'y_label': 'Average Power Consumption'},
+    {'row': 3, 'col': 2, 'y_col': 'c2-power', 'y_range_ref': 'c1-power', 'title': 'Power Consumption - LITTLE Cluster', 'y_label': 'Average Power Consumption'},
+    {'row': 3, 'col': 3, 'y_col': 'total-power', 'y_range_ref': 'total-power', 'title': 'Total Power Consumption', 'y_label': 'Average Power Consumption'},
+]
 
-axe=0
+energy_plot_definitions = [
+    {'row': 4, 'col': 1, 'y_col': 'c1-energy-{i}-diff', 'title': 'Energy Diff - Big Cluster', 'y_label': 'Difference Energy Consumption'},
+    {'row': 4, 'col': 2, 'y_col': 'c2-energy-{i}-diff', 'title': 'Energy Diff - LITTLE Cluster', 'y_label': 'Difference Energy Consumption'},
+    {'row': 4, 'col': 3, 'y_col': 'energy-{i}-diff', 'title': 'Total Energy Difference', 'y_label': 'Difference Energy Consumption'},
+]
+
+subplot_titles = [p['title'] for p in plot_definitions] + [p['title'] for p in energy_plot_definitions]
+
+config_labels = [f"{c[0]} {c[1]} {c[2]}" for c in configs]
+colors = px.colors.qualitative.Plotly
+color_map = {label: colors[i % len(colors)] for i, label in enumerate(config_labels)}
+
+fig = make_subplots(rows=4, cols=3, subplot_titles=subplot_titles,
+                    vertical_spacing=0.08, horizontal_spacing=0.08)
+
 for i, c in enumerate(configs):
-    axes[axe].plot(results[i]["utilizations"], results[i]["accepted-rates"] * 100, label=f"{c[0]} {c[1]} {c[2]}", marker='s')
-axes[axe].set_ylim(0, 105)
-axes[axe].set_xlabel("Utilizations")
-axes[axe].set_ylabel("Accepted Rates (%)")
-axes[axe].set_title("Accepted Rates vs Utilizations")
-axes[axe].legend()
-axes[axe].grid(True)
+    config_label = f"{c[0]} {c[1]} {c[2]}"
+    for p_idx, p in enumerate(plot_definitions):
+        y_values = results[i][p['y_col']]
+        if 'y_scale' in p:
+            y_values = y_values * p['y_scale']
 
-axe=1
+        fig.add_trace(go.Scatter(
+            x=results[i]['utilizations'],
+            y=y_values,
+            name=config_label,
+            legendgroup=config_label,
+            showlegend=(p_idx == 0),
+            mode='lines+markers', marker_symbol='square',
+            marker_color=color_map[config_label],
+            line_color=color_map[config_label]
+        ), row=p['row'], col=p['col'])
+
+for p in plot_definitions:
+    y_range = p.get('y_range')
+    if 'y_range_ref' in p:
+        max_val = max([results[i][p['y_range_ref']].max() for i, _ in enumerate(configs)]) * 1.05
+        y_range = [0, max_val]
+
+    fig.update_xaxes(title_text="Utilizations", row=p['row'], col=p['col'])
+    fig.update_yaxes(title_text=p['y_label'], range=y_range, row=p['row'], col=p['col'])
+
+
+max_y_energy = energy_diff.select(pl.col(r"^energy.*diff$")).max().select(pl.max_horizontal("*"))[0,0] * 1.05
+min_y_energy = energy_diff.select(pl.col(r"^energy.*diff$")).min().select(pl.min_horizontal("*"))[0,0] * 1.10
+energy_yrange = [min_y_energy, max_y_energy]
+
 for i, c in enumerate(configs):
-    axes[axe].plot(results[i]["utilizations"], results[i]["meet-rates"] * 100, label=f"{c[0]} {c[1]} {c[2]}", marker='s')
-axes[axe].set_ylim(0, 105)
-axes[axe].set_xlabel("Utilizations")
-axes[axe].set_ylabel("Deadline meet Rates (%)")
-axes[axe].set_title("Deadline meet Rates vs Utilizations")
-axes[axe].legend()
-axes[axe].grid(True)
+    config_label = f"{c[0]} {c[1]} {c[2]}"
+    for p in energy_plot_definitions:
+        fig.add_trace(go.Scatter(
+            x=energy_diff['utilizations'],
+            y=energy_diff[p['y_col'].format(i=i)],
+            name=config_label,
+            legendgroup=config_label,
+            showlegend=False,
+            mode='lines+markers', marker_symbol='square',
+            marker_color=color_map[config_label],
+            line_color=color_map[config_label]
+        ), row=p['row'], col=p['col'])
 
-axe=2
-for i, c in enumerate(configs):
-    axes[axe].plot(results[i]["utilizations"], results[i]["migration-rates"] * 100, label=f"{c[0]} {c[1]} {c[2]}", marker='s')
-axes[axe].set_ylim(0, 105)
-axes[axe].set_xlabel("Utilizations")
-axes[axe].set_ylabel("Migration Rates (%)")
-axes[axe].set_title("Migration Rates vs Utilizations")
-axes[axe].legend()
-axes[axe].grid(True)
+for p in energy_plot_definitions:
+    fig.update_xaxes(title_text="Utilizations", row=p['row'], col=p['col'])
+    fig.update_yaxes(title_text=p['y_label'], range=energy_yrange, row=p['row'], col=p['col'])
 
-axe=3
-for i, c in enumerate(configs):
-    axes[axe].plot(results[i]["utilizations"], results[i]["c1-util"], label=f"{c[0]} {c[1]} {c[2]}", marker='s')
-axes[axe].set_ylim(0, max([results[i]["total-util"].max() for i, _ in enumerate(configs)]) * 1.05)
-axes[axe].set_xlabel("Utilizations")
-axes[axe].set_ylabel("Average Total Utilization")
-axes[axe].set_title("Big Cluster Utilization")
-axes[axe].legend()
-axes[axe].grid(True)
-
-axe=4
-for i, c in enumerate(configs):
-    axes[axe].plot(results[i]["utilizations"], results[i]["c2-util"], label=f"{c[0]} {c[1]} {c[2]}", marker='s')
-axes[axe].set_ylim(0, max([results[i]["total-util"].max() for i, _ in enumerate(configs)]) * 1.05)
-axes[axe].set_xlabel("Utilizations")
-axes[axe].set_ylabel("Average Total Utilization")
-axes[axe].set_title("LITTLE Cluster Utilization")
-axes[axe].legend()
-axes[axe].grid(True)
-
-axe=5
-for i, c in enumerate(configs):
-    axes[axe].plot(results[i]["utilizations"], results[i]["total-util"], label=f"{c[0]} {c[1]} {c[2]}", marker='s')
-axes[axe].set_ylim(0, max([results[i]["total-util"].max() for i, _ in enumerate(configs)]) * 1.05)
-axes[axe].set_xlabel("Utilizations")
-axes[axe].set_ylabel("Average Total Utilization")
-axes[axe].set_title("Total Utilization")
-axes[axe].legend()
-axes[axe].grid(True)
-
-axe=6
-for i, c in enumerate(configs):
-    axes[axe].plot(results[i]["utilizations"], results[i]["c1-power"], label=f"{c[0]} {c[1]} {c[2]}", marker='s')
-axes[axe].set_ylim(0, max([results[i]["c1-power"].max() for i, _ in enumerate(configs)]) * 1.05)
-axes[axe].set_xlabel("Utilizations")
-axes[axe].set_ylabel("Average Power Consumption")
-axes[axe].set_title("Power Consumption - Big Cluster")
-axes[axe].legend()
-axes[axe].grid(True)
-
-axe=7
-for i, c in enumerate(configs):
-    axes[axe].plot(results[i]["utilizations"], results[i]["c2-power"], label=f"{c[0]} {c[1]} {c[2]}", marker='s')
-axes[axe].set_ylim(0, max([results[i]["c1-power"].max() for i, _ in enumerate(configs)]) * 1.05)
-axes[axe].set_xlabel("Utilizations")
-axes[axe].set_ylabel("Average Power Consumption")
-axes[axe].set_title("Power Consumption - LITTLE Cluster")
-axes[axe].legend()
-axes[axe].grid(True)
-
-axe=8
-for i, c in enumerate(configs):
-    axes[axe].plot(results[i]["utilizations"], results[i]["total-power"], label=f"{c[0]} {c[1]} {c[2]}", marker='s')
-axes[axe].set_ylim(0, max([results[i]["total-power"].max() for i, _ in enumerate(configs)]) * 1.05)
-axes[axe].set_xlabel("Utilizations")
-axes[axe].set_ylabel("Average Power Consumption")
-axes[axe].set_title("Total Power Consumption")
-axes[axe].legend()
-axes[axe].grid(True)
-
-max_y = max(energy_diff.select(pl.col(r"^energy.*diff$")).max().with_columns(pl.max_horizontal("*").alias("max"))["max"]) * 1.05
-min_y = max(energy_diff.select(pl.col(r"^energy.*diff$")).min().with_columns(pl.min_horizontal("*").alias("min"))["min"]) * 1.10
-
-axe=9
-for i, c in enumerate(configs):
-    axes[axe].plot(energy_diff["utilizations"], energy_diff[f"c1-energy-{i}-diff"], label=f"{c[0]} {c[1]} {c[2]}", marker='s')
-axes[axe].set_xlabel("Utilizations")
-axes[axe].set_ylabel("Difference Energy Consumption")
-axes[axe].set_title("Energy Diff - Big Cluster")
-axes[axe].set_ylim(min_y, max_y)
-axes[axe].legend()
-axes[axe].grid(True)
-
-axe=10
-for i, c in enumerate(configs):
-    axes[axe].plot(energy_diff["utilizations"], energy_diff[f"c2-energy-{i}-diff"], label=f"{c[0]} {c[1]} {c[2]}", marker='s')
-axes[axe].set_xlabel("Utilizations")
-axes[axe].set_ylabel("Difference Energy Consumption")
-axes[axe].set_title("Energy Diff - LITTLE Cluster")
-axes[axe].set_ylim(min_y, max_y)
-axes[axe].legend()
-axes[axe].grid(True)
-
-axe=11
-for i, c in enumerate(configs):
-    axes[axe].plot(energy_diff["utilizations"], energy_diff[f"energy-{i}-diff"], label=f"{c[0]} {c[1]} {c[2]}", marker='s')
-axes[axe].set_xlabel("Utilizations")
-axes[axe].set_ylabel("Difference Energy Consumption")
-axes[axe].set_title("Total Energy Difference")
-axes[axe].set_ylim(min_y, max_y)
-axes[axe].legend()
-axes[axe].grid(True)
-
-plt.tight_layout()
-plt.show()
+fig.update_layout(height=1800, width=1800, title_text="Simulation Results Analysis")
+fig.show()
 
 # %%
