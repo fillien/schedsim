@@ -1,5 +1,5 @@
-#ifndef ALLOCATOR_SMART_ASS
-#define ALLOCATOR_SMART_ASS
+#ifndef ALLOCATOR_FF_CAP
+#define ALLOCATOR_FF_CAP
 
 #include <optional>
 #include <simulator/allocator.hpp>
@@ -11,7 +11,7 @@ namespace allocators {
  * This class inherits from the `Allocator` base class and provides a
  * mechanism for allocating tasks to schedulers based on some internal logic.
  */
-class SmartAss : public Allocator {
+class FFCap : public Allocator {
       protected:
         /**
          * @brief Determines where to place a new task.
@@ -34,10 +34,10 @@ class SmartAss : public Allocator {
          *
          * @param sim A weak pointer to the simulation engine.
          */
-        explicit SmartAss(const std::weak_ptr<Engine>& sim) : Allocator(sim) {};
+        explicit FFCap(const std::weak_ptr<Engine>& sim) : Allocator(sim) {};
 
       private:
-        double last_little_cap{0};
+        double last_cap{0};
 };
 }; // namespace allocators
 

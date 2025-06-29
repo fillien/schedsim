@@ -27,9 +27,9 @@ target_sources(schedlib PRIVATE
     src/protocols/scenario.cpp
     src/protocols/traces.cpp
     src/simulator/allocator.cpp
-    src/simulator/allocators/high_perf_first.cpp
-    src/simulator/allocators/low_perf_first.cpp
-    src/simulator/allocators/smart_ass.cpp
+    src/simulator/allocators/ff_big_first.cpp
+    src/simulator/allocators/ff_little_first.cpp
+    src/simulator/allocators/ff_cap.cpp
     src/simulator/allocators/ff_lb.cpp
     src/simulator/engine.cpp
     src/simulator/platform.cpp

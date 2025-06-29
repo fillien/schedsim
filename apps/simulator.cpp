@@ -4,9 +4,9 @@
 #include <protocols/traces.hpp>
 #include <simulator/allocator.hpp>
 #include <simulator/allocators/ff_lb.hpp>
-#include <simulator/allocators/high_perf_first.hpp>
-#include <simulator/allocators/low_perf_first.hpp>
-#include <simulator/allocators/smart_ass.hpp>
+#include <simulator/allocators/ff_big_first.hpp>
+#include <simulator/allocators/ff_little_first.hpp>
+#include <simulator/allocators/ff_cap.hpp>
 #include <simulator/engine.hpp>
 #include <simulator/entity.hpp>
 #include <simulator/event.hpp>
@@ -96,9 +96,9 @@ auto select_alloc(const std::string& choice, const std::shared_ptr<Engine>& sim)
 {
         using namespace allocators;
         // if (choice.empty() || choice == "default") { return std::make_shared<Allocator>(sim); }
-        if (choice == "big_first") { return std::make_shared<HighPerfFirst>(sim); }
-        if (choice == "little_first") { return std::make_shared<LowPerfFirst>(sim); }
-        if (choice == "smart_ass") { return std::make_shared<SmartAss>(sim); }
+        if (choice == "ff_big_first") { return std::make_shared<FFBigFirst>(sim); }
+        if (choice == "ff_little_first") { return std::make_shared<FFLittleFirst>(sim); }
+        if (choice == "ff_cap") { return std::make_shared<FFCap>(sim); }
         if (choice == "ff_lb") { return std::make_shared<FirstFitLoadBalancer>(sim); }
         throw std::invalid_argument("Undefined allocation policy");
 }

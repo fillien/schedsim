@@ -1,5 +1,5 @@
-#ifndef ALLOCATOR_LOW_PERF_FIRST
-#define ALLOCATOR_LOW_PERF_FIRST
+#ifndef ALLOCATOR_FF_LITTLE_FIRST
+#define ALLOCATOR_FF_LITTLE_FIRST
 
 #include <optional>
 #include <simulator/allocator.hpp>
@@ -11,7 +11,7 @@ namespace allocators {
  *
  * This allocator prioritizes scheduling tasks on schedulers with lower performance metrics.
  */
-class LowPerfFirst : public Allocator {
+class FFLittleFirst : public Allocator {
       protected:
         /**
          * @brief Determines the scheduler to place a new task onto, prioritizing those with lower
@@ -25,7 +25,7 @@ class LowPerfFirst : public Allocator {
          * std::nullopt if no scheduler is available.
          */
         auto where_to_put_the_task(const std::shared_ptr<Task>& new_task)
-            -> std::optional<std::shared_ptr<scheds::Scheduler>>;
+            -> std::optional<std::shared_ptr<scheds::Scheduler>> override;
 
       public:
         /**
@@ -35,7 +35,7 @@ class LowPerfFirst : public Allocator {
          *
          * @param sim A weak pointer to the simulation engine.
          */
-        explicit LowPerfFirst(const std::weak_ptr<Engine>& sim) : Allocator(sim) {};
+        explicit FFLittleFirst(const std::weak_ptr<Engine>& sim) : Allocator(sim) {};
 };
 }; // namespace allocators
 

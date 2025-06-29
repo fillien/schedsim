@@ -45,14 +45,14 @@ LITTLE_PERF_SCORE = 0.33334
 
 configs = [
     ( "ff_lb", "grub", 0.22 ),
-    ( "little_first", "grub", 0.22 ),
-    ( "smart_ass", "grub", 0.05 ),
-    ( "smart_ass", "grub", 0.1 ),
-    ( "smart_ass", "grub", 0.15 ),
-    ( "smart_ass", "grub", 0.2 ),
-    ( "smart_ass", "grub", 0.25 ),
-    ( "smart_ass", "grub", 0.3 ),
-    ( "smart_ass", "grub", 0.33334 )
+    ( "ff_little_first", "grub", 0.22 ),
+    ( "ff_cap", "grub", 0.05 ),
+    ( "ff_cap", "grub", 0.1 ),
+    ( "ff_cap", "grub", 0.15 ),
+    ( "ff_cap", "grub", 0.2 ),
+    ( "ff_cap", "grub", 0.25 ),
+    ( "ff_cap", "grub", 0.3 ),
+    ( "ff_cap", "grub", 0.33334 )
 ]
 
 # %%

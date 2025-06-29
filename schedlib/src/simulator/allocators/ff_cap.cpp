@@ -1,13 +1,13 @@
 #include <print>
 #include <simulator/allocator.hpp>
-#include <simulator/allocators/smart_ass.hpp>
+#include <simulator/allocators/ff_cap.hpp>
 #include <simulator/scheduler.hpp>
 
 #include <algorithm>
 #include <memory>
 #include <optional>
 
-auto allocators::SmartAss::where_to_put_the_task(const std::shared_ptr<Task>& new_task)
+auto allocators::FFCap::where_to_put_the_task(const std::shared_ptr<Task>& new_task)
     -> std::optional<std::shared_ptr<scheds::Scheduler>>
 {
         const auto compare_perf = [](const auto& first, const auto& second) {

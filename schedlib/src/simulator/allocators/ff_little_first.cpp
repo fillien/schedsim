@@ -1,11 +1,11 @@
 #include <simulator/allocator.hpp>
-#include <simulator/allocators/low_perf_first.hpp>
+#include <simulator/allocators/ff_little_first.hpp>
 
 #include <algorithm>
 #include <optional>
 #include <ranges>
 
-auto allocators::LowPerfFirst::where_to_put_the_task(const std::shared_ptr<Task>& new_task)
+auto allocators::FFLittleFirst::where_to_put_the_task(const std::shared_ptr<Task>& new_task)
     -> std::optional<std::shared_ptr<scheds::Scheduler>>
 {
         const auto compare_perf = [](const auto& first, const auto& second) {
