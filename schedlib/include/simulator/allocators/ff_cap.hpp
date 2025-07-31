@@ -35,9 +35,6 @@ class FFCap : public Allocator {
          * @param sim A weak pointer to the simulation engine.
          */
         explicit FFCap(const std::weak_ptr<Engine>& sim) : Allocator(sim) {};
-
-      private:
-        double last_cap{0};
 };
 }; // namespace allocators
 

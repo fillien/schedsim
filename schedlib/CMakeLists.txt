@@ -31,6 +31,8 @@ target_sources(schedlib PRIVATE
     src/simulator/allocators/ff_little_first.cpp
     src/simulator/allocators/ff_cap.cpp
     src/simulator/allocators/ff_lb.cpp
+    src/simulator/allocators/ff_sma.cpp
+    src/simulator/allocators/optimal.cpp
     src/simulator/engine.cpp
     src/simulator/platform.cpp
     src/simulator/processor.cpp

@@ -76,11 +76,6 @@ auto Scheduler::update_running_servers() -> void
         // Update timing for servers that are running on any processor.
         for (const auto& proc : chip()->processors()) {
                 if (proc->has_task()) {
-                        // std::print(
-                        //     "sched={0}, serv={1}, proc={2}\n",
-                        //     cluster()->id(),
-                        //     proc->task()->id(),
-                        //     proc->id());
                         assert(proc->task()->has_server());
                         update_server_times(proc->task()->server());
                 }
@@ -152,15 +147,8 @@ auto Scheduler::detach_server_if_needed(const std::shared_ptr<Task>& inactive_ta
                             (inactive_task->utilization() * cluster()->scale_speed()) /
                             cluster()->perf();
                         Engine::round_zero(total_utilization_);
+                        last_utilizations_.emplace_back(sim()->time(), total_utilization_);
                 }
-                // else {
-                //         std::erase(servers_, inactive_task->server());
-                //         inactive_task->clear_server();
-                //         total_utilization_ -=
-                //             (inactive_task->utilization() * cluster()->scale_speed()) /
-                //             cluster()->perf();
-                //         Engine::round_zero(total_utilization_);
-                // }
         }
         else {
                 // std::print("erase serv={0}", inactive_task->server()->id());
@@ -168,6 +156,7 @@ auto Scheduler::detach_server_if_needed(const std::shared_ptr<Task>& inactive_ta
                 total_utilization_ -=
                     (inactive_task->utilization() * cluster()->scale_speed()) / cluster()->perf();
                 Engine::round_zero(total_utilization_);
+                last_utilizations_.emplace_back(sim()->time(), total_utilization_);
         }
 }
 
@@ -214,6 +203,7 @@ auto Scheduler::on_serv_inactive(const std::shared_ptr<Server>& serv) -> void
                 total_utilization_ -=
                     (serv->utilization() * cluster()->scale_speed()) / cluster()->perf();
                 Engine::round_zero(total_utilization_);
+                last_utilizations_.emplace_back(sim()->time(), total_utilization_);
         }
         else {
                 detach_server_if_needed(serv->task());
@@ -264,6 +254,7 @@ auto Scheduler::on_job_arrival(const std::shared_ptr<Task>& new_task, const doub
                 servers_.push_back(new_server);
                 total_utilization_ +=
                     (new_task->utilization() * cluster()->scale_speed()) / cluster()->perf();
+                last_utilizations_.emplace_back(sim()->time(), total_utilization_);
         }
 
         assert(new_task->has_server());

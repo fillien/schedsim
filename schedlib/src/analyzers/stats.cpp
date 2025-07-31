@@ -135,20 +135,9 @@ auto count_rejected(const logs_type& input) -> std::size_t
 auto count_cluster_migration(const logs_type& input) -> std::size_t
 {
         namespace traces = protocols::traces;
-        // map : tid, {nb_transition, last_cid}
-        // std::unordered_map<std::size_t, std::pair<std::size_t, std::size_t>> cpts;
-        // std::unordered_map<std::size_t, std::size_t> last_cids;
-
         std::size_t cpt{0};
 
         for (const auto& [_, event] : input) {
-                // if (const auto* evt = std::get_if<traces::TaskPlaced>(&event)) {
-                //         auto cid = last_cids.find(evt->task_id);
-                //         if (cid != last_cids.end() && cid->second != evt->cluster_id) {
-                //                 last_cids.insert_or_assign(evt->task_id, evt->cluster_id);
-                //                 cpt++;
-                //         }
-                // }
                 if (const auto* evt = std::get_if<traces::MigrationCluster>(&event)) { cpt++; }
         }
 
@@ -241,6 +230,8 @@ auto count_cores_utilization(const logs_type& input, const protocols::hardware::
         std::unordered_map<std::size_t, double> last_util;
         std::unordered_map<std::size_t, double> last_times;
 
+        std::unordered_map<std::size_t, std::set<std::size_t>> active_servers;
+
         double sim_duration = 0;
 
         const auto update = [&](const auto& timestamp, const auto& id) {
@@ -254,12 +245,18 @@ auto count_cores_utilization(const logs_type& input, const protocols::hardware::
         for (const auto& tra : input) {
                 const auto& [timestamp, event] = tra;
                 if (const auto* evt = std::get_if<ServReady>(&event)) {
-                        update(timestamp, evt->sched_id);
-                        last_util[evt->sched_id] += evt->utilization;
+                        if (!active_servers[evt->sched_id].contains(evt->task_id)) {
+                                active_servers[evt->sched_id].insert(evt->task_id);
+                                update(timestamp, evt->sched_id);
+                                last_util[evt->sched_id] += evt->utilization;
+                        }
                 }
                 else if (const auto* evt = std::get_if<ServInactive>(&event)) {
-                        update(timestamp, evt->sched_id);
-                        last_util[evt->sched_id] -= evt->utilization;
+                        if (active_servers[evt->sched_id].contains(evt->task_id)) {
+                                active_servers[evt->sched_id].erase(evt->task_id);
+                                update(timestamp, evt->sched_id);
+                                last_util[evt->sched_id] -= evt->utilization;
+                        }
                 }
                 else if (std::holds_alternative<protocols::traces::SimFinished>(event)) {
                         sim_duration = timestamp;

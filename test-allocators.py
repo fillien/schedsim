@@ -44,15 +44,16 @@ UTILIZATION = 6.5
 LITTLE_PERF_SCORE = 0.33334
 
 configs = [
-    ( "ff_lb", "grub", 0.22 ),
     ( "ff_little_first", "grub", 0.22 ),
+    ( "ff_lb", "grub", 0.22 ),
+    ( "ff_sma", "grub", 0.22 ),
     ( "ff_cap", "grub", 0.05 ),
     ( "ff_cap", "grub", 0.1 ),
-    ( "ff_cap", "grub", 0.15 ),
+    #( "ff_cap", "grub", 0.15 ),
     ( "ff_cap", "grub", 0.2 ),
-    ( "ff_cap", "grub", 0.25 ),
+    #( "ff_cap", "grub", 0.25 ),
     ( "ff_cap", "grub", 0.3 ),
-    ( "ff_cap", "grub", 0.33334 )
+    #( "ff_cap", "grub", 0.33334 ),
 ]
 
 # %%
@@ -73,8 +74,8 @@ os.mkdir(DIR)
 
 util_steps = list(reversed(range(1, int(UTILIZATION*10)+1, 2)))
 NB_JOBS = 100
-NB_TASK = 50
-UMAX    = 0.8 #LITTLE_PERF_SCORE - 0.13334
+NB_TASK = 100
+UMAX    = 0.3 #LITTLE_PERF_SCORE - 0.13334
 
 for i in util_steps:
     data_path = f"{DIR}/{str(i)}"
@@ -128,7 +129,7 @@ print("== finished ==")
 # %% [markdown]
 # # Logs analysis
 
-# %%
+# %% editable=true slideshow={"slide_type": ""}
 def compute_stats(logs_dir):
     args = [SCHEDVIEW, "--platform", PLATFORM, "-d", logs_dir, "--index", "--arrivals", "--rejected", "--deadlines-counts", "--cmigration", "--transitions", "--duration"]
     try:
@@ -204,7 +205,7 @@ energy = pl.concat([
 ], how="align")
 
 energy_diff = energy.with_columns(
-    [(pl.col(f"{clu}-energy-{str(i)}") - pl.col(f"{clu}-energy-{str(1)}")).alias(f"{clu}-energy-{str(i)}-diff") for i, _ in enumerate(configs) for clu in ["c1", "c2"]],
+    [(pl.col(f"{clu}-energy-{str(i)}") - pl.col(f"{clu}-energy-{str(0)}")).alias(f"{clu}-energy-{str(i)}-diff") for i, _ in enumerate(configs) for clu in ["c1", "c2"]],
 ).with_columns(
     [(pl.col(f"c1-energy-{str(i)}-diff") + pl.col(f"c2-energy-{str(i)}-diff")).alias(f"energy-{str(i)}-diff") for i,_ in enumerate(configs)]
 ).group_by("utilizations").agg(
@@ -292,7 +293,10 @@ for p in energy_plot_definitions:
     fig.update_xaxes(title_text="Utilizations", row=p['row'], col=p['col'])
     fig.update_yaxes(title_text=p['y_label'], range=energy_yrange, row=p['row'], col=p['col'])
 
-fig.update_layout(height=1800, width=1800, title_text="Simulation Results Analysis")
+fig.update_layout(height=1800, width=2200, title_text="Simulation Results Analysis")
 fig.show()
+
+# %%
+stats
 
 # %%

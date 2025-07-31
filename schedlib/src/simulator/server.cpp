@@ -50,8 +50,7 @@ auto Server::change_state(State new_state) -> void
                             .sched_id = scheduler()->cluster()->id(),
                             .task_id = self->id(),
                             .deadline = relative_deadline_,
-                            .utilization = (utilization() * scheduler()->cluster()->scale_speed()) /
-                                           scheduler()->cluster()->perf()});
+                            .utilization = utilization()});
                         break;
                 }
                 case State::NonCont: {
@@ -69,8 +68,7 @@ auto Server::change_state(State new_state) -> void
                             .sched_id = scheduler()->cluster()->id(),
                             .task_id = self->id(),
                             .deadline = relative_deadline_,
-                            .utilization = (utilization() * scheduler()->cluster()->scale_speed()) /
-                                           scheduler()->cluster()->perf()});
+                            .utilization = utilization()});
                         break;
                 }
                 case State::Ready:
@@ -110,8 +108,7 @@ auto Server::change_state(State new_state) -> void
                 sim()->add_trace(traces::ServInactive{
                     .sched_id = scheduler()->cluster()->id(),
                     .task_id = self->id(),
-                    .utilization = (utilization() * scheduler()->cluster()->scale_speed()) /
-                                   scheduler()->cluster()->perf()});
+                    .utilization = utilization()});
                 current_state_ = State::Inactive;
                 break;
         }

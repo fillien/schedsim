@@ -1,4 +1,3 @@
-#include <print>
 #include <simulator/allocator.hpp>
 #include <simulator/allocators/ff_cap.hpp>
 #include <simulator/scheduler.hpp>
@@ -20,7 +19,6 @@ auto allocators::FFCap::where_to_put_the_task(const std::shared_ptr<Task>& new_t
 
         std::optional<std::shared_ptr<scheds::Scheduler>> next_sched;
 
-
         // Look for a cluster to place the task
         for (auto& sched : sorted_scheds) {
                 const auto& clu = sched->cluster();
@@ -29,10 +27,6 @@ auto allocators::FFCap::where_to_put_the_task(const std::shared_ptr<Task>& new_t
                     clu->u_target()) {
                         if (sched->admission_test(*new_task)) {
                                 next_sched = sched;
-                                if (sched != sorted_scheds.back()) {
-                                        // Update the last
-                                        clu->u_target();
-                                }
                                 break;
                         }
                 }

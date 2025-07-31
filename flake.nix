@@ -72,6 +72,7 @@
             jupyter
             jupyterlab
             jupyter-nbextensions-configurator
+            jupyterlab-execute-time
             pybind11-stubgen
             sphinx
             furo

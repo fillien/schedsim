@@ -7,6 +7,7 @@
 #include <simulator/allocators/ff_big_first.hpp>
 #include <simulator/allocators/ff_little_first.hpp>
 #include <simulator/allocators/ff_cap.hpp>
+#include <simulator/allocators/optimal.hpp>
 #include <simulator/engine.hpp>
 #include <simulator/entity.hpp>
 #include <simulator/event.hpp>
@@ -96,10 +97,11 @@ auto select_alloc(const std::string& choice, const std::shared_ptr<Engine>& sim)
 {
         using namespace allocators;
         // if (choice.empty() || choice == "default") { return std::make_shared<Allocator>(sim); }
-        if (choice == "ff_big_first") { return std::make_shared<FFBigFirst>(sim); }
-        if (choice == "ff_little_first") { return std::make_shared<FFLittleFirst>(sim); }
-        if (choice == "ff_cap") { return std::make_shared<FFCap>(sim); }
-        if (choice == "ff_lb") { return std::make_shared<FirstFitLoadBalancer>(sim); }
+        // if (choice == "ff_big_first") { return std::make_shared<FFBigFirst>(sim); }
+        // if (choice == "ff_little_first") { return std::make_shared<FFLittleFirst>(sim); }
+        // if (choice == "ff_cap") { return std::make_shared<FFCap>(sim); }
+        // if (choice == "ff_lb") { return std::make_shared<FirstFitLoadBalancer>(sim); }
+        // if (choice == "ff_sma") { return std::make_shared<FFSma>(sim); }
         throw std::invalid_argument("Undefined allocation policy");
 }
 
@@ -184,7 +186,7 @@ auto main(const int argc, const char** argv) -> int
                 // Simulate the system (job set + platform) with the chosen scheduler
                 sim->simulation();
 
-                protocols::traces::write_log_file(sim->traces(), config.output_file);
+                // protocols::traces::write_log_file(sim->traces(), config.output_file);
 
                 return EXIT_SUCCESS;
         }

@@ -97,6 +97,8 @@ class Scheduler : public Entity, public std::enable_shared_from_this<Scheduler> 
          */
         auto total_utilization() const -> double;
 
+        auto last_utilizations() const -> std::vector<std::pair<double, double>> { return last_utilizations_; };
+
       protected:
         /**
          * @brief Retrieves the chip (cluster) associated with the scheduler.
@@ -213,6 +215,9 @@ class Scheduler : public Entity, public std::enable_shared_from_this<Scheduler> 
         std::weak_ptr<Cluster> attached_cluster_;
 
         double total_utilization_{0.0};
+
+        /// Vector of pairs (timestamp, utilization) of last utilization values
+        std::vector<std::pair<double, double>> last_utilizations_;
 };
 
 } // namespace scheds

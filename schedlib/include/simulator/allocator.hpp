@@ -57,6 +57,9 @@ class Allocator : public Entity {
                 rescheds_.insert(index);
         }
 
+        virtual auto start() -> void = 0;
+        virtual auto end() -> void = 0;
+
       protected:
         /**
          * @brief Determines where to place a new task.
