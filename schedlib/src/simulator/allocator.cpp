@@ -40,9 +40,6 @@ auto compare_events(const events::Event& ev1, const events::Event& ev2) -> bool
 
 namespace allocators {
 
-auto Allocator::start() -> void {}
-auto Allocator::end() -> void {}
-
 auto Allocator::add_child_sched(
     const std::weak_ptr<Cluster>& clu, const std::shared_ptr<scheds::Scheduler>& sched) -> void
 {

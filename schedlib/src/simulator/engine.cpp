@@ -32,8 +32,6 @@ void Engine::simulation()
                 clu->scheduler().lock()->call_resched();
         }
 
-        alloc()->start();
-
         while (!future_list_.empty()) {
 #ifdef TRACY_ENABLE
                 FrameMark;
@@ -50,8 +48,6 @@ void Engine::simulation()
 
                 alloc_->handle(current_events);
         }
-
-        alloc()->end();
 
         if (future_list_.empty()) { add_trace(protocols::traces::SimFinished{}); }
 }

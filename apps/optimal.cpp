@@ -1,14 +1,17 @@
+#include "analyzers/stats.hpp"
+#include <__ostream/print.h>
+#include <algorithm>
+#include <cmath>
 #include <cstddef>
+#include <limits>
+#include <numbers>
 #include <optional>
 #include <protocols/hardware.hpp>
 #include <protocols/scenario.hpp>
 #include <protocols/traces.hpp>
+#include <random>
 #include <simulator/allocator.hpp>
-#include <simulator/allocators/ff_big_first.hpp>
-#include <simulator/allocators/ff_cap.hpp>
-#include <simulator/allocators/ff_lb.hpp>
-#include <simulator/allocators/ff_little_first.hpp>
-#include <simulator/allocators/optimal.hpp>
+#include <simulator/allocators/mcts.hpp>
 #include <simulator/engine.hpp>
 #include <simulator/entity.hpp>
 #include <simulator/event.hpp>
@@ -31,7 +34,12 @@
 #include <ostream>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
+
+#include <cstdint>
+#include <fstream>
+#include <sstream>
 
 #ifdef TRACY_ENABLE
 #include <chrono>
@@ -64,7 +72,7 @@ auto parse_args(const int argc, const char** argv) -> AppConfig
 	    ("a,alloc", "Specify the cluster allocator", cxxopts::value<std::string>())
 	    ("s,sched", "Specify the scheduling policy to be used.", cxxopts::value<std::string>())
 	    ("o,output", "Specify the output file to write the simulation results.", cxxopts::value<std::string>());
-            // clang-format on
+        // clang-format on
 
         const auto cli = options.parse(argc, argv);
 
@@ -82,14 +90,75 @@ auto parse_args(const int argc, const char** argv) -> AppConfig
         return config;
 }
 
-auto explore(const AppConfig& config, const auto taskset, const auto platconfig, void* exchange) -> void*
+enum alloc { SCHED1, SCHED2 };
+
+struct Node {
+        Node* parent = nullptr;
+        std::vector<std::unique_ptr<Node>> children;
+        alloc allocation;
+        std::size_t nb_rejects = 0;
+        std::size_t nb_visit = 0;
+        bool leaf = false;
+        double last_score;
+        std::size_t last_reject;
+};
+
+// Helper: Convert alloc to string
+std::string alloc_to_string(alloc a)
+{
+        switch (a) {
+        // case REJECT: return "REJECT";
+        case SCHED1: return "SCHED1";
+        case SCHED2: return "SCHED2";
+        default: return "UNKNOWN";
+        }
+}
+
+// Helper to create a unique node id string
+std::string node_id(const Node* node)
+{
+        std::ostringstream oss;
+        oss << "N" << reinterpret_cast<std::uintptr_t>(node);
+        return oss.str();
+}
+
+// Write a node and its children recursively
+void writeDot(const Node* node, std::ofstream& f)
+{
+        if (!node) return;
+
+        f << "    " << node_id(node) << " [label=\"nb_visit=" << node->nb_visit
+          << "\\nnb_rejects=" << node->nb_rejects
+          << "\\nalloc=" << alloc_to_string(node->allocation) << "\\nscore=" << node->last_score
+          << "\"];\n";
+
+        for (const auto& child : node->children) {
+                f << "    " << node_id(node) << " -> " << node_id(child.get()) << ";\n";
+                writeDot(child.get(), f);
+        }
+}
+
+// Main entry point to write DOT file
+void treeToDot(const Node* root, const std::string& filename)
+{
+        std::ofstream f(filename);
+        f << "digraph Tree {\n";
+        writeDot(root, f);
+        f << "}\n";
+}
+
+auto simulate(
+    const AppConfig& config,
+    const auto taskset,
+    const auto platconfig,
+    const std::vector<unsigned>& pattern) -> std::pair<std::size_t, std::size_t>
 {
         using namespace std;
         std::shared_ptr<Engine> sim = make_shared<Engine>(config.active_delay);
         auto plat = make_shared<Platform>(sim, false);
         sim->platform(plat);
 
-        auto alloc = make_shared<allocators::Optimal>(sim, exchange);
+        auto alloc = make_shared<allocators::MCTS>(sim, pattern);
 
         std::size_t cluster_id_cpt{1};
         for (const protocols::hardware::Cluster& clu : platconfig.clusters) {
@@ -103,14 +172,14 @@ auto explore(const AppConfig& config, const auto taskset, const auto platconfig,
                                                                        : clu.perf_score));
                 newclu->create_procs(clu.nb_procs);
 
-                auto sched = std::make_shared<scheds::Parallel>(sim);
+                auto sched = make_shared<scheds::Parallel>(sim);
                 alloc->add_child_sched(newclu, sched);
                 plat->add_cluster(newclu);
                 cluster_id_cpt++;
         }
 
         sim->scheduler(alloc);
-        std::vector<std::shared_ptr<Task>> tasks{taskset.tasks.size()};
+        vector<shared_ptr<Task>> tasks{taskset.tasks.size()};
 
         for (auto input_task : taskset.tasks) {
                 auto new_task = make_shared<Task>(
@@ -126,8 +195,139 @@ auto explore(const AppConfig& config, const auto taskset, const auto platconfig,
         }
 
         sim->simulation();
-        protocols::traces::write_log_file(sim->traces(), config.output_file);
-        return alloc->get_exchange();
+        std::vector<std::pair<double, protocols::traces::trace>> log(
+            sim->traces().begin(), sim->traces().end());
+
+        return {outputs::stats::count_rejected(log), alloc->get_nb_alloc()};
+}
+
+auto selection(Node* root) -> Node*
+{
+        // const auto score = [](const std::unique_ptr<Node>& node) {
+        //         const double p_visite = (node->parent != nullptr ? node->parent->nb_visit : 1);
+        //         const double nb_visit = static_cast<double>(node->nb_visit);
+        //         const double c = std::numbers::sqrt2;
+        //         const double exploration = c * std::sqrt(std::log(p_visite) / nb_visit);
+        //         const double avg_reject = (static_cast<double>(node->nb_rejects) / nb_visit);
+        //         return avg_reject + exploration;
+        // };
+        const auto score = [](const std::unique_ptr<Node>& node) {
+                if (node->nb_visit == 0) {
+                        // return std::numeric_limits<double>::infinity();
+                        return 0.0;
+                }
+                const auto nb_visit = static_cast<double>(node->nb_visit);
+                const double avg_rejects = static_cast<double>(node->nb_rejects) / nb_visit;
+                const double c = 5 * std::numbers::sqrt2;
+                // const double c = 5.0;
+                const double parent_visits = (node->parent != nullptr) ? node->parent->nb_visit : 1;
+                double exploration = c * std::sqrt(std::log(parent_visits) / node->nb_visit);
+                node->last_score = avg_rejects - exploration;
+                return avg_rejects - exploration; // if LOWER rejects is better
+        };
+        Node* current = root;
+        while (!current->children.empty()) {
+                // For each children select the one with the bigger score
+                auto best = std::ranges::min_element(
+                    current->children, [&score](const auto& first, const auto& second) {
+                            return score(first) < score(second);
+                    });
+                current = best->get();
+        }
+        return current;
+}
+
+auto get_random_alloc() -> std::size_t
+{
+        static std::mt19937 rng(static_cast<std::size_t>(std::time(nullptr)));
+        std::uniform_int_distribution<int> dist(0, 1);
+        return static_cast<std::size_t>(dist(rng));
+}
+
+auto add_nodes(Node* parent) -> void
+{
+        for (std::size_t i = 0; i < 2; ++i) {
+                auto child = std::make_unique<Node>();
+                child->parent = parent;
+                child->allocation = alloc(i);
+                parent->children.push_back(std::move(child));
+        }
+}
+
+auto get_first_pattern(Node* node) -> std::vector<unsigned>
+{
+        std::vector<unsigned> pattern;
+        Node* current = node;
+        while (current->parent != nullptr) {
+                pattern.push_back(current->allocation);
+                current = current->parent;
+        }
+        return pattern;
+}
+
+auto backpropagate(Node* node, std::size_t score) -> void
+{
+        Node* current = node;
+        while (current->parent != nullptr) {
+                current->nb_rejects += score;
+                current->nb_visit++;
+                current = current->parent;
+        }
+        current->nb_rejects += score;
+        current->nb_visit++;
+}
+
+auto run_monte_carlo(auto config, auto taskset, auto plat) -> void
+{
+        Node tree;
+        Node* current_node = &tree;
+
+        double best = std::numeric_limits<double>::infinity();
+        std::size_t nb_leaf_found = 0;
+
+        const int MAX_ITR = 30'000'000;
+        // const int MAX_ITR = 3001;
+
+        for (int i = 0; i < MAX_ITR; ++i) {
+                current_node = selection(&tree);
+
+                if (current_node->leaf) {
+                        auto pattern = get_first_pattern(current_node);
+                        auto score = current_node->last_reject;
+                        backpropagate(current_node, score);
+                }
+                else {
+                        add_nodes(current_node);
+                        const auto branch = get_random_alloc();
+                        current_node = current_node->children.at(branch).get();
+
+                        auto pattern = get_first_pattern(current_node);
+                        auto [score, nb_alloc] = simulate(config, taskset, plat, pattern);
+
+                        if (nb_alloc <= pattern.size()) {
+                                if (!current_node->leaf) { nb_leaf_found++; }
+                                current_node->leaf = true;
+                                current_node->last_reject = score;
+                                const double ratio =
+                                    static_cast<double>(score) / static_cast<double>(nb_alloc);
+                                if (ratio < best) {
+                                        best = ratio;
+                                        std::println("new best: {}", best);
+                                }
+                        }
+                        backpropagate(current_node, score);
+                }
+
+
+                if (!(i % 10'000)) {
+                        std::println("{}/{} ; leafs found = {} ; best = {}", i, MAX_ITR, nb_leaf_found, best);
+                }
+                // std::println("{0}", pattern);
+        }
+
+        std::println("best: {}", best);
+
+        // treeToDot(&tree, "tree.dot");
 }
 
 auto main(const int argc, const char** argv) -> int
@@ -139,13 +339,9 @@ auto main(const int argc, const char** argv) -> int
         try {
                 const auto config = parse_args(argc, argv);
                 const auto taskset = protocols::scenario::read_file(config.scenario_file);
-                const auto PlatformConfig = protocols::hardware::read_file(config.platform_file);
+                const auto plat = protocols::hardware::read_file(config.platform_file);
 
-                void * exchange = nullptr;
-
-                while (true) {
-                        exchange = explore(config, taskset, PlatformConfig, exchange);
-                }
+                run_monte_carlo(config, taskset, plat);
 
                 return EXIT_SUCCESS;
         }
