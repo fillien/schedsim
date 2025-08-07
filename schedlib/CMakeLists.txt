@@ -51,3 +51,4 @@ target_sources(schedlib PRIVATE
 )
 
 target_include_directories(schedlib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set_target_properties(schedlib PROPERTIES CXX_VISIBILITY_PRESET default)
