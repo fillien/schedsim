@@ -99,8 +99,6 @@ struct Node {
         std::size_t nb_rejects = 0;
         std::size_t nb_visit = 0;
         bool leaf = false;
-        double last_score;
-        std::size_t last_reject;
 };
 
 // Helper: Convert alloc to string
@@ -129,7 +127,7 @@ void writeDot(const Node* node, std::ofstream& f)
 
         f << "    " << node_id(node) << " [label=\"nb_visit=" << node->nb_visit
           << "\\nnb_rejects=" << node->nb_rejects
-          << "\\nalloc=" << alloc_to_string(node->allocation) << "\\nscore=" << node->last_score
+          << "\\nalloc=" << alloc_to_string(node->allocation)
           << "\"];\n";
 
         for (const auto& child : node->children) {
@@ -203,36 +201,34 @@ auto simulate(
 
 auto selection(Node* root) -> Node*
 {
-        // const auto score = [](const std::unique_ptr<Node>& node) {
-        //         const double p_visite = (node->parent != nullptr ? node->parent->nb_visit : 1);
-        //         const double nb_visit = static_cast<double>(node->nb_visit);
-        //         const double c = std::numbers::sqrt2;
-        //         const double exploration = c * std::sqrt(std::log(p_visite) / nb_visit);
-        //         const double avg_reject = (static_cast<double>(node->nb_rejects) / nb_visit);
-        //         return avg_reject + exploration;
-        // };
         const auto score = [](const std::unique_ptr<Node>& node) {
-                if (node->nb_visit == 0) {
-                        // return std::numeric_limits<double>::infinity();
-                        return 0.0;
-                }
+                if (node->nb_visit == 0) { return 0.0; }
                 const auto nb_visit = static_cast<double>(node->nb_visit);
                 const double avg_rejects = static_cast<double>(node->nb_rejects) / nb_visit;
-                const double c = 5 * std::numbers::sqrt2;
-                // const double c = 5.0;
+                const double c = 10 * std::numbers::sqrt2;
                 const double parent_visits = (node->parent != nullptr) ? node->parent->nb_visit : 1;
                 double exploration = c * std::sqrt(std::log(parent_visits) / node->nb_visit);
-                node->last_score = avg_rejects - exploration;
                 return avg_rejects - exploration; // if LOWER rejects is better
         };
         Node* current = root;
+
         while (!current->children.empty()) {
-                // For each children select the one with the bigger score
-                auto best = std::ranges::min_element(
-                    current->children, [&score](const auto& first, const auto& second) {
-                            return score(first) < score(second);
-                    });
-                current = best->get();
+                if (std::ranges::all_of(
+                        current->children, [](const auto& node) { return node->leaf; })) {
+                        current->leaf = true;
+                        current = current->parent;
+                }
+                else {
+                        // For each children select the one with the bigger score
+                        auto best = std::ranges::min_element(
+                            current->children, [&score](const auto& first, const auto& second) {
+                                    if (first->leaf) { return false; }
+                                    if (second->leaf) { return true; }
+                                    return score(first) < score(second);
+                            });
+
+                        current = best->get();
+                }
         }
         return current;
 }
@@ -285,48 +281,41 @@ auto run_monte_carlo(auto config, auto taskset, auto plat) -> void
         double best = std::numeric_limits<double>::infinity();
         std::size_t nb_leaf_found = 0;
 
-        const int MAX_ITR = 30'000'000;
-        // const int MAX_ITR = 3001;
+        const int MAX_ITR = 2'000'000;
 
-        for (int i = 0; i < MAX_ITR; ++i) {
+        for (int i = 1; i <= MAX_ITR; ++i) {
                 current_node = selection(&tree);
 
-                if (current_node->leaf) {
-                        auto pattern = get_first_pattern(current_node);
-                        auto score = current_node->last_reject;
-                        backpropagate(current_node, score);
-                }
-                else {
-                        add_nodes(current_node);
-                        const auto branch = get_random_alloc();
-                        current_node = current_node->children.at(branch).get();
+                add_nodes(current_node);
+                const auto branch = get_random_alloc();
+                current_node = current_node->children.at(branch).get();
 
-                        auto pattern = get_first_pattern(current_node);
-                        auto [score, nb_alloc] = simulate(config, taskset, plat, pattern);
+                auto pattern = get_first_pattern(current_node);
+                auto [score, nb_alloc] = simulate(config, taskset, plat, pattern);
 
-                        if (nb_alloc <= pattern.size()) {
-                                if (!current_node->leaf) { nb_leaf_found++; }
-                                current_node->leaf = true;
-                                current_node->last_reject = score;
-                                const double ratio =
-                                    static_cast<double>(score) / static_cast<double>(nb_alloc);
-                                if (ratio < best) {
-                                        best = ratio;
-                                        std::println("new best: {}", best);
-                                }
+                if (nb_alloc <= pattern.size()) {
+                        if (!current_node->leaf) { nb_leaf_found++; }
+                        current_node->leaf = true;
+                        const double ratio =
+                            static_cast<double>(score) / static_cast<double>(nb_alloc);
+                        if (ratio < best) {
+                                best = ratio;
+                                std::println("new best: {}", best);
                         }
-                        backpropagate(current_node, score);
                 }
+                backpropagate(current_node, score);
 
-
-                if (!(i % 10'000)) {
-                        std::println("{}/{} ; leafs found = {} ; best = {}", i, MAX_ITR, nb_leaf_found, best);
+                if (!(i % 1'000)) {
+                        std::println(
+                            "{}/{} ; leafs found = {} ; best = {}",
+                            i,
+                            MAX_ITR,
+                            nb_leaf_found,
+                            best);
                 }
-                // std::println("{0}", pattern);
         }
 
         std::println("best: {}", best);
-
         // treeToDot(&tree, "tree.dot");
 }
 
