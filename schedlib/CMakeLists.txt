@@ -2,12 +2,12 @@ add_library(schedlib)
 
 target_compile_features(schedlib PUBLIC cxx_std_23)
 
-if (ENABLE_TRACY)
-    target_compile_definitions(schedlib PRIVATE TRACY_ENABLE)
-endif()
+# if (ENABLE_TRACY)
+#     target_compile_definitions(schedlib PRIVATE TRACY_ENABLE)
+# endif()
 
 if (ENABLE_DEBUG)
-    target_link_libraries(schedlib PUBLIC json rang TracyClient)
+    target_link_libraries(schedlib PUBLIC json rang)
 endif()
 
 target_link_libraries(schedlib PUBLIC json rang)

@@ -20,6 +20,7 @@
             doxygen
             graphviz
             gtest
+            llvmPackages.openmp
             (python312.withPackages (ps: with ps; [
               pybind11
               pybind11-stubgen
@@ -93,6 +94,8 @@
           shellcheck
           tracy
           sphinx
+          llvmPackages.openmp
+          llvmPackages.clang
         ];
       in
       {

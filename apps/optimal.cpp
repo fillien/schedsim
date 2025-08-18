@@ -1,11 +1,16 @@
 #include "analyzers/stats.hpp"
 #include <__ostream/print.h>
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
+#include <ios>
+#include <iterator>
 #include <limits>
 #include <numbers>
+#include <numeric>
 #include <optional>
+#include <print>
 #include <protocols/hardware.hpp>
 #include <protocols/scenario.hpp>
 #include <protocols/traces.hpp>
@@ -24,6 +29,7 @@
 #include <simulator/schedulers/parallel.hpp>
 #include <simulator/schedulers/power_aware.hpp>
 #include <simulator/task.hpp>
+#include <stack>
 
 #include <cstdlib>
 #include <cxxopts.hpp>
@@ -39,6 +45,7 @@
 
 #include <cstdint>
 #include <fstream>
+#include <omp.h>
 #include <sstream>
 
 #ifdef TRACY_ENABLE
@@ -127,8 +134,7 @@ void writeDot(const Node* node, std::ofstream& f)
 
         f << "    " << node_id(node) << " [label=\"nb_visit=" << node->nb_visit
           << "\\nnb_rejects=" << node->nb_rejects
-          << "\\nalloc=" << alloc_to_string(node->allocation)
-          << "\"];\n";
+          << "\\nalloc=" << alloc_to_string(node->allocation) << "\"];\n";
 
         for (const auto& child : node->children) {
                 f << "    " << node_id(node) << " -> " << node_id(child.get()) << ";\n";
@@ -147,8 +153,8 @@ void treeToDot(const Node* root, const std::string& filename)
 
 auto simulate(
     const AppConfig& config,
-    const auto taskset,
-    const auto platconfig,
+    const auto& taskset,
+    const auto& platconfig,
     const std::vector<unsigned>& pattern) -> std::pair<std::size_t, std::size_t>
 {
         using namespace std;
@@ -206,9 +212,11 @@ auto selection(Node* root) -> Node*
                 const auto nb_visit = static_cast<double>(node->nb_visit);
                 const double avg_rejects = static_cast<double>(node->nb_rejects) / nb_visit;
                 const double c = 10 * std::numbers::sqrt2;
-                const double parent_visits = (node->parent != nullptr) ? node->parent->nb_visit : 1;
-                double exploration = c * std::sqrt(std::log(parent_visits) / node->nb_visit);
-                return avg_rejects - exploration; // if LOWER rejects is better
+                const double parent_visits =
+                    (node == nullptr) ? static_cast<double>(node->parent->nb_visit) : 1.0;
+                double exploration =
+                    c * std::sqrt(std::log(parent_visits) / static_cast<double>(node->nb_visit));
+                return avg_rejects - exploration;
         };
         Node* current = root;
 
@@ -235,7 +243,7 @@ auto selection(Node* root) -> Node*
 
 auto get_random_alloc() -> std::size_t
 {
-        static std::mt19937 rng(static_cast<std::size_t>(std::time(nullptr)));
+        static thread_local std::mt19937 rng(std::random_device{}());
         std::uniform_int_distribution<int> dist(0, 1);
         return static_cast<std::size_t>(dist(rng));
 }
@@ -273,24 +281,46 @@ auto backpropagate(Node* node, std::size_t score) -> void
         current->nb_visit++;
 }
 
-auto run_monte_carlo(auto config, auto taskset, auto plat) -> void
+void destroy_tree_iter(std::unique_ptr<Node> root)
 {
-        Node tree;
-        Node* current_node = &tree;
+        std::stack<Node*> stk;
+        stk.push(root.release()); // Release ownership, now raw
+
+        while (!stk.empty()) {
+                Node* node = stk.top();
+                stk.pop();
+                for (auto& c : node->children)
+                        stk.push(
+                            c.release()); // Release children (get raw pointer, not deleted yet)
+                delete node;
+        }
+}
+
+auto run_monte_carlo(
+    const std::size_t thread_id,
+    const int MAX_SIM,
+    const auto& prepattern,
+    auto config,
+    auto taskset,
+    auto plat) -> std::pair<double, std::size_t>
+{
+        auto tree = std::make_unique<Node>();
+        Node* current_node = tree.get();
 
         double best = std::numeric_limits<double>::infinity();
+        std::size_t best_reject = std::numeric_limits<std::size_t>::infinity();
         std::size_t nb_leaf_found = 0;
 
-        const int MAX_ITR = 2'000'000;
-
-        for (int i = 1; i <= MAX_ITR; ++i) {
-                current_node = selection(&tree);
+        for (int i = 1; i <= MAX_SIM; ++i) {
+                current_node = selection(tree.get());
 
                 add_nodes(current_node);
                 const auto branch = get_random_alloc();
                 current_node = current_node->children.at(branch).get();
 
+                // auto pattern = prepattern + get_first_pattern(current_node);
                 auto pattern = get_first_pattern(current_node);
+                pattern.insert(pattern.begin(), prepattern.begin(), prepattern.end());
                 auto [score, nb_alloc] = simulate(config, taskset, plat, pattern);
 
                 if (nb_alloc <= pattern.size()) {
@@ -300,29 +330,27 @@ auto run_monte_carlo(auto config, auto taskset, auto plat) -> void
                             static_cast<double>(score) / static_cast<double>(nb_alloc);
                         if (ratio < best) {
                                 best = ratio;
-                                std::println("new best: {}", best);
+                                best_reject = score;
+                                std::println("T{} new best = {}", thread_id, best);
                         }
                 }
                 backpropagate(current_node, score);
-
-                if (!(i % 1'000)) {
-                        std::println(
-                            "{}/{} ; leafs found = {} ; best = {}",
-                            i,
-                            MAX_ITR,
-                            nb_leaf_found,
-                            best);
-                }
         }
 
-        std::println("best: {}", best);
+        destroy_tree_iter(std::move(tree));
+
+        std::println("finished from thread {}", thread_id);
+
+        // std::println("best: {}", best);
         // treeToDot(&tree, "tree.dot");
+        return {best_reject, nb_leaf_found};
 }
 
 auto main(const int argc, const char** argv) -> int
 {
         using namespace std;
 
+        const std::size_t NB_THREADS = 8;
         const bool FREESCALING_ALLOWED{false};
 
         try {
@@ -330,7 +358,45 @@ auto main(const int argc, const char** argv) -> int
                 const auto taskset = protocols::scenario::read_file(config.scenario_file);
                 const auto plat = protocols::hardware::read_file(config.platform_file);
 
-                run_monte_carlo(config, taskset, plat);
+                std::array<std::vector<unsigned>, NB_THREADS> prepatterns = {{
+                    {{0, 0, 0}},
+                    {{0, 0, 1}},
+                    {{0, 1, 0}},
+                    {{0, 1, 1}},
+                    {{1, 0, 0}},
+                    {{1, 0, 1}},
+                    {{1, 1, 0}},
+                    {{1, 1, 1}},
+                }};
+                omp_set_num_threads(NB_THREADS);
+                std::println(
+                    "array size = {} ; procs max = {}", prepatterns.size(), omp_get_max_threads());
+
+                const std::size_t MAX_SIM = 1'000'000;
+                const std::size_t MAX_SIM_PART = MAX_SIM / NB_THREADS;
+                std::vector<std::size_t> results(omp_get_max_threads());
+                std::vector<std::size_t> leafs_found(omp_get_max_threads());
+
+#pragma omp parallel
+                {
+                        auto index = omp_get_thread_num();
+                        auto [best, leafs] = run_monte_carlo(
+                            index, MAX_SIM_PART, prepatterns.at(index), config, taskset, plat);
+                        results.at(index) = best;
+                        leafs_found.at(index) = leafs;
+                }
+
+                std::println("{}", results);
+                const std::size_t best_result = *std::ranges::min_element(results);
+                const std::size_t nb_leafs =
+                    std::accumulate(leafs_found.begin(), leafs_found.end(), 0);
+                std::println("best result = {}, nb leafs found = {}", best_result, nb_leafs);
+
+                std::ofstream datafile("mcts-result.csv", std::ios::app);
+                if (!datafile) { return 1; }
+
+                datafile << config.scenario_file << ";optimal;" << best_result << std::endl;
+                datafile.close();
 
                 return EXIT_SUCCESS;
         }
