@@ -11,7 +11,8 @@
       let
         pkgs = import nixpkgs { inherit system; };
 
-        schedsim = pkgs.stdenv.mkDerivation {
+        # Build using the LLVM toolchain (clang) on Linux
+        schedsim = pkgs.llvmPackages.stdenv.mkDerivation {
           name = "schedsim";
           src = ./.;
           buildInputs = with pkgs; [
@@ -21,6 +22,7 @@
             graphviz
             gtest
             llvmPackages.openmp
+            llvmPackages.clang
             (python312.withPackages (ps: with ps; [
               pybind11
               pybind11-stubgen
@@ -29,11 +31,11 @@
               breathe
             ]))
           ];
-          cmakeFlags = [ "-GNinja" "-DCMAKE_BUILD_TYPE=Release" ];
+          cmakeFlags = [ "-GNinja" "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_C_COMPILER=clang" "-DCMAKE_CXX_COMPILER=clang++" ];
           doCheck = false;
         };
 
-        schedsimTest = pkgs.stdenv.mkDerivation {
+        schedsimTest = pkgs.llvmPackages.stdenv.mkDerivation {
           name = "schedsim-test";
           src = ./.;
           buildInputs = with pkgs; [
@@ -42,6 +44,7 @@
             doxygen
             graphviz
             gtest
+            llvmPackages.clang
             (python312.withPackages (ps: with ps; [
               pybind11
               pybind11-stubgen
@@ -50,7 +53,7 @@
               breathe
             ]))
           ];
-          cmakeFlags = [ "-GNinja" "-DCMAKE_BUILD_TYPE=Debug" ];
+          cmakeFlags = [ "-GNinja" "-DCMAKE_BUILD_TYPE=Debug" "-DCMAKE_C_COMPILER=clang" "-DCMAKE_CXX_COMPILER=clang++" ];
           doCheck = true;
           buildPhase = ''
             cmake --build . --target test

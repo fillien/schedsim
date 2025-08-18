@@ -1,4 +1,13 @@
 cmake_minimum_required(VERSION 3.20...3.25)
+
+# Prefer Clang toolchain by default on all platforms unless explicitly overridden
+if(NOT DEFINED CMAKE_C_COMPILER)
+  set(CMAKE_C_COMPILER clang)
+endif()
+if(NOT DEFINED CMAKE_CXX_COMPILER)
+  set(CMAKE_CXX_COMPILER clang++)
+endif()
+
 project("Schedsim"
   VERSION 2023.09
   DESCRIPTION "A scheduling simulator")
