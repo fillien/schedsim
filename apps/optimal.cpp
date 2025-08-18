@@ -1,11 +1,9 @@
 #include "analyzers/stats.hpp"
-#include <__ostream/print.h>
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
 #include <ios>
-#include <iterator>
 #include <limits>
 #include <numbers>
 #include <numeric>
