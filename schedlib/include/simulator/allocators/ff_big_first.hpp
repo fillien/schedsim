@@ -7,28 +7,26 @@
 namespace allocators {
 
 /**
- * @brief A class representing a high-performance first allocator.
+ * @brief First-Fit allocator preferring highest-performance clusters.
  *
- * This allocator prioritizes scheduling tasks on schedulers with the highest performance.
+ * @details Schedulers (clusters) are sorted by decreasing `perf()`. The first
+ * scheduler that accepts the task via `admission_test()` is selected.
  */
 class FFBigFirst : public Allocator {
       protected:
         /**
-         * @brief Determines the scheduler to place a new task onto, prioritizing those with higher
-         * performance.
+         * @brief Pick the highest-performance scheduler that can admit the task.
          *
-         * @param new_task The task to be scheduled.
-         * @return An optional containing the selected scheduler if one is found; otherwise,
-         * std::nullopt.
+         * @param new_task Task to be scheduled.
+         * @return Selected scheduler, or std::nullopt if none can admit it.
          */
         auto where_to_put_the_task(const std::shared_ptr<Task>& new_task)
             -> std::optional<std::shared_ptr<scheds::Scheduler>> override;
 
       public:
         /**
-         * @brief Constructor for the HighPerfFirst allocator.
-         *
-         * @param sim A weak pointer to the simulation engine.
+         * @brief Construct the allocator.
+         * @param sim Weak pointer to the simulation engine.
          */
         explicit FFBigFirst(const std::weak_ptr<Engine>& sim) : Allocator(sim) {};
 };

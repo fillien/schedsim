@@ -384,7 +384,19 @@ auto main(const int argc, const char** argv) -> int
                         leafs_found.at(index) = leafs;
                 }
 
-                std::println("{}", results);
+                // GCC/libstdc++ may not yet support C++23 range formatting for std::vector.
+                // Avoid formatting the vector directly to keep portability across macOS/Linux.
+                auto format_vector = [](const std::vector<std::size_t>& v) {
+                        std::ostringstream oss;
+                        oss << "[";
+                        for (std::size_t i = 0; i < v.size(); ++i) {
+                                if (i > 0) oss << ", ";
+                                oss << v[i];
+                        }
+                        oss << "]";
+                        return oss.str();
+                };
+                std::println("{}", format_vector(results));
                 const std::size_t best_result = *std::ranges::min_element(results);
                 const std::size_t nb_leafs =
                     std::accumulate(leafs_found.begin(), leafs_found.end(), 0);

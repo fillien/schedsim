@@ -6,33 +6,27 @@
 
 namespace allocators {
 /**
- * @brief A smart allocator class.
+ * @brief First-Fit allocator guided by a simple moving average.
  *
- * This class inherits from the `Allocator` base class and provides a
- * mechanism for allocating tasks to schedulers based on some internal logic.
+ * @details Uses a simple moving average of recent utilization on the largest
+ * cluster to adjust `u_target()` on other clusters, then applies a capacity
+ * check and first-fit admission.
  */
 class FFSma : public Allocator {
       protected:
         /**
-         * @brief Determines where to place a new task.
+         * @brief Choose a cluster based on SMA-adjusted capacity targets.
          *
-         * This virtual function is responsible for selecting the appropriate scheduler
-         * for a given task. The implementation details are specific to this allocator.
-         *
-         * @param new_task A shared pointer to the task to be allocated.
-         * @return An optional containing a shared pointer to the selected scheduler, or
-         * std::nullopt if no suitable scheduler is found.
+         * @param new_task Task to be scheduled.
+         * @return Selected scheduler, or std::nullopt if none can admit it.
          */
         auto where_to_put_the_task(const std::shared_ptr<Task>& new_task)
             -> std::optional<std::shared_ptr<scheds::Scheduler>> override;
 
       public:
         /**
-         * @brief Constructor for the SmartAss allocator.
-         *
-         * Initializes the `SmartAss` object with a weak pointer to the simulation engine.
-         *
-         * @param sim A weak pointer to the simulation engine.
+         * @brief Construct the allocator.
+         * @param sim Weak pointer to the simulation engine.
          */
         explicit FFSma(const std::weak_ptr<Engine>& sim) : Allocator(sim) {};
 };

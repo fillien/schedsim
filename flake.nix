@@ -11,7 +11,6 @@
       let
         pkgs = import nixpkgs { inherit system; };
 
-        # Build using the LLVM toolchain (clang) on Linux
         schedsim = pkgs.llvmPackages.stdenv.mkDerivation {
           name = "schedsim";
           src = ./.;
