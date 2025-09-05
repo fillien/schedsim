@@ -40,6 +40,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <atomic>
 
 #include <cstdint>
 #include <fstream>
@@ -300,7 +301,9 @@ auto run_monte_carlo(
     const auto& prepattern,
     auto config,
     auto taskset,
-    auto plat) -> std::pair<double, std::size_t>
+    auto plat,
+    std::atomic<bool>& stop_flag) -> std::pair<std::size_t, std::size_t>
+
 {
         auto tree = std::make_unique<Node>();
         Node* current_node = tree.get();
@@ -310,6 +313,7 @@ auto run_monte_carlo(
         std::size_t nb_leaf_found = 0;
 
         for (int i = 1; i <= MAX_SIM; ++i) {
+                if (stop_flag.load(std::memory_order_acquire)) { break; }
                 current_node = selection(tree.get());
 
                 add_nodes(current_node);
@@ -330,6 +334,10 @@ auto run_monte_carlo(
                                 best = ratio;
                                 best_reject = score;
                                 std::println("T{} new best = {}", thread_id, best);
+                                if (best == 0) {
+                                        stop_flag.store(true, std::memory_order_release);
+                                        break;
+                                }
                         }
                 }
                 backpropagate(current_node, score);
@@ -348,7 +356,6 @@ auto main(const int argc, const char** argv) -> int
 {
         using namespace std;
 
-        const std::size_t NB_THREADS = 8;
         const bool FREESCALING_ALLOWED{false};
 
         try {
@@ -356,36 +363,44 @@ auto main(const int argc, const char** argv) -> int
                 const auto taskset = protocols::scenario::read_file(config.scenario_file);
                 const auto plat = protocols::hardware::read_file(config.platform_file);
 
-                std::array<std::vector<unsigned>, NB_THREADS> prepatterns = {{
-                    {{0, 0, 0}},
-                    {{0, 0, 1}},
-                    {{0, 1, 0}},
-                    {{0, 1, 1}},
-                    {{1, 0, 0}},
-                    {{1, 0, 1}},
-                    {{1, 1, 0}},
-                    {{1, 1, 1}},
-                }};
-                omp_set_num_threads(NB_THREADS);
+                // Determine number of threads from available processors
+                std::size_t nb_threads = static_cast<std::size_t>(std::max(1, omp_get_num_procs()))
+                    ;
+                omp_set_num_threads(static_cast<int>(nb_threads));
+
+                // Generate prepatterns to split the MCTS root into nb_threads subtrees.
+                // We create binary patterns of length L = ceil(log2(nb_threads)) and
+                // take the first nb_threads combinations.
+                auto generate_prepatterns = [](std::size_t n) {
+                        std::vector<std::vector<unsigned>> res;
+                        if (n == 0) { return res; }
+                        std::size_t L = 0;
+                        while ((1ull << L) < n) { ++L; }
+                        res.reserve(n);
+                        for (std::size_t i = 0; i < n; ++i) {
+                                std::vector<unsigned> pattern(L);
+                                for (std::size_t b = 0; b < L; ++b) {
+                                        pattern[L - 1 - b] = static_cast<unsigned>((i >> b) & 1u);
+                                }
+                                res.push_back(std::move(pattern));
+                        }
+                        return res;
+                };
+
+                auto prepatterns = generate_prepatterns(nb_threads);
                 std::println(
-                    "array size = {} ; procs max = {}", prepatterns.size(), omp_get_max_threads());
+                    "prepatterns={} ; omp_max_threads={} ; nb_procs={}",
+                    prepatterns.size(),
+                    omp_get_max_threads(),
+                    omp_get_num_procs());
 
                 const std::size_t MAX_SIM = 1'000'000;
-                const std::size_t MAX_SIM_PART = MAX_SIM / NB_THREADS;
-                std::vector<std::size_t> results(omp_get_max_threads());
-                std::vector<std::size_t> leafs_found(omp_get_max_threads());
+                const std::size_t base_sim = MAX_SIM / nb_threads;
+                const std::size_t remainder = MAX_SIM % nb_threads;
+                std::vector<std::size_t> results(nb_threads);
+                std::vector<std::size_t> leafs_found(nb_threads);
+                std::atomic<bool> stop_flag{false};
 
-#pragma omp parallel
-                {
-                        auto index = omp_get_thread_num();
-                        auto [best, leafs] = run_monte_carlo(
-                            index, MAX_SIM_PART, prepatterns.at(index), config, taskset, plat);
-                        results.at(index) = best;
-                        leafs_found.at(index) = leafs;
-                }
-
-                // GCC/libstdc++ may not yet support C++23 range formatting for std::vector.
-                // Avoid formatting the vector directly to keep portability across macOS/Linux.
                 auto format_vector = [](const std::vector<std::size_t>& v) {
                         std::ostringstream oss;
                         oss << "[";
@@ -396,6 +411,37 @@ auto main(const int argc, const char** argv) -> int
                         oss << "]";
                         return oss.str();
                 };
+
+                auto format_vector_unsigned = [](const std::vector<unsigned>& v) {
+                        std::ostringstream oss;
+                        oss << "[";
+                        for (std::size_t i = 0; i < v.size(); ++i) {
+                                if (i > 0) oss << ", ";
+                                oss << v[i];
+                        }
+                        oss << "]";
+                        return oss.str();
+                };
+
+                for (std::size_t i = 0; i < prepatterns.size(); ++i) {
+                        std::println("{}", format_vector_unsigned(prepatterns.at(i)));
+                }
+
+#pragma omp parallel
+                {
+                        auto index = static_cast<std::size_t>(omp_get_thread_num());
+                        const std::size_t sims_for_this_thread =
+                            base_sim + (index < remainder ? 1 : 0);
+                        std::println("sim for this thread : {}", sims_for_this_thread);
+                        auto [best, leafs] = run_monte_carlo(
+                            index, static_cast<int>(sims_for_this_thread), prepatterns.at(index), config, taskset, plat, stop_flag);
+                        results.at(index) = best;
+                        leafs_found.at(index) = leafs;
+                }
+
+                if (stop_flag.load(std::memory_order_acquire)) {
+                        std::println("Early stop requested, exiting.");
+                }
                 std::println("{}", format_vector(results));
                 const std::size_t best_result = *std::ranges::min_element(results);
                 const std::size_t nb_leafs =

@@ -4,9 +4,9 @@
 #include <cstddef>
 #include <memory>
 #include <optional>
+#include <rapidjson/document.h>
 #include <simulator/allocator.hpp>
 #include <vector>
-#include <rapidjson/document.h>
 
 namespace allocators {
 
@@ -36,7 +36,8 @@ class MCTS : public Allocator {
          * @param pattern Vector of indices into the scheduler list; the i-th
          * element selects the scheduler for the i-th allocation.
          */
-        explicit MCTS(const std::weak_ptr<Engine>& sim, const std::vector<unsigned>& pattern) : Allocator(sim), pattern(pattern) {};
+        explicit MCTS(const std::weak_ptr<Engine>& sim, const std::vector<unsigned>& pattern)
+            : Allocator(sim), pattern(pattern) {};
 
         /**
          * @brief Number of allocations performed so far.
@@ -44,7 +45,7 @@ class MCTS : public Allocator {
          */
         auto get_nb_alloc() const -> std::size_t { return step; };
 
-       private:
+      private:
         std::vector<unsigned> pattern;
         std::size_t step = 0;
 };

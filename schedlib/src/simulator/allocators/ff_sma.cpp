@@ -48,17 +48,17 @@ auto allocators::FFSma::where_to_put_the_task(const std::shared_ptr<Task>& new_t
 
         std::optional<std::shared_ptr<scheds::Scheduler>> next_sched;
 
-        const double NB_PROCS = static_cast<double>(sorted_scheds.back()->cluster()->processors().size());
+        const double NB_PROCS =
+            static_cast<double>(sorted_scheds.back()->cluster()->processors().size());
 
         // Look for a cluster to place the task
         for (auto& sched : sorted_scheds) {
                 const auto& clu = sched->cluster();
 
-                // std::println(
-                //     "sched {}, sma: {}", clu->id(), computeSMA(sorted_scheds.back()->last_utilizations(), 0.5, 5)/NB_PROCS);
-
                 if (sched != sorted_scheds.back()) {
-                        sched->cluster()->u_target(computeSMA(sorted_scheds.back()->last_utilizations(), 0.5, 5)/NB_PROCS);
+                        sched->cluster()->u_target(
+                            computeSMA(sorted_scheds.back()->last_utilizations(), 0.5, 5) /
+                            NB_PROCS);
                 }
 
                 if (sched != sorted_scheds.back()) { clu->u_target(); }

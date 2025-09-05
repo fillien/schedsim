@@ -47,7 +47,7 @@ add_subdirectory(python)
 add_subdirectory(docs)
 
 install(
-  TARGETS schedsim schedview schedgen
+  TARGETS schedsim schedview schedgen optimal
   EXPORT ${PROJECT_NAME}_Targets
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUEDIR}
 )

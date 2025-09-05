@@ -67,12 +67,15 @@ plat
 # # Generate the tasksets
 
 # %%
+util_steps = list(reversed(range(1, int(UTILIZATION*10)+1, 2)))
+
+# %%
 if os.path.isdir(DIR):
     shutil.rmtree(DIR)
 
 os.mkdir(DIR)
 
-util_steps = list(reversed(range(1, int(UTILIZATION*10)+1, 2)))
+
 NB_JOBS = 100
 NB_TASK = 100
 UMAX    = 0.3 #LITTLE_PERF_SCORE - 0.13334
@@ -176,6 +179,9 @@ for index,conf in enumerate(configs):
     stats[index] = pl.concat(stats_df).select(["utilizations", "id", pl.exclude(["utilizations", "id"])]).sort(["utilizations", "id"])
 
 print("== finished ==")
+
+# %%
+stats
 
 # %%
 results = {}

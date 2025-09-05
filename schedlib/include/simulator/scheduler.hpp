@@ -97,7 +97,10 @@ class Scheduler : public Entity, public std::enable_shared_from_this<Scheduler> 
          */
         auto total_utilization() const -> double;
 
-        auto last_utilizations() const -> std::vector<std::pair<double, double>> { return last_utilizations_; };
+        auto last_utilizations() const -> std::vector<std::pair<double, double>>
+        {
+                return last_utilizations_;
+        };
 
       protected:
         /**

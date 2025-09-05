@@ -3,10 +3,10 @@
 #include <protocols/scenario.hpp>
 #include <protocols/traces.hpp>
 #include <simulator/allocator.hpp>
-#include <simulator/allocators/ff_lb.hpp>
 #include <simulator/allocators/ff_big_first.hpp>
-#include <simulator/allocators/ff_little_first.hpp>
 #include <simulator/allocators/ff_cap.hpp>
+#include <simulator/allocators/ff_lb.hpp>
+#include <simulator/allocators/ff_little_first.hpp>
 #include <simulator/allocators/ff_sma.hpp>
 #include <simulator/engine.hpp>
 #include <simulator/entity.hpp>
