@@ -19,21 +19,14 @@ endfunction()
 add_app(schedgen generator.cpp)
 add_app(schedsim simulator.cpp)
 add_app(schedview analyzer.cpp)
-# add_app(optimal optimal.cpp)
 
-FIND_PACKAGE(OpenMP REQUIRED)
+find_package(OpenMP REQUIRED)
 add_executable(optimal)
 target_compile_features(optimal PRIVATE cxx_std_23)
-
-# if (NOT APPLE)
-#     target_compile_options(optimal PRIVATE
-#         -fdiagnostics-color=always
-#         -fsanitize=address
-#     )
-#     target_link_options(optimal PRIVATE
-#         -fsanitize=address
-#     )
-# endif()
-
 target_sources(optimal PRIVATE optimal.cpp)
 target_link_libraries(optimal cxxopts schedlib OpenMP::OpenMP_CXX)
+
+add_executable(alloc)
+target_compile_features(alloc PRIVATE cxx_std_23)
+target_sources(alloc PRIVATE alloc.cpp)
+target_link_libraries(alloc cxxopts schedlib OpenMP::OpenMP_CXX)

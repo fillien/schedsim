@@ -39,6 +39,7 @@ auto uunifast_discard_weibull(
     std::size_t nb_tasks,
     double total_utilization,
     double umax,
+    double umin,
     double success_rate,
     double compression_rate,
     const std::optional<std::pair<double, double>>& a_special_need = std::nullopt)
@@ -75,6 +76,7 @@ auto generate_tasksets(
     std::size_t nb_tasks,
     double total_utilization,
     double umax,
+    double umin,
     double success_rate,
     double compression_rate,
     std::optional<std::pair<double, double>> a_special_need = std::nullopt,
@@ -94,6 +96,25 @@ auto generate_tasksets(
 auto add_taskets(
     const protocols::scenario::Setting& first, const protocols::scenario::Setting& second)
     -> protocols::scenario::Setting;
+
+/**
+ * @brief Build a task set from an explicit vector of utilizations.
+ *
+ * For each utilization value, a task is created with a randomly picked period from the
+ * same discrete set used by `uunifast_discard_weibull`. The WCET is computed as
+ * `utilization * period`, and jobs are generated using the same Weibull-based
+ * compression and success-rate logic as in `uunifast_discard_weibull`.
+ *
+ * @param utilizations The list of per-task utilizations (each in [0, 1]).
+ * @param success_rate Success rate to select the budget among generated jobs (in [0, 1]).
+ * @param compression_rate Compression rate for job durations (in [0, 1]).
+ * @return A `protocols::scenario::Setting` with one task per utilization value.
+ * @throws std::invalid_argument if parameters are out of bounds.
+ */
+auto from_utilizations(
+    const std::vector<double>& utilizations,
+    double success_rate,
+    double compression_rate) -> protocols::scenario::Setting;
 } // namespace generators
 
 #endif

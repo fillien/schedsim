@@ -2,10 +2,10 @@ cmake_minimum_required(VERSION 3.20...3.25)
 
 # Prefer Clang toolchain by default on all platforms unless explicitly overridden
 if(NOT DEFINED CMAKE_C_COMPILER)
-  set(CMAKE_C_COMPILER clang)
+    set(CMAKE_C_COMPILER clang)
 endif()
 if(NOT DEFINED CMAKE_CXX_COMPILER)
-  set(CMAKE_CXX_COMPILER clang++)
+    set(CMAKE_CXX_COMPILER clang++)
 endif()
 
 project("Schedsim"
@@ -43,7 +43,10 @@ add_subdirectory(external/rang)
 add_subdirectory(external/tracy)
 add_subdirectory(schedlib)
 add_subdirectory(apps)
-add_subdirectory(python)
+option(BUILD_PYTHON "Build Python bindings" ON)
+if(BUILD_PYTHON)
+  add_subdirectory(python)
+endif()
 add_subdirectory(docs)
 
 install(

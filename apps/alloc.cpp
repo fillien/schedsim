@@ -1,4 +1,4 @@
-#include <optional>
+#include <analyzers/stats.hpp>
 #include <protocols/hardware.hpp>
 #include <protocols/scenario.hpp>
 #include <protocols/traces.hpp>
@@ -8,6 +8,7 @@
 #include <simulator/allocators/ff_lb.hpp>
 #include <simulator/allocators/ff_little_first.hpp>
 #include <simulator/allocators/ff_sma.hpp>
+#include <simulator/allocators/mcts.hpp>
 #include <simulator/engine.hpp>
 #include <simulator/entity.hpp>
 #include <simulator/event.hpp>
@@ -21,22 +22,21 @@
 #include <simulator/schedulers/power_aware.hpp>
 #include <simulator/task.hpp>
 
+#include <cstddef>
 #include <cstdlib>
 #include <cxxopts.hpp>
 #include <exception>
 #include <filesystem>
+#include <fstream>
+#include <ios>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
-
-#ifdef TRACY_ENABLE
-#include <chrono>
-#include <thread>
-#include <tracy/Tracy.hpp>
-#endif
 
 namespace fs = std::filesystem;
 
@@ -50,14 +50,6 @@ struct AppConfig {
         std::optional<double> u_target;
 };
 
-constexpr std::array<const char*, 6> policies{
-    "grub - M-GRUB with global reclaiming",
-    "pa   - M-GRUB-PA with global reclaiming",
-    "ffa  - M-GRUB with minimum frequency",
-    "csf  - M-GRUB with minimum active processor",
-    "ffa_timer",
-    "csf_timer"};
-
 auto parse_args(const int argc, const char** argv) -> AppConfig
 {
         AppConfig config;
@@ -70,10 +62,9 @@ auto parse_args(const int argc, const char** argv) -> AppConfig
 	    ("p,platform", "Specify the platform configuration file.", cxxopts::value<std::string>())
 	    ("a,alloc", "Specify the cluster allocator", cxxopts::value<std::string>())
 	    ("s,sched", "Specify the scheduling policy to be used.", cxxopts::value<std::string>())
-            ("delay", "Activate delay during DVFS and DPM switch mode", cxxopts::value<bool>()->default_value("false"))
-	    ("o,output", "Specify the output file to write the simulation results.", cxxopts::value<std::string>())
-	    ("target", "Specify u_target for the LITTLE cluster", cxxopts::value<double>()->default_value("1"));
+	    ("o,output", "Specify the output file to write the simulation results.", cxxopts::value<std::string>());
         // clang-format on
+
         const auto cli = options.parse(argc, argv);
 
         if (cli.count("help") || cli.arguments().empty()) {
@@ -86,8 +77,6 @@ auto parse_args(const int argc, const char** argv) -> AppConfig
         if (cli.count("sched")) { config.sched = cli["sched"].as<std::string>(); }
         if (cli.count("alloc")) { config.alloc = cli["alloc"].as<std::string>(); }
         if (cli.count("output")) { config.output_file = cli["output"].as<std::string>(); }
-        if (cli.count("delay")) { config.active_delay = true; }
-        if (cli.count("target")) { config.u_target = cli["target"].as<double>(); }
 
         return config;
 }
@@ -125,23 +114,18 @@ auto main(const int argc, const char** argv) -> int
         const bool FREESCALING_ALLOWED{false};
 
         try {
-                auto config = parse_args(argc, argv);
+                const auto config = parse_args(argc, argv);
+                const auto taskset = protocols::scenario::read_file(config.scenario_file);
+                const auto plat_config = protocols::hardware::read_file(config.platform_file);
 
-                // Create the simulation engine and attache to it a scheduler
                 std::shared_ptr<Engine> sim = make_shared<Engine>(config.active_delay);
-
-                auto taskset = protocols::scenario::read_file(config.scenario_file);
-                auto PlatformConfig = protocols::hardware::read_file(config.platform_file);
-
-                // Insert the platform configured through the scenario file, in the simulation
-                // engine
                 auto plat = make_shared<Platform>(sim, FREESCALING_ALLOWED);
                 sim->platform(plat);
-
-                auto alloc = select_alloc(config.alloc, sim);
+                // auto alloc = select_alloc(config.alloc, sim);
+                auto alloc = std::make_shared<allocators::FFLittleFirst>(sim);
 
                 std::size_t cluster_id_cpt{1};
-                for (const protocols::hardware::Cluster& clu : PlatformConfig.clusters) {
+                for (const protocols::hardware::Cluster& clu : plat_config.clusters) {
                         auto newclu = std::make_shared<Cluster>(
                             sim,
                             cluster_id_cpt,
@@ -152,9 +136,7 @@ auto main(const int argc, const char** argv) -> int
                                  ? config.u_target.value()
                                  : clu.perf_score));
                         newclu->create_procs(clu.nb_procs);
-
                         auto sched = select_sched(config.sched, sim);
-
                         alloc->add_child_sched(newclu, sched);
                         plat->add_cluster(newclu);
                         cluster_id_cpt++;
@@ -163,13 +145,10 @@ auto main(const int argc, const char** argv) -> int
                 sim->scheduler(alloc);
 
                 std::vector<std::shared_ptr<Task>> tasks{taskset.tasks.size()};
-
-                // Create tasks and job arrival events
                 for (auto input_task : taskset.tasks) {
                         auto new_task = make_shared<Task>(
                             sim, input_task.id, input_task.period, input_task.utilization);
 
-                        // For each job of tasks add a "job arrival" event in the future list
                         for (auto job : input_task.jobs) {
                                 sim->add_event(
                                     events::JobArrival{
@@ -179,10 +158,24 @@ auto main(const int argc, const char** argv) -> int
                         tasks.push_back(std::move(new_task));
                 }
 
-                // Simulate the system (job set + platform) with the chosen scheduler
+                std::print("simulate...");
                 sim->simulation();
+                std::println("OK");
 
-                protocols::traces::write_log_file(sim->traces(), config.output_file);
+                std::vector<std::pair<double, protocols::traces::trace>> log(
+                    sim->traces().begin(), sim->traces().end());
+
+                auto result = outputs::stats::count_rejected(log);
+                std::cout << alloc->get_nb_alloc() << std::endl;
+
+                std::ofstream datafile("min_taskset_result.csv", std::ios::app);
+                if (!datafile) {
+                        std::cerr << "failed to open alloc-result.csv file" << std::endl;
+                        return EXIT_FAILURE;
+                }
+                datafile << config.scenario_file << ";" << config.alloc << ";" << result
+                         << std::endl;
+                datafile.close();
 
                 return EXIT_SUCCESS;
         }

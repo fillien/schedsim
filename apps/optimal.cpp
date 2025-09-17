@@ -29,6 +29,7 @@
 #include <simulator/task.hpp>
 #include <stack>
 
+#include <atomic>
 #include <cstdlib>
 #include <cxxopts.hpp>
 #include <exception>
@@ -40,7 +41,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <atomic>
 
 #include <cstdint>
 #include <fstream>
@@ -107,49 +107,6 @@ struct Node {
         bool leaf = false;
 };
 
-// Helper: Convert alloc to string
-std::string alloc_to_string(alloc a)
-{
-        switch (a) {
-        // case REJECT: return "REJECT";
-        case SCHED1: return "SCHED1";
-        case SCHED2: return "SCHED2";
-        default: return "UNKNOWN";
-        }
-}
-
-// Helper to create a unique node id string
-std::string node_id(const Node* node)
-{
-        std::ostringstream oss;
-        oss << "N" << reinterpret_cast<std::uintptr_t>(node);
-        return oss.str();
-}
-
-// Write a node and its children recursively
-void writeDot(const Node* node, std::ofstream& f)
-{
-        if (!node) return;
-
-        f << "    " << node_id(node) << " [label=\"nb_visit=" << node->nb_visit
-          << "\\nnb_rejects=" << node->nb_rejects
-          << "\\nalloc=" << alloc_to_string(node->allocation) << "\"];\n";
-
-        for (const auto& child : node->children) {
-                f << "    " << node_id(node) << " -> " << node_id(child.get()) << ";\n";
-                writeDot(child.get(), f);
-        }
-}
-
-// Main entry point to write DOT file
-void treeToDot(const Node* root, const std::string& filename)
-{
-        std::ofstream f(filename);
-        f << "digraph Tree {\n";
-        writeDot(root, f);
-        f << "}\n";
-}
-
 auto simulate(
     const AppConfig& config,
     const auto& taskset,
@@ -210,7 +167,8 @@ auto selection(Node* root) -> Node*
                 if (node->nb_visit == 0) { return 0.0; }
                 const auto nb_visit = static_cast<double>(node->nb_visit);
                 const double avg_rejects = static_cast<double>(node->nb_rejects) / nb_visit;
-                const double c = 10 * std::numbers::sqrt2;
+                // const double c = 10 * std::numbers::sqrt2;
+                constexpr double c = 1 * std::numbers::sqrt2;
                 const double parent_visits =
                     (node == nullptr) ? static_cast<double>(node->parent->nb_visit) : 1.0;
                 double exploration =
@@ -242,9 +200,12 @@ auto selection(Node* root) -> Node*
 
 auto get_random_alloc() -> std::size_t
 {
-        static thread_local std::mt19937 rng(std::random_device{}());
-        std::uniform_int_distribution<int> dist(0, 1);
-        return static_cast<std::size_t>(dist(rng));
+        static thread_local unsigned long long x = 0x9E3779B97F4A7C15ull;
+        x ^= x >> 12;
+        x ^= x << 25;
+        x ^= x >> 27;
+        const unsigned long long r = x * 2685821657736338717ull;
+        return static_cast<std::size_t>(r & 1ull);
 }
 
 auto add_nodes(Node* parent) -> void
@@ -364,8 +325,7 @@ auto main(const int argc, const char** argv) -> int
                 const auto plat = protocols::hardware::read_file(config.platform_file);
 
                 // Determine number of threads from available processors
-                std::size_t nb_threads = static_cast<std::size_t>(std::max(1, omp_get_num_procs()))
-                    ;
+                std::size_t nb_threads = static_cast<std::size_t>(std::max(1, omp_get_num_procs()));
                 omp_set_num_threads(static_cast<int>(nb_threads));
 
                 // Generate prepatterns to split the MCTS root into nb_threads subtrees.
@@ -375,7 +335,9 @@ auto main(const int argc, const char** argv) -> int
                         std::vector<std::vector<unsigned>> res;
                         if (n == 0) { return res; }
                         std::size_t L = 0;
-                        while ((1ull << L) < n) { ++L; }
+                        while ((1ull << L) < n) {
+                                ++L;
+                        }
                         res.reserve(n);
                         for (std::size_t i = 0; i < n; ++i) {
                                 std::vector<unsigned> pattern(L);
@@ -394,7 +356,7 @@ auto main(const int argc, const char** argv) -> int
                     omp_get_max_threads(),
                     omp_get_num_procs());
 
-                const std::size_t MAX_SIM = 1'000'000;
+                const std::size_t MAX_SIM = 100'000'000;
                 const std::size_t base_sim = MAX_SIM / nb_threads;
                 const std::size_t remainder = MAX_SIM % nb_threads;
                 std::vector<std::size_t> results(nb_threads);
@@ -434,7 +396,13 @@ auto main(const int argc, const char** argv) -> int
                             base_sim + (index < remainder ? 1 : 0);
                         std::println("sim for this thread : {}", sims_for_this_thread);
                         auto [best, leafs] = run_monte_carlo(
-                            index, static_cast<int>(sims_for_this_thread), prepatterns.at(index), config, taskset, plat, stop_flag);
+                            index,
+                            static_cast<int>(sims_for_this_thread),
+                            prepatterns.at(index),
+                            config,
+                            taskset,
+                            plat,
+                            stop_flag);
                         results.at(index) = best;
                         leafs_found.at(index) = leafs;
                 }

@@ -30,6 +30,11 @@ class FFLittleFirst : public Allocator {
          * @param sim Weak pointer to the simulation engine.
          */
         explicit FFLittleFirst(const std::weak_ptr<Engine>& sim) : Allocator(sim) {};
+
+        auto get_nb_alloc() const -> std::size_t { return step; };
+
+      private:
+        std::size_t step = 0;
 };
 }; // namespace allocators
 

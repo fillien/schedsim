@@ -7,6 +7,7 @@
 /build_*.json
 /data_*
 /alloc*
+/*tasksets*
 /vgcore.*
 /trace/stream
 /rtsched.sty

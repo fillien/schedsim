@@ -12,6 +12,7 @@ auto allocators::FFLittleFirst::where_to_put_the_task(const std::shared_ptr<Task
                 return first->cluster()->perf() > second->cluster()->perf();
         };
 
+        step++;
         // Sort the schedulers by perf score
         auto sorted_scheds{schedulers()};
         std::ranges::sort(sorted_scheds, compare_perf);

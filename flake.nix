@@ -20,6 +20,7 @@
             doxygen
             graphviz
             gtest
+            swig
             llvmPackages.openmp
             llvmPackages.clang
             (python312.withPackages (ps: with ps; [
@@ -30,7 +31,13 @@
               breathe
             ]))
           ];
-          cmakeFlags = [ "-GNinja" "-DCMAKE_BUILD_TYPE=Release" "-DCMAKE_C_COMPILER=clang" "-DCMAKE_CXX_COMPILER=clang++" ];
+          cmakeFlags = [
+            "-GNinja"
+            "-DCMAKE_BUILD_TYPE=Release"
+            "-DCMAKE_C_COMPILER=clang"
+            "-DCMAKE_CXX_COMPILER=clang++"
+            "-DBUILD_PYTHON=OFF"
+          ];
           doCheck = false;
         };
 
@@ -74,11 +81,10 @@
             gtest
             llvmPackages.clang
             (python312.withPackages (ps: with ps; [
-              pybind11
-              pybind11-stubgen
               sphinx
               furo
               breathe
+              swig
             ]))
           ];
           cmakeFlags = [ "-GNinja" "-DCMAKE_BUILD_TYPE=Debug" "-DCMAKE_C_COMPILER=clang" "-DCMAKE_CXX_COMPILER=clang++" ];
@@ -91,11 +97,24 @@
           '';
         };
 
+       container = pkgs.dockerTools.buildImage {
+         name = "schedsim-optimal";
+         tag = "latest";
+         copyToRoot = [
+           # schedsimStatic
+           schedsim
+           pkgs.bash
+           pkgs.coreutils
+         ];
+         config = {
+           Cmd = ["/bin/optimal" "--platform" "/job/platforms/exynos5422.json" "--alloc" "opti" "--sched" "grub" "--output" "/job/logs.json" "--input" "/job/alloc_tasksets/1/1.json"];
+         };
+       };
+
         devShellInputs = with pkgs; [
           (python312.withPackages (ps: with ps; [
             pip
             jupytext
-            pybind11
             pandas
             polars
             pyarrow
@@ -107,6 +126,7 @@
             jupyterlab-execute-time
             pybind11-stubgen
             sphinx
+            scipy
             furo
             breathe
           ]))
@@ -127,11 +147,13 @@
           sphinx
           llvmPackages.openmp
           llvmPackages.clang
+          swig
         ];
       in
       {
         packages.default = schedsim;
         packages.schedsim-static = schedsimStatic;
+        packages.container = container;
         checks.default = schedsimTest;
         devShells.default = pkgs.mkShell {
           name = "schedsim-shell";

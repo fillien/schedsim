@@ -18,10 +18,17 @@
 #include <thread>
 #include <utility>
 #include <vector>
+#include <iostream>
 
 namespace {
 using hr_clk = std::chrono::high_resolution_clock;
-static std::mt19937_64 random_gen(hr_clk::now().time_since_epoch().count());
+// Use a thread-local RNG to avoid data races when generating in parallel
+static thread_local std::mt19937_64 random_gen{
+    static_cast<std::mt19937_64::result_type>(
+        hr_clk::now().time_since_epoch().count() ^
+        (reinterpret_cast<std::uintptr_t>(&random_gen) +
+         static_cast<std::uintptr_t>(std::hash<std::thread::id>{}(std::this_thread::get_id()))))
+};
 
 /**
  * @brief Generates a vector of utilizations for a given number of tasks such that their total
@@ -48,14 +55,19 @@ auto uunifast_discard(
     std::size_t nb_tasks,
     double total_utilization,
     double umax,
+    double umin,
     std::optional<std::pair<double, double>> a_special_need = std::nullopt) -> std::vector<double>
 {
         std::uniform_real_distribution<double> distribution(0, 1);
         std::vector<double> utilizations;
         bool have_a_special_need = a_special_need.has_value();
+        int attempts = 0;
 
         bool discard = false;
         do {
+                if (++attempts > 2000000000)
+                        throw std::runtime_error(
+                            "can't achieve the total utilization with those parameters");
                 utilizations.clear();
                 double sum_utilization = total_utilization;
                 discard = false;
@@ -67,9 +79,10 @@ auto uunifast_discard(
                             std::pow(new_rand, 1.0 / static_cast<double>(nb_tasks - i));
                         double utilization = sum_utilization - next_sum_utilization;
 
-                        if (utilization > umax || (have_a_special_need &&
-                                                   (a_special_need.value().first > utilization ||
-                                                    utilization > a_special_need.value().second))) {
+                        if (utilization < umin || utilization > umax ||
+                            (have_a_special_need &&
+                             (a_special_need.value().first > utilization ||
+                              utilization > a_special_need.value().second))) {
                                 discard = true;
                                 break;
                         }
@@ -84,7 +97,7 @@ auto uunifast_discard(
 
                 if (!discard) {
                         double last_utilization = sum_utilization;
-                        if (last_utilization > umax) { discard = true; }
+                        if (last_utilization < umin || last_utilization > umax) { discard = true; }
                         else {
                                 utilizations.push_back(last_utilization);
                         }
@@ -191,6 +204,7 @@ auto uunifast_discard_weibull(
     std::size_t nb_tasks,
     double total_utilization,
     double umax,
+    double umin,
     double success_rate,
     double compression_rate,
     const std::optional<std::pair<double, double>>& a_special_need) -> protocols::scenario::Setting
@@ -211,8 +225,19 @@ auto uunifast_discard_weibull(
                 throw std::invalid_argument(
                     "uunifast_discard_weibull: total utilization is out of bounds 0..max_double");
         }
-        if (0 > umax || umax > 1) {
-                throw std::invalid_argument("uunifast_discard_weibull: umax is out of bounds 0..1");
+        if (umin > umax || umax > 1) {
+                throw std::invalid_argument(
+                    "uunifast_discard_weibull: umax is out of bounds umin..1");
+        }
+        if (0 > umin || umin > umax) {
+                throw std::invalid_argument(
+                    "uunifast_discard_weibull: umin is out of bounds 0..umax");
+        }
+        if (static_cast<double>(nb_tasks) * umin > total_utilization) {
+                throw std::invalid_argument("uunifast_discard_weibull: nb task * umin <= total utilization");
+        }
+        if (total_utilization > static_cast<double>(nb_tasks) * umax) {
+                throw std::invalid_argument("uunifast_discard_weibull: total utilization <= nb task * umax");
         }
         if (0 > success_rate || success_rate > 1) {
                 throw std::invalid_argument(
@@ -222,15 +247,12 @@ auto uunifast_discard_weibull(
                 throw std::invalid_argument(
                     "uunifast_discard_weibull: compression_rate is out of bounds 0..1");
         }
-        if (static_cast<double>(nb_tasks) * umax < total_utilization) {
-                throw std::invalid_argument("uunifast_discard_weibull: can't acheive the total "
-                                            "utilization with those parameters");
-        }
 
         double sum_of_utils = 0;
         std::vector<double> utilizations;
         while (std::abs(sum_of_utils - total_utilization) > UTIL_ROUNDING) {
-                utilizations = uunifast_discard(nb_tasks, total_utilization, umax, a_special_need);
+                utilizations =
+                    uunifast_discard(nb_tasks, total_utilization, umax, umin, a_special_need);
                 sum_of_utils = std::ranges::fold_left(utilizations, 0.0, std::plus<>());
         }
 
@@ -255,6 +277,7 @@ auto generate_tasksets(
     std::size_t nb_tasks,
     double total_utilization,
     double umax,
+    double umin,
     double success_rate,
     double compression_rate,
     std::optional<std::pair<double, double>> a_special_need,
@@ -283,6 +306,7 @@ auto generate_tasksets(
                                       nb_tasks,
                                       total_utilization,
                                       umax,
+                                      umin,
                                       success_rate,
                                       compression_rate,
                                       a_special_need,
@@ -298,11 +322,11 @@ auto generate_tasksets(
                                         taskset_indices.pop();
                                 }
 
-                                // Generate the taskset *after* acquiring the index from the queue.
                                 auto taskset = uunifast_discard_weibull(
                                     nb_tasks,
                                     total_utilization,
                                     umax,
+                                    umin,
                                     success_rate,
                                     compression_rate,
                                     a_special_need);
@@ -360,5 +384,48 @@ auto histogram(const std::vector<double>& data, int num_bins, double min, double
                 histogram[bin_index]++;
         }
         return histogram;
+}
+
+auto from_utilizations(
+    const std::vector<double>& utilizations,
+    double success_rate,
+    double compression_rate) -> protocols::scenario::Setting
+{
+        using namespace protocols::scenario;
+
+        if (utilizations.empty()) {
+                throw std::invalid_argument("from_utilizations: empty utilization vector");
+        }
+        if (success_rate < 0.0 || success_rate > 1.0) {
+                throw std::invalid_argument("from_utilizations: success_rate is out of bounds 0..1");
+        }
+        if (compression_rate < 0.0 || compression_rate > 1.0) {
+                throw std::invalid_argument(
+                    "from_utilizations: compression_rate is out of bounds 0..1");
+        }
+        for (double u : utilizations) {
+                if (u < 0.0 || u > 1.0) {
+                        throw std::invalid_argument(
+                            "from_utilizations: each utilization must be within [0,1]");
+                }
+        }
+
+        constexpr std::array<int, 10> PERIODS{
+            25200, 12600, 8400, 6300, 5040, 4200, 3600, 3150, 2800, 2520};
+        constexpr int HYPERPERIOD = PERIODS.at(0);
+
+        std::vector<Task> tasks;
+        tasks.reserve(utilizations.size());
+
+        for (std::size_t tid = 0; tid < utilizations.size(); ++tid) {
+                const int period = pick_period(PERIODS);
+                const int nb_jobs = HYPERPERIOD / period;
+                const double util = utilizations.at(tid);
+                const double wcet = period * util;
+                tasks.push_back(
+                    generate_task(tid, nb_jobs, success_rate, compression_rate, wcet, period));
+        }
+
+        return Setting{.tasks = tasks};
 }
 } // namespace generators

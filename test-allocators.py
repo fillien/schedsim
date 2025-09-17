@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.16.6
+#       jupytext_version: 1.17.2
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -29,6 +29,7 @@ from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
 import numpy as np
 import json as js
+import drs
 
 pio.renderers.default = "iframe"
 pl.Config.set_tbl_rows(-1)
@@ -39,7 +40,8 @@ sim = sm.SchedSimRunner("./build/apps/schedsim")
 
 # %%
 PLATFORM = "platforms/exynos5422.json"
-DIR = "alloc_tasksets"
+#DIR = "alloc_tasksets"
+DIR = "min_tasksets"
 UTILIZATION = 6.5
 LITTLE_PERF_SCORE = 0.33334
 
@@ -67,7 +69,13 @@ plat
 # # Generate the tasksets
 
 # %%
-util_steps = list(reversed(range(1, int(UTILIZATION*10)+1, 2)))
+util_steps = list(reversed(range(21, int(UTILIZATION*10)+1, 2)))
+NB_JOBS = 100  # number of task sets per utilization step
+NB_TASK = 20   # number of tasks per task set
+UMAX    = 0.4  # per-task upper bound
+UMIN    = 0.025  # per-task lower bound
+
+from drs import drs
 
 # %%
 if os.path.isdir(DIR):
@@ -75,28 +83,32 @@ if os.path.isdir(DIR):
 
 os.mkdir(DIR)
 
-
-NB_JOBS = 100
-NB_TASK = 100
-UMAX    = 0.3 #LITTLE_PERF_SCORE - 0.13334
-
 for i in util_steps:
     data_path = f"{DIR}/{str(i)}"
     os.mkdir(data_path)
     utilization = round(i * 0.1, 1)
     print(f"jobs = {NB_JOBS}, tasks = {NB_TASK}, umax = {UMAX}, utilization = {utilization}")
-    sc.generate_tasksets(data_path, NB_JOBS, NB_TASK, utilization, UMAX, success_rate = 1.0, compression_rate = 1.0, nb_cores = 16, a_special_need=(0.0, 0.22))
+
+    # Generate NB_JOBS tasksets using custom utilization vectors (DRS)
+    for idx in range(1, NB_JOBS + 1):
+        upper_bounds = [UMAX] * NB_TASK
+        lower_bounds = [UMIN] * NB_TASK
+        utils = drs(NB_TASK, utilization, upper_bounds, lower_bounds)
+        setting = sc.from_utilizations(utils, success_rate=1.0, compression_rate=1.0)
+        sc.write_setting_file(f"{data_path}/{idx}.json", setting)
 
 print("== finished ==")
 
 # %%
-bins = np.linspace(0, UMAX, num=61)
+bins = np.linspace(UMIN, UMAX, num=61)
 values = []
 for i in range(1, 101):
     lines = []
     with open(f"{DIR}/65/{str(i)}.json", "r") as f:
         lines = f.readlines()
-    file_values = [t.utilization for t in sc.from_json_setting(lines[0]).tasks]
+    setting = sc.from_json_setting(lines[0])
+    tasks = setting.tasks
+    file_values = [t.utilization for t in tasks]
     values += file_values
 
 fig = px.histogram(x=values, nbins=60,
@@ -108,9 +120,27 @@ fig.show()
 values = []
 for i in range(1, 101):
     lines = []
+    with open(f"{DIR}/43/{str(i)}.json", "r") as f:
+        lines = f.readlines()
+    setting = sc.from_json_setting(lines[0])
+    tasks = setting.tasks
+    file_values = [t.utilization for t in tasks]
+    values += file_values
+
+fig = px.histogram(x=values, nbins=60,
+                   title="Distribution of task's utilization at total utilization 4.3")
+fig.update_layout(xaxis_title="Value", yaxis_title="Frequency")
+fig.update_traces(marker_line_width=1,marker_line_color="black", opacity=0.7)
+fig.show()
+
+values = []
+for i in range(1, 101):
+    lines = []
     with open(f"{DIR}/21/{str(i)}.json", "r") as f:
         lines = f.readlines()
-    file_values = [t.utilization for t in sc.from_json_setting(lines[0]).tasks]
+    setting = sc.from_json_setting(lines[0])
+    tasks = setting.tasks
+    file_values = [t.utilization for t in tasks]
     values += file_values
 
 fig = px.histogram(x=values, nbins=60,
@@ -179,9 +209,6 @@ for index,conf in enumerate(configs):
     stats[index] = pl.concat(stats_df).select(["utilizations", "id", pl.exclude(["utilizations", "id"])]).sort(["utilizations", "id"])
 
 print("== finished ==")
-
-# %%
-stats
 
 # %%
 results = {}
@@ -304,5 +331,3 @@ fig.show()
 
 # %%
 stats
-
-# %%
