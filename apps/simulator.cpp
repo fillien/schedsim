@@ -30,6 +30,8 @@
 #include <ostream>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #ifdef TRACY_ENABLE
@@ -48,6 +50,7 @@ struct AppConfig {
         std::string alloc;
         bool active_delay{false};
         std::optional<double> u_target;
+        std::unordered_map<std::string, std::string> alloc_args;
 };
 
 constexpr std::array<const char*, 6> policies{
@@ -57,6 +60,33 @@ constexpr std::array<const char*, 6> policies{
     "csf  - M-GRUB with minimum active processor",
     "ffa_timer",
     "csf_timer"};
+
+auto parse_allocator_args(const std::vector<std::string>& raw_args)
+    -> std::unordered_map<std::string, std::string>
+{
+        std::unordered_map<std::string, std::string> result;
+        for (const auto& arg : raw_args) {
+                const auto pos = arg.find('=');
+                if (pos == std::string::npos) {
+                        throw std::invalid_argument(
+                            "Allocator arguments must follow the key=value format");
+                }
+
+                auto key = arg.substr(0, pos);
+                auto value = arg.substr(pos + 1);
+
+                if (key.empty() || value.empty()) {
+                        throw std::invalid_argument(
+                            "Allocator arguments require both a non-empty key and value");
+                }
+
+                if (!result.emplace(std::move(key), std::move(value)).second) {
+                        throw std::invalid_argument("Duplicate allocator argument: " + arg);
+                }
+        }
+
+        return result;
+}
 
 auto parse_args(const int argc, const char** argv) -> AppConfig
 {
@@ -69,6 +99,8 @@ auto parse_args(const int argc, const char** argv) -> AppConfig
 	    ("i,input", "Specify the scenario file.", cxxopts::value<std::string>())
 	    ("p,platform", "Specify the platform configuration file.", cxxopts::value<std::string>())
 	    ("a,alloc", "Specify the cluster allocator", cxxopts::value<std::string>())
+	    ("A,alloc-arg", "Allocator argument in key=value form (repeatable).",
+	        cxxopts::value<std::vector<std::string>>())
 	    ("s,sched", "Specify the scheduling policy to be used.", cxxopts::value<std::string>())
             ("delay", "Activate delay during DVFS and DPM switch mode", cxxopts::value<bool>()->default_value("false"))
 	    ("o,output", "Specify the output file to write the simulation results.", cxxopts::value<std::string>())
@@ -85,6 +117,10 @@ auto parse_args(const int argc, const char** argv) -> AppConfig
         if (cli.count("platform")) { config.platform_file = cli["platform"].as<std::string>(); }
         if (cli.count("sched")) { config.sched = cli["sched"].as<std::string>(); }
         if (cli.count("alloc")) { config.alloc = cli["alloc"].as<std::string>(); }
+        if (cli.count("alloc-arg")) {
+                config.alloc_args =
+                    parse_allocator_args(cli["alloc-arg"].as<std::vector<std::string>>());
+        }
         if (cli.count("output")) { config.output_file = cli["output"].as<std::string>(); }
         if (cli.count("delay")) { config.active_delay = true; }
         if (cli.count("target")) { config.u_target = cli["target"].as<double>(); }
@@ -92,16 +128,72 @@ auto parse_args(const int argc, const char** argv) -> AppConfig
         return config;
 }
 
-auto select_alloc(const std::string& choice, const std::shared_ptr<Engine>& sim)
+auto select_alloc(
+    const std::string& choice,
+    const std::shared_ptr<Engine>& sim,
+    const std::unordered_map<std::string, std::string>& alloc_args)
     -> std::shared_ptr<allocators::Allocator>
 {
         using namespace allocators;
+        const auto ensure_allowed_args = [&](std::initializer_list<const char*> allowed_keys) {
+                std::unordered_set<std::string> allowed;
+                allowed.reserve(allowed_keys.size());
+                for (const auto* key : allowed_keys) {
+                        allowed.emplace(key);
+                }
+
+                for (const auto& [key, value] : alloc_args) {
+                        if (allowed.find(key) == allowed.end()) {
+                                throw std::invalid_argument(
+                                    "Undefined allocator argument '" + key + "' for policy '" +
+                                    choice + "'");
+                        }
+                }
+        };
         // if (choice.empty() || choice == "default") { return std::make_shared<Allocator>(sim); }
-        if (choice == "ff_big_first") { return std::make_shared<FFBigFirst>(sim); }
-        if (choice == "ff_little_first") { return std::make_shared<FFLittleFirst>(sim); }
-        if (choice == "ff_cap") { return std::make_shared<FFCap>(sim); }
-        if (choice == "ff_lb") { return std::make_shared<FirstFitLoadBalancer>(sim); }
-        if (choice == "ff_sma") { return std::make_shared<FFSma>(sim); }
+        if (choice == "ff_big_first") {
+                ensure_allowed_args({});
+                return std::make_shared<FFBigFirst>(sim);
+        }
+        if (choice == "ff_little_first") {
+                ensure_allowed_args({});
+                return std::make_shared<FFLittleFirst>(sim);
+        }
+        if (choice == "ff_cap") {
+                ensure_allowed_args({});
+                return std::make_shared<FFCap>(sim);
+        }
+        if (choice == "ff_lb") {
+                ensure_allowed_args({});
+                return std::make_shared<FirstFitLoadBalancer>(sim);
+        }
+        if (choice == "ff_sma") {
+                ensure_allowed_args({"sample_rate", "num_samples"});
+
+                double sample_rate = 0.5;
+                if (const auto it = alloc_args.find("sample_rate"); it != alloc_args.end()) {
+                        try {
+                                sample_rate = std::stod(it->second);
+                        }
+                        catch (const std::exception& e) {
+                                throw std::invalid_argument(
+                                    "Invalid value for ff_sma sample_rate: " + it->second);
+                        }
+                }
+
+                int num_samples = 5;
+                if (const auto it = alloc_args.find("num_samples"); it != alloc_args.end()) {
+                        try {
+                                num_samples = std::stoi(it->second);
+                        }
+                        catch (const std::exception& e) {
+                                throw std::invalid_argument(
+                                    "Invalid value for ff_sma num_samples: " + it->second);
+                        }
+                }
+
+                return std::make_shared<FFSma>(sim, sample_rate, num_samples);
+        }
         throw std::invalid_argument("Undefined allocation policy");
 }
 
@@ -138,7 +230,7 @@ auto main(const int argc, const char** argv) -> int
                 auto plat = make_shared<Platform>(sim, FREESCALING_ALLOWED);
                 sim->platform(plat);
 
-                auto alloc = select_alloc(config.alloc, sim);
+                auto alloc = select_alloc(config.alloc, sim, config.alloc_args);
 
                 std::size_t cluster_id_cpt{1};
                 for (const protocols::hardware::Cluster& clu : PlatformConfig.clusters) {

@@ -1,8 +1,10 @@
 import subprocess
 import shutil
 import os
-from typing import Optional
+from typing import Mapping, Optional, Union
 import concurrent.futures
+
+AllocatorArgValue = Union[str, int, float]
 
 class SchedSimRunner:
     def __init__(self, executable_path: str = "schedsim"):
@@ -17,7 +19,8 @@ class SchedSimRunner:
                       delay: bool = False,
                       target: Optional[int] = 1,
                       show_help: bool = False,
-                      show_version: bool = False) -> tuple[int, str, str]:
+                      show_version: bool = False,
+                      allocator_args: Optional[Mapping[str, AllocatorArgValue]] = None) -> tuple[int, str, str]:
         cmd = [self.executable]
 
         if show_help:
@@ -31,6 +34,9 @@ class SchedSimRunner:
                 cmd.extend(["--platform", platform_file])
             if allocator:
                 cmd.extend(["--alloc", allocator])
+            if allocator_args:
+                for key, value in allocator_args.items():
+                    cmd.extend(["--alloc-arg", f"{key}={value}"])
             if scheduler:
                 cmd.extend(["--sched", scheduler])
             if output_file:
@@ -58,7 +64,16 @@ class SchedSimRunner:
             print(f"Error: {str(e)}")
             return -1, "", f"Error: {str(e)}"
 
-    def simul(self, sce_dir, alloc, sched, platform, target, logs):
+    def simul(
+        self,
+        sce_dir,
+        alloc,
+        sched,
+        platform,
+        target,
+        logs,
+        allocator_args: Optional[Mapping[str, AllocatorArgValue]] = None,
+    ):
         if os.path.isdir(logs):
             shutil.rmtree(logs)
 
@@ -82,7 +97,8 @@ class SchedSimRunner:
                             sched,
                             os.path.join(logs_dir, scenario),
                             False,
-                            target
+                            target,
+                            allocator_args=allocator_args
                         )
                         for scenario in scenarios
                     ]

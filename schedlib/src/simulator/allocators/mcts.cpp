@@ -39,9 +39,8 @@ auto allocators::MCTS::where_to_put_the_task(const std::shared_ptr<Task>& new_ta
 
         std::optional<std::shared_ptr<scheds::Scheduler>> next_sched;
 
-        if (step < pattern.size()) {
-                next_sched = sorted_scheds[pattern[step]];
-        } else {
+        if (step < pattern.size()) { next_sched = sorted_scheds[pattern[step]]; }
+        else {
                 next_sched = pick_random(sorted_scheds);
         }
         step++;

@@ -27,8 +27,15 @@ class FFSma : public Allocator {
         /**
          * @brief Construct the allocator.
          * @param sim Weak pointer to the simulation engine.
+         * @param sample_rate Number of samples collected per unit time for the SMA window.
+         * @param num_samples Number of samples included in the SMA window.
          */
-        explicit FFSma(const std::weak_ptr<Engine>& sim) : Allocator(sim) {};
+        explicit FFSma(
+            const std::weak_ptr<Engine>& sim, double sample_rate = 0.5, int num_samples = 5);
+
+      private:
+        double sample_rate_;
+        int num_samples_;
 };
 }; // namespace allocators
 

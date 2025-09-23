@@ -8,8 +8,20 @@
 #include <memory>
 #include <numeric>
 #include <optional>
+#include <stdexcept>
 #include <utility>
 #include <vector>
+
+allocators::FFSma::FFSma(const std::weak_ptr<Engine>& sim, double sample_rate, int num_samples)
+    : Allocator(sim), sample_rate_(sample_rate), num_samples_(num_samples)
+{
+        if (sample_rate_ <= 0.0) {
+                throw std::invalid_argument("FFSma: sample_rate must be strictly positive");
+        }
+        if (num_samples_ <= 0) {
+                throw std::invalid_argument("FFSma: num_samples must be strictly positive");
+        }
+}
 
 auto computeSMA(
     const std::vector<std::pair<double, double>>& data, double sample_rate, int num_samples)
@@ -57,7 +69,10 @@ auto allocators::FFSma::where_to_put_the_task(const std::shared_ptr<Task>& new_t
 
                 if (sched != sorted_scheds.back()) {
                         sched->cluster()->u_target(
-                            computeSMA(sorted_scheds.back()->last_utilizations(), 0.5, 5) /
+                            computeSMA(
+                                sorted_scheds.back()->last_utilizations(),
+                                sample_rate_,
+                                num_samples_) /
                             NB_PROCS);
                 }
 
