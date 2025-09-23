@@ -225,7 +225,8 @@ auto from_json(const rapidjson::Value& log) -> trace;
  * @param logs Multimap of trace events with timestamps.
  * @param file Path to the log file.
  */
-void write_log_file(const std::multimap<double, trace>& logs, const std::filesystem::path& file);
+void write_log_file(
+    const std::vector<std::pair<double, trace>>& logs, const std::filesystem::path& file);
 
 /**
  * @brief Reads trace events from a log file.

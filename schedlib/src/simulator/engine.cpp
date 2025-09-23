@@ -19,7 +19,7 @@ void Engine::add_event(const events::Event& new_event, const double& timestamp)
 
 void Engine::add_trace(const protocols::traces::trace& new_trace)
 {
-        past_list_.insert({current_timestamp_, std::move(new_trace)});
+        past_list_.emplace_back(current_timestamp_, std::move(new_trace));
 }
 
 void Engine::simulation()

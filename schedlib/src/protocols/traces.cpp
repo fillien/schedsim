@@ -341,7 +341,8 @@ auto from_json(const rapidjson::Value& log) -> trace
         throw std::out_of_range("Unsupported event type");
 }
 
-void write_log_file(const std::multimap<double, trace>& logs, const std::filesystem::path& file)
+void write_log_file(
+    const std::vector<std::pair<double, trace>>& logs, const std::filesystem::path& file)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;

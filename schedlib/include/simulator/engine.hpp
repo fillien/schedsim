@@ -125,7 +125,8 @@ class Engine {
          * @brief Retrieve the past trace events.
          * @return A multimap of timestamps and traces.
          */
-        [[nodiscard]] auto traces() const -> const std::multimap<double, protocols::traces::trace>&
+        [[nodiscard]] auto traces() const
+            -> const std::vector<std::pair<double, protocols::traces::trace>>&
         {
                 return past_list_;
         }
@@ -146,10 +147,11 @@ class Engine {
         [[nodiscard]] auto is_delay_activated() const -> bool { return delay_activated_; }
 
       private:
-        double current_timestamp_{0};                               ///< Simulation time counter.
-        std::shared_ptr<allocators::Allocator> alloc_;              ///< Attached scheduler.
-        std::shared_ptr<Platform> platform_;                        ///< The simulation platform.
-        std::multimap<double, protocols::traces::trace> past_list_; ///< Log of past trace events.
+        double current_timestamp_{0};                  ///< Simulation time counter.
+        std::shared_ptr<allocators::Allocator> alloc_; ///< Attached scheduler.
+        std::shared_ptr<Platform> platform_;           ///< The simulation platform.
+        std::vector<std::pair<double, protocols::traces::trace>>
+            past_list_;               ///< Log of past trace events.
         bool delay_activated_{false}; ///< Flag indicating if delay is activated.
         std::multimap<double, events::Event> future_list_; ///< List of future events.
 };
