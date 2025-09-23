@@ -53,7 +53,15 @@
 #include <tracy/Tracy.hpp>
 #endif
 
+#include <chrono>
 namespace fs = std::filesystem;
+
+static inline std::string now_ts()
+{
+        using namespace std::chrono;
+        const auto ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+        return std::to_string(ms);
+}
 
 struct AppConfig {
         fs::path output_file{"logs.json"};
@@ -83,7 +91,7 @@ auto parse_args(const int argc, const char** argv) -> AppConfig
         const auto cli = options.parse(argc, argv);
 
         if (cli.count("help") || cli.arguments().empty()) {
-                std::cout << options.help() << std::endl;
+                std::cout << "[" << now_ts() << "] " << options.help() << std::endl;
                 exit(cli.arguments().empty() ? EXIT_FAILURE : EXIT_SUCCESS);
         }
 
@@ -101,9 +109,14 @@ enum alloc { SCHED1, SCHED2 };
 struct Node {
         Node* parent = nullptr;
         std::vector<std::unique_ptr<Node>> children;
-        alloc allocation;
+        alloc allocation{};
+
+        // Keep raw rejects for inspection/logging (not used by selection now)
         std::size_t nb_rejects = 0;
         std::size_t nb_visit = 0;
+
+        // NEW: sum of scaled rewards in [0,1] for UCB mean Q
+        double reward_sum01 = 0.0;
         bool leaf = false;
 };
 
@@ -158,43 +171,68 @@ auto simulate(
         std::vector<std::pair<double, protocols::traces::trace>> log(
             sim->traces().begin(), sim->traces().end());
 
+        // returns: { #rejected, #allocations done (horizon for the rollout) }
         return {outputs::stats::count_rejected(log), alloc->get_nb_alloc()};
 }
 
+// ---------- UCB parameters ----------
+constexpr double UCB_C = 0.7; // try {0.4, 0.7, 1.0, 1.414}
+constexpr bool UCB_DEPTH_ANNEAL = true;
+
+// ---------- UCB helper ----------
+static inline double ucb_score(const Node* child, std::size_t parent_visits, int depth)
+{
+        if (child->nb_visit == 0) {
+                // Force exploring each unvisited child at least once
+                return std::numeric_limits<double>::infinity();
+        }
+
+        const double q = child->reward_sum01 / static_cast<double>(child->nb_visit); // in [0,1]
+        const double n = static_cast<double>(child->nb_visit);
+        const double np = static_cast<double>(std::max<std::size_t>(parent_visits, 1));
+        const double c =
+            UCB_DEPTH_ANNEAL ? (UCB_C / std::sqrt(static_cast<double>(depth) + 1.0)) : UCB_C;
+
+        const double bonus = c * std::sqrt(std::log(np) / n);
+        return q + bonus; // MAXIMIZE this
+}
+
+// ---------- Selection (MAX UCB) ----------
 auto selection(Node* root) -> Node*
 {
-        const auto score = [](const std::unique_ptr<Node>& node) {
-                if (node->nb_visit == 0) { return 0.0; }
-                const auto nb_visit = static_cast<double>(node->nb_visit);
-                const double avg_rejects = static_cast<double>(node->nb_rejects) / nb_visit;
-                // const double c = 10 * std::numbers::sqrt2;
-                constexpr double c = 1 * std::numbers::sqrt2;
-                const double parent_visits =
-                    (node == nullptr) ? static_cast<double>(node->parent->nb_visit) : 1.0;
-                double exploration =
-                    c * std::sqrt(std::log(parent_visits) / static_cast<double>(node->nb_visit));
-                return avg_rejects - exploration;
-        };
         Node* current = root;
+        int depth = 0;
 
+        // Descend while there are children
         while (!current->children.empty()) {
-                if (std::ranges::all_of(
-                        current->children, [](const auto& node) { return node->leaf; })) {
+                // If all children are marked leaf/closed, mark this node and bubble up once.
+                if (std::ranges::all_of(current->children, [](const auto& n) { return n->leaf; })) {
                         current->leaf = true;
+                        if (current->parent == nullptr) { break; }
                         current = current->parent;
+                        depth = std::max(0, depth - 1);
+                        continue;
                 }
-                else {
-                        // For each children select the one with the bigger score
-                        auto best = std::ranges::min_element(
-                            current->children, [&score](const auto& first, const auto& second) {
-                                    if (first->leaf) { return false; }
-                                    if (second->leaf) { return true; }
-                                    return score(first) < score(second);
-                            });
 
-                        current = best->get();
-                }
+                const std::size_t parent_visits = current->nb_visit;
+
+                // Choose child with MAX UCB score (skip children already marked as leaf)
+                auto best_it = std::ranges::max_element(
+                    current->children,
+                    [parent_visits,
+                     depth](const std::unique_ptr<Node>& a, const std::unique_ptr<Node>& b) {
+                            if (a->leaf && !b->leaf) return true;  // a < b so b wins
+                            if (b->leaf && !a->leaf) return false; // b < a so a wins
+                            const double ua = ucb_score(a.get(), parent_visits, depth + 1);
+                            const double ub = ucb_score(b.get(), parent_visits, depth + 1);
+                            return ua < ub; // max_element with "less-than" comparator
+                    });
+
+                current = best_it->get();
+                depth++;
+                if (current->children.empty()) break; // reached frontier
         }
+
         return current;
 }
 
@@ -229,16 +267,15 @@ auto get_first_pattern(Node* node) -> std::vector<unsigned>
         return pattern;
 }
 
-auto backpropagate(Node* node, std::size_t score) -> void
+auto backpropagate(Node* node, double reward01, std::size_t raw_rejects) -> void
 {
         Node* current = node;
-        while (current->parent != nullptr) {
-                current->nb_rejects += score;
+        while (current != nullptr) { // include root
+                current->reward_sum01 += reward01;
                 current->nb_visit++;
+                current->nb_rejects += raw_rejects; // optional: raw stats only
                 current = current->parent;
         }
-        current->nb_rejects += score;
-        current->nb_visit++;
 }
 
 void destroy_tree_iter(std::unique_ptr<Node> root)
@@ -270,7 +307,7 @@ auto run_monte_carlo(
         Node* current_node = tree.get();
 
         double best = std::numeric_limits<double>::infinity();
-        std::size_t best_reject = std::numeric_limits<std::size_t>::infinity();
+        std::size_t best_reject = std::numeric_limits<std::size_t>::max();
         std::size_t nb_leaf_found = 0;
 
         for (int i = 1; i <= MAX_SIM; ++i) {
@@ -281,35 +318,46 @@ auto run_monte_carlo(
                 const auto branch = get_random_alloc();
                 current_node = current_node->children.at(branch).get();
 
-                // auto pattern = prepattern + get_first_pattern(current_node);
+                // Build pattern = prepattern + path allocations to this node
                 auto pattern = get_first_pattern(current_node);
                 pattern.insert(pattern.begin(), prepattern.begin(), prepattern.end());
-                auto [score, nb_alloc] = simulate(config, taskset, plat, pattern);
+
+                auto [rejected, nb_alloc] = simulate(config, taskset, plat, pattern);
 
                 if (nb_alloc <= pattern.size()) {
                         if (!current_node->leaf) { nb_leaf_found++; }
                         current_node->leaf = true;
+
                         const double ratio =
-                            static_cast<double>(score) / static_cast<double>(nb_alloc);
+                            (nb_alloc > 0)
+                                ? (static_cast<double>(rejected) / static_cast<double>(nb_alloc))
+                                : std::numeric_limits<double>::infinity();
+
                         if (ratio < best) {
                                 best = ratio;
-                                best_reject = score;
-                                std::println("T{} new best = {}", thread_id, best);
-                                if (best == 0) {
+                                best_reject = rejected;
+                                std::println("[{}] T{} new best = {}", now_ts(), thread_id, best);
+                                if (best == 0.0) {
                                         stop_flag.store(true, std::memory_order_release);
                                         break;
                                 }
                         }
                 }
-                backpropagate(current_node, score);
+
+                // ---- Scaled reward in [0,1], per rollout ----
+                double reward01 = 0.0;
+                if (nb_alloc > 0) {
+                        reward01 =
+                            1.0 - static_cast<double>(rejected) / static_cast<double>(nb_alloc);
+                        if (reward01 < 0.0) reward01 = 0.0;
+                        if (reward01 > 1.0) reward01 = 1.0;
+                }
+                backpropagate(current_node, reward01, rejected);
         }
 
         destroy_tree_iter(std::move(tree));
 
-        std::println("finished from thread {}", thread_id);
-
-        // std::println("best: {}", best);
-        // treeToDot(&tree, "tree.dot");
+        std::println("[{}] finished from thread {}", now_ts(), thread_id);
         return {best_reject, nb_leaf_found};
 }
 
@@ -351,12 +399,13 @@ auto main(const int argc, const char** argv) -> int
 
                 auto prepatterns = generate_prepatterns(nb_threads);
                 std::println(
-                    "prepatterns={} ; omp_max_threads={} ; nb_procs={}",
+                    "[{}] prepatterns={} ; omp_max_threads={} ; nb_procs={}",
+                    now_ts(),
                     prepatterns.size(),
                     omp_get_max_threads(),
                     omp_get_num_procs());
 
-                const std::size_t MAX_SIM = 100'000'000;
+                const std::size_t MAX_SIM = 80'000'000;
                 const std::size_t base_sim = MAX_SIM / nb_threads;
                 const std::size_t remainder = MAX_SIM % nb_threads;
                 std::vector<std::size_t> results(nb_threads);
@@ -386,7 +435,8 @@ auto main(const int argc, const char** argv) -> int
                 };
 
                 for (std::size_t i = 0; i < prepatterns.size(); ++i) {
-                        std::println("{}", format_vector_unsigned(prepatterns.at(i)));
+                        std::println(
+                            "[{}] {}", now_ts(), format_vector_unsigned(prepatterns.at(i)));
                 }
 
 #pragma omp parallel
@@ -394,7 +444,8 @@ auto main(const int argc, const char** argv) -> int
                         auto index = static_cast<std::size_t>(omp_get_thread_num());
                         const std::size_t sims_for_this_thread =
                             base_sim + (index < remainder ? 1 : 0);
-                        std::println("sim for this thread : {}", sims_for_this_thread);
+                        std::println(
+                            "[{}] sim for this thread : {}", now_ts(), sims_for_this_thread);
                         auto [best, leafs] = run_monte_carlo(
                             index,
                             static_cast<int>(sims_for_this_thread),
@@ -408,15 +459,34 @@ auto main(const int argc, const char** argv) -> int
                 }
 
                 if (stop_flag.load(std::memory_order_acquire)) {
-                        std::println("Early stop requested, exiting.");
+                        std::println("[{}] Early stop requested, exiting.", now_ts());
                 }
-                std::println("{}", format_vector(results));
+                std::println("[{}] {}", now_ts(), format_vector(results));
                 const std::size_t best_result = *std::ranges::min_element(results);
                 const std::size_t nb_leafs =
-                    std::accumulate(leafs_found.begin(), leafs_found.end(), 0);
-                std::println("best result = {}, nb leafs found = {}", best_result, nb_leafs);
+                    std::accumulate(leafs_found.begin(), leafs_found.end(), 0ull);
+                std::println(
+                    "[{}] best result = {}, nb leafs found = {}", now_ts(), best_result, nb_leafs);
 
-                std::ofstream datafile("mcts-result.csv", std::ios::app);
+                auto sanitize_name = [](const std::string& s) {
+                        std::string r = s;
+                        for (char& ch : r) {
+                                if (!((ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
+                                      (ch >= '0' && ch <= '9') || ch == '-' || ch == '_')) {
+                                        ch = '_';
+                                }
+                        }
+                        return r;
+                };
+                const std::string scenario_base =
+                    sanitize_name(fs::path(config.scenario_file).stem().string());
+                const std::string platform_base =
+                    sanitize_name(fs::path(config.platform_file).stem().string());
+                const std::string results_filename =
+                    "mcts-result-" + scenario_base + "-" + platform_base + "-" + now_ts() + ".csv";
+                std::println("[{}] writing results to {}", now_ts(), results_filename);
+
+                std::ofstream datafile(results_filename, std::ios::app);
                 if (!datafile) { return 1; }
 
                 datafile << config.scenario_file << ";optimal;" << best_result << std::endl;
@@ -425,16 +495,19 @@ auto main(const int argc, const char** argv) -> int
                 return EXIT_SUCCESS;
         }
         catch (const cxxopts::exceptions::parsing& e) {
-                std::cerr << "Error parsing options: " << e.what() << std::endl;
+                std::cerr << "[" << now_ts() << "] " << "Error parsing options: " << e.what()
+                          << std::endl;
         }
         catch (const std::bad_cast& e) {
-                std::cerr << "Error parsing casting option: " << e.what() << std::endl;
+                std::cerr << "[" << now_ts() << "] " << "Error parsing casting option: " << e.what()
+                          << std::endl;
         }
         catch (const std::invalid_argument& e) {
-                std::cerr << "Invalid argument: " << e.what() << std::endl;
+                std::cerr << "[" << now_ts() << "] " << "Invalid argument: " << e.what()
+                          << std::endl;
         }
         catch (const std::exception& e) {
-                std::cerr << "Error: " << e.what() << std::endl;
+                std::cerr << "[" << now_ts() << "] " << "Error: " << e.what() << std::endl;
         }
         return EXIT_FAILURE;
 }
