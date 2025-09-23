@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstddef>
 #include <filesystem>
+#include <iostream>
 #include <limits>
 #include <mutex>
 #include <optional>
@@ -18,17 +19,14 @@
 #include <thread>
 #include <utility>
 #include <vector>
-#include <iostream>
 
 namespace {
 using hr_clk = std::chrono::high_resolution_clock;
 // Use a thread-local RNG to avoid data races when generating in parallel
-static thread_local std::mt19937_64 random_gen{
-    static_cast<std::mt19937_64::result_type>(
-        hr_clk::now().time_since_epoch().count() ^
-        (reinterpret_cast<std::uintptr_t>(&random_gen) +
-         static_cast<std::uintptr_t>(std::hash<std::thread::id>{}(std::this_thread::get_id()))))
-};
+static thread_local std::mt19937_64 random_gen{static_cast<std::mt19937_64::result_type>(
+    hr_clk::now().time_since_epoch().count() ^
+    (reinterpret_cast<std::uintptr_t>(&random_gen) +
+     static_cast<std::uintptr_t>(std::hash<std::thread::id>{}(std::this_thread::get_id()))))};
 
 /**
  * @brief Generates a vector of utilizations for a given number of tasks such that their total
@@ -234,10 +232,12 @@ auto uunifast_discard_weibull(
                     "uunifast_discard_weibull: umin is out of bounds 0..umax");
         }
         if (static_cast<double>(nb_tasks) * umin > total_utilization) {
-                throw std::invalid_argument("uunifast_discard_weibull: nb task * umin <= total utilization");
+                throw std::invalid_argument(
+                    "uunifast_discard_weibull: nb task * umin <= total utilization");
         }
         if (total_utilization > static_cast<double>(nb_tasks) * umax) {
-                throw std::invalid_argument("uunifast_discard_weibull: total utilization <= nb task * umax");
+                throw std::invalid_argument(
+                    "uunifast_discard_weibull: total utilization <= nb task * umax");
         }
         if (0 > success_rate || success_rate > 1) {
                 throw std::invalid_argument(
@@ -387,9 +387,8 @@ auto histogram(const std::vector<double>& data, int num_bins, double min, double
 }
 
 auto from_utilizations(
-    const std::vector<double>& utilizations,
-    double success_rate,
-    double compression_rate) -> protocols::scenario::Setting
+    const std::vector<double>& utilizations, double success_rate, double compression_rate)
+    -> protocols::scenario::Setting
 {
         using namespace protocols::scenario;
 
@@ -397,7 +396,8 @@ auto from_utilizations(
                 throw std::invalid_argument("from_utilizations: empty utilization vector");
         }
         if (success_rate < 0.0 || success_rate > 1.0) {
-                throw std::invalid_argument("from_utilizations: success_rate is out of bounds 0..1");
+                throw std::invalid_argument(
+                    "from_utilizations: success_rate is out of bounds 0..1");
         }
         if (compression_rate < 0.0 || compression_rate > 1.0) {
                 throw std::invalid_argument(

@@ -112,9 +112,8 @@ auto add_taskets(
  * @throws std::invalid_argument if parameters are out of bounds.
  */
 auto from_utilizations(
-    const std::vector<double>& utilizations,
-    double success_rate,
-    double compression_rate) -> protocols::scenario::Setting;
+    const std::vector<double>& utilizations, double success_rate, double compression_rate)
+    -> protocols::scenario::Setting;
 } // namespace generators
 
 #endif
