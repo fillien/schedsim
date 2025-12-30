@@ -15,6 +15,7 @@ auto allocators::FFBigFirst::where_to_put_the_task(const std::shared_ptr<Task>& 
         std::ranges::sort(sorted_scheds, compare_perf);
 
         for (const auto& itr : sorted_scheds) {
+                const auto& clu = itr->cluster();
                 if (itr->admission_test(*new_task)) { return itr; }
         }
 

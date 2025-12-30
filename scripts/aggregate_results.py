@@ -8,7 +8,7 @@ import math
 import sys
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence
+from typing import Any, Dict, Iterable, List, Optional, Sequence, cast
 
 import polars as pl
 
@@ -16,15 +16,27 @@ COLUMN_FLAG_MAP = {
     "ff_little_first": "--sched grub --alloc ff_little_first",
     "ff_lb": "--sched grub --alloc ff_lb",
     "ff_sma": "--sched grub --alloc ff_sma",
+    "ff_u_cap_fitted": "--sched grub --alloc ff_u_cap_fitted",
     "mcts": "--sched grub --alloc opti",
     "ff_cap_0.05": "--sched grub --alloc ff_cap --target 0.05",
     "ff_cap_0.1": "--sched grub --alloc ff_cap --target 0.1",
     "ff_cap_0.15": "--sched grub --alloc ff_cap --target 0.15",
     "ff_cap_0.2": "--sched grub --alloc ff_cap --target 0.2",
-    "ff_cap_0.22": "--sched grub --alloc ff_cap --target 0.22",
+    "ff_cap_0.225": "--sched grub --alloc ff_cap --target 0.225",
     "ff_cap_0.25": "--sched grub --alloc ff_cap --target 0.25",
+    "ff_cap_0.275": "--sched grub --alloc ff_cap --target 0.275",
     "ff_cap_0.3": "--sched grub --alloc ff_cap --target 0.3",
-    "ff_cap_0.33334": "--sched grub --alloc ff_cap --target 0.33334",
+    "ff_cap_0.325": "--sched grub --alloc ff_cap --target 0.325",
+    "ff_cap_0.35": "--sched grub --alloc ff_cap --target 0.35",
+    "ff_cap_0.375": "--sched grub --alloc ff_cap --target 0.375",
+    "ff_cap_0.4": "--sched grub --alloc ff_cap --target 0.4",
+    "ff_cap_0.5": "--sched grub --alloc ff_cap --target 0.5",
+    "ff_cap_0.6": "--sched grub --alloc ff_cap --target 0.6",
+    "ff_cap_0.7": "--sched grub --alloc ff_cap --target 0.7",
+    "ff_cap_0.8": "--sched grub --alloc ff_cap --target 0.8",
+    "ff_cap_0.9": "--sched grub --alloc ff_cap --target 0.9",
+    "ff_cap_1.0": "--sched grub --alloc ff_cap --target 1.0",
+    "counting": "--sched grub --alloc counting",
 }
 
 DEFAULT_COMMAND_TEMPLATE = (
@@ -69,12 +81,13 @@ def parse_args() -> argparse.Namespace:
         help="Append a new column with the given NAME and null values for all rows. Can be repeated.",
     )
     parser.add_argument(
-        "--export-zsh",
+        "--export",
         metavar="PATH",
         help="Write a zsh script that invokes the simulator for each missing algorithm result.",
     )
     parser.add_argument(
-        "--sim-results",
+        "--import",
+        dest="import_paths",
         action="append",
         default=[],
         metavar="PATH",
@@ -82,6 +95,11 @@ def parse_args() -> argparse.Namespace:
             "CSV file containing simulation outputs to merge into the results table. "
             "May be provided multiple times."
         ),
+    )
+    parser.add_argument(
+        "--clear",
+        action="store_true",
+        help="If set, drop all existing rows from the input CSV before processing.",
     )
     return parser.parse_args()
 
@@ -165,11 +183,11 @@ def append_missing_tasksets(frame: pl.DataFrame, taskset_paths: Iterable[str]) -
     if not new_paths:
         return frame, 0
 
-    data = {"tasksets": new_paths}
+    data: Dict[str, List[Any]] = {"tasksets": cast(List[Any], list(new_paths))}
     for column in frame.columns:
         if column == "tasksets":
             continue
-        data[column] = [None] * len(new_paths)
+        data[column] = cast(List[Any], [None] * len(new_paths))
 
     new_rows = pl.DataFrame(data)
 
@@ -234,7 +252,7 @@ def load_simulation_results(paths: Sequence[str]) -> pl.DataFrame:
                 separator=';',
                 new_columns=["tasksets", "algorithm", "value"],
             )
-        except pl.exceptions.PolarsError as exc:  # type: ignore[attr-defined]
+        except pl.exceptions.PolarsError as exc:
             print(f"error: failed to read simulation results '{csv_path}': {exc}", file=sys.stderr)
             sys.exit(1)
 
@@ -250,7 +268,7 @@ def load_simulation_results(paths: Sequence[str]) -> pl.DataFrame:
             pl.col("algorithm")
             .map_elements(normalize_algorithm_column, return_dtype=pl.Utf8)
             .alias("algorithm"),
-            pl.col("value").cast(pl.Float64, strict=False).alias("value"),
+            pl.col("value").cast(pl.Int64, strict=False).alias("value"),
         ]
     )
 
@@ -293,11 +311,11 @@ def apply_simulation_results(
     additional_tasksets = [ts for ts in result_tasksets if ts not in existing_tasksets]
 
     if additional_tasksets:
-        data = {"tasksets": additional_tasksets}
+        data: Dict[str, List[Any]] = {"tasksets": cast(List[Any], list(additional_tasksets))}
         for column in frame.columns:
             if column == "tasksets":
                 continue
-            data[column] = [None] * len(additional_tasksets)
+            data[column] = cast(List[Any], [None] * len(additional_tasksets))
 
         new_rows = pl.DataFrame(data).select(frame.columns)
         frame = pl.concat([frame, new_rows], how="vertical", rechunk=True)
@@ -322,7 +340,12 @@ def apply_simulation_results(
         if current_dtype != pl.Null:
             new_value = new_value.cast(current_dtype, strict=False)
 
-        update_exprs.append(pl.coalesce(pl.col(column), new_value).alias(column))
+        update_exprs.append(
+            pl.when(new_value.is_not_null())
+            .then(new_value)
+            .otherwise(pl.col(column))
+            .alias(column)
+        )
 
     if update_exprs:
         joined = joined.with_columns(update_exprs)
@@ -460,6 +483,8 @@ def main() -> None:
     taskset_root: Optional[Path] = Path(args.taskset_root) if args.taskset_root else None
 
     frame = load_results_frame(csv_path)
+    if args.clear:
+        frame = frame.clear()
     frame = ensure_additional_columns(frame, args.add_column)
 
     taskset_paths: List[str] = []
@@ -468,18 +493,18 @@ def main() -> None:
         taskset_paths = find_taskset_files(taskset_root, root_argument)
 
     updated_frame, added = append_missing_tasksets(frame, taskset_paths)
-    sim_results = load_simulation_results(args.sim_results)
+    sim_results = load_simulation_results(args.import_paths)
     updated_frame, filled = apply_simulation_results(updated_frame, sim_results)
     updated_frame = sort_tasksets(updated_frame)
 
     flag_table = build_flag_table(updated_frame.columns)
 
     commands: List[str] = []
-    if args.export_zsh:
+    if args.export:
         print("Column to simulator flags mapping:")
         print(flag_table)
         commands = generate_missing_commands(updated_frame)
-        write_zsh_script(commands, Path(args.export_zsh))
+        write_zsh_script(commands, Path(args.export))
 
     write_results(updated_frame, output_path)
 
@@ -490,12 +515,12 @@ def main() -> None:
     if args.add_column:
         added_cols = ", ".join(args.add_column)
         print(f"Added new column(s): {added_cols}.")
-    if args.sim_results:
+    if args.import_paths:
         print(
-            f"Applied {filled} simulation result(s) from {len(args.sim_results)} file(s)."
+            f"Applied {filled} simulation result(s) from {len(args.import_paths)} file(s)."
         )
-    if args.export_zsh:
-        print(f"Zsh script written to '{args.export_zsh}' with {len(commands)} command(s).")
+    if args.export:
+        print(f"Zsh script written to '{args.export}' with {len(commands)} command(s).")
     print(f"Updated CSV written to '{output_path}'.")
 
 

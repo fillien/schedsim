@@ -3,11 +3,15 @@
 #include <protocols/scenario.hpp>
 #include <protocols/traces.hpp>
 #include <simulator/allocator.hpp>
+#include <simulator/allocators/counting.hpp>
 #include <simulator/allocators/ff_big_first.hpp>
 #include <simulator/allocators/ff_cap.hpp>
+#include <simulator/allocators/ff_u_cap_fitted.hpp>
 #include <simulator/allocators/ff_lb.hpp>
 #include <simulator/allocators/ff_little_first.hpp>
 #include <simulator/allocators/ff_sma.hpp>
+#include <simulator/allocators/ff_cap_adaptive_linear.hpp>
+#include <simulator/allocators/ff_cap_adaptive_poly.hpp>
 #include <simulator/allocators/mcts.hpp>
 #include <simulator/engine.hpp>
 #include <simulator/entity.hpp>
@@ -35,6 +39,7 @@
 #include <ostream>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -148,6 +153,10 @@ auto select_alloc(
                 ensure_allowed_args({});
                 return std::make_shared<FFBigFirst>(sim);
         }
+        if (choice == "counting") {
+                ensure_allowed_args({});
+                return std::make_shared<Counting>(sim);
+        }
         if (choice == "ff_little_first") {
                 ensure_allowed_args({});
                 return std::make_shared<FFLittleFirst>(sim);
@@ -155,6 +164,10 @@ auto select_alloc(
         if (choice == "ff_cap") {
                 ensure_allowed_args({});
                 return std::make_shared<FFCap>(sim);
+        }
+        if (choice == "ff_u_cap_fitted") {
+                ensure_allowed_args({});
+                return std::make_shared<FFUCapFitted>(sim);
         }
         if (choice == "ff_lb") {
                 ensure_allowed_args({});
@@ -186,6 +199,14 @@ auto select_alloc(
                 }
 
                 return std::make_shared<FFSma>(sim, sample_rate, num_samples);
+        }
+        if (choice == "ff_cap_adaptive_linear") {
+                ensure_allowed_args({});
+                return std::make_shared<FFCapAdaptiveLinear>(sim);
+        }
+        if (choice == "ff_cap_adaptive_poly") {
+                ensure_allowed_args({});
+                return std::make_shared<FFCapAdaptivePoly>(sim);
         }
         throw std::invalid_argument("Undefined allocation policy");
 }
@@ -240,6 +261,22 @@ auto main(const int argc, const char** argv) -> int
 
                 sim->scheduler(alloc);
 
+                // Compute total utilization from taskset for adaptive allocators
+                double total_util = 0.0;
+                for (const auto& input_task : taskset.tasks) {
+                        total_util += input_task.utilization;
+                }
+
+                // Set expected total utilization for adaptive allocators
+                if (auto adaptive_linear =
+                        std::dynamic_pointer_cast<allocators::FFCapAdaptiveLinear>(alloc)) {
+                        adaptive_linear->set_expected_total_util(total_util);
+                }
+                else if (auto adaptive_poly =
+                             std::dynamic_pointer_cast<allocators::FFCapAdaptivePoly>(alloc)) {
+                        adaptive_poly->set_expected_total_util(total_util);
+                }
+
                 std::vector<std::shared_ptr<Task>> tasks{taskset.tasks.size()};
                 for (auto input_task : taskset.tasks) {
                         auto new_task = make_shared<Task>(
@@ -254,12 +291,21 @@ auto main(const int argc, const char** argv) -> int
                         tasks.push_back(std::move(new_task));
                 }
 
-                std::print("simulate...");
+                std::print("simulate {} {}...", config.scenario_file.c_str(), config.alloc);
                 sim->simulation();
                 std::println("OK");
 
-                auto result = outputs::stats::count_rejected(sim->traces());
-                // std::cout << alloc->get_nb_alloc() << std::endl;
+                std::size_t result = 0;
+                if (config.alloc == "counting") {
+                        if (const auto counting_alloc = std::dynamic_pointer_cast<allocators::Counting>(alloc)) {
+                                result = counting_alloc->get_nb_alloc();
+                        }
+                        else {
+                                throw std::logic_error("counting allocator selection did not produce Counting instance");
+                        }
+                } else {
+                        result = outputs::stats::count_rejected(sim->traces());
+                }
 
                 std::ofstream datafile("min_taskset_result.csv", std::ios::app);
                 if (!datafile) {

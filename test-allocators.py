@@ -71,8 +71,8 @@ plat
 # %%
 util_steps = list(reversed(range(21, int(UTILIZATION*10)+1, 2)))
 NB_JOBS = 100  # number of task sets per utilization step
-NB_TASK = 20   # number of tasks per task set
-UMAX    = 0.4  # per-task upper bound
+NB_TASK = 30   # number of tasks per task set
+UMAX    = 0.266  # per-task upper bound
 UMIN    = 0.025  # per-task lower bound
 
 from drs import drs

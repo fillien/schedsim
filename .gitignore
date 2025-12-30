@@ -23,6 +23,8 @@
 /result
 /Archive*
 /iframe_figures
+/tmp
+/tasq_sim
 
 /*.png
 /*.tex

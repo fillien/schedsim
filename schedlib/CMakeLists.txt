@@ -28,10 +28,14 @@ target_sources(schedlib PRIVATE
     src/protocols/traces.cpp
     src/simulator/allocator.cpp
     src/simulator/allocators/ff_big_first.cpp
+    src/simulator/allocators/counting.cpp
     src/simulator/allocators/ff_little_first.cpp
     src/simulator/allocators/ff_cap.cpp
+    src/simulator/allocators/ff_u_cap_fitted.cpp
     src/simulator/allocators/ff_lb.cpp
     src/simulator/allocators/ff_sma.cpp
+    src/simulator/allocators/ff_cap_adaptive_linear.cpp
+    src/simulator/allocators/ff_cap_adaptive_poly.cpp
     src/simulator/allocators/mcts.cpp
     src/simulator/engine.cpp
     src/simulator/platform.cpp

@@ -3,11 +3,15 @@
 #include <protocols/scenario.hpp>
 #include <protocols/traces.hpp>
 #include <simulator/allocator.hpp>
+#include <simulator/allocators/counting.hpp>
 #include <simulator/allocators/ff_big_first.hpp>
 #include <simulator/allocators/ff_cap.hpp>
+#include <simulator/allocators/ff_u_cap_fitted.hpp>
 #include <simulator/allocators/ff_lb.hpp>
 #include <simulator/allocators/ff_little_first.hpp>
 #include <simulator/allocators/ff_sma.hpp>
+#include <simulator/allocators/ff_cap_adaptive_linear.hpp>
+#include <simulator/allocators/ff_cap_adaptive_poly.hpp>
 #include <simulator/engine.hpp>
 #include <simulator/entity.hpp>
 #include <simulator/event.hpp>
@@ -155,6 +159,10 @@ auto select_alloc(
                 ensure_allowed_args({});
                 return std::make_shared<FFBigFirst>(sim);
         }
+        if (choice == "counting") {
+                ensure_allowed_args({});
+                return std::make_shared<Counting>(sim);
+        }
         if (choice == "ff_little_first") {
                 ensure_allowed_args({});
                 return std::make_shared<FFLittleFirst>(sim);
@@ -162,6 +170,10 @@ auto select_alloc(
         if (choice == "ff_cap") {
                 ensure_allowed_args({});
                 return std::make_shared<FFCap>(sim);
+        }
+        if (choice == "ff_u_cap_fitted") {
+                ensure_allowed_args({});
+                return std::make_shared<FFUCapFitted>(sim);
         }
         if (choice == "ff_lb") {
                 ensure_allowed_args({});
@@ -193,6 +205,14 @@ auto select_alloc(
                 }
 
                 return std::make_shared<FFSma>(sim, sample_rate, num_samples);
+        }
+        if (choice == "ff_cap_adaptive_linear") {
+                ensure_allowed_args({});
+                return std::make_shared<FFCapAdaptiveLinear>(sim);
+        }
+        if (choice == "ff_cap_adaptive_poly") {
+                ensure_allowed_args({});
+                return std::make_shared<FFCapAdaptivePoly>(sim);
         }
         throw std::invalid_argument("Undefined allocation policy");
 }
