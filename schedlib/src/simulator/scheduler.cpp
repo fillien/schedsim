@@ -3,7 +3,6 @@
 #include <iterator>
 #include <map>
 #include <memory>
-#include <print>
 #include <protocols/traces.hpp>
 #include <ranges>
 #include <simulator/engine.hpp>
@@ -102,8 +101,12 @@ auto Scheduler::deadline_order(const Server& first, const Server& second) -> boo
 {
         if (first.deadline() == second.deadline()) {
                 // If deadlines are equal, running servers have higher priority.
-                if (first.state() == Server::State::Running) { return true; }
-                if (second.state() == Server::State::Running) { return false; }
+                if (first.state() == Server::State::Running && second.state() != Server::State::Running) {
+                        return true;
+                }
+                if (second.state() == Server::State::Running && first.state() != Server::State::Running) {
+                        return false;
+                }
                 return first.id() < second.id();
         }
         return first.deadline() < second.deadline();
@@ -236,14 +239,6 @@ auto Scheduler::on_job_arrival(Task* new_task, const double& job_duration) -> vo
 #endif
 
         namespace traces = protocols::traces;
-
-        if (new_task->has_server() && new_task->server()->scheduler() != this) {
-                for (const auto& serv : servers_) {
-                        if (serv.get() == new_task->server()) {
-                                std::println("A server can re-used his resevation !");
-                        }
-                }
-        }
 
         if (!new_task->has_server() ||
             (new_task->has_server() && new_task->server()->scheduler() != this)) {

@@ -24,7 +24,7 @@ auto Parallel::processor_order(const Processor& first, const Processor& second) 
 #endif
         if (!first.has_task()) { return (first.state() == Idle); }
         if (!second.has_task()) { return (second.state() == Sleep || second.state() == Change); }
-        return deadline_order(*first.task()->server(), *second.task()->server());
+        return deadline_order(*second.task()->server(), *first.task()->server());
 }
 
 auto Parallel::inactive_bandwidth() const -> double
@@ -128,7 +128,7 @@ void Parallel::on_resched()
                 if (selected_proc->state() == Sleep) { assert(!selected_proc->has_task()); }
 
                 const bool can_schedule =
-                    (selected_proc->state() != Change) || (!selected_proc->has_task()) ||
+                    (!selected_proc->has_task()) ||
                     deadline_order(*highest_priority_server, *selected_proc->task()->server());
 
                 if (can_schedule) {
