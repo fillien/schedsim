@@ -1,4 +1,4 @@
-#include <cassert>
+#include <algorithm>
 #include <simulator/schedulers/power_aware.hpp>
 
 #ifdef TRACY_ENABLE
@@ -17,9 +17,7 @@ void PowerAware::update_platform()
         const auto NB_PROCS{static_cast<double>(chip()->processors().size())};
         const auto TOTAL_U{total_utilization()};
         const auto F_MAX{chip()->freq_max()};
-        const auto new_freq{(F_MAX * ((NB_PROCS - 1) * u_max() + TOTAL_U)) / NB_PROCS};
-
-        assert(new_freq <= chip()->freq_max());
+        const auto new_freq{std::min((F_MAX * ((NB_PROCS - 1) * u_max() + TOTAL_U)) / NB_PROCS, F_MAX)};
         if (chip()->freq() != chip()->ceil_to_mode(new_freq)) {
                 for (const auto& proc : chip()->processors()) {
                         remove_task_from_cpu(proc.get());
