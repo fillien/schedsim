@@ -28,8 +28,8 @@ void Engine::simulation()
         ZoneScoped;
 #endif
 
-        for (auto clu : platform_->clusters()) {
-                clu->scheduler().lock()->call_resched();
+        for (const auto& clu : platform_->clusters()) {
+                clu->scheduler()->call_resched();
         }
 
         while (!future_list_.empty()) {

@@ -4,9 +4,6 @@
 #include <simulator/event.hpp>
 #include <simulator/platform.hpp>
 #include <simulator/scheduler.hpp>
-#include <simulator/schedulers/csf.hpp>
-#include <simulator/schedulers/ffa.hpp>
-#include <simulator/schedulers/parallel.hpp>
 #include <simulator/server.hpp>
 #include <simulator/task.hpp>
 
@@ -40,22 +37,22 @@ auto compare_events(const events::Event& ev1, const events::Event& ev2) -> bool
 
 namespace allocators {
 
-auto Allocator::add_child_sched(
-    const std::weak_ptr<Cluster>& clu, const std::shared_ptr<scheds::Scheduler>& sched) -> void
+auto Allocator::add_child_sched(Cluster* clu, std::unique_ptr<scheds::Scheduler> sched) -> void
 {
         schedulers_.push_back(std::move(sched));
-        clu.lock()->scheduler(schedulers_.back()->weak_from_this());
-        schedulers_.back()->cluster(clu.lock());
-        call_resched(sched);
+        auto* sched_ptr = schedulers_.back().get();
+        clu->scheduler(sched_ptr);
+        sched_ptr->cluster(clu);
+        sched_ptr->set_resched_callback([this](scheds::Scheduler* s) { call_resched(s); });
+        call_resched(sched_ptr);
 }
 
-auto Allocator::migrate_task(
-    const events::JobArrival& evt, const std::shared_ptr<scheds::Scheduler>& receiver) -> void
+auto Allocator::migrate_task(const events::JobArrival& evt, scheds::Scheduler* receiver) -> void
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        const auto serv = evt.task_of_job->server();
+        auto* serv = evt.task_of_job->server();
         assert(serv->state() != Server::State::Ready && serv->state() != Server::State::Running);
         serv->been_migrated = true;
         evt.task_of_job->clear_server();
@@ -67,27 +64,26 @@ auto Allocator::need_to_place_task(const auto& new_job) -> void
 {
         using namespace protocols::traces;
 
-        const auto& receiver = where_to_put_the_task(new_job.task_of_job);
+        auto* receiver = where_to_put_the_task(*new_job.task_of_job);
 
-        if (!receiver.has_value()) {
-                sim()->add_trace(TaskRejected{new_job.task_of_job->id()});
+        if (receiver == nullptr) {
+                sim().add_trace(TaskRejected{new_job.task_of_job->id()});
                 return;
         }
 
-        const auto& scheduler = receiver.value();
-        const auto& task = new_job.task_of_job;
+        auto* task = new_job.task_of_job;
 
-        sim()->add_trace(
-            TaskPlaced{.task_id = task->id(), .cluster_id = scheduler->cluster()->id()});
+        sim().add_trace(
+            TaskPlaced{.task_id = task->id(), .cluster_id = receiver->cluster()->id()});
 
-        if (!task->has_server() || task->server()->scheduler() == scheduler) {
-                scheduler->on_job_arrival(task, new_job.job_duration);
+        if (!task->has_server() || task->server()->scheduler() == receiver) {
+                receiver->on_job_arrival(task, new_job.job_duration);
         }
         else {
                 // The task is on another scheduler, so it needs to be migrated.
-                sim()->add_trace(MigrationCluster{
-                    .task_id = task->id(), .cluster_id = scheduler->cluster()->id()});
-                migrate_task(new_job, scheduler);
+                sim().add_trace(MigrationCluster{
+                    .task_id = task->id(), .cluster_id = receiver->cluster()->id()});
+                migrate_task(new_job, receiver);
         }
 }
 
@@ -103,7 +99,7 @@ auto Allocator::handle(std::vector<events::Event> evts) -> void
         std::ranges::sort(evts, compare_events);
 
         // Looking for JOB_ARRIVAL events at the same time for this server
-        auto has_matching_job_arrival = [&evts](const auto& server) {
+        auto has_matching_job_arrival = [&evts](const Server* server) {
                 return std::ranges::any_of(evts, [server](const auto& evt) {
                         if (const auto* job_evt = std::get_if<events::JobArrival>(&evt)) {
                                 return job_evt->task_of_job == server->task();
@@ -135,12 +131,12 @@ auto Allocator::handle(std::vector<events::Event> evts) -> void
                 if (handled) { continue; }
 
                 const auto new_job = *(std::get_if<JobArrival>(&evt));
-                const auto& task = new_job.task_of_job;
+                auto* task = new_job.task_of_job;
 
-                sim()->add_trace(traces::JobArrival{
+                sim().add_trace(traces::JobArrival{
                     .task_id = task->id(),
                     .duration = new_job.job_duration,
-                    .deadline = sim()->time() + task->period()});
+                    .deadline = sim().time() + task->period()});
 
                 if (task->has_server() && (task->server()->state() == Server::State::Ready ||
                                            task->server()->state() == Server::State::Running)) {
@@ -151,7 +147,7 @@ auto Allocator::handle(std::vector<events::Event> evts) -> void
                 }
         }
 
-        for (const auto& resch : rescheds_) {
+        for (auto* resch : rescheds_) {
                 resch->call_resched();
         }
         rescheds_.clear();

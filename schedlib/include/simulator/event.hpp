@@ -1,13 +1,11 @@
 #ifndef EVENT_HPP
 #define EVENT_HPP
 
-#include <simulator/task.hpp>
-#include <simulator/timer.hpp>
-
-#include <memory>
 #include <variant>
 
+class Task;
 class Server;
+class Timer;
 
 namespace events {
 
@@ -18,7 +16,7 @@ struct JobArrival {
         /**
          * @brief The task associated with the arrived job.
          */
-        std::shared_ptr<Task> task_of_job;
+        Task* task_of_job;
         /**
          * @brief The duration of the arrived job.
          */
@@ -32,7 +30,7 @@ struct JobFinished {
         /**
          * @brief The server where the job is completed.
          */
-        std::shared_ptr<Server> server_of_job;
+        Server* server_of_job;
         /**
          * @brief Give info about a JobFinished event at the same timestep.
          */
@@ -46,7 +44,7 @@ struct ServBudgetExhausted {
         /**
          * @brief The server with an exhausted budget.
          */
-        std::shared_ptr<Server> serv;
+        Server* serv;
 };
 
 /**
@@ -56,14 +54,14 @@ struct ServInactive {
         /**
          * @brief The inactive server.
          */
-        std::shared_ptr<Server> serv;
+        Server* serv;
 };
 
 struct TimerIsr {
         /**
          * @brief The target timer.
          */
-        std::shared_ptr<Timer> target_timer;
+        Timer* target_timer;
 };
 
 /**

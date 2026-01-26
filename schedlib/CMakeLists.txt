@@ -37,6 +37,7 @@ target_sources(schedlib PRIVATE
     src/simulator/allocators/ff_cap_adaptive_linear.cpp
     src/simulator/allocators/ff_cap_adaptive_poly.cpp
     src/simulator/allocators/mcts.cpp
+    src/simulator/factory.cpp
     src/simulator/engine.cpp
     src/simulator/platform.cpp
     src/simulator/processor.cpp

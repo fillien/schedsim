@@ -2,18 +2,17 @@
 #include <simulator/engine.hpp>
 #include <simulator/platform.hpp>
 #include <simulator/processor.hpp>
+#include <simulator/timer.hpp>
 
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <functional>
-#include <iostream>
-#include <iterator>
 #include <memory>
 #include <vector>
 
 Cluster::Cluster(
-    const std::weak_ptr<Engine>& sim,
+    Engine& sim,
     const std::size_t cid,
     const std::vector<double>& frequencies,
     const double& effective_freq,
@@ -34,8 +33,10 @@ Cluster::Cluster(
 
         freq(freq_max());
 
-        dvfs_timer_ = std::make_shared<Timer>(sim, [this]() { this->freq(this->dvfs_target_); });
+        dvfs_timer_ = std::make_unique<Timer>(sim, [this]() { this->freq(this->dvfs_target_); });
 }
+
+Cluster::~Cluster() = default;
 
 void Cluster::create_procs(const std::size_t nb_procs)
 {
@@ -43,9 +44,8 @@ void Cluster::create_procs(const std::size_t nb_procs)
         processors_.reserve(nb_procs);
 
         for (std::size_t i = 0; i < nb_procs; ++i) {
-                const auto proc_id = sim()->chip()->reserve_next_id();
-                processors_.push_back(
-                    std::make_shared<Processor>(sim(), shared_from_this(), proc_id));
+                const auto proc_id = sim().chip().reserve_next_id();
+                processors_.push_back(std::make_unique<Processor>(sim(), this, proc_id));
         }
 }
 
@@ -55,12 +55,12 @@ void Cluster::freq(const double& new_freq)
                 throw std::domain_error("This frequency is not available");
         }
 
-        const bool free_scaling = sim()->chip()->is_freescaling();
+        const bool free_scaling = sim().chip().is_freescaling();
         const double target_freq = free_scaling ? new_freq : ceil_to_mode(new_freq);
 
         if (current_freq_ != target_freq) {
                 current_freq_ = target_freq;
-                sim()->add_trace(protocols::traces::FrequencyUpdate{
+                sim().add_trace(protocols::traces::FrequencyUpdate{
                     .cluster_id = id_, .frequency = current_freq_});
         }
 }
@@ -82,11 +82,11 @@ void Cluster::dvfs_change_freq(const double& next_freq)
                 throw std::domain_error("This frequency is not available");
         }
 
-        const bool free_scaling = sim()->chip()->is_freescaling();
+        const bool free_scaling = sim().chip().is_freescaling();
         const double target_freq = free_scaling ? next_freq : ceil_to_mode(next_freq);
         if (target_freq == current_freq_) { return; }
 
-        if (!sim()->is_delay_activated()) {
+        if (!sim().is_delay_activated()) {
                 freq(target_freq);
                 return;
         }
@@ -108,11 +108,10 @@ void Cluster::dvfs_change_freq(const double& next_freq)
 auto Cluster::speed() const -> double
 {
         assert(current_freq_ / freq_max() <= 1);
-        // std::cout << current_freq_ / sim()->chip()->clusters().at(0)->freq_max() << std::endl;
         return current_freq_ / freq_max();
 }
 
 auto Cluster::scale_speed() const -> double
 {
-        return sim()->chip()->clusters().at(0)->freq_max() / freq_max();
+        return sim().chip().clusters().at(0)->freq_max() / freq_max();
 }

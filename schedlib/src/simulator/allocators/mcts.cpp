@@ -1,4 +1,3 @@
-#include <optional>
 #include <print>
 #include <random>
 #include <simulator/allocator.hpp>
@@ -27,17 +26,14 @@ template <typename T> const T& pick_random(const std::vector<T>& vec)
         return vec[static_cast<std::size_t>(next_rand() % n)];
 }
 
-auto allocators::MCTS::where_to_put_the_task(const std::shared_ptr<Task>& new_task)
-    -> std::optional<std::shared_ptr<scheds::Scheduler>>
+auto allocators::MCTS::where_to_put_the_task(const Task& new_task) -> scheds::Scheduler*
 {
-        const auto compare_perf = [](const auto& first, const auto& second) {
-                return first->cluster()->perf() < second->cluster()->perf();
-        };
+        // Build raw-pointer vector from unique_ptr schedulers
+        std::vector<scheds::Scheduler*> sorted_scheds;
+        sorted_scheds.reserve(schedulers().size());
+        for (const auto& s : schedulers()) sorted_scheds.push_back(s.get());
 
-        // Sort the schedulers by perf score
-        auto sorted_scheds{schedulers()};
-
-        std::optional<std::shared_ptr<scheds::Scheduler>> next_sched;
+        scheds::Scheduler* next_sched = nullptr;
 
         if (step < pattern.size()) { next_sched = sorted_scheds[pattern[step]]; }
         else {
@@ -45,6 +41,6 @@ auto allocators::MCTS::where_to_put_the_task(const std::shared_ptr<Task>& new_ta
         }
         step++;
 
-        // Otherwise return that the allocator didn't found a cluster to place the task
+        // Otherwise return that the allocator didn't find a cluster to place the task
         return next_sched;
 }

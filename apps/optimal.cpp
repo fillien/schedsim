@@ -16,16 +16,10 @@
 #include <simulator/allocator.hpp>
 #include <simulator/allocators/mcts.hpp>
 #include <simulator/engine.hpp>
-#include <simulator/entity.hpp>
 #include <simulator/event.hpp>
 #include <simulator/platform.hpp>
 #include <simulator/scheduler.hpp>
-#include <simulator/schedulers/csf.hpp>
-#include <simulator/schedulers/csf_timer.hpp>
-#include <simulator/schedulers/ffa.hpp>
-#include <simulator/schedulers/ffa_timer.hpp>
 #include <simulator/schedulers/parallel.hpp>
-#include <simulator/schedulers/power_aware.hpp>
 #include <simulator/task.hpp>
 #include <stack>
 
@@ -126,16 +120,17 @@ auto simulate(
     const auto& platconfig,
     const std::vector<unsigned>& pattern) -> std::pair<std::size_t, std::size_t>
 {
-        using namespace std;
-        std::shared_ptr<Engine> sim = make_shared<Engine>(config.active_delay);
-        auto plat = make_shared<Platform>(sim, false);
-        sim->platform(plat);
+        Engine sim(config.active_delay);
+        auto plat = std::make_unique<Platform>(sim, false);
+        auto* plat_ptr = plat.get();
+        sim.platform(std::move(plat));
 
-        auto alloc = make_shared<allocators::MCTS>(sim, pattern);
+        auto alloc = std::make_unique<allocators::MCTS>(sim, pattern);
+        auto* mcts_ptr = alloc.get();
 
         std::size_t cluster_id_cpt{1};
         for (const protocols::hardware::Cluster& clu : platconfig.clusters) {
-                auto newclu = make_shared<Cluster>(
+                auto newclu = std::make_unique<Cluster>(
                     sim,
                     cluster_id_cpt,
                     clu.frequencies,
@@ -143,36 +138,38 @@ auto simulate(
                     clu.perf_score,
                     (clu.perf_score < 1 && config.u_target.has_value() ? config.u_target.value()
                                                                        : clu.perf_score));
-                newclu->create_procs(clu.nb_procs);
+                auto* clu_ptr = newclu.get();
+                clu_ptr->create_procs(clu.nb_procs);
 
-                auto sched = make_shared<scheds::Parallel>(sim);
-                alloc->add_child_sched(newclu, sched);
-                plat->add_cluster(newclu);
+                auto sched = std::make_unique<scheds::Parallel>(sim);
+                alloc->add_child_sched(clu_ptr, std::move(sched));
+                plat_ptr->add_cluster(std::move(newclu));
                 cluster_id_cpt++;
         }
 
-        sim->scheduler(alloc);
-        vector<shared_ptr<Task>> tasks{taskset.tasks.size()};
+        sim.scheduler(std::move(alloc));
 
-        for (auto input_task : taskset.tasks) {
-                auto new_task = make_shared<Task>(
+        std::vector<std::unique_ptr<Task>> tasks;
+        tasks.reserve(taskset.tasks.size());
+
+        for (const auto& input_task : taskset.tasks) {
+                auto new_task = std::make_unique<Task>(
                     sim, input_task.id, input_task.period, input_task.utilization);
+                auto* task_ptr = new_task.get();
 
-                for (auto job : input_task.jobs) {
-                        sim->add_event(
+                for (const auto& job : input_task.jobs) {
+                        sim.add_event(
                             events::JobArrival{
-                                .task_of_job = new_task, .job_duration = job.duration},
+                                .task_of_job = task_ptr, .job_duration = job.duration},
                             job.arrival);
                 }
                 tasks.push_back(std::move(new_task));
         }
 
-        sim->simulation();
-        std::vector<std::pair<double, protocols::traces::trace>> log(
-            sim->traces().begin(), sim->traces().end());
+        sim.simulation();
 
         // returns: { #rejected, #allocations done (horizon for the rollout) }
-        return {outputs::stats::count_rejected(log), alloc->get_nb_alloc()};
+        return {outputs::stats::count_rejected(sim.traces()), mcts_ptr->get_nb_alloc()};
 }
 
 // ---------- UCB parameters ----------

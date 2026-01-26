@@ -4,26 +4,12 @@
 #include <protocols/traces.hpp>
 #include <simulator/allocator.hpp>
 #include <simulator/allocators/counting.hpp>
-#include <simulator/allocators/ff_big_first.hpp>
-#include <simulator/allocators/ff_cap.hpp>
-#include <simulator/allocators/ff_u_cap_fitted.hpp>
-#include <simulator/allocators/ff_lb.hpp>
-#include <simulator/allocators/ff_little_first.hpp>
-#include <simulator/allocators/ff_sma.hpp>
 #include <simulator/allocators/ff_cap_adaptive_linear.hpp>
 #include <simulator/allocators/ff_cap_adaptive_poly.hpp>
-#include <simulator/allocators/mcts.hpp>
 #include <simulator/engine.hpp>
-#include <simulator/entity.hpp>
 #include <simulator/event.hpp>
+#include <simulator/factory.hpp>
 #include <simulator/platform.hpp>
-#include <simulator/scheduler.hpp>
-#include <simulator/schedulers/csf.hpp>
-#include <simulator/schedulers/csf_timer.hpp>
-#include <simulator/schedulers/ffa.hpp>
-#include <simulator/schedulers/ffa_timer.hpp>
-#include <simulator/schedulers/parallel.hpp>
-#include <simulator/schedulers/power_aware.hpp>
 #include <simulator/task.hpp>
 
 #include <cstddef>
@@ -37,12 +23,10 @@
 #include <memory>
 #include <optional>
 #include <ostream>
+#include <print>
 #include <stdexcept>
 #include <string>
-#include <type_traits>
 #include <unordered_map>
-#include <unordered_set>
-#include <utility>
 #include <vector>
 
 namespace fs = std::filesystem;
@@ -57,33 +41,6 @@ struct AppConfig {
         std::optional<double> u_target;
         std::unordered_map<std::string, std::string> alloc_args;
 };
-
-auto parse_allocator_args(const std::vector<std::string>& raw_args)
-    -> std::unordered_map<std::string, std::string>
-{
-        std::unordered_map<std::string, std::string> result;
-        for (const auto& arg : raw_args) {
-                const auto pos = arg.find('=');
-                if (pos == std::string::npos) {
-                        throw std::invalid_argument(
-                            "Allocator arguments must follow the key=value format");
-                }
-
-                auto key = arg.substr(0, pos);
-                auto value = arg.substr(pos + 1);
-
-                if (key.empty() || value.empty()) {
-                        throw std::invalid_argument(
-                            "Allocator arguments require both a non-empty key and value");
-                }
-
-                if (!result.emplace(std::move(key), std::move(value)).second) {
-                        throw std::invalid_argument("Duplicate allocator argument: " + arg);
-                }
-        }
-
-        return result;
-}
 
 auto parse_args(const int argc, const char** argv) -> AppConfig
 {
@@ -124,106 +81,6 @@ auto parse_args(const int argc, const char** argv) -> AppConfig
         return config;
 }
 
-auto select_alloc(
-    const std::string& choice,
-    const std::shared_ptr<Engine>& sim,
-    const std::unordered_map<std::string, std::string>& alloc_args)
-    -> std::shared_ptr<allocators::Allocator>
-{
-        using namespace allocators;
-
-        const auto ensure_allowed_args = [&](std::initializer_list<const char*> allowed_keys) {
-                std::unordered_set<std::string> allowed;
-                allowed.reserve(allowed_keys.size());
-                for (const auto* key : allowed_keys) {
-                        allowed.emplace(key);
-                }
-
-                for (const auto& [key, value] : alloc_args) {
-                        if (allowed.find(key) == allowed.end()) {
-                                throw std::invalid_argument(
-                                    "Undefined allocator argument '" + key + "' for policy '" +
-                                    choice + "'");
-                        }
-                }
-        };
-
-        // if (choice.empty() || choice == "default") { return std::make_shared<Allocator>(sim); }
-        if (choice == "ff_big_first") {
-                ensure_allowed_args({});
-                return std::make_shared<FFBigFirst>(sim);
-        }
-        if (choice == "counting") {
-                ensure_allowed_args({});
-                return std::make_shared<Counting>(sim);
-        }
-        if (choice == "ff_little_first") {
-                ensure_allowed_args({});
-                return std::make_shared<FFLittleFirst>(sim);
-        }
-        if (choice == "ff_cap") {
-                ensure_allowed_args({});
-                return std::make_shared<FFCap>(sim);
-        }
-        if (choice == "ff_u_cap_fitted") {
-                ensure_allowed_args({});
-                return std::make_shared<FFUCapFitted>(sim);
-        }
-        if (choice == "ff_lb") {
-                ensure_allowed_args({});
-                return std::make_shared<FirstFitLoadBalancer>(sim);
-        }
-        if (choice == "ff_sma") {
-                ensure_allowed_args({"sample_rate", "num_samples"});
-
-                double sample_rate = 0.5;
-                if (const auto it = alloc_args.find("sample_rate"); it != alloc_args.end()) {
-                        try {
-                                sample_rate = std::stod(it->second);
-                        }
-                        catch (const std::exception& e) {
-                                throw std::invalid_argument(
-                                    "Invalid value for ff_sma sample_rate: " + it->second);
-                        }
-                }
-
-                int num_samples = 5;
-                if (const auto it = alloc_args.find("num_samples"); it != alloc_args.end()) {
-                        try {
-                                num_samples = std::stoi(it->second);
-                        }
-                        catch (const std::exception& e) {
-                                throw std::invalid_argument(
-                                    "Invalid value for ff_sma num_samples: " + it->second);
-                        }
-                }
-
-                return std::make_shared<FFSma>(sim, sample_rate, num_samples);
-        }
-        if (choice == "ff_cap_adaptive_linear") {
-                ensure_allowed_args({});
-                return std::make_shared<FFCapAdaptiveLinear>(sim);
-        }
-        if (choice == "ff_cap_adaptive_poly") {
-                ensure_allowed_args({});
-                return std::make_shared<FFCapAdaptivePoly>(sim);
-        }
-        throw std::invalid_argument("Undefined allocation policy");
-}
-
-auto select_sched(const std::string& choice, const std::shared_ptr<Engine>& sim)
-    -> std::shared_ptr<scheds::Scheduler>
-{
-        using namespace scheds;
-        if (choice.empty() || choice == "grub") { return std::make_shared<Parallel>(sim); }
-        if (choice == "pa") { return std::make_shared<PowerAware>(sim); }
-        if (choice == "ffa") { return std::make_shared<Ffa>(sim); }
-        if (choice == "csf") { return std::make_shared<Csf>(sim); }
-        if (choice == "ffa_timer") { return std::make_shared<FfaTimer>(sim); }
-        if (choice == "csf_timer") { return std::make_shared<CsfTimer>(sim); }
-        throw std::invalid_argument("Undefined scheduling policy");
-}
-
 auto main(const int argc, const char** argv) -> int
 {
         using namespace std;
@@ -235,15 +92,15 @@ auto main(const int argc, const char** argv) -> int
                 const auto taskset = protocols::scenario::read_file(config.scenario_file);
                 const auto plat_config = protocols::hardware::read_file(config.platform_file);
 
-                std::shared_ptr<Engine> sim = make_shared<Engine>(config.active_delay);
-                auto plat = make_shared<Platform>(sim, FREESCALING_ALLOWED);
-                sim->platform(plat);
+                Engine sim(config.active_delay);
+                auto plat = make_unique<Platform>(sim, FREESCALING_ALLOWED);
+                auto* plat_ptr = plat.get();
+                sim.platform(std::move(plat));
                 auto alloc = select_alloc(config.alloc, sim, config.alloc_args);
-                // auto alloc = std::make_shared<allocators::FFLittleFirst>(sim);
 
                 std::size_t cluster_id_cpt{1};
                 for (const protocols::hardware::Cluster& clu : plat_config.clusters) {
-                        auto newclu = std::make_shared<Cluster>(
+                        auto newclu = std::make_unique<Cluster>(
                             sim,
                             cluster_id_cpt,
                             clu.frequencies,
@@ -252,14 +109,17 @@ auto main(const int argc, const char** argv) -> int
                             (clu.perf_score < 1 && config.u_target.has_value()
                                  ? config.u_target.value()
                                  : clu.perf_score));
-                        newclu->create_procs(clu.nb_procs);
+                        auto* clu_ptr = newclu.get();
+                        clu_ptr->create_procs(clu.nb_procs);
                         auto sched = select_sched(config.sched, sim);
-                        alloc->add_child_sched(newclu, sched);
-                        plat->add_cluster(newclu);
+                        alloc->add_child_sched(clu_ptr, std::move(sched));
+                        plat_ptr->add_cluster(std::move(newclu));
                         cluster_id_cpt++;
                 }
 
-                sim->scheduler(alloc);
+                // Keep raw pointer before moving ownership into engine
+                auto* alloc_raw = alloc.get();
+                sim.scheduler(std::move(alloc));
 
                 // Compute total utilization from taskset for adaptive allocators
                 double total_util = 0.0;
@@ -268,43 +128,48 @@ auto main(const int argc, const char** argv) -> int
                 }
 
                 // Set expected total utilization for adaptive allocators
-                if (auto adaptive_linear =
-                        std::dynamic_pointer_cast<allocators::FFCapAdaptiveLinear>(alloc)) {
+                if (auto* adaptive_linear =
+                        dynamic_cast<allocators::FFCapAdaptiveLinear*>(alloc_raw)) {
                         adaptive_linear->set_expected_total_util(total_util);
                 }
-                else if (auto adaptive_poly =
-                             std::dynamic_pointer_cast<allocators::FFCapAdaptivePoly>(alloc)) {
+                else if (auto* adaptive_poly =
+                             dynamic_cast<allocators::FFCapAdaptivePoly*>(alloc_raw)) {
                         adaptive_poly->set_expected_total_util(total_util);
                 }
 
-                std::vector<std::shared_ptr<Task>> tasks{taskset.tasks.size()};
-                for (auto input_task : taskset.tasks) {
-                        auto new_task = make_shared<Task>(
+                std::vector<std::unique_ptr<Task>> tasks;
+                tasks.reserve(taskset.tasks.size());
+                for (const auto& input_task : taskset.tasks) {
+                        auto new_task = make_unique<Task>(
                             sim, input_task.id, input_task.period, input_task.utilization);
+                        auto* task_ptr = new_task.get();
 
-                        for (auto job : input_task.jobs) {
-                                sim->add_event(
+                        for (const auto& job : input_task.jobs) {
+                                sim.add_event(
                                     events::JobArrival{
-                                        .task_of_job = new_task, .job_duration = job.duration},
+                                        .task_of_job = task_ptr, .job_duration = job.duration},
                                     job.arrival);
                         }
                         tasks.push_back(std::move(new_task));
                 }
 
                 std::print("simulate {} {}...", config.scenario_file.c_str(), config.alloc);
-                sim->simulation();
+                sim.simulation();
                 std::println("OK");
 
                 std::size_t result = 0;
                 if (config.alloc == "counting") {
-                        if (const auto counting_alloc = std::dynamic_pointer_cast<allocators::Counting>(alloc)) {
+                        if (const auto* counting_alloc =
+                                dynamic_cast<const allocators::Counting*>(alloc_raw)) {
                                 result = counting_alloc->get_nb_alloc();
                         }
                         else {
-                                throw std::logic_error("counting allocator selection did not produce Counting instance");
+                                throw std::logic_error(
+                                    "counting allocator selection did not produce Counting instance");
                         }
-                } else {
-                        result = outputs::stats::count_rejected(sim->traces());
+                }
+                else {
+                        result = outputs::stats::count_rejected(sim.traces());
                 }
 
                 std::ofstream datafile("min_taskset_result.csv", std::ios::app);

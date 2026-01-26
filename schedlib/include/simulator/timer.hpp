@@ -4,35 +4,26 @@
 #include <simulator/entity.hpp>
 
 #include <functional>
-#include <memory>
 
 class Engine;
 
 /**
  * @brief Represents a timer that can be set to execute a callback function after a specified
  * duration.
- *
- * This class inherits from `Entity` and provides functionality for setting, canceling,
- * and checking the status of a timer.  It uses a callback function to perform an action
- * when the timer expires.
  */
-class Timer : public Entity, public std::enable_shared_from_this<Timer> {
+class Timer : public Entity {
       public:
         /**
          * @brief Constructs a new Timer object.
          *
-         * @param sim A weak pointer to the Engine that owns this timer.
-         * @param callback The function to be called when the timer expires.  This is moved into the
-         * Timer object.
+         * @param sim A reference to the Engine that owns this timer.
+         * @param callback The function to be called when the timer expires.
          */
-        Timer(const std::weak_ptr<Engine>& sim, std::function<void()> callback)
+        Timer(Engine& sim, std::function<void()> callback)
             : Entity(sim), callback_(std::move(callback)) {};
 
         /**
          * @brief Sets the timer for a specified duration.
-         *
-         * This function activates the timer and sets its deadline to the current time plus the
-         * given duration. If the timer is already active, it resets the existing deadline.
          *
          * @param duration The duration in seconds until the timer should expire.
          */
@@ -40,8 +31,6 @@ class Timer : public Entity, public std::enable_shared_from_this<Timer> {
 
         /**
          * @brief Cancels the timer.
-         *
-         * This function deactivates the timer, preventing it from firing.
          */
         void cancel();
 
@@ -54,9 +43,6 @@ class Timer : public Entity, public std::enable_shared_from_this<Timer> {
 
         /**
          * @brief Fires the timer's callback function.
-         *
-         * This function executes the callback associated with the timer and deactivates it.  It
-         * should be called by the Engine when the deadline is reached.
          */
         void fire();
 

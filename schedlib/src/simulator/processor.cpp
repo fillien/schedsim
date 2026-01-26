@@ -12,43 +12,38 @@
 #include <tracy/Tracy.hpp>
 #endif
 
-Processor::Processor(std::weak_ptr<Engine> sim, std::weak_ptr<Cluster> clu, std::size_t cpu_id)
-    : Entity(sim), id_(cpu_id), cluster_(std::move(clu))
+Processor::Processor(Engine& sim, Cluster* cluster, std::size_t cpu_id)
+    : Entity(sim), id_(cpu_id), cluster_(cluster)
 {
         using namespace protocols::traces;
 
-        assert(sim.lock());
-        sim.lock()->add_trace(ProcIdled{.proc_id = id_, .cluster_id = cluster_.lock()->id()});
+        sim.add_trace(ProcIdled{.proc_id = id_, .cluster_id = cluster_->id()});
 
-        core_timer_ = std::make_shared<Timer>(sim, [this, sim]() {
+        core_timer_ = std::make_unique<Timer>(sim, [this]() {
                 assert(current_state_ == State::Change);
                 change_state(dpm_target_);
 
-                if (auto clu = cluster_.lock()) {
-                        if (auto scheduler = clu->scheduler().lock()) {
-                                sim.lock()->alloc()->call_resched(scheduler);
-                        }
+                if (auto* scheduler = cluster_->scheduler()) {
+                        this->sim().alloc().call_resched(scheduler);
                 }
 
                 assert(current_state_ != State::Change);
         });
 }
 
-void Processor::task(std::weak_ptr<Task> task_to_execute)
+void Processor::task(Task* task_to_execute)
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        assert(!task_to_execute.expired());
+        assert(task_to_execute != nullptr);
 
-        auto shared_task = task_to_execute.lock();
+        // Set bidirectional relationship
+        task_ = task_to_execute;
+        task_to_execute->proc(this);
 
-        // Set bidiretionnal relationship
-        task_ = std::move(shared_task);
-        shared_task->proc(shared_from_this());
-
-        sim()->add_trace(protocols::traces::TaskScheduled{
-            .task_id = shared_task->id(), .proc_id = shared_from_this()->id_});
+        sim().add_trace(
+            protocols::traces::TaskScheduled{.task_id = task_to_execute->id(), .proc_id = id_});
 }
 
 void Processor::clear_task()
@@ -56,11 +51,9 @@ void Processor::clear_task()
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        if (auto shared_task = task_.lock()) { shared_task->proc().reset(); }
-        task_.reset();
+        if (task_) { task_->proc(nullptr); }
+        task_ = nullptr;
 }
-
-auto Processor::task() const -> std::shared_ptr<Task> { return task_.lock(); }
 
 void Processor::change_state(const State& next_state)
 {
@@ -71,27 +64,24 @@ void Processor::change_state(const State& next_state)
 #endif
         if (next_state == current_state_) { return; }
 
-        if (auto engine = sim()) {
-                current_state_ = next_state;
-                switch (next_state) {
-                case Idle: engine->add_trace(ProcIdled{id_, cluster()->id()}); break;
-                case Running: engine->add_trace(ProcActivated{id_, cluster()->id()}); break;
-                case Sleep: engine->add_trace(ProcSleep{id_, cluster()->id()}); break;
-                case Change:
-                        assert(!has_task());
-                        engine->add_trace(ProcChange{id_, cluster()->id()});
-                        break;
-                }
+        current_state_ = next_state;
+        switch (next_state) {
+        case Idle: sim().add_trace(ProcIdled{id_, cluster()->id()}); break;
+        case Running: sim().add_trace(ProcActivated{id_, cluster()->id()}); break;
+        case Sleep: sim().add_trace(ProcSleep{id_, cluster()->id()}); break;
+        case Change:
+                assert(!has_task());
+                sim().add_trace(ProcChange{id_, cluster()->id()});
+                break;
         }
 }
 
 void Processor::dvfs_change_state(double delay)
 {
-        auto engine = sim();
-        if (!engine || !engine->is_delay_activated()) { return; }
+        if (!sim().is_delay_activated()) { return; }
 
         if (current_state_ == State::Change) {
-                if (core_timer_->deadline() < (engine->time() + delay)) {
+                if (core_timer_->deadline() < (sim().time() + delay)) {
                         core_timer_->cancel();
                         dpm_target_ = State::Idle;
                         core_timer_->set(delay);
@@ -111,14 +101,13 @@ void Processor::dpm_change_state(const State& next_state)
 #endif
         if (next_state == current_state_) { return; }
 
-        auto engine = sim();
-        if (!engine || !engine->is_delay_activated()) {
+        if (!sim().is_delay_activated()) {
                 change_state(next_state);
                 return;
         }
 
         if (current_state_ == State::Change) {
-                if (core_timer_->deadline() < (engine->time() + DPM_DELAY)) {
+                if (core_timer_->deadline() < (sim().time() + DPM_DELAY)) {
                         core_timer_->cancel();
                         dpm_target_ = next_state;
                         core_timer_->set(DPM_DELAY);

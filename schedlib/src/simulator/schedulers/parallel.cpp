@@ -75,7 +75,7 @@ auto Parallel::admission_test(const Task& new_task) const -> bool
         return (new_total_util <= (nb_procs - ((nb_procs - 1) * u_max_val)));
 }
 
-void Parallel::remove_task_from_cpu(const std::shared_ptr<Processor>& proc)
+void Parallel::remove_task_from_cpu(Processor* proc)
 {
         if (proc->has_task()) {
                 cancel_alarms(*proc->task()->server());
@@ -87,7 +87,7 @@ void Parallel::remove_task_from_cpu(const std::shared_ptr<Processor>& proc)
 void Parallel::on_resched()
 {
         using std::ranges::empty;
-        using std::ranges::min;
+        using std::ranges::min_element;
         using std::views::filter;
         using enum Processor::State;
 #ifdef TRACY_ENABLE
@@ -100,23 +100,30 @@ void Parallel::on_resched()
         std::size_t num_scheduled_procs = 0;
         const std::size_t nb_procs = nb_active_procs();
 
-        const auto is_ready_server = [](const Server& serv) -> bool {
-                return serv.state() == Server::State::Ready;
-        };
-
         // Schedule tasks using global EDF until all available processors are occupied.
         while (num_scheduled_procs < nb_procs) {
-                auto ready_servers = servers() | filter(from_shared<Server>(is_ready_server));
+                auto ready_servers =
+                    servers() | filter([](const std::unique_ptr<Server>& srv) {
+                            return srv->state() == Server::State::Ready;
+                    });
                 auto available_procs =
-                    chip()->processors() | filter([](const auto& proc) {
+                    chip()->processors() | filter([](const std::unique_ptr<Processor>& proc) {
                             return proc->state() == Idle || proc->state() == Running;
                     });
 
                 if (empty(ready_servers) || empty(available_procs)) { break; }
 
-                auto highest_priority_server =
-                    min(ready_servers, from_shared<Server>(deadline_order));
-                auto selected_proc = min(available_procs, from_shared<Processor>(processor_order));
+                const auto& highest_priority_server = *min_element(
+                    ready_servers,
+                    [](const std::unique_ptr<Server>& lhs, const std::unique_ptr<Server>& rhs) {
+                            return deadline_order(*lhs, *rhs);
+                    });
+                const auto& selected_proc = *min_element(
+                    available_procs,
+                    [](const std::unique_ptr<Processor>& lhs,
+                       const std::unique_ptr<Processor>& rhs) {
+                            return processor_order(*lhs, *rhs);
+                    });
 
                 if (selected_proc->state() == Sleep) { assert(!selected_proc->has_task()); }
 
@@ -126,7 +133,7 @@ void Parallel::on_resched()
 
                 if (can_schedule) {
                         assert(selected_proc->state() != Sleep);
-                        resched_proc(selected_proc, highest_priority_server);
+                        resched_proc(selected_proc.get(), highest_priority_server.get());
                         ++num_scheduled_procs;
                 }
                 else {
@@ -135,7 +142,7 @@ void Parallel::on_resched()
         }
 
         // Update each processor: set next event or mark as idle.
-        for (auto proc : chip()->processors()) {
+        for (const auto& proc : chip()->processors()) {
                 if (proc->state() == Sleep || proc->state() == Change) { continue; }
                 if (proc->has_task()) {
                         cancel_alarms(*proc->task()->server());

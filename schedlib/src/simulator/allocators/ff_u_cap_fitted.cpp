@@ -3,13 +3,9 @@
 #include <simulator/scheduler.hpp>
 
 #include <algorithm>
-#include <memory>
-#include <optional>
-#include <ranges>
+#include <vector>
 
-auto allocators::FFUCapFitted::where_to_put_the_task(
-    const std::shared_ptr<Task>& new_task)
-    -> std::optional<std::shared_ptr<scheds::Scheduler>>
+auto allocators::FFUCapFitted::where_to_put_the_task(const Task& new_task) -> scheds::Scheduler*
 {
         // TODO: Implement fitted utilization model
         // For now, fall back to simple first-fit behavior
@@ -18,17 +14,14 @@ auto allocators::FFUCapFitted::where_to_put_the_task(
                 return first->cluster()->perf() < second->cluster()->perf();
         };
 
-        auto sorted_scheds{schedulers()};
+        std::vector<scheds::Scheduler*> sorted_scheds;
+        sorted_scheds.reserve(schedulers().size());
+        for (const auto& s : schedulers()) sorted_scheds.push_back(s.get());
         std::ranges::sort(sorted_scheds, compare_perf);
 
-        std::optional<std::shared_ptr<scheds::Scheduler>> next_sched;
-
-        for (auto& sched : sorted_scheds) {
-                if (sched->admission_test(*new_task)) {
-                        next_sched = sched;
-                        break;
-                }
+        for (auto* sched : sorted_scheds) {
+                if (sched->admission_test(new_task)) { return sched; }
         }
 
-        return next_sched;
+        return nullptr;
 }

@@ -7,15 +7,18 @@
 
 namespace scheds {
 
-PowerAwareTimer::PowerAwareTimer(const std::weak_ptr<Engine>& sim) : Parallel(sim)
+PowerAwareTimer::PowerAwareTimer(Engine& sim) : Parallel(sim)
 {
-        if (!sim.lock()->is_delay_activated()) {
+        if (!sim.is_delay_activated()) {
                 throw std::runtime_error(
                     "Simulation without DVFS & DPM delays is not support for this scheduler");
         }
 };
 
-auto PowerAwareTimer::nb_active_procs() const -> std::size_t { return chip()->processors().size(); }
+auto PowerAwareTimer::nb_active_procs() const -> std::size_t
+{
+        return chip()->processors().size();
+}
 
 void PowerAwareTimer::update_platform()
 {
@@ -30,7 +33,7 @@ void PowerAwareTimer::update_platform()
         assert(new_freq <= chip()->freq_max());
         if (chip()->freq() != chip()->ceil_to_mode(new_freq)) {
                 for (const auto& proc : chip()->processors()) {
-                        remove_task_from_cpu(proc);
+                        remove_task_from_cpu(proc.get());
                 }
                 chip()->dvfs_change_freq(new_freq);
                 call_resched();

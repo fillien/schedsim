@@ -22,8 +22,7 @@ auto DpmDvfs::nb_active_procs() const -> std::size_t
         return std::count_if(processors.begin(), processors.end(), is_active);
 }
 
-void DpmDvfs::change_state_proc(
-    const Processor::State& next_state, const std::shared_ptr<Processor>& proc)
+void DpmDvfs::change_state_proc(const Processor::State& next_state, Processor* proc)
 {
         assert(next_state != proc->state());
         assert(proc->state() != Processor::State::Change);
@@ -41,7 +40,7 @@ void DpmDvfs::activate_next_core()
                 return;
         } // No sleeping core found, there
           // is core in change state.
-        change_state_proc(Idle, *itr);
+        change_state_proc(Idle, itr->get());
 }
 
 void DpmDvfs::put_next_core_to_bed()
@@ -52,7 +51,7 @@ void DpmDvfs::put_next_core_to_bed()
                 return proc->state() == Idle || proc->state() == Running;
         });
         assert(itr != processors.end());
-        change_state_proc(Sleep, *itr);
+        change_state_proc(Sleep, itr->get());
 }
 
 void DpmDvfs::adjust_active_processors(const std::size_t target_processors)

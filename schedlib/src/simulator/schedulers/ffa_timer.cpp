@@ -4,12 +4,20 @@
 #include <simulator/schedulers/ffa_timer.hpp>
 
 namespace scheds {
-FfaTimer::FfaTimer(const std::weak_ptr<Engine>& sim) : DpmDvfs(sim)
+FfaTimer::FfaTimer(Engine& sim) : DpmDvfs(sim)
 {
-        if (!sim.lock()->is_delay_activated()) {
+        if (!sim.is_delay_activated()) {
                 throw std::runtime_error(
                     "Simulation without DVFS & DPM delays is not support for this scheduler");
         }
+
+        timer_dvfs_cooldown = std::make_unique<Timer>(sim, [this]() {
+                for (const auto& proc : chip()->processors()) {
+                        remove_task_from_cpu(proc.get());
+                }
+                chip()->dvfs_change_freq(freq_after_cooldown);
+                request_resched();
+        });
 }
 
 void FfaTimer::manage_dpm_timer(const auto next_active_procs)
@@ -29,8 +37,8 @@ void FfaTimer::manage_dpm_timer(const auto next_active_procs)
                         // Cancel youngest timers
                         std::ranges::sort(
                             timers_dpm_cooldown,
-                            [](const std::shared_ptr<Timer>& first,
-                               const std::shared_ptr<Timer>& second) {
+                            [](const std::unique_ptr<Timer>& first,
+                               const std::unique_ptr<Timer>& second) {
                                     return first->deadline() < second->deadline();
                             });
 
@@ -43,7 +51,7 @@ void FfaTimer::manage_dpm_timer(const auto next_active_procs)
                 }
                 else if (couverture < 0) {
                         for (int i = couverture; i > 0; --i) {
-                                auto timer_dpm = std::make_shared<Timer>(
+                                auto timer_dpm = std::make_unique<Timer>(
                                     sim(), [this]() { activate_next_core(); });
                                 timer_dpm->set(DPM_COOLDOWN);
                                 timers_dpm_cooldown.push_back(std::move(timer_dpm));

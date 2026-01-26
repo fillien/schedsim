@@ -3,11 +3,10 @@
 #include <simulator/task.hpp>
 
 #include <cassert>
-#include <memory>
 #include <stdexcept>
 
-Task::Task(std::weak_ptr<Engine> engine, std::size_t tid, double period, double utilization)
-    : Entity(std::move(engine)), id_(tid), period_(period), utilization_(utilization)
+Task::Task(Engine& engine, std::size_t tid, double period, double utilization)
+    : Entity(engine), id_(tid), period_(period), utilization_(utilization)
 {
 }
 
@@ -29,7 +28,7 @@ auto Task::add_job(double duration) -> void
 
 auto Task::remaining_time() const noexcept -> double
 {
-        const auto& FMAX_CHIP{sim()->chip()->clusters().at(0)->freq_max()};
+        const auto& FMAX_CHIP{sim().chip().clusters().at(0)->freq_max()};
         const auto& FMAX_CLUSTER{attached_proc_->cluster()->freq_max()};
         const auto& PERF{attached_proc_->cluster()->perf()};
         const auto& SPEED{attached_proc_->cluster()->speed()};
@@ -39,12 +38,12 @@ auto Task::remaining_time() const noexcept -> double
 auto Task::consume_time(double duration) -> void
 {
         assert(duration >= 0);
-        const auto& FMAX_CHIP{sim()->chip()->clusters().at(0)->freq_max()};
+        const auto& FMAX_CHIP{sim().chip().clusters().at(0)->freq_max()};
         const auto& FMAX_CLUSTER{attached_proc_->cluster()->freq_max()};
         const auto& PERF{attached_proc_->cluster()->perf()};
         const auto& SPEED{attached_proc_->cluster()->speed()};
         remaining_execution_time_ -= ((duration / (FMAX_CHIP / FMAX_CLUSTER)) * PERF) * SPEED;
-        assert(sim()->round_zero(remaining_execution_time_) >= 0);
+        assert(Engine::round_zero(remaining_execution_time_) >= 0);
 }
 
 auto Task::next_job() -> void
@@ -55,10 +54,10 @@ auto Task::next_job() -> void
         pending_jobs_.pop();
 }
 
-auto Task::server(const std::shared_ptr<Server>& serv_to_attach) -> void
+auto Task::server(Server* serv_to_attach) -> void
 {
         attached_serv_ = serv_to_attach;
-        serv_to_attach->attach_task(shared_from_this());
+        serv_to_attach->attach_task(this);
 }
 
-auto Task::clear_server() -> void { attached_serv_.reset(); }
+auto Task::clear_server() -> void { attached_serv_ = nullptr; }

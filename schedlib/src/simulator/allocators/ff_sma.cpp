@@ -7,14 +7,12 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
-#include <memory>
 #include <numeric>
-#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <vector>
 
-allocators::FFSma::FFSma(const std::weak_ptr<Engine>& sim, double sample_rate, int num_samples)
+allocators::FFSma::FFSma(Engine& sim, double sample_rate, int num_samples)
     : Allocator(sim), sample_rate_(sample_rate), num_samples_(num_samples)
 {
         if (sample_rate_ <= 0.0) {
@@ -95,25 +93,24 @@ auto computeSMA(
         return integral / window;
 }
 
-auto allocators::FFSma::where_to_put_the_task(const std::shared_ptr<Task>& new_task)
-    -> std::optional<std::shared_ptr<scheds::Scheduler>>
+auto allocators::FFSma::where_to_put_the_task(const Task& new_task) -> scheds::Scheduler*
 {
         const auto compare_perf = [](const auto& first, const auto& second) {
                 return first->cluster()->perf() < second->cluster()->perf();
         };
 
         // Sort the schedulers by perf score
-        auto sorted_scheds{schedulers()};
+        std::vector<scheds::Scheduler*> sorted_scheds;
+        sorted_scheds.reserve(schedulers().size());
+        for (const auto& s : schedulers()) sorted_scheds.push_back(s.get());
         std::ranges::sort(sorted_scheds, compare_perf);
-
-        std::optional<std::shared_ptr<scheds::Scheduler>> next_sched;
 
         const double NB_PROCS =
             static_cast<double>(sorted_scheds.back()->cluster()->processors().size());
 
         // Look for a cluster to place the task
-        for (auto& sched : sorted_scheds) {
-                const auto& clu = sched->cluster();
+        for (auto* sched : sorted_scheds) {
+                const auto* clu = sched->cluster();
 
                 if (sched != sorted_scheds.back()) {
                         sched->cluster()->u_target(
@@ -124,15 +121,12 @@ auto allocators::FFSma::where_to_put_the_task(const std::shared_ptr<Task>& new_t
                             NB_PROCS);
                 }
 
-                if (((new_task->utilization() * clu->scale_speed()) / clu->perf()) <
+                if (((new_task.utilization() * clu->scale_speed()) / clu->perf()) <
                     clu->u_target()) {
-                        if (sched->admission_test(*new_task)) {
-                                next_sched = sched;
-                                break;
-                        }
+                        if (sched->admission_test(new_task)) { return sched; }
                 }
         }
 
-        // Otherwise return that the allocator didn't found a cluster to place the task
-        return next_sched;
+        // Otherwise return that the allocator didn't find a cluster to place the task
+        return nullptr;
 }

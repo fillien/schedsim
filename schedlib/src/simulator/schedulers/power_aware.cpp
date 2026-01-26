@@ -22,10 +22,10 @@ void PowerAware::update_platform()
         assert(new_freq <= chip()->freq_max());
         if (chip()->freq() != chip()->ceil_to_mode(new_freq)) {
                 for (const auto& proc : chip()->processors()) {
-                        remove_task_from_cpu(proc);
+                        remove_task_from_cpu(proc.get());
                 }
                 chip()->dvfs_change_freq(new_freq);
-                sim()->alloc()->call_resched(shared_from_this());
+                request_resched();
         }
 }
 

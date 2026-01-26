@@ -1,9 +1,6 @@
 #ifndef ENTITY_HPP
 #define ENTITY_HPP
 
-#include <cassert>
-#include <memory>
-
 class Engine;
 
 /**
@@ -11,25 +8,26 @@ class Engine;
  */
 class Entity {
       public:
-        std::weak_ptr<Engine> simulator; /**< Weak pointer to the engine for event handling. */
+        /**
+         * @brief Constructs an entity with a reference to the engine.
+         * @param sim Reference to the engine.
+         */
+        explicit Entity(Engine& sim) : engine_(sim) {}
+
+        Entity(const Entity&) = delete;
+        Entity& operator=(const Entity&) = delete;
+        Entity(Entity&&) = delete;
+        Entity& operator=(Entity&&) = delete;
 
         /**
-         * @brief Constructs an entity with a weak pointer to the engine.
-         * @param sim Weak pointer to the engine.
+         * @brief Retrieves a reference to the engine.
+         * @return Reference to the engine.
          */
-        explicit Entity(const std::weak_ptr<Engine> sim) : simulator(sim) {}
+        [[nodiscard]] auto sim() -> Engine& { return engine_; }
+        [[nodiscard]] auto sim() const -> const Engine& { return engine_; }
 
-        /**
-         * @brief Retrieves a shared pointer to the engine.
-         * @return Shared pointer to the engine.
-         *
-         * Asserts that the weak pointer to the engine is still valid.
-         */
-        [[nodiscard]] auto sim() const -> std::shared_ptr<Engine>
-        {
-                assert(!simulator.expired());
-                return simulator.lock();
-        }
+      private:
+        Engine& engine_;
 };
 
 #endif

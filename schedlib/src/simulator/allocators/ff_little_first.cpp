@@ -2,11 +2,10 @@
 #include <simulator/allocators/ff_little_first.hpp>
 
 #include <algorithm>
-#include <optional>
 #include <ranges>
+#include <vector>
 
-auto allocators::FFLittleFirst::where_to_put_the_task(const std::shared_ptr<Task>& new_task)
-    -> std::optional<std::shared_ptr<scheds::Scheduler>>
+auto allocators::FFLittleFirst::where_to_put_the_task(const Task& new_task) -> scheds::Scheduler*
 {
         const auto compare_perf = [](const auto& first, const auto& second) {
                 return first->cluster()->perf() > second->cluster()->perf();
@@ -14,12 +13,14 @@ auto allocators::FFLittleFirst::where_to_put_the_task(const std::shared_ptr<Task
 
         step++;
         // Sort the schedulers by perf score
-        auto sorted_scheds{schedulers()};
+        std::vector<scheds::Scheduler*> sorted_scheds;
+        sorted_scheds.reserve(schedulers().size());
+        for (const auto& s : schedulers()) sorted_scheds.push_back(s.get());
         std::ranges::sort(sorted_scheds, compare_perf);
 
-        for (const auto& itr : std::ranges::reverse_view(sorted_scheds)) {
-                if (itr->admission_test(*new_task)) { return itr; }
+        for (auto* sched : std::ranges::reverse_view(sorted_scheds)) {
+                if (sched->admission_test(new_task)) { return sched; }
         }
 
-        return {};
+        return nullptr;
 }

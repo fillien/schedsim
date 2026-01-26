@@ -1,6 +1,5 @@
 #include <cassert>
 #include <cmath>
-#include <memory>
 #include <simulator/schedulers/csf.hpp>
 
 namespace scheds {
@@ -34,10 +33,10 @@ void Csf::update_platform()
         adjust_active_processors(static_cast<std::size_t>(next_active_procs));
         if (chip()->freq() != chip()->ceil_to_mode(next_freq)) {
                 for (const auto& proc : chip()->processors()) {
-                        remove_task_from_cpu(proc);
+                        remove_task_from_cpu(proc.get());
                 }
                 chip()->dvfs_change_freq(next_freq);
-                sim()->alloc()->call_resched(shared_from_this());
+                request_resched();
         }
 }
 

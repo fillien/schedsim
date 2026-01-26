@@ -3,9 +3,7 @@
 #include <simulator/scheduler.hpp>
 
 #include <algorithm>
-#include <memory>
-#include <optional>
-#include <ranges>
+#include <vector>
 
 namespace {
 
@@ -32,18 +30,19 @@ auto model_target(double umax, double U) -> double
 
 } // namespace
 
-auto allocators::FFCapAdaptiveLinear::where_to_put_the_task(
-    const std::shared_ptr<Task>& new_task)
-    -> std::optional<std::shared_ptr<scheds::Scheduler>>
+auto allocators::FFCapAdaptiveLinear::where_to_put_the_task(const Task& new_task)
+    -> scheds::Scheduler*
 {
         // Update observed umax with incoming task's utilization
-        observed_umax_ = std::max(observed_umax_, new_task->utilization());
+        observed_umax_ = std::max(observed_umax_, new_task.utilization());
 
         const auto compare_perf = [](const auto& first, const auto& second) {
                 return first->cluster()->perf() < second->cluster()->perf();
         };
 
-        auto sorted_scheds{schedulers()};
+        std::vector<scheds::Scheduler*> sorted_scheds;
+        sorted_scheds.reserve(schedulers().size());
+        for (const auto& s : schedulers()) sorted_scheds.push_back(s.get());
         std::ranges::sort(sorted_scheds, compare_perf);
 
         if (!sorted_scheds.empty()) {
@@ -52,20 +51,15 @@ auto allocators::FFCapAdaptiveLinear::where_to_put_the_task(
                 sorted_scheds.front()->cluster()->u_target(target);
         }
 
-        std::optional<std::shared_ptr<scheds::Scheduler>> next_sched;
-
-        for (auto& sched : sorted_scheds) {
-                const auto& clu = sched->cluster();
+        for (auto* sched : sorted_scheds) {
+                const auto* clu = sched->cluster();
                 const double scaled_utilization =
-                    (new_task->utilization() * clu->scale_speed()) / clu->perf();
+                    (new_task.utilization() * clu->scale_speed()) / clu->perf();
 
                 if (scaled_utilization <= clu->u_target()) {
-                        if (sched->admission_test(*new_task)) {
-                                next_sched = sched;
-                                break;
-                        }
+                        if (sched->admission_test(new_task)) { return sched; }
                 }
         }
 
-        return next_sched;
+        return nullptr;
 }
