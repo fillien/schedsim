@@ -50,13 +50,18 @@ auto Parallel::server_budget(const Server& serv) const -> double
         return scaled_utilization / bandwidth * (serv.deadline() - serv.virtual_time());
 }
 
+auto Parallel::compute_bandwidth() const -> double
+{
+        const auto nb_active_procs_val = static_cast<double>(nb_active_procs());
+        return 1 - (inactive_bandwidth() / nb_active_procs_val);
+}
+
 auto Parallel::server_virtual_time(const Server& serv, const double& running_time) -> double
 {
 #ifdef TRACY_ENABLE
         ZoneScoped;
 #endif
-        const auto nb_active_procs_val = static_cast<double>(nb_active_procs());
-        const auto bandwidth = 1 - (inactive_bandwidth() / nb_active_procs_val);
+        const auto bandwidth = compute_bandwidth();
         const auto scaled_utilization =
             (serv.utilization() * cluster()->scale_speed()) / cluster()->perf();
         return serv.virtual_time() + ((bandwidth / scaled_utilization) * running_time);

@@ -24,6 +24,8 @@ class Parallel : public Scheduler {
 
         auto server_virtual_time(const Server& serv, const double& running_time) -> double override;
 
+        auto compute_bandwidth() const -> double override;
+
         auto admission_test(const Task& new_task) const -> bool override;
 
         auto on_resched() -> void override;

@@ -71,6 +71,7 @@ class Scheduler : public Entity {
 
         virtual auto server_virtual_time(const Server& serv, const double& running_time)
             -> double = 0;
+        virtual auto compute_bandwidth() const -> double = 0;
         virtual auto server_budget(const Server& serv) const -> double = 0;
         virtual auto on_resched() -> void = 0;
         virtual auto on_active_utilization_updated() -> void = 0;

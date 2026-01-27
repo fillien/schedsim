@@ -172,6 +172,8 @@ void to_json(const trace& log, rapidjson::Writer<rapidjson::OStreamWrapper>& wri
                         writer.Uint(tra.task_id);
                         writer.Key("virtual_time");
                         writer.Double(tra.virtual_time);
+                        writer.Key("bandwidth");
+                        writer.Double(tra.bandwidth);
                 },
                 [&writer](const FrequencyUpdate& tra) {
                         writer.Key("type");
@@ -314,7 +316,10 @@ auto from_json(const rapidjson::Value& log) -> trace
              [](const rapidjson::Value& log) -> trace {
                      return VirtualTimeUpdate{
                          .task_id = log["tid"].GetUint64(),
-                         .virtual_time = log["virtual_time"].GetDouble()};
+                         .virtual_time = log["virtual_time"].GetDouble(),
+                         .bandwidth = log.HasMember("bandwidth")
+                                          ? log["bandwidth"].GetDouble()
+                                          : 0.0};
              }},
             {"frequency_update",
              [](const rapidjson::Value& log) -> trace {

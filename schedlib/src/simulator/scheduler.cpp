@@ -345,7 +345,9 @@ auto Scheduler::update_server_times(Server* serv) -> void
 
         serv->virtual_time(server_virtual_time(*serv, rt));
         sim().add_trace(traces::VirtualTimeUpdate{
-            .task_id = serv->task()->id(), .virtual_time = serv->virtual_time()});
+            .task_id = serv->task()->id(),
+            .virtual_time = serv->virtual_time(),
+            .bandwidth = compute_bandwidth()});
         serv->task()->consume_time(rt);
         serv->update_time();
 }

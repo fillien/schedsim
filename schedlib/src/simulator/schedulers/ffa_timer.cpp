@@ -22,7 +22,7 @@ FfaTimer::FfaTimer(Engine& sim) : DpmDvfs(sim)
 
 void FfaTimer::manage_dpm_timer(const auto next_active_procs)
 {
-        int diff_dpm = static_cast<std::size_t>(next_active_procs) - nb_active_procs();
+        int diff_dpm = static_cast<int>(next_active_procs) - static_cast<int>(nb_active_procs());
         if (diff_dpm > 0) {
                 for (int i = 0; i < diff_dpm; ++i) {
                         activate_next_core();
@@ -78,7 +78,7 @@ void FfaTimer::update_platform()
         const double max_procs{static_cast<double>(chip()->processors().size())};
         const double freq_eff{chip()->freq_eff()};
         const double freq_max{chip()->freq_max()};
-        const double freq_min{compute_freq_min(freq_max, total_util, max_util, max_procs)};
+        const double freq_min{std::min(compute_freq_min(freq_max, total_util, max_util, max_procs), freq_max)};
 
         double next_freq{0};
         double next_active_procs{0};
@@ -88,7 +88,6 @@ void FfaTimer::update_platform()
                 next_active_procs = std::ceil(max_procs * (freq_min / freq_eff));
         }
         else {
-                assert(freq_min <= chip()->freq_max());
                 next_freq = chip()->ceil_to_mode(freq_min);
                 next_active_procs = max_procs;
         }

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cassert>
 #include <cmath>
 #include <simulator/schedulers/csf.hpp>
@@ -12,7 +13,7 @@ void Csf::update_platform()
         const double freq_eff{chip()->freq_eff()};
         const double freq_max{chip()->freq_max()};
         const double m_min{clamp(std::ceil((total_util - max_util) / (1 - max_util)))};
-        const double freq_min{compute_freq_min(freq_max, total_util, max_util, m_min)};
+        const double freq_min{std::min(compute_freq_min(freq_max, total_util, max_util, m_min), freq_max)};
 
         double next_freq{0};
         double next_active_procs{0};
@@ -22,7 +23,6 @@ void Csf::update_platform()
                 next_active_procs = std::ceil(m_min * (freq_min / freq_eff));
         }
         else {
-                assert(freq_min <= chip()->freq_max());
                 next_freq = chip()->ceil_to_mode(freq_min);
                 next_active_procs = max_procs;
         }

@@ -159,6 +159,7 @@ struct TaskRejected {
 struct VirtualTimeUpdate {
         std::size_t task_id; /**< ID of the task. */
         double virtual_time; /**< Updated virtual time. */
+        double bandwidth;    /**< Bandwidth used in VT computation. */
 };
 
 /**

@@ -34,7 +34,7 @@ void PowerAwareTimer::update_platform()
                         remove_task_from_cpu(proc.get());
                 }
                 chip()->dvfs_change_freq(new_freq);
-                call_resched();
+                request_resched();
         }
 }
 

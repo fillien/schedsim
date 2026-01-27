@@ -23,7 +23,7 @@ CsfTimer::CsfTimer(Engine& sim) : DpmDvfs(sim)
 
 void CsfTimer::manage_dpm_timer(const auto next_active_procs)
 {
-        int diff_dpm = next_active_procs - nb_active_procs();
+        int diff_dpm = static_cast<int>(next_active_procs) - static_cast<int>(nb_active_procs());
         if (diff_dpm > 0) {
                 for (int i = 0; i < diff_dpm; ++i) {
                         activate_next_core();
@@ -84,24 +84,13 @@ void CsfTimer::update_platform()
         double next_freq{0};
 
         const auto m_min{clamp(std::ceil((total_util - max_util) / (1 - max_util)))};
-        const auto freq_min{compute_freq_min(freq_max, total_util, max_util, m_min)};
+        const auto freq_min{std::min(compute_freq_min(freq_max, total_util, max_util, m_min), freq_max)};
 
         if (freq_min < freq_eff) {
                 next_freq = freq_eff;
                 next_active_procs = std::ceil(m_min * (freq_min / freq_eff));
         }
         else {
-                assert(freq_min <= chip()->freq_max());
-                next_freq = chip()->ceil_to_mode(freq_min);
-                next_active_procs = max_procs;
-        }
-
-        if (freq_min < freq_eff) {
-                next_freq = freq_eff;
-                next_active_procs = std::ceil(max_procs * (freq_min / freq_eff));
-        }
-        else {
-                assert(freq_min <= chip()->freq_max());
                 next_freq = chip()->ceil_to_mode(freq_min);
                 next_active_procs = max_procs;
         }
