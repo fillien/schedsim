@@ -1,17 +1,38 @@
-﻿---
-AlignAfterOpenBracket: AlwaysBreak
-AlignConsecutiveMacros: 'true'
-AllowShortBlocksOnASingleLine: Always
-AllowShortCaseLabelsOnASingleLine: 'true'
-AllowShortIfStatementsOnASingleLine: WithoutElse
-BinPackArguments: 'false'
-BinPackParameters: 'false'
-BreakBeforeBraces: Stroustrup
-ColumnLimit: '100'
-IndentWidth: '8'
 Language: Cpp
-PointerAlignment: Left
-SortIncludes: 'true'
-TabWidth: '8'
+Standard: c++20
+BasedOnStyle: LLVM
 
-...
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+IndentCaseLabels: false
+NamespaceIndentation: None
+
+BreakBeforeBraces: Attach
+Cpp11BracedListStyle: true
+
+ColumnLimit: 100
+
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<schedsim/'
+    Priority: 2
+  - Regex: '^<[a-z_]+>'
+    Priority: 3
+  - Regex: '^<'
+    Priority: 4
+  - Regex: '.*'
+    Priority: 1
+SortIncludes: CaseSensitive
+
+AlignAfterOpenBracket: Align
+AlignOperands: true
+AlignTrailingComments: true
+
+AllowShortBlocksOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+PointerAlignment: Left
+ReferenceAlignment: Left

@@ -37,11 +37,16 @@ if(CMAKE_EXPORT_COMPILE_COMMANDS)
     ${CMAKE_CXX_IMPLICIT_INCLUDE_DIRECTORIES})
 endif()
 
+# New schedsim library options
+option(SCHEDSIM_BUILD_TESTS "Build schedsim unit tests" ON)
+option(SCHEDSIM_BUILD_EXAMPLES "Build schedsim example programs" OFF)
+
 add_subdirectory(external/cxxopts)
 add_subdirectory(external/json)
 add_subdirectory(external/rang)
 add_subdirectory(external/tracy)
 add_subdirectory(schedlib)
+add_subdirectory(schedsim)
 add_subdirectory(apps)
 option(BUILD_PYTHON "Build Python bindings" ON)
 if(BUILD_PYTHON)
