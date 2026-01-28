@@ -6,6 +6,9 @@ target_link_libraries(schedsim-algo PUBLIC schedsim-core)
 
 target_sources(schedsim-algo PRIVATE
     src/algo.cpp
+    src/cbs_server.cpp
+    src/edf_scheduler.cpp
+    src/single_scheduler_allocator.cpp
 )
 
 target_include_directories(schedsim-algo PUBLIC
