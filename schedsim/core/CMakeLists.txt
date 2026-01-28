@@ -4,6 +4,15 @@ target_compile_features(schedsim-core PUBLIC cxx_std_20)
 
 target_sources(schedsim-core PRIVATE
     src/core.cpp
+    src/engine.cpp
+    src/energy_tracker.cpp
+    src/clock_domain.cpp
+    src/job.cpp
+    src/platform.cpp
+    src/power_domain.cpp
+    src/processor.cpp
+    src/processor_type.cpp
+    src/task.cpp
 )
 
 target_include_directories(schedsim-core PUBLIC
