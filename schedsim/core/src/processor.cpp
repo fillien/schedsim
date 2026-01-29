@@ -58,9 +58,11 @@ void Processor::assign(Job& job) {
         last_update_time_ = engine_->time();
         schedule_completion();
 
-        // Schedule deadline timer
+        // Schedule deadline timer (at deadline time or current time if passed)
+        // Using std::max ensures deadline misses are detected even for past deadlines
+        core::TimePoint deadline_time = std::max(job.absolute_deadline(), engine_->time());
         deadline_timer_ = engine_->add_timer(
-            job.absolute_deadline(),
+            deadline_time,
             EventPriority::DEADLINE_MISS,
             [this]() { on_deadline_timer(); }
         );
@@ -231,12 +233,17 @@ void Processor::begin_context_switch(Job& job) {
     state_ = ProcessorState::ContextSwitching;
 
     if (engine_) {
+        // Cancel any existing deadline timer from wake-up phase to prevent duplicates
+        engine_->cancel_timer(deadline_timer_);
+
         Duration cs_delay = type_->context_switch_delay();
         TimePoint complete_time = engine_->time() + cs_delay;
 
-        // Schedule deadline timer immediately (starts during context switch)
+        // Schedule deadline timer (at deadline time or current time if passed)
+        // Using std::max ensures deadline misses are detected even for past deadlines
+        core::TimePoint deadline_time = std::max(job.absolute_deadline(), engine_->time());
         deadline_timer_ = engine_->add_timer(
-            job.absolute_deadline(),
+            deadline_time,
             EventPriority::DEADLINE_MISS,
             [this]() { on_deadline_timer(); }
         );
@@ -295,9 +302,11 @@ void Processor::begin_wake_up(Job& job) {
         return;
     }
 
-    // Schedule deadline timer immediately (starts during wake-up)
+    // Schedule deadline timer (at deadline time or current time if passed)
+    // Using std::max ensures deadline misses are detected even for past deadlines
+    core::TimePoint deadline_time = std::max(job.absolute_deadline(), engine_->time());
     deadline_timer_ = engine_->add_timer(
-        job.absolute_deadline(),
+        deadline_time,
         EventPriority::DEADLINE_MISS,
         [this]() { on_deadline_timer(); }
     );
