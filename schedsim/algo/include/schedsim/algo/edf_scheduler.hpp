@@ -2,6 +2,7 @@
 
 #include <schedsim/algo/cbs_server.hpp>
 #include <schedsim/algo/error.hpp>
+#include <schedsim/algo/reclamation_policy.hpp>
 #include <schedsim/algo/scheduler.hpp>
 
 #include <schedsim/core/deferred.hpp>
@@ -15,11 +16,17 @@
 
 #include <deque>
 #include <functional>
+#include <memory>
 #include <span>
 #include <unordered_map>
 #include <vector>
 
 namespace schedsim::algo {
+
+// Forward declarations for policy types
+class DpmPolicy;
+class DvfsPolicy;
+class ReclamationPolicy;
 
 // EDF (Earliest Deadline First) scheduler with CBS servers
 // Manages a set of processors and dispatches jobs using EDF ordering
@@ -65,6 +72,20 @@ public:
     void set_deadline_miss_policy(DeadlineMissPolicy policy);
     void set_deadline_miss_handler(std::function<void(core::Processor&, core::Job&)> handler);
 
+    // Policy management (Phase 6)
+    void set_reclamation_policy(std::unique_ptr<ReclamationPolicy> policy);
+    void set_dvfs_policy(std::unique_ptr<DvfsPolicy> policy);
+    void set_dpm_policy(std::unique_ptr<DpmPolicy> policy);
+
+    // Convenience methods for enabling policies
+    void enable_grub();
+    void enable_cash();
+    void enable_power_aware_dvfs(core::Duration cooldown = core::Duration{0.0});
+    void enable_basic_dpm(int target_cstate = 1);
+
+    // Active utilization query (for DVFS integration)
+    [[nodiscard]] double active_utilization() const;
+
     // Access to engine (for tests)
     [[nodiscard]] core::Engine& engine() noexcept { return engine_; }
     [[nodiscard]] const core::Engine& engine() const noexcept { return engine_; }
@@ -96,6 +117,12 @@ private:
     std::vector<CbsServer*> get_ready_servers();
     std::vector<core::Processor*> get_available_processors();
 
+    // Policy callbacks
+    void notify_utilization_changed();
+    void notify_server_state_change(CbsServer& server, ReclamationPolicy::ServerStateChange change);
+    void on_dvfs_frequency_changed(core::ClockDomain& domain);
+    void reschedule_budget_timers_for_domain(core::ClockDomain& domain);
+
     core::Engine& engine_;
     std::vector<core::Processor*> processors_;
     std::deque<CbsServer> servers_;  // deque to prevent pointer invalidation on growth
@@ -117,6 +144,11 @@ private:
 
     // Monotonic server ID counter for deterministic tie-breaking
     std::size_t next_server_id_{0};
+
+    // Policies (Phase 6)
+    std::unique_ptr<ReclamationPolicy> reclamation_policy_;
+    std::unique_ptr<DvfsPolicy> dvfs_policy_;
+    std::unique_ptr<DpmPolicy> dpm_policy_;
 };
 
 } // namespace schedsim::algo

@@ -120,17 +120,35 @@ TEST_F(TimerTest, TimerSchedulesTimer) {
     EXPECT_EQ(engine.time(), time(2.0));
 }
 
+TEST_F(TimerTest, TimerAtCurrentTimeAllowed) {
+    Engine engine;
+    bool fired = false;
+
+    // Timer at current time should NOT throw (was changed to support deadline timers)
+    EXPECT_NO_THROW(
+        engine.add_timer(time(0.0), [&fired]() { fired = true; })
+    );
+
+    engine.run();
+    EXPECT_TRUE(fired);
+}
+
 TEST_F(TimerTest, TimerInPastThrows) {
     Engine engine;
 
-    // Timer at current time should throw
+    // Advance time first
+    engine.add_timer(time(5.0), []() {});
+    engine.run();
+    EXPECT_EQ(engine.time(), time(5.0));
+
+    // Timer in the past should throw
     EXPECT_THROW(
-        engine.add_timer(time(0.0), []() {}),
+        engine.add_timer(time(3.0), []() {}),
         InvalidStateError
     );
 }
 
-TEST_F(TimerTest, TimerInPastAfterAdvance) {
+TEST_F(TimerTest, TimerAtCurrentTimeAfterAdvance) {
     Engine engine;
 
     engine.add_timer(time(5.0), []() {});
@@ -138,11 +156,14 @@ TEST_F(TimerTest, TimerInPastAfterAdvance) {
 
     EXPECT_EQ(engine.time(), time(5.0));
 
-    // Timer at time 3.0 should throw since current time is 5.0
-    EXPECT_THROW(
-        engine.add_timer(time(3.0), []() {}),
-        InvalidStateError
+    // Timer at current time (5.0) should be allowed
+    bool fired = false;
+    EXPECT_NO_THROW(
+        engine.add_timer(time(5.0), [&fired]() { fired = true; })
     );
+
+    engine.run();
+    EXPECT_TRUE(fired);
 }
 
 TEST_F(TimerTest, MultipleTimersAtDifferentTimes) {

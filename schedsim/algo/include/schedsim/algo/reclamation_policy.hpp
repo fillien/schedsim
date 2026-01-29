@@ -1,0 +1,48 @@
+#pragma once
+
+#include <schedsim/core/types.hpp>
+
+namespace schedsim::algo {
+
+class CbsServer;
+
+// Interface for bandwidth reclamation policies
+// Reclamation policies allow unused bandwidth to be redistributed to other servers
+class ReclamationPolicy {
+public:
+    virtual ~ReclamationPolicy() = default;
+
+    // Called on early job completion (job finishes before budget exhaustion)
+    // Returns true if server should enter NonContending state (GRUB)
+    // Returns false for standard CBS behavior (server goes Inactive/Ready)
+    virtual bool on_early_completion(CbsServer& server, core::Duration remaining_budget) = 0;
+
+    // Called on budget exhaustion
+    // Returns extra budget granted (0 = standard CBS postpone)
+    // CASH can return borrowed budget from spare queue
+    virtual core::Duration on_budget_exhausted(CbsServer& server) = 0;
+
+    // Virtual time computation (override for GRUB formula)
+    // Default: CBS formula vt += exec_time / U_server
+    // GRUB: vt += exec_time / U_active (clamped to avoid division by zero)
+    virtual core::TimePoint compute_virtual_time(
+        const CbsServer& server, core::TimePoint current_vt, core::Duration exec_time) const;
+
+    // State change notification for tracking active bandwidth
+    // Called when a server transitions between states
+    enum class ServerStateChange {
+        Activated,       // Inactive -> Ready
+        Dispatched,      // Ready -> Running
+        Preempted,       // Running -> Ready
+        Completed,       // Running -> Inactive
+        NonContending,   // Running -> NonContending (GRUB)
+        DeadlineReached  // NonContending -> Inactive (GRUB)
+    };
+    virtual void on_server_state_change(CbsServer& server, ServerStateChange change) = 0;
+
+    // Get current active utilization (for DVFS integration)
+    // Active utilization = sum of U_i for servers in Running or Ready state
+    [[nodiscard]] virtual double active_utilization() const = 0;
+};
+
+} // namespace schedsim::algo

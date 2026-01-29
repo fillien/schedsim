@@ -4,6 +4,7 @@
 #include <schedsim/core/task.hpp>
 #include <schedsim/core/types.hpp>
 
+#include <cstdint>
 #include <deque>
 
 namespace schedsim::algo {
@@ -60,6 +61,7 @@ public:
     // Job queue accessors
     [[nodiscard]] bool has_pending_jobs() const noexcept { return !job_queue_.empty(); }
     [[nodiscard]] std::size_t job_queue_size() const noexcept { return job_queue_.size(); }
+    [[nodiscard]] uint64_t last_enqueued_job_id() const noexcept { return last_enqueued_job_id_; }
     [[nodiscard]] core::Job* current_job();
     [[nodiscard]] const core::Job* current_job() const;
 
@@ -82,6 +84,12 @@ public:
 
     // Running -> Ready: budget exhausted, postpone deadline
     void exhaust_budget(core::TimePoint current_time);
+
+    // Running -> NonContending: job completed early, waiting for deadline (GRUB)
+    void enter_non_contending(core::TimePoint current_time);
+
+    // NonContending -> Inactive: server deadline reached (GRUB)
+    void reach_deadline(core::TimePoint current_time);
 
     // CBS formulas
     // Update virtual time: vt += execution_time / U
@@ -112,6 +120,8 @@ private:
     core::TimePoint deadline_{core::Duration{0.0}};
     core::TimePoint virtual_time_{core::Duration{0.0}};
     core::Duration remaining_budget_{core::Duration{0.0}};
+    uint64_t job_counter_{0};
+    uint64_t last_enqueued_job_id_{0};
 
     std::deque<core::Job> job_queue_;
     core::Task* task_{nullptr};

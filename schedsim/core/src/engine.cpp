@@ -47,9 +47,9 @@ TimerId Engine::add_timer(TimePoint when, int priority, std::function<void()> ca
     if (finalized_) {
         throw AlreadyFinalizedError("Cannot add timer after finalize()");
     }
-    // Decision 7: Timers must be scheduled strictly in future
-    if (when <= current_time_) {
-        throw InvalidStateError("Timer must be scheduled in the future (when > time())");
+    // Decision 7: Timers must be scheduled in future or at current time
+    if (when < current_time_) {
+        throw InvalidStateError("Timer must be scheduled in the future (when >= time())");
     }
 
     EventKey key{when, priority, sequence_++};

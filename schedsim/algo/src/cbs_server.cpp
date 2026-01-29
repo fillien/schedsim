@@ -34,7 +34,8 @@ void CbsServer::enqueue_job(core::Job job) {
                 // Default: just enqueue
                 break;
             case OverrunPolicy::Skip:
-                // Drop the new job
+                // Drop the new job without updating last_enqueued_job_id_.
+                // Skipped jobs don't get IDs - they are silently discarded.
                 return;
             case OverrunPolicy::Abort:
                 // Abort current job (remove from front)
@@ -43,6 +44,7 @@ void CbsServer::enqueue_job(core::Job job) {
         }
     }
     job_queue_.push_back(std::move(job));
+    last_enqueued_job_id_ = ++job_counter_;
 }
 
 core::Job CbsServer::dequeue_job() {
@@ -96,6 +98,22 @@ void CbsServer::exhaust_budget(core::TimePoint /*current_time*/) {
 
     // Transition to Ready (will be re-dispatched with new deadline)
     state_ = State::Ready;
+}
+
+void CbsServer::enter_non_contending(core::TimePoint /*current_time*/) {
+    assert(state_ == State::Running && "Can only enter NonContending from Running state");
+
+    // GRUB: Job completed early, server waits for its deadline
+    // The server's bandwidth is no longer contributing to active utilization
+    state_ = State::NonContending;
+}
+
+void CbsServer::reach_deadline(core::TimePoint /*current_time*/) {
+    assert(state_ == State::NonContending && "Can only reach deadline from NonContending state");
+
+    // GRUB: Deadline reached, server becomes Inactive
+    // Budget and deadline will be reset on next job arrival
+    state_ = State::Inactive;
 }
 
 void CbsServer::update_virtual_time(core::Duration execution_time) {
