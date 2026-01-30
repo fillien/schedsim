@@ -239,16 +239,9 @@ void Processor::begin_context_switch(Job& job) {
         Duration cs_delay = type_->context_switch_delay();
         TimePoint complete_time = engine_->time() + cs_delay;
 
-        // Schedule deadline timer (at deadline time or current time if passed)
-        // Using std::max ensures deadline misses are detected even for past deadlines
-        core::TimePoint deadline_time = std::max(job.absolute_deadline(), engine_->time());
-        deadline_timer_ = engine_->add_timer(
-            deadline_time,
-            EventPriority::DEADLINE_MISS,
-            [this]() { on_deadline_timer(); }
-        );
-
-        // Schedule context switch completion
+        // Only schedule context switch completion - NOT deadline timer
+        // Deadline timer is scheduled in on_context_switch_complete() after
+        // current_job_ is set, so on_deadline_timer() can properly detect misses
         transition_timer_ = engine_->add_timer(
             complete_time,
             EventPriority::PROCESSOR_AVAILABLE,
@@ -272,6 +265,15 @@ void Processor::on_context_switch_complete() {
     if (engine_) {
         last_update_time_ = engine_->time();
         schedule_completion();
+
+        // Schedule deadline timer HERE, after current_job_ is set
+        // This ensures on_deadline_timer() can properly detect the miss
+        TimePoint deadline_time = std::max(current_job_->absolute_deadline(), engine_->time());
+        deadline_timer_ = engine_->add_timer(
+            deadline_time,
+            EventPriority::DEADLINE_MISS,
+            [this]() { on_deadline_timer(); }
+        );
     }
 
     // Fire ProcessorAvailable ISR

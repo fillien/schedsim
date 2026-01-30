@@ -181,3 +181,33 @@ TEST_F(ContextSwitchTest, ZeroDelaySkipsCS) {
     // Even with CS enabled, zero delay goes directly to Running
     EXPECT_EQ(proc.state(), ProcessorState::Running);
 }
+
+TEST_F(ContextSwitchTest, DeadlineMissDuringCS) {
+    engine_.enable_context_switch(true);
+    // CS delay is 0.1s (from SetUp)
+
+    bool deadline_miss_called = false;
+    TimePoint miss_time;
+    proc_->set_deadline_miss_handler([&](Processor& p, Job& j) {
+        deadline_miss_called = true;
+        miss_time = engine_.time();
+        EXPECT_EQ(&p, proc_);
+        (void)j;
+    });
+
+    // Job with deadline at 0.05s - BEFORE context switch completes (0.1s)
+    TimePoint deadline{Duration{0.05}};
+    Job job(*task_, Duration{2.0}, deadline);
+
+    proc_->assign(job);  // Starts context switch
+    EXPECT_EQ(proc_->state(), ProcessorState::ContextSwitching);
+
+    // Run past the deadline (but before CS completes)
+    engine_.run(TimePoint{Duration{0.2}});
+
+    // Deadline miss MUST be detected
+    EXPECT_TRUE(deadline_miss_called);
+    // Miss detected after CS completes (0.1s), not at actual deadline (0.05s)
+    // This is acceptable - we detect it once job reaches Running state
+    EXPECT_GE(miss_time.time_since_epoch().count(), 0.1);
+}

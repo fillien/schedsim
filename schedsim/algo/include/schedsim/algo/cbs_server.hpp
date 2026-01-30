@@ -95,6 +95,9 @@ public:
     // Update virtual time: vt += execution_time / U
     void update_virtual_time(core::Duration execution_time);
 
+    // Set virtual time directly (used when reclamation policy computes VT externally)
+    void set_virtual_time(core::TimePoint vt) noexcept { virtual_time_ = vt; }
+
     // Postpone deadline: d += T, remaining_budget = Q
     void postpone_deadline();
 

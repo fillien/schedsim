@@ -127,7 +127,7 @@ private:
     std::vector<core::Processor*> processors_;
     std::deque<CbsServer> servers_;  // deque to prevent pointer invalidation on growth
 
-    std::unordered_map<core::Task*, CbsServer*> task_to_server_;
+    std::unordered_map<const core::Task*, CbsServer*> task_to_server_;
     std::unordered_map<CbsServer*, core::Processor*> server_to_processor_;
     std::unordered_map<core::Processor*, CbsServer*> processor_to_server_;
     std::unordered_map<CbsServer*, core::TimerId> budget_timers_;

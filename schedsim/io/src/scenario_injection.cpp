@@ -5,18 +5,19 @@
 
 namespace schedsim::io {
 
-void inject_scenario(core::Engine& engine, const ScenarioData& scenario) {
+std::vector<core::Task*> inject_scenario(core::Engine& engine, const ScenarioData& scenario) {
     auto& platform = engine.platform();
+    std::vector<core::Task*> tasks;
+    tasks.reserve(scenario.tasks.size());
 
-    // Create tasks in platform
-    // Note: We rely on the task order matching the scenario order
-    // since Platform assigns sequential IDs starting from 0
     for (const auto& task_params : scenario.tasks) {
-        platform.add_task(
+        auto& task = platform.add_task(
             task_params.period,
             task_params.relative_deadline,
             task_params.wcet);
+        tasks.push_back(&task);
     }
+    return tasks;
 }
 
 void schedule_arrivals(core::Engine& engine, core::Task& task,

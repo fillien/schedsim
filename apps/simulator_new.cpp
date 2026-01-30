@@ -121,7 +121,7 @@ int main(int argc, char** argv) {
 
         // 3. Load scenario and inject tasks (before finalize)
         auto scenario = io::load_scenario(config.scenario_file);
-        io::inject_scenario(engine, scenario);
+        auto scenario_tasks = io::inject_scenario(engine, scenario);
 
         // 4. Enable optional features (before finalize)
         if (config.energy) {
@@ -133,7 +133,7 @@ int main(int argc, char** argv) {
 
         // 5. Schedule job arrivals (before engine finalize, but tasks already created)
         for (std::size_t i = 0; i < scenario.tasks.size(); ++i) {
-            io::schedule_arrivals(engine, engine.platform().task(i), scenario.tasks[i].jobs);
+            io::schedule_arrivals(engine, *scenario_tasks[i], scenario.tasks[i].jobs);
         }
 
         // 6. Finalize platform (after scheduling arrivals)

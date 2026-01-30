@@ -132,7 +132,7 @@ CbsServer* EdfScheduler::find_server(core::Task& task) {
 }
 
 const CbsServer* EdfScheduler::find_server(const core::Task& task) const {
-    auto it = task_to_server_.find(const_cast<core::Task*>(&task));
+    auto it = task_to_server_.find(&task);
     return (it != task_to_server_.end()) ? it->second : nullptr;
 }
 
@@ -214,10 +214,7 @@ void EdfScheduler::on_job_completion(core::Processor& proc, core::Job& job) {
         if (reclamation_policy_) {
             core::TimePoint new_vt = reclamation_policy_->compute_virtual_time(
                 *server, server->virtual_time(), ref_executed);
-            // Update server's virtual time (need to compute delta)
-            core::Duration vt_delta = new_vt.time_since_epoch() -
-                                       server->virtual_time().time_since_epoch();
-            server->update_virtual_time(core::Duration{vt_delta.count() * server->utilization()});
+            server->set_virtual_time(new_vt);
         } else {
             server->update_virtual_time(ref_executed);
         }
@@ -301,13 +298,42 @@ void EdfScheduler::on_deadline_miss(core::Processor& proc, core::Job& job) {
             break;
         }
 
-        case DeadlineMissPolicy::AbortTask:
+        case DeadlineMissPolicy::AbortTask: {
             // Remove task from scheduler entirely
-            // Note: This is a simplified implementation
-            // In practice, we'd need to clean up all server state
+            CbsServer* server = find_server(job.task());
+            if (server) {
+                // Cancel budget timer
+                cancel_budget_timer(*server);
+
+                // Clear ALL pending jobs
+                while (server->has_pending_jobs()) {
+                    server->dequeue_job();
+                }
+
+                // Update total utilization
+                total_utilization_ -= server->utilization();
+
+                // Complete the job and transition server to Inactive
+                server->complete_job(engine_.time());
+
+                // Notify reclamation policy
+                if (reclamation_policy_) {
+                    reclamation_policy_->on_server_state_change(*server,
+                        ReclamationPolicy::ServerStateChange::Completed);
+                }
+
+                // Remove from all mappings
+                // Note: Server remains in servers_ deque but is orphaned (no task mapping)
+                // Future job arrivals for this task will auto-create a new server (fresh start)
+                task_to_server_.erase(server->task());
+                server_to_processor_.erase(server);
+                processor_to_server_.erase(&proc);
+                last_dispatch_time_.erase(server);
+            }
             proc.clear();
             request_resched();
             break;
+        }
 
         case DeadlineMissPolicy::StopSimulation:
             // This would require engine support for stopping
@@ -470,9 +496,7 @@ void EdfScheduler::preempt_processor(core::Processor& proc) {
         if (reclamation_policy_) {
             core::TimePoint new_vt = reclamation_policy_->compute_virtual_time(
                 *server, server->virtual_time(), ref_executed);
-            core::Duration vt_delta = new_vt.time_since_epoch() -
-                                       server->virtual_time().time_since_epoch();
-            server->update_virtual_time(core::Duration{vt_delta.count() * server->utilization()});
+            server->set_virtual_time(new_vt);
         } else {
             server->update_virtual_time(ref_executed);
         }
@@ -550,9 +574,7 @@ void EdfScheduler::on_budget_exhausted(CbsServer& server) {
         if (reclamation_policy_) {
             core::TimePoint new_vt = reclamation_policy_->compute_virtual_time(
                 server, server.virtual_time(), ref_executed);
-            core::Duration vt_delta = new_vt.time_since_epoch() -
-                                       server.virtual_time().time_since_epoch();
-            server.update_virtual_time(core::Duration{vt_delta.count() * server.utilization()});
+            server.set_virtual_time(new_vt);
         } else {
             server.update_virtual_time(ref_executed);
         }

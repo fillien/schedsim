@@ -79,6 +79,8 @@ void Platform::finalize() {
     }
 
     // Calculate reference performance (highest performance value)
+    // Invariant: At least one processor type has performance = 1.0 (the reference type)
+    // All performance values are in range (0, 1]
     reference_performance_ = 1.0;
     for (const auto& pt : processor_types_) {
         if (pt->performance() > reference_performance_) {
