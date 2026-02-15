@@ -22,6 +22,15 @@ add_executable(schedsim_algo_tests
     dvfs_policy_test.cpp
     dpm_policy_test.cpp
     policy_integration_test.cpp
+    # FFA/CSF policy tests
+    ffa_policy_test.cpp
+    csf_policy_test.cpp
+    # Cluster, multi-cluster allocator, and timer policy tests
+    cluster_test.cpp
+    multi_cluster_allocator_test.cpp
+    ffa_timer_policy_test.cpp
+    csf_timer_policy_test.cpp
+    allocators_test.cpp
 )
 
 target_link_libraries(schedsim_algo_tests PRIVATE
