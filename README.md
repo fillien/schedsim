@@ -1,38 +1,48 @@
 # Schedsim
 
-A suite of three tools for simulating the execution of multicore schedulers.
+A discrete event simulator for multicore real-time scheduling research. Schedsim models task execution on heterogeneous processors with support for:
+
+- **Real-time schedulers**: EDF, GRUB, CBS, and custom policies
+- **Power management**: DVFS (frequency scaling) and DPM (core sleep states)
+- **Energy analysis**: Track power consumption and optimize for energy efficiency
+- **Heterogeneous platforms**: ARM big.LITTLE and other multi-cluster architectures
+
+## Quick Start
+
+```bash
+# Build
+nix build                    # or: cmake -S . -B build -G Ninja && cmake --build build
+
+# Generate a task set
+./result/bin/schedgen taskset -t 10 -u 3.9 -s 0.1 -c 0.1 --umax 1 -o scenario.json
+
+# Run simulation with GRUB scheduler
+./result/bin/schedsim -p platforms/exynos5422LITTLE.json --sched grub -s scenario.json
+
+# Analyze results
+./result/bin/schedview logs.json -p platforms/exynos5422LITTLE.json
+```
 
 ## Installation
 
-To compile the software, you can use [Nix](https://nixos.org) :
+### Using Nix (recommended)
 
-```
+```bash
 nix build
 ```
-Then run the programs:
-```
-$ result/bin/schedgen
-$ result/bin/schedsim
-$ result/bin/schedview
-```
-To compile the software using `cmake`:
 
-```
+Binaries are available at `result/bin/{schedgen,schedsim,schedview}`.
+
+### Using CMake
+
+```bash
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-```
-
-```
 cmake --build build
 ```
 
-Then run the programs :
-```
-$ build/schedgen/schedgen
-$ build/schedsim/schedsim
-$ build/schedview/schedview
-```
+Binaries are available at `build/schedgen/schedgen`, `build/schedsim/schedsim`, `build/schedview/schedview`.
 
-## Usage
+## Workflow
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="doc/background-dark.svg">
@@ -41,115 +51,124 @@ $ build/schedview/schedview
   in the current step of simulation" src="doc/background.svg">
 </picture>
 
-1. Use `schedgen` to generate new task sets with your parameters. Here, we
-   generate a scenario of 10 tasks with a total utilization of 3.9, a success
-   rate of 10%, a 10% compression ratio for the WCET, and tasks with a maximum
-   utilization of 1.
+### 1. Generate a task set
 
-   ```
-   ./build/schedgen/schedgen taskset -t 10 -u 3.9 -s 0.1 -c 0.1 --umax 1 -o scenario.json
-   ```
+Use `schedgen` to create task sets with specific parameters. This example generates 10 tasks with total utilization 3.9, 10% success rate, 10% WCET compression, and max per-task utilization of 1:
 
-2. Then, use `schedsim` to simulate the execution of your task set and specify a platform for it to run on.
+```bash
+schedgen taskset -t 10 -u 3.9 -s 0.1 -c 0.1 --umax 1 -o scenario.json
+```
 
-   > [!TIP]
-   > You can use the platforms provided in the `platforms/` folder.
+### 2. Run simulation
 
-   In the following example, we use the LITTLE cluster of the exynos5422 (composed of four cores) to run the previously generated task set, and we schedule it with GRUB.
+Use `schedsim` to execute your scenario on a target platform with a chosen scheduler:
 
-   ```
-   ./build/schedsim/schedsim -p platforms/exynos5422LITTLE.json --sched grub -s scenario.json
-   ```
+```bash
+schedsim -p platforms/exynos5422LITTLE.json --sched grub -s scenario.json
+```
 
-3. Finally, use `schedview` to analyze the execution traces (in JSON) or generate graphs.
-   Here you can display all the events of the simulation performed in the previous state.
-   ```
-   ./build/schedview/schedview logs.json -p platforms/exynos5422LITTLE.json
-   ```
-   ```
-   [135.92326] (         )                 resched:
-   [135.92326] (         )     virtual_time_update: tid = 1, virtual_time = 1028.9
-   [135.92326] (         )     virtual_time_update: tid = 8, virtual_time = 2549.3
-   [135.92326] (         )     virtual_time_update: tid = 2, virtual_time = 2565.2
-   [135.92326] (         ) serv_budget_replenished: tid = 1, budget = 529.88
-   [135.92326] (         ) serv_budget_replenished: tid = 8, budget = 88.013
-   [135.92326] (         )              proc_idled: cpu = 3
-   [135.92326] (         ) serv_budget_replenished: tid = 2, budget = 12.443
-   [148.36663] (+12.44337)   serv_budget_exhausted: tid = 2
-   [148.36663] (         )     virtual_time_update: tid = 2, virtual_time = 2800
-   [148.36663] (         )           serv_postpone: tid = 2, deadline = 5600
-   [148.36663] (         )                 resched:
-   [148.36663] (         )     virtual_time_update: tid = 1, virtual_time = 1123.1
-   [148.36663] (         )     virtual_time_update: tid = 8, virtual_time = 2782.7
-   [148.36663] (         )     virtual_time_update: tid = 2, virtual_time = 2800
-   [148.36663] (         )            serv_running: tid = 6
-   [148.36663] (         )          task_scheduled: tid = 6, cpu = 3
+> [!TIP]
+> Platform definitions are available in the `platforms/` folder (e.g., `exynos5422.json`, `exynos5422LITTLE.json`).
 
-   ```
+### 3. Analyze results
 
-In the following sections you'll find the options available for each command.
+Use `schedview` to inspect traces, compute metrics, or generate visualizations:
 
+```bash
+schedview logs.json -p platforms/exynos5422LITTLE.json
+```
 
-### Schedgen
+Example output:
+```
+[135.92326] (         )                 resched:
+[135.92326] (         )     virtual_time_update: tid = 1, virtual_time = 1028.9
+[135.92326] (         )     virtual_time_update: tid = 8, virtual_time = 2549.3
+[135.92326] (         ) serv_budget_replenished: tid = 1, budget = 529.88
+[148.36663] (+12.44337)   serv_budget_exhausted: tid = 2
+[148.36663] (         )           serv_postpone: tid = 2, deadline = 5600
+[148.36663] (         )          task_scheduled: tid = 6, cpu = 3
+```
 
-Task set generator for mono-core and multi-core systems.
+## Command Reference
 
-Usage: `schedgen taskset [OPTION...]`
-  - `-h, --help`             Show this help message.
-  - `-t, --tasks arg`        Specify the number of tasks to generate.
-  - `-u, --totalu arg`       Set the total utilization of the task set.
-  - `-m, --umax arg`         Define the maximum utilization for a task (range: 0 to 1).
-  - `-s, --success arg`      Specify the success rate of deadlines met (range: 0 to 1).
-  - `-c, --compression arg`  Set the compression ratio for the tasks (range: 0 to 1).
-  - `-o, --output arg`       Output file to write the generated scenario.
+### schedgen
 
-Platform configuration file generator.
+Generate task sets and platform configurations.
 
-Usage: `schedgen platform [OPTION...]`
-  - `-h, --help`        Show this help message.
-  - `-c, --cores arg`   Specify the number of processor cores.
-  - `-f, --freq arg`    Define the allowed operating frequencies.
-  - `-e, --eff arg`     Add an effective frequency (actual frequency that minimize the total energy consumption).
-  - `-p, --power arg`   Set the power model for the platform.
-  - `-o, --output arg`  Specify the output file to write the configuration.
+#### `schedgen taskset`
 
+| Option | Description |
+|--------|-------------|
+| `-t, --tasks <n>` | Number of tasks to generate |
+| `-u, --totalu <n>` | Total utilization of the task set |
+| `-m, --umax <n>` | Maximum utilization per task (0-1) |
+| `-s, --success <n>` | Success rate of deadlines met (0-1) |
+| `-c, --compression <n>` | Compression ratio for WCET (0-1) |
+| `-o, --output <file>` | Output file for the scenario |
+| `-h, --help` | Show help message |
 
-### Schedsim
+#### `schedgen platform`
 
-GRUB scheduler simulation for a given task set and platform.
+| Option | Description |
+|--------|-------------|
+| `-c, --cores <n>` | Number of processor cores |
+| `-f, --freq <list>` | Allowed operating frequencies |
+| `-e, --eff <freq>` | Effective frequency (energy-optimal) |
+| `-p, --power <model>` | Power model for the platform |
+| `-o, --output <file>` | Output file for the configuration |
+| `-h, --help` | Show help message |
 
-Usage: `schedsim [OPTION...]`
-  - `-h, --help`          Show this help message.
-  - `-s, --scenario arg`  Specify the scenario file.
-  - `-p, --platform arg`  Specify the platform configuration file.
-  - `    --sched arg`     Specify the scheduling policy to be used.
-  - `    --scheds`        List the available schedulers.
-  - `-o, --output arg`    Specify the output file to write the simulation results.
+### schedsim
 
+Run scheduling simulations.
 
-### Schedview
+| Option | Description |
+|--------|-------------|
+| `-s, --scenario <file>` | Scenario file (task set) |
+| `-p, --platform <file>` | Platform configuration file |
+| `--sched <name>` | Scheduling policy (e.g., `grub`, `edf`) |
+| `--scheds` | List available schedulers |
+| `-o, --output <file>` | Output file for simulation results |
+| `-h, --help` | Show help message |
 
-Simulation trace analysis and plot generation tool (for post-simulation analysis of schedsim).
+### schedview
 
-Usage: `schedview [OPTION...] infile`
-  - `-h, --help`              Show this help message.
-  - `-p, --print`             Print the trace logs.
-  - `-d, --directory arg`     Analyze all simulation traces within a directory.
-  - `-i, --index`             Add column names to table data.
-  - `-f, --frequency`         Print frequency change events.
-  - `-m, --cores`             Print active core count changes.
-  - `-r, --rtsched`           Generate an RTSched LaTeX file.
-  - `    --procmode`          Generate RTSched LaTeX file with processor mode.
-  - `-s, --svg`               Generate a GANTT chart in SVG format.
-  - `    --html`              Generate a GANTT chart in HTML format.
-  - `    --au`                Print active utilization metrics.
-  - `-e, --energy`            Print the energy used by the platform during the simulation.
-  - `    --duration`          Print task set execution duration.
-  - `    --preemptions`       Print the number of preemptions.
-  - `    --contextswitch`     Print the number of context switches.
-  - `    --rejected`          Print the number of tasks rejected by the admission test.
-  - `    --dpm-request`       Print the number of requests to change core C-state.
-  - `    --freq-request`      Print the number of requests to change frequency.
-  - `    --deadlines-rates`   Print the rate of missed deadlines.
-  - `    --deadlines-counts`  Print the count of missed deadlines.
-  - `    --platform arg`      Specify the hardware description file (default: platform.json).
+Analyze simulation traces and generate visualizations.
+
+**Usage:** `schedview [OPTIONS] <trace-file>`
+
+| Option | Description |
+|--------|-------------|
+| `-p, --platform <file>` | Hardware description file |
+| **Output formats** | |
+| `-r, --rtsched` | Generate RTSched LaTeX file |
+| `--procmode` | RTSched with processor mode |
+| `-s, --svg` | Generate GANTT chart (SVG) |
+| `--html` | Generate GANTT chart (HTML) |
+| **Metrics** | |
+| `-e, --energy` | Energy consumption |
+| `--duration` | Task set execution duration |
+| `--preemptions` | Number of preemptions |
+| `--contextswitch` | Number of context switches |
+| `--rejected` | Tasks rejected by admission test |
+| `--deadlines-rates` | Rate of missed deadlines |
+| `--deadlines-counts` | Count of missed deadlines |
+| **Power management** | |
+| `--dpm-request` | C-state change requests |
+| `--freq-request` | Frequency change requests |
+| `-f, --frequency` | Frequency change events |
+| `-m, --cores` | Active core count changes |
+| `--au` | Active utilization metrics |
+| **Other** | |
+| `-d, --directory <dir>` | Analyze all traces in directory |
+| `-i, --index` | Add column names to table data |
+| `-h, --help` | Show help message |
+
+## Platforms
+
+Platform definitions in `platforms/` describe hardware configurations including:
+- Processor types and clusters (e.g., big.LITTLE)
+- Available frequencies and voltage levels
+- Power models for energy estimation
+
+See `platforms/exynos5422.json` for a complete ARM big.LITTLE example.
