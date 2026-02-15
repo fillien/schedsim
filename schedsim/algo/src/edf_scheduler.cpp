@@ -1,8 +1,12 @@
 #include <schedsim/algo/edf_scheduler.hpp>
 
 #include <schedsim/algo/cash_policy.hpp>
+#include <schedsim/algo/csf_policy.hpp>
+#include <schedsim/algo/csf_timer_policy.hpp>
 #include <schedsim/algo/dpm_policy.hpp>
 #include <schedsim/algo/dvfs_policy.hpp>
+#include <schedsim/algo/ffa_policy.hpp>
+#include <schedsim/algo/ffa_timer_policy.hpp>
 #include <schedsim/algo/grub_policy.hpp>
 
 #include <schedsim/core/clock_domain.hpp>
@@ -188,6 +192,34 @@ double EdfScheduler::active_utilization() const {
     return total_utilization_;
 }
 
+double EdfScheduler::max_server_utilization() const {
+    double max_util = 0.0;
+    for (const auto& server : servers_) {
+        max_util = std::max(max_util, server.utilization());
+    }
+    return max_util;
+}
+
+void EdfScheduler::enable_ffa(core::Duration cooldown, int sleep_cstate) {
+    set_dvfs_policy(std::make_unique<FfaPolicy>(engine_, cooldown, sleep_cstate));
+    set_dpm_policy(nullptr);  // FFA manages DPM internally
+}
+
+void EdfScheduler::enable_csf(core::Duration cooldown, int sleep_cstate) {
+    set_dvfs_policy(std::make_unique<CsfPolicy>(engine_, cooldown, sleep_cstate));
+    set_dpm_policy(nullptr);  // CSF manages DPM internally
+}
+
+void EdfScheduler::enable_ffa_timer(core::Duration cooldown, int sleep_cstate) {
+    set_dvfs_policy(std::make_unique<FfaTimerPolicy>(engine_, cooldown, sleep_cstate));
+    set_dpm_policy(nullptr);  // FFA timer manages DPM internally
+}
+
+void EdfScheduler::enable_csf_timer(core::Duration cooldown, int sleep_cstate) {
+    set_dvfs_policy(std::make_unique<CsfTimerPolicy>(engine_, cooldown, sleep_cstate));
+    set_dpm_policy(nullptr);  // CSF timer manages DPM internally
+}
+
 // ISR Handlers
 
 void EdfScheduler::on_job_completion(core::Processor& proc, core::Job& job) {
@@ -269,6 +301,19 @@ void EdfScheduler::on_job_completion(core::Processor& proc, core::Job& job) {
 }
 
 void EdfScheduler::on_deadline_miss(core::Processor& proc, core::Job& job) {
+    // Look up server before any state changes (needed for trace and switch branches)
+    CbsServer* server = find_server(job.task());
+
+    // Emit trace event for deadline miss
+    engine_.trace([&](core::TraceWriter& w) {
+        w.type("deadline_miss");
+        w.field("task_id", static_cast<uint64_t>(job.task().id()));
+        if (server) {
+            w.field("job_id", static_cast<uint64_t>(server->last_enqueued_job_id()));
+        }
+        w.field("proc_id", static_cast<uint64_t>(proc.id()));
+    });
+
     // Call custom handler if set
     if (deadline_miss_handler_) {
         deadline_miss_handler_(proc, job);
@@ -282,7 +327,6 @@ void EdfScheduler::on_deadline_miss(core::Processor& proc, core::Job& job) {
 
         case DeadlineMissPolicy::AbortJob: {
             // Abort the job, clear from processor
-            CbsServer* server = find_server(job.task());
             if (server) {
                 cancel_budget_timer(*server);
                 if (server->has_pending_jobs()) {
@@ -300,7 +344,6 @@ void EdfScheduler::on_deadline_miss(core::Processor& proc, core::Job& job) {
 
         case DeadlineMissPolicy::AbortTask: {
             // Remove task from scheduler entirely
-            CbsServer* server = find_server(job.task());
             if (server) {
                 // Cancel budget timer
                 cancel_budget_timer(*server);
@@ -481,6 +524,12 @@ void EdfScheduler::preempt_processor(core::Processor& proc) {
         w.field("proc_id", static_cast<uint64_t>(proc.id()));
     });
 
+    // Emit trace event for context switch (processor switches between servers)
+    engine_.trace([&](core::TraceWriter& w) {
+        w.type("context_switch");
+        w.field("proc_id", static_cast<uint64_t>(proc.id()));
+    });
+
     // Cancel budget timer
     cancel_budget_timer(*server);
 
@@ -635,7 +684,8 @@ std::vector<CbsServer*> EdfScheduler::get_ready_servers() {
 std::vector<core::Processor*> EdfScheduler::get_available_processors() {
     std::vector<core::Processor*> available;
     for (auto* proc : processors_) {
-        if (proc->state() == core::ProcessorState::Idle) {
+        if (proc->state() == core::ProcessorState::Idle ||
+            proc->state() == core::ProcessorState::Sleep) {
             available.push_back(proc);
         }
     }
