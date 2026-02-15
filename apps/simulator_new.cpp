@@ -4,6 +4,8 @@
 
 #include <schedsim/algo/edf_scheduler.hpp>
 #include <schedsim/algo/error.hpp>
+#include <schedsim/algo/ffa_policy.hpp>
+#include <schedsim/algo/csf_policy.hpp>
 #include <schedsim/algo/single_scheduler_allocator.hpp>
 
 #include <schedsim/io/error.hpp>
@@ -52,7 +54,7 @@ Config parse_args(int argc, char** argv) {
         ("p,platform", "Platform configuration (JSON)", cxxopts::value<std::string>())
         ("s,scheduler", "Scheduler: edf (default: edf)", cxxopts::value<std::string>()->default_value("edf"))
         ("reclaim", "Reclamation: none|grub|cash (default: none)", cxxopts::value<std::string>()->default_value("none"))
-        ("dvfs", "DVFS: none|power-aware (default: none)", cxxopts::value<std::string>()->default_value("none"))
+        ("dvfs", "DVFS: none|power-aware|ffa|csf (default: none)", cxxopts::value<std::string>()->default_value("none"))
         ("dvfs-cooldown", "DVFS cooldown in ms (default: 0)", cxxopts::value<double>()->default_value("0"))
         ("dpm", "DPM: none|basic (default: none)", cxxopts::value<std::string>()->default_value("none"))
         ("dpm-cstate", "Target C-state (default: 1)", cxxopts::value<int>()->default_value("1"))
@@ -162,9 +164,16 @@ int main(int argc, char** argv) {
         if (config.dvfs == "power-aware") {
             scheduler.enable_power_aware_dvfs(
                 core::Duration{config.dvfs_cooldown_ms / 1000.0});
+        } else if (config.dvfs == "ffa") {
+            scheduler.enable_ffa(
+                core::Duration{config.dvfs_cooldown_ms / 1000.0}, config.dpm_cstate);
+        } else if (config.dvfs == "csf") {
+            scheduler.enable_csf(
+                core::Duration{config.dvfs_cooldown_ms / 1000.0}, config.dpm_cstate);
         }
 
-        if (config.dpm == "basic") {
+        // FFA/CSF manage DPM internally, so only enable separate DPM if not using them
+        if (config.dpm == "basic" && config.dvfs != "ffa" && config.dvfs != "csf") {
             scheduler.enable_basic_dpm(config.dpm_cstate);
         }
 
