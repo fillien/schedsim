@@ -4,6 +4,7 @@
 #include <schedsim/core/event.hpp>
 #include <schedsim/core/processor.hpp>
 
+#include <algorithm>
 #include <cmath>
 
 namespace schedsim::core {
@@ -99,6 +100,44 @@ void ClockDomain::on_dvfs_complete() {
     for (Processor* proc : processors_) {
         proc->end_dvfs();
     }
+}
+
+void ClockDomain::set_frequency_modes(std::vector<Frequency> modes) {
+    // Sort ascending by MHz
+    std::sort(modes.begin(), modes.end(),
+              [](const Frequency& a, const Frequency& b) { return a.mhz < b.mhz; });
+    // Deduplicate
+    modes.erase(std::unique(modes.begin(), modes.end()), modes.end());
+    frequency_modes_ = std::move(modes);
+    // Update min/max from sorted modes
+    if (!frequency_modes_.empty()) {
+        freq_min_ = frequency_modes_.front();
+        freq_max_ = frequency_modes_.back();
+    }
+}
+
+std::span<const Frequency> ClockDomain::frequency_modes() const noexcept {
+    return frequency_modes_;
+}
+
+bool ClockDomain::has_frequency_modes() const noexcept {
+    return !frequency_modes_.empty();
+}
+
+Frequency ClockDomain::ceil_to_mode(Frequency freq) const {
+    if (frequency_modes_.empty()) {
+        // Continuous mode: clamp to [freq_min, freq_max]
+        return Frequency{std::clamp(freq.mhz, freq_min_.mhz, freq_max_.mhz)};
+    }
+    // Find smallest mode >= freq (lower_bound on ascending modes)
+    auto it = std::lower_bound(
+        frequency_modes_.begin(), frequency_modes_.end(), freq,
+        [](const Frequency& mode, const Frequency& target) { return mode.mhz < target.mhz; });
+    if (it != frequency_modes_.end()) {
+        return *it;
+    }
+    // All modes are below freq — return max
+    return frequency_modes_.back();
 }
 
 void ClockDomain::add_processor(Processor* proc) {

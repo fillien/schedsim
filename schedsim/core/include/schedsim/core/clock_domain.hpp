@@ -37,6 +37,16 @@ public:
     // Permanently disable DVFS for this domain
     void lock_frequency() noexcept { locked_ = true; }
 
+    // Discrete frequency mode support (OPPs)
+    void set_frequency_modes(std::vector<Frequency> modes);
+    [[nodiscard]] std::span<const Frequency> frequency_modes() const noexcept;
+    [[nodiscard]] bool has_frequency_modes() const noexcept;
+    [[nodiscard]] Frequency ceil_to_mode(Frequency freq) const;
+
+    // Efficient frequency (transition point for DPM decisions)
+    void set_freq_eff(Frequency freq) noexcept { freq_eff_ = freq; }
+    [[nodiscard]] Frequency freq_eff() const noexcept { return freq_eff_; }
+
     // Power model for energy tracking: P(f) = a0 + a1*f + a2*f^2 + a3*f^3
     // Coefficients: {a0, a1, a2, a3}, power in mW, frequency in GHz
     void set_power_coefficients(std::array<double, 4> coeffs) noexcept;
@@ -67,6 +77,10 @@ private:
     std::array<double, 4> power_coefficients_{0.0, 0.0, 0.0, 0.0};
     std::vector<Processor*> processors_;
     Engine* engine_{nullptr};
+
+    // Discrete frequency modes (sorted ascending, empty = continuous)
+    std::vector<Frequency> frequency_modes_;
+    Frequency freq_eff_{0.0};
 };
 
 } // namespace schedsim::core

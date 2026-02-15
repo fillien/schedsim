@@ -249,6 +249,13 @@ void Engine::notify_frequency_change(ClockDomain& cd, Frequency old_freq, Freque
     if (energy_tracker_) {
         energy_tracker_->on_frequency_change(cd, old_freq, new_freq, current_time_);
     }
+
+    trace([&](TraceWriter& w) {
+        w.type("frequency_change");
+        w.field("clock_domain_id", static_cast<uint64_t>(cd.id()));
+        w.field("old_freq_mhz", old_freq.mhz);
+        w.field("new_freq_mhz", new_freq.mhz);
+    });
 }
 
 } // namespace schedsim::core

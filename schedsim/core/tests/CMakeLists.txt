@@ -18,6 +18,7 @@ add_executable(schedsim-core-tests
     trace_writer_test.cpp
     processor_type_test.cpp
     clock_domain_test.cpp
+    clock_domain_modes_test.cpp
     power_domain_test.cpp
     processor_test.cpp
     task_test.cpp
