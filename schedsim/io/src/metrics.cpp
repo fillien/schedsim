@@ -61,14 +61,14 @@ SimulationMetrics compute_metrics(const std::vector<TraceRecord>& traces) {
 
         if (record.type == "job_arrival") {
             metrics.total_jobs++;
-            uint64_t tid = get_uint64_field(record, "tid");
-            uint64_t jid = get_uint64_field(record, "jid");
+            uint64_t tid = get_uint64_field(record, "task_id");
+            uint64_t jid = get_uint64_field(record, "job_id");
             arrival_times[tid][jid] = record.time;
         }
         else if (record.type == "job_completion") {
             metrics.completed_jobs++;
-            uint64_t tid = get_uint64_field(record, "tid");
-            uint64_t jid = get_uint64_field(record, "jid");
+            uint64_t tid = get_uint64_field(record, "task_id");
+            uint64_t jid = get_uint64_field(record, "job_id");
 
             // Compute response time
             auto task_it = arrival_times.find(tid);
@@ -82,6 +82,31 @@ SimulationMetrics compute_metrics(const std::vector<TraceRecord>& traces) {
         }
         else if (record.type == "deadline_miss") {
             metrics.deadline_misses++;
+            uint64_t tid = get_uint64_field(record, "task_id");
+            metrics.deadline_misses_per_task[tid]++;
+        }
+        else if (record.type == "task_rejected") {
+            metrics.rejected_tasks++;
+        }
+        else if (record.type == "frequency_change") {
+            SimulationMetrics::FrequencyChange fc;
+            fc.time = record.time;
+            fc.clock_domain_id = get_uint64_field(record, "clock_domain_id");
+            fc.old_freq_mhz = get_double_field(record, "old_freq_mhz");
+            fc.new_freq_mhz = get_double_field(record, "new_freq_mhz");
+            metrics.frequency_changes.push_back(fc);
+        }
+        else if (record.type == "job_start") {
+            uint64_t tid = get_uint64_field(record, "task_id");
+            auto task_it = arrival_times.find(tid);
+            if (task_it != arrival_times.end()) {
+                uint64_t jid = get_uint64_field(record, "job_id");
+                auto job_it = task_it->second.find(jid);
+                if (job_it != task_it->second.end()) {
+                    double wait = record.time - job_it->second;
+                    metrics.waiting_times_per_task[tid].push_back(wait);
+                }
+            }
         }
         else if (record.type == "preemption") {
             metrics.preemptions++;

@@ -27,6 +27,24 @@ struct SimulationMetrics {
 
     // Response times per task (task_id -> list of response times)
     std::unordered_map<uint64_t, std::vector<double>> response_times_per_task;
+
+    // Per-task deadline miss counts
+    std::unordered_map<uint64_t, uint64_t> deadline_misses_per_task;
+
+    // Rejected task count
+    uint64_t rejected_tasks{0};
+
+    // Waiting times per task (arrival -> job_start delay)
+    std::unordered_map<uint64_t, std::vector<double>> waiting_times_per_task;
+
+    // Frequency change log
+    struct FrequencyChange {
+        double time;
+        uint64_t clock_domain_id;
+        double old_freq_mhz;
+        double new_freq_mhz;
+    };
+    std::vector<FrequencyChange> frequency_changes;
 };
 
 // Compute metrics from in-memory traces

@@ -134,6 +134,21 @@ void load_new_format(Engine& engine, const rapidjson::Document& doc) {
                 Frequency{freq_max},
                 Duration{transition_delay / 1e6});  // Convert us to seconds
 
+            // Set discrete frequency modes if multiple frequencies
+            if (freqs.Size() > 1) {
+                std::vector<Frequency> modes;
+                modes.reserve(freqs.Size());
+                for (rapidjson::SizeType fi = 0; fi < freqs.Size(); ++fi) {
+                    modes.push_back(Frequency{freqs[fi].GetDouble()});
+                }
+                cd.set_frequency_modes(std::move(modes));
+            }
+
+            // Set effective frequency if specified
+            if (cd_obj.HasMember("effective_frequency_mhz")) {
+                cd.set_freq_eff(Frequency{cd_obj["effective_frequency_mhz"].GetDouble()});
+            }
+
             // Set initial frequency if specified
             if (cd_obj.HasMember("initial_frequency_mhz")) {
                 double initial_freq = cd_obj["initial_frequency_mhz"].GetDouble();
@@ -277,6 +292,22 @@ void load_legacy_format(Engine& engine, const rapidjson::Document& doc) {
         // Create clock domain for this cluster
         auto& cd = platform.add_clock_domain(Frequency{freq_min}, Frequency{freq_max});
         cd.set_frequency(Frequency{effective_freq});
+
+        // Set discrete frequency modes from frequencies array
+        if (cluster.HasMember("frequencies")) {
+            const auto& freqs = cluster["frequencies"];
+            if (freqs.IsArray() && freqs.Size() > 1) {
+                std::vector<Frequency> modes;
+                modes.reserve(freqs.Size());
+                for (rapidjson::SizeType fi = 0; fi < freqs.Size(); ++fi) {
+                    modes.push_back(Frequency{freqs[fi].GetDouble()});
+                }
+                cd.set_frequency_modes(std::move(modes));
+            }
+        }
+
+        // Set effective frequency
+        cd.set_freq_eff(Frequency{effective_freq});
 
         // Set power model if specified
         if (cluster.HasMember("power_model")) {
