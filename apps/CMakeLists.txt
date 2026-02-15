@@ -40,6 +40,7 @@ add_app(schedview analyzer.cpp)
 add_new_app(schedsim-new simulator_new.cpp)
 add_new_app(schedgen-new generator_new.cpp)
 add_new_app(schedview-new analyzer_new.cpp)
+add_new_app(alloc-new alloc_new.cpp)
 
 # OpenMP apps
 find_package(OpenMP REQUIRED)
