@@ -240,3 +240,25 @@ TEST_F(PlatformTest, HandlerAlreadySetThrows) {
         engine_.set_job_arrival_handler([](Task&, Job) {}),
         HandlerAlreadySetError);
 }
+
+// =============================================================================
+// add_task with Explicit ID Tests
+// =============================================================================
+
+TEST_F(PlatformTest, AddTaskWithExplicitId) {
+    auto& task = engine_.platform().add_task(42, Duration{10.0}, Duration{10.0}, Duration{2.0});
+    EXPECT_EQ(task.id(), 42U);
+    EXPECT_EQ(task.period().count(), 10.0);
+    EXPECT_EQ(task.wcet().count(), 2.0);
+}
+
+TEST_F(PlatformTest, AddTaskWithExplicitId_NonSequential) {
+    auto& t1 = engine_.platform().add_task(5, Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& t2 = engine_.platform().add_task(10, Duration{20.0}, Duration{20.0}, Duration{3.0});
+    auto& t3 = engine_.platform().add_task(1, Duration{5.0}, Duration{5.0}, Duration{1.0});
+
+    EXPECT_EQ(t1.id(), 5U);
+    EXPECT_EQ(t2.id(), 10U);
+    EXPECT_EQ(t3.id(), 1U);
+    EXPECT_EQ(engine_.platform().task_count(), 3U);
+}

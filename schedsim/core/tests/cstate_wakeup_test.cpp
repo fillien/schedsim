@@ -182,6 +182,33 @@ TEST_F(CStateWakeupTest, AchievedCStatePerProcessor) {
     EXPECT_EQ(achieved, 2);
 }
 
+TEST_F(CStateWakeupTest, ZeroLatencyWakeUp) {
+    // Zero-latency C-state wake-up: assign on sleeping proc → immediate Running
+    Engine engine2;
+    auto& pt = engine2.platform().add_processor_type("big", 1.0);
+    auto& cd = engine2.platform().add_clock_domain(Frequency{1000.0}, Frequency{2000.0});
+    auto& pd = engine2.platform().add_power_domain({
+        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}},
+        {1, CStateScope::PerProcessor, Duration{0.0}, Power{50.0}}  // C1 with zero wake latency
+    });
+    auto& proc = engine2.platform().add_processor(pt, cd, pd);
+    engine2.platform().finalize();
+
+    proc.request_cstate(1);
+    EXPECT_EQ(proc.state(), ProcessorState::Sleep);
+
+    Task task(0, Duration{10.0}, Duration{10.0}, Duration{2.0});
+    TimePoint deadline{Duration{10.0}};
+    Job job(task, Duration{2.0}, deadline);
+
+    proc.assign(job);
+
+    // Zero latency → immediate transition to Running (no WakeUp state)
+    EXPECT_EQ(proc.state(), ProcessorState::Running);
+    EXPECT_EQ(proc.current_job(), &job);
+    EXPECT_EQ(proc.current_cstate_level(), 0);
+}
+
 TEST_F(CStateWakeupTest, AchievedCStateDomainWide) {
     // Create two processors in the same power domain
     Engine engine2;

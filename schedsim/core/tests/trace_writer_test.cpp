@@ -98,9 +98,10 @@ TEST_F(TraceWriterTest, TraceAutoTimestamp) {
 
     engine.run();
 
-    ASSERT_EQ(writer.records.size(), 1u);
+    ASSERT_EQ(writer.records.size(), 2u);
     EXPECT_EQ(writer.records[0].time, time(5.0));
     EXPECT_EQ(writer.records[0].type_name, "TimerFired");
+    EXPECT_EQ(writer.records[1].type_name, "sim_finished");
 }
 
 TEST_F(TraceWriterTest, SetNullWriterDisablesTracing) {

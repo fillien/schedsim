@@ -19,6 +19,7 @@ void Engine::run() {
     while (!event_queue_.empty()) {
         process_timestep();
     }
+    trace([&](TraceWriter& w) { w.type("sim_finished"); });
 }
 
 void Engine::run(TimePoint until) {
@@ -27,7 +28,7 @@ void Engine::run(TimePoint until) {
         auto it = event_queue_.begin();
         if (it->first.time > until) {
             current_time_ = until;
-            return;
+            break;
         }
         process_timestep();
     }
@@ -35,12 +36,14 @@ void Engine::run(TimePoint until) {
     if (current_time_ < until) {
         current_time_ = until;
     }
+    trace([&](TraceWriter& w) { w.type("sim_finished"); });
 }
 
 void Engine::run(std::function<bool()> stop_condition) {
     while (!event_queue_.empty() && !stop_condition()) {
         process_timestep();
     }
+    trace([&](TraceWriter& w) { w.type("sim_finished"); });
 }
 
 TimerId Engine::add_timer(TimePoint when, int priority, std::function<void()> callback) {
