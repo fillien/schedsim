@@ -100,6 +100,7 @@ private:
     // DVFS handling (called by ClockDomain)
     void begin_dvfs();
     void end_dvfs();
+    void notify_immediate_freq_change();
 
     // Execution tracking
     void schedule_completion();

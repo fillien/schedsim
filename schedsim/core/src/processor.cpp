@@ -181,6 +181,13 @@ void Processor::schedule_completion() {
 
     // Calculate time to completion based on remaining work and speed
     Duration remaining = current_job_->remaining_work();
+
+    if (remaining.count() <= 0.0) {
+        // Job already complete (floating-point rounding from DVFS) — fire immediately
+        on_completion_timer();
+        return;
+    }
+
     double spd = speed(reference_performance_);
 
     if (spd <= 0.0) {
@@ -224,6 +231,17 @@ void Processor::reschedule_completion() {
     cancel_completion();
     if (engine_ && current_job_ && state_ == ProcessorState::Running) {
         last_update_time_ = engine_->time();
+        schedule_completion();
+    }
+}
+
+void Processor::notify_immediate_freq_change() {
+    // Lightweight notification for zero-delay frequency changes.
+    // Just updates consumed work and reschedules completion without
+    // changing state or firing ProcessorAvailable ISR.
+    if (state_ == ProcessorState::Running && current_job_) {
+        update_consumed_work();
+        cancel_completion();
         schedule_completion();
     }
 }

@@ -86,6 +86,18 @@ TEST_F(ProcessorTest, RequestCStateFromIdle) {
     EXPECT_EQ(proc.state(), ProcessorState::Sleep);
 }
 
+TEST_F(ProcessorTest, RequestCStateWhileRunningThrows) {
+    Processor proc(0, *type_, *clock_domain_, *power_domain_);
+    Task task(0, Duration{10.0}, Duration{10.0}, Duration{2.0});
+    TimePoint deadline{Duration{10.0}};
+    Job job(task, Duration{2.0}, deadline);
+
+    proc.assign(job);
+    EXPECT_EQ(proc.state(), ProcessorState::Running);
+
+    EXPECT_THROW(proc.request_cstate(1), InvalidStateError);
+}
+
 TEST_F(ProcessorTest, HandlerRegistration) {
     Processor proc(0, *type_, *clock_domain_, *power_domain_);
 

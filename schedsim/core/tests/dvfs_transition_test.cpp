@@ -54,6 +54,48 @@ TEST_F(DVFSTransitionTest, InstantChangeNoDelay) {
     EXPECT_EQ(proc.state(), ProcessorState::Idle);
 }
 
+TEST_F(DVFSTransitionTest, InstantChangeNoDelay_WhileRunning) {
+    // Zero-delay DVFS on a Running processor exercises notify_immediate_freq_change()
+    Engine engine2;
+    auto& pt2 = engine2.platform().add_processor_type("big", 1.0);
+    auto& cd2 = engine2.platform().add_clock_domain(
+        Frequency{500.0}, Frequency{2000.0}, Duration{0.0});
+    auto& pd2 = engine2.platform().add_power_domain({
+        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+    });
+    auto& proc2 = engine2.platform().add_processor(pt2, cd2, pd2);
+    engine2.platform().finalize();
+
+    bool completion_called = false;
+    TimePoint completion_time;
+    proc2.set_job_completion_handler([&](Processor&, Job&) {
+        completion_called = true;
+        completion_time = engine2.time();
+    });
+
+    Task task2(0, Duration{10.0}, Duration{10.0}, Duration{2.0});
+    TimePoint deadline{Duration{10.0}};
+    Job job(task2, Duration{2.0}, deadline);
+
+    proc2.assign(job);
+    EXPECT_EQ(proc2.state(), ProcessorState::Running);
+
+    // At t=1.0, change frequency to half (instant, no Changing state)
+    engine2.add_timer(TimePoint{Duration{1.0}}, [&]() {
+        cd2.set_frequency(Frequency{1000.0});
+    });
+
+    engine2.run(TimePoint{Duration{10.0}});
+
+    EXPECT_TRUE(completion_called);
+    EXPECT_TRUE(job.is_complete());
+    EXPECT_EQ(proc2.state(), ProcessorState::Idle);
+    // Zero-delay path: frequency changes before update_consumed_work runs,
+    // so elapsed 1.0s is accounted at new speed 0.5 → 0.5 work done.
+    // Remaining 1.5 at speed 0.5 → 3.0s more. Completion at t=4.0.
+    EXPECT_NEAR(completion_time.time_since_epoch().count(), 4.0, 0.001);
+}
+
 TEST_F(DVFSTransitionTest, DelayedChangeStartsTransition) {
     EXPECT_DOUBLE_EQ(cd_->frequency().mhz, 2000.0);
     EXPECT_FALSE(cd_->is_transitioning());

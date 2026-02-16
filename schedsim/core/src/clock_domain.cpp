@@ -40,6 +40,10 @@ void ClockDomain::set_frequency(Frequency freq) {
         if (engine_) {
             engine_->notify_frequency_change(*this, old_freq, freq);
         }
+        // Update consumed work and reschedule completion timers at new speed
+        for (Processor* proc : processors_) {
+            proc->notify_immediate_freq_change();
+        }
         return;
     }
 
