@@ -53,7 +53,11 @@ void EdfScheduler::on_job_arrival(core::Task& task, core::Job job) {
         server = &add_server(task);
     }
 
+    // Track arrivals for detach logic
+    arrival_counts_[&task]++;
+
     bool was_inactive = (server->state() == CbsServer::State::Inactive);
+    bool was_non_contending = (server->state() == CbsServer::State::NonContending);
 
     // Enqueue the job
     server->enqueue_job(std::move(job));
@@ -62,6 +66,25 @@ void EdfScheduler::on_job_arrival(core::Task& task, core::Job job) {
     if (was_inactive) {
         server->activate(engine_.time());
         notify_server_state_change(*server, ReclamationPolicy::ServerStateChange::Activated);
+
+        // Emit serv_ready after activation
+        engine_.trace([&](core::TraceWriter& w) {
+            w.type("serv_ready");
+            w.field("tid", static_cast<uint64_t>(task.id()));
+            w.field("deadline", server->deadline().time_since_epoch().count());
+            w.field("utilization", server->utilization());
+        });
+    } else if (was_non_contending && reclamation_policy_) {
+        // NonContending -> Ready: cancel deadline timer, reactivate
+        notify_server_state_change(*server, ReclamationPolicy::ServerStateChange::Activated);
+        server->reactivate_from_non_contending();
+
+        engine_.trace([&](core::TraceWriter& w) {
+            w.type("serv_ready");
+            w.field("tid", static_cast<uint64_t>(task.id()));
+            w.field("deadline", server->deadline().time_since_epoch().count());
+            w.field("utilization", server->utilization());
+        });
     }
 
     // Notify policies of utilization change
@@ -70,7 +93,7 @@ void EdfScheduler::on_job_arrival(core::Task& task, core::Job job) {
     // Emit trace event for job arrival
     engine_.trace([&](core::TraceWriter& w) {
         w.type("job_arrival");
-        w.field("task_id", static_cast<uint64_t>(task.id()));
+        w.field("tid", static_cast<uint64_t>(task.id()));
         w.field("job_id", static_cast<uint64_t>(server->last_enqueued_job_id()));
     });
 
@@ -81,6 +104,10 @@ void EdfScheduler::on_job_arrival(core::Task& task, core::Job job) {
 
     // Request reschedule
     request_resched();
+}
+
+void EdfScheduler::set_expected_arrivals(const core::Task& task, std::size_t count) {
+    expected_arrivals_[&task] = count;
 }
 
 bool EdfScheduler::can_admit(core::Duration budget, core::Duration period) const {
@@ -243,13 +270,23 @@ void EdfScheduler::on_job_completion(core::Processor& proc, core::Job& job) {
             wall_elapsed.count() * proc.speed(reference_performance_)};
 
         // Update virtual time (use policy if available)
+        // M-GRUB VT formula uses wall time; CBS uses reference time
         if (reclamation_policy_) {
+            core::Duration vt_time = reclamation_policy_->needs_global_budget_recalculation()
+                ? wall_elapsed : ref_executed;
             core::TimePoint new_vt = reclamation_policy_->compute_virtual_time(
-                *server, server->virtual_time(), ref_executed);
+                *server, server->virtual_time(), vt_time);
             server->set_virtual_time(new_vt);
         } else {
             server->update_virtual_time(ref_executed);
         }
+
+        // Emit virtual_time_update after VT computation
+        engine_.trace([&](core::TraceWriter& w) {
+            w.type("virtual_time_update");
+            w.field("tid", static_cast<uint64_t>(job.task().id()));
+            w.field("virtual_time", server->virtual_time().time_since_epoch().count());
+        });
 
         server->consume_budget(ref_executed);
         remaining_budget = server->remaining_budget();
@@ -258,10 +295,9 @@ void EdfScheduler::on_job_completion(core::Processor& proc, core::Job& job) {
 
     // Emit trace event for job completion
     engine_.trace([&](core::TraceWriter& w) {
-        w.type("job_completion");
-        w.field("task_id", static_cast<uint64_t>(job.task().id()));
+        w.type("job_finished");
+        w.field("tid", static_cast<uint64_t>(job.task().id()));
         w.field("job_id", static_cast<uint64_t>(completed_job_id));
-        w.field("proc_id", static_cast<uint64_t>(proc.id()));
     });
 
     // Remove job from server queue
@@ -269,9 +305,10 @@ void EdfScheduler::on_job_completion(core::Processor& proc, core::Job& job) {
         server->dequeue_job();
     }
 
-    // Check for early completion (budget remaining) with reclamation policy
+    // Check for early completion with reclamation policy
+    // Only enter NonContending when no more pending jobs in the queue
     bool enter_non_contending = false;
-    if (reclamation_policy_ && remaining_budget.count() > 0.0) {
+    if (reclamation_policy_ && !server->has_pending_jobs()) {
         enter_non_contending = reclamation_policy_->on_early_completion(*server, remaining_budget);
     }
 
@@ -279,14 +316,33 @@ void EdfScheduler::on_job_completion(core::Processor& proc, core::Job& job) {
     if (enter_non_contending) {
         server->enter_non_contending(engine_.time());
         notify_server_state_change(*server, ReclamationPolicy::ServerStateChange::NonContending);
+        engine_.trace([&](core::TraceWriter& w) {
+            w.type("serv_non_cont");
+            w.field("tid", static_cast<uint64_t>(job.task().id()));
+        });
     } else {
         server->complete_job(engine_.time());
-        notify_server_state_change(*server, ReclamationPolicy::ServerStateChange::Completed);
+        // Only emit Completed + serv_inactive when server actually went Inactive
+        if (server->state() == CbsServer::State::Inactive) {
+            notify_server_state_change(*server, ReclamationPolicy::ServerStateChange::Completed);
+            engine_.trace([&](core::TraceWriter& w) {
+                w.type("serv_inactive");
+                w.field("tid", static_cast<uint64_t>(job.task().id()));
+            });
+        }
+        // If server went to Ready (has pending jobs), it stays in active set
     }
 
     // Remove mappings
     server_to_processor_.erase(server);
     processor_to_server_.erase(&proc);
+
+    // Emit proc_idled
+    engine_.trace([&](core::TraceWriter& w) {
+        w.type("proc_idled");
+        w.field("cpu", static_cast<uint64_t>(proc.id()));
+        w.field("cluster_id", static_cast<uint64_t>(proc.clock_domain().id()));
+    });
 
     // Notify processor idle for DPM
     if (dpm_policy_) {
@@ -307,11 +363,11 @@ void EdfScheduler::on_deadline_miss(core::Processor& proc, core::Job& job) {
     // Emit trace event for deadline miss
     engine_.trace([&](core::TraceWriter& w) {
         w.type("deadline_miss");
-        w.field("task_id", static_cast<uint64_t>(job.task().id()));
+        w.field("tid", static_cast<uint64_t>(job.task().id()));
         if (server) {
             w.field("job_id", static_cast<uint64_t>(server->last_enqueued_job_id()));
         }
-        w.field("proc_id", static_cast<uint64_t>(proc.id()));
+        w.field("cpu", static_cast<uint64_t>(proc.id()));
     });
 
     // Call custom handler if set
@@ -333,11 +389,24 @@ void EdfScheduler::on_deadline_miss(core::Processor& proc, core::Job& job) {
                     server->dequeue_job();
                 }
                 server->complete_job(engine_.time());
+                if (server->state() == CbsServer::State::Inactive) {
+                    notify_server_state_change(*server,
+                        ReclamationPolicy::ServerStateChange::Completed);
+                    engine_.trace([&](core::TraceWriter& w) {
+                        w.type("serv_inactive");
+                        w.field("tid", static_cast<uint64_t>(job.task().id()));
+                    });
+                }
                 server_to_processor_.erase(server);
                 processor_to_server_.erase(&proc);
                 last_dispatch_time_.erase(server);
             }
             proc.clear();
+            engine_.trace([&](core::TraceWriter& w) {
+                w.type("proc_idled");
+                w.field("cpu", static_cast<uint64_t>(proc.id()));
+                w.field("cluster_id", static_cast<uint64_t>(proc.clock_domain().id()));
+            });
             request_resched();
             break;
         }
@@ -358,11 +427,13 @@ void EdfScheduler::on_deadline_miss(core::Processor& proc, core::Job& job) {
 
                 // Complete the job and transition server to Inactive
                 server->complete_job(engine_.time());
-
-                // Notify reclamation policy
-                if (reclamation_policy_) {
-                    reclamation_policy_->on_server_state_change(*server,
+                if (server->state() == CbsServer::State::Inactive) {
+                    notify_server_state_change(*server,
                         ReclamationPolicy::ServerStateChange::Completed);
+                    engine_.trace([&](core::TraceWriter& w) {
+                        w.type("serv_inactive");
+                        w.field("tid", static_cast<uint64_t>(job.task().id()));
+                    });
                 }
 
                 // Remove from all mappings
@@ -374,6 +445,11 @@ void EdfScheduler::on_deadline_miss(core::Processor& proc, core::Job& job) {
                 last_dispatch_time_.erase(server);
             }
             proc.clear();
+            engine_.trace([&](core::TraceWriter& w) {
+                w.type("proc_idled");
+                w.field("cpu", static_cast<uint64_t>(proc.id()));
+                w.field("cluster_id", static_cast<uint64_t>(proc.clock_domain().id()));
+            });
             request_resched();
             break;
         }
@@ -382,6 +458,11 @@ void EdfScheduler::on_deadline_miss(core::Processor& proc, core::Job& job) {
             // This would require engine support for stopping
             // For now, just abort the job
             proc.clear();
+            engine_.trace([&](core::TraceWriter& w) {
+                w.type("proc_idled");
+                w.field("cpu", static_cast<uint64_t>(proc.id()));
+                w.field("cluster_id", static_cast<uint64_t>(proc.clock_domain().id()));
+            });
             break;
     }
 }
@@ -467,6 +548,11 @@ void EdfScheduler::dispatch_edf() {
         available.pop_back();
         assign_server_to_processor(*server, *proc);
     }
+
+    // M-GRUB: recalculate budget timers for all running servers after dispatch
+    if (reclamation_policy_ && reclamation_policy_->needs_global_budget_recalculation()) {
+        recalculate_all_budget_timers();
+    }
 }
 
 void EdfScheduler::assign_server_to_processor(CbsServer& server, core::Processor& proc) {
@@ -482,9 +568,22 @@ void EdfScheduler::assign_server_to_processor(CbsServer& server, core::Processor
     // Assign job to processor
     proc.assign(*job);
 
+    // Emit proc_activated
+    engine_.trace([&](core::TraceWriter& w) {
+        w.type("proc_activated");
+        w.field("cpu", static_cast<uint64_t>(proc.id()));
+        w.field("cluster_id", static_cast<uint64_t>(proc.clock_domain().id()));
+    });
+
     // Update server state
     server.dispatch();
     notify_server_state_change(server, ReclamationPolicy::ServerStateChange::Dispatched);
+
+    // Emit serv_running
+    engine_.trace([&](core::TraceWriter& w) {
+        w.type("serv_running");
+        w.field("tid", static_cast<uint64_t>(server.task()->id()));
+    });
 
     // Record mappings
     server_to_processor_[&server] = &proc;
@@ -493,12 +592,12 @@ void EdfScheduler::assign_server_to_processor(CbsServer& server, core::Processor
     // Record dispatch time for budget consumption
     last_dispatch_time_[&server] = engine_.time();
 
-    // Emit trace event for job start
+    // Emit trace event for task scheduled
     engine_.trace([&](core::TraceWriter& w) {
-        w.type("job_start");
-        w.field("task_id", static_cast<uint64_t>(server.task()->id()));
+        w.type("task_scheduled");
+        w.field("tid", static_cast<uint64_t>(server.task()->id()));
         w.field("job_id", static_cast<uint64_t>(server.last_enqueued_job_id()));
-        w.field("proc_id", static_cast<uint64_t>(proc.id()));
+        w.field("cpu", static_cast<uint64_t>(proc.id()));
     });
 
     // Notify DVFS policy of processor becoming active
@@ -506,8 +605,10 @@ void EdfScheduler::assign_server_to_processor(CbsServer& server, core::Processor
         dvfs_policy_->on_processor_active(*this, proc);
     }
 
-    // Schedule budget timer
-    schedule_budget_timer(server, proc);
+    // Schedule budget timer (skip if global recalculation will set it)
+    if (!reclamation_policy_ || !reclamation_policy_->needs_global_budget_recalculation()) {
+        schedule_budget_timer(server, proc);
+    }
 }
 
 void EdfScheduler::preempt_processor(core::Processor& proc) {
@@ -518,16 +619,10 @@ void EdfScheduler::preempt_processor(core::Processor& proc) {
 
     // Emit trace event for preemption
     engine_.trace([&](core::TraceWriter& w) {
-        w.type("preemption");
-        w.field("task_id", static_cast<uint64_t>(server->task()->id()));
+        w.type("task_preempted");
+        w.field("tid", static_cast<uint64_t>(server->task()->id()));
         w.field("job_id", static_cast<uint64_t>(server->last_enqueued_job_id()));
-        w.field("proc_id", static_cast<uint64_t>(proc.id()));
-    });
-
-    // Emit trace event for context switch (processor switches between servers)
-    engine_.trace([&](core::TraceWriter& w) {
-        w.type("context_switch");
-        w.field("proc_id", static_cast<uint64_t>(proc.id()));
+        w.field("cpu", static_cast<uint64_t>(proc.id()));
     });
 
     // Cancel budget timer
@@ -542,13 +637,24 @@ void EdfScheduler::preempt_processor(core::Processor& proc) {
         server->consume_budget(ref_executed);
 
         // Update virtual time (use policy if available)
+        // M-GRUB VT formula uses wall time; CBS uses reference time
         if (reclamation_policy_) {
+            core::Duration vt_time = reclamation_policy_->needs_global_budget_recalculation()
+                ? wall_elapsed : ref_executed;
             core::TimePoint new_vt = reclamation_policy_->compute_virtual_time(
-                *server, server->virtual_time(), ref_executed);
+                *server, server->virtual_time(), vt_time);
             server->set_virtual_time(new_vt);
         } else {
             server->update_virtual_time(ref_executed);
         }
+
+        // Emit virtual_time_update after VT computation
+        engine_.trace([&](core::TraceWriter& w) {
+            w.type("virtual_time_update");
+            w.field("tid", static_cast<uint64_t>(server->task()->id()));
+            w.field("virtual_time", server->virtual_time().time_since_epoch().count());
+        });
+
         last_dispatch_time_.erase(it);
     }
 
@@ -559,6 +665,13 @@ void EdfScheduler::preempt_processor(core::Processor& proc) {
     // Clear processor (Library 1 call - updates job.remaining_work)
     proc.clear();
 
+    // Emit proc_idled
+    engine_.trace([&](core::TraceWriter& w) {
+        w.type("proc_idled");
+        w.field("cpu", static_cast<uint64_t>(proc.id()));
+        w.field("cluster_id", static_cast<uint64_t>(proc.clock_domain().id()));
+    });
+
     // Remove mappings
     server_to_processor_.erase(server);
     processor_to_server_.erase(&proc);
@@ -567,14 +680,24 @@ void EdfScheduler::preempt_processor(core::Processor& proc) {
 // Budget timers
 
 void EdfScheduler::schedule_budget_timer(CbsServer& server, core::Processor& proc) {
-    // Note: Budget timer is computed at dispatch time. If DVFS changes frequency
-    // during execution, this timer will be inaccurate. Phase 6 adds DVFS policies
-    // with proper budget timer rescheduling.
-    core::Duration remaining = server.remaining_budget();
-    double speed = proc.speed(reference_performance_);
+    core::Duration remaining;
+    bool budget_is_wall_time = false;
+    if (reclamation_policy_) {
+        remaining = reclamation_policy_->compute_server_budget(server);
+        budget_is_wall_time = reclamation_policy_->needs_global_budget_recalculation();
+    } else {
+        remaining = server.remaining_budget();
+    }
 
-    // Wall time until budget exhaustion: remaining / speed
-    core::Duration wall_time{remaining.count() / speed};
+    // M-GRUB: dynamic budget is already in wall time
+    // CBS: budget is in reference time, must divide by speed
+    core::Duration wall_time;
+    if (budget_is_wall_time) {
+        wall_time = remaining;
+    } else {
+        double speed = proc.speed(reference_performance_);
+        wall_time = core::Duration{remaining.count() / speed};
+    }
     core::TimePoint exhaust_time = engine_.time() + wall_time;
 
     // Only schedule if in the future
@@ -605,11 +728,10 @@ void EdfScheduler::on_budget_exhausted(CbsServer& server) {
     }
     core::Processor* proc = it->second;
 
-    // Emit trace event for budget exhaustion (after finding proc for proc_id)
+    // Emit trace event for budget exhaustion
     engine_.trace([&](core::TraceWriter& w) {
-        w.type("budget_exhausted");
-        w.field("task_id", static_cast<uint64_t>(server.task()->id()));
-        w.field("proc_id", static_cast<uint64_t>(proc->id()));
+        w.type("serv_budget_exhausted");
+        w.field("tid", static_cast<uint64_t>(server.task()->id()));
     });
 
     // Update virtual time for executed portion
@@ -620,13 +742,24 @@ void EdfScheduler::on_budget_exhausted(CbsServer& server) {
             wall_elapsed.count() * proc->speed(reference_performance_)};
 
         // Update virtual time (use policy if available)
+        // M-GRUB VT formula uses wall time; CBS uses reference time
         if (reclamation_policy_) {
+            core::Duration vt_time = reclamation_policy_->needs_global_budget_recalculation()
+                ? wall_elapsed : ref_executed;
             core::TimePoint new_vt = reclamation_policy_->compute_virtual_time(
-                server, server.virtual_time(), ref_executed);
+                server, server.virtual_time(), vt_time);
             server.set_virtual_time(new_vt);
         } else {
             server.update_virtual_time(ref_executed);
         }
+
+        // Emit virtual_time_update after VT computation
+        engine_.trace([&](core::TraceWriter& w) {
+            w.type("virtual_time_update");
+            w.field("tid", static_cast<uint64_t>(server.task()->id()));
+            w.field("virtual_time", server.virtual_time().time_since_epoch().count());
+        });
+
         last_dispatch_time_.erase(dispatch_it);
     }
 
@@ -639,6 +772,13 @@ void EdfScheduler::on_budget_exhausted(CbsServer& server) {
     // Clear processor
     proc->clear();
 
+    // Emit proc_idled
+    engine_.trace([&](core::TraceWriter& w) {
+        w.type("proc_idled");
+        w.field("cpu", static_cast<uint64_t>(proc->id()));
+        w.field("cluster_id", static_cast<uint64_t>(proc->clock_domain().id()));
+    });
+
     if (extra_budget.count() > 0.0) {
         // CASH: extra budget granted, continue without postponing
         // Note: Server stays Ready (was Running, exhaust puts it to Ready)
@@ -648,6 +788,21 @@ void EdfScheduler::on_budget_exhausted(CbsServer& server) {
     } else {
         // Standard CBS: postpone deadline
         server.exhaust_budget(engine_.time());
+    }
+
+    // Emit serv_postpone after exhaust_budget
+    engine_.trace([&](core::TraceWriter& w) {
+        w.type("serv_postpone");
+        w.field("tid", static_cast<uint64_t>(server.task()->id()));
+        w.field("deadline", server.deadline().time_since_epoch().count());
+    });
+    // Emit serv_budget_replenished (suppress when M-GRUB; it fires during recalculate)
+    if (!reclamation_policy_ || !reclamation_policy_->needs_global_budget_recalculation()) {
+        engine_.trace([&](core::TraceWriter& w) {
+            w.type("serv_budget_replenished");
+            w.field("tid", static_cast<uint64_t>(server.task()->id()));
+            w.field("budget", server.remaining_budget().count());
+        });
     }
 
     // Remove mappings
@@ -664,6 +819,155 @@ void EdfScheduler::on_budget_exhausted(CbsServer& server) {
 
     // Request reschedule
     request_resched();
+}
+
+void EdfScheduler::flush_running_server_times() {
+    // Update VTs of all running servers using CURRENT bandwidth,
+    // then reset dispatch times. Does NOT recompute budgets or timers.
+    // Must be called BEFORE any operation that changes bandwidth (e.g., server activation/detach).
+    for (auto* proc : processors_) {
+        if (proc->state() != core::ProcessorState::Running) {
+            continue;
+        }
+
+        CbsServer* server = find_server_on_processor(*proc);
+        if (!server) {
+            continue;
+        }
+
+        auto dispatch_it = last_dispatch_time_.find(server);
+        if (dispatch_it == last_dispatch_time_.end()) {
+            continue;
+        }
+
+        core::Duration wall_elapsed = engine_.time() - dispatch_it->second;
+        if (wall_elapsed.count() <= 0.0) {
+            continue;
+        }
+
+        core::Duration ref_executed = core::Duration{
+            wall_elapsed.count() * proc->speed(reference_performance_)};
+
+        // Update virtual time via policy (uses current bandwidth, before any change)
+        if (reclamation_policy_) {
+            core::Duration vt_time = reclamation_policy_->needs_global_budget_recalculation()
+                ? wall_elapsed : ref_executed;
+            core::TimePoint new_vt = reclamation_policy_->compute_virtual_time(
+                *server, server->virtual_time(), vt_time);
+            server->set_virtual_time(new_vt);
+        } else {
+            server->update_virtual_time(ref_executed);
+        }
+
+        // Emit virtual_time_update so verify_grub.py can see the interval boundary
+        double bandwidth = reclamation_policy_
+            ? reclamation_policy_->compute_bandwidth() : 1.0;
+        engine_.trace([&](core::TraceWriter& w) {
+            w.type("virtual_time_update");
+            w.field("tid", static_cast<uint64_t>(server->task()->id()));
+            w.field("virtual_time", server->virtual_time().time_since_epoch().count());
+            w.field("bandwidth", bandwidth);
+        });
+
+        server->consume_budget(ref_executed);
+        last_dispatch_time_[server] = engine_.time();
+    }
+}
+
+void EdfScheduler::recalculate_all_budget_timers() {
+    for (auto* proc : processors_) {
+        if (proc->state() != core::ProcessorState::Running) {
+            continue;
+        }
+
+        CbsServer* server = find_server_on_processor(*proc);
+        if (!server) {
+            continue;
+        }
+
+        // Update VT and budget for elapsed execution
+        auto dispatch_it = last_dispatch_time_.find(server);
+        if (dispatch_it != last_dispatch_time_.end()) {
+            core::Duration wall_elapsed = engine_.time() - dispatch_it->second;
+            core::Duration ref_executed = core::Duration{
+                wall_elapsed.count() * proc->speed(reference_performance_)};
+
+            // Update virtual time via policy
+            // M-GRUB VT formula uses wall time; CBS uses reference time
+            if (reclamation_policy_) {
+                core::Duration vt_time = reclamation_policy_->needs_global_budget_recalculation()
+                    ? wall_elapsed : ref_executed;
+                core::TimePoint new_vt = reclamation_policy_->compute_virtual_time(
+                    *server, server->virtual_time(), vt_time);
+                server->set_virtual_time(new_vt);
+            } else {
+                server->update_virtual_time(ref_executed);
+            }
+
+            double bandwidth = reclamation_policy_
+                ? reclamation_policy_->compute_bandwidth() : 1.0;
+
+            // Emit virtual_time_update
+            engine_.trace([&](core::TraceWriter& w) {
+                w.type("virtual_time_update");
+                w.field("tid", static_cast<uint64_t>(server->task()->id()));
+                w.field("virtual_time", server->virtual_time().time_since_epoch().count());
+                w.field("bandwidth", bandwidth);
+            });
+
+            server->consume_budget(ref_executed);
+            last_dispatch_time_[server] = engine_.time();
+        }
+
+        // Cancel existing budget timer
+        cancel_budget_timer(*server);
+
+        // Compute dynamic budget via policy
+        core::Duration budget;
+        if (reclamation_policy_) {
+            budget = reclamation_policy_->compute_server_budget(*server);
+        } else {
+            budget = server->remaining_budget();
+        }
+
+        // Emit serv_budget_replenished with dynamic budget
+        engine_.trace([&](core::TraceWriter& w) {
+            w.type("serv_budget_replenished");
+            w.field("tid", static_cast<uint64_t>(server->task()->id()));
+            w.field("budget", budget.count());
+        });
+
+        // Schedule timer
+        // M-GRUB: dynamic budget is already in wall time (legacy: time + budget)
+        // CBS: budget is in reference time, must divide by speed
+        if (budget.count() > 0.0) {
+            core::Duration wall_time = budget;  // M-GRUB: budget IS wall time
+            core::TimePoint exhaust_time = engine_.time() + wall_time;
+
+            if (exhaust_time > engine_.time()) {
+                budget_timers_[server] = engine_.add_timer(
+                    exhaust_time,
+                    core::EventPriority::TIMER_DEFAULT,
+                    [this, server]() { on_budget_exhausted(*server); });
+            }
+        }
+    }
+}
+
+void EdfScheduler::try_detach_server(CbsServer& server) {
+    if (server.state() != CbsServer::State::Inactive) {
+        return;
+    }
+    if (server.has_pending_jobs()) {
+        return;
+    }
+    const core::Task* task = server.task();
+    auto exp_it = expected_arrivals_.find(task);
+    auto cnt_it = arrival_counts_.find(task);
+    if (exp_it != expected_arrivals_.end() && cnt_it != arrival_counts_.end()
+        && cnt_it->second >= exp_it->second) {
+        notify_server_state_change(server, ReclamationPolicy::ServerStateChange::Detached);
+    }
 }
 
 CbsServer* EdfScheduler::find_server_on_processor(core::Processor& proc) {
@@ -712,8 +1016,28 @@ void EdfScheduler::notify_utilization_changed() {
 
 void EdfScheduler::notify_server_state_change(CbsServer& server,
                                                 ReclamationPolicy::ServerStateChange change) {
+    // M-GRUB: flush VTs before bandwidth-changing state transitions
+    // so running servers have VTs computed with the old bandwidth
+    if (reclamation_policy_ && reclamation_policy_->needs_global_budget_recalculation()) {
+        if (change == ReclamationPolicy::ServerStateChange::Activated ||
+            change == ReclamationPolicy::ServerStateChange::Detached) {
+            flush_running_server_times();
+        }
+    }
+
     if (reclamation_policy_) {
         reclamation_policy_->on_server_state_change(server, change);
+    }
+
+    // After Completed or DeadlineReached, check if server should be detached (M-GRUB).
+    // Note: try_detach_server() may call notify_server_state_change(Detached)
+    // re-entrantly. This is safe because Detached does not match this condition,
+    // so there is no infinite recursion.
+    if (reclamation_policy_ && reclamation_policy_->needs_global_budget_recalculation()) {
+        if (change == ReclamationPolicy::ServerStateChange::Completed ||
+            change == ReclamationPolicy::ServerStateChange::DeadlineReached) {
+            try_detach_server(server);
+        }
     }
 }
 
@@ -723,6 +1047,12 @@ void EdfScheduler::on_dvfs_frequency_changed(core::ClockDomain& domain) {
 }
 
 void EdfScheduler::reschedule_budget_timers_for_domain(core::ClockDomain& domain) {
+    // When using M-GRUB, delegate to recalculate_all_budget_timers for consistency
+    if (reclamation_policy_ && reclamation_policy_->needs_global_budget_recalculation()) {
+        recalculate_all_budget_timers();
+        return;
+    }
+
     for (auto* proc : processors_) {
         if (&proc->clock_domain() != &domain) {
             continue;
@@ -742,13 +1072,7 @@ void EdfScheduler::reschedule_budget_timers_for_domain(core::ClockDomain& domain
         // Update consumed budget based on elapsed time
         auto it = last_dispatch_time_.find(server);
         if (it != last_dispatch_time_.end()) {
-            // Compute work done at OLD frequency (before change)
-            // Note: The processor speed already reflects the new frequency,
-            // so we use the elapsed wall time directly
             core::Duration wall_elapsed = engine_.time() - it->second;
-            // The work done is wall_elapsed * old_speed, but since we don't
-            // have old_speed here, we rely on the processor having tracked this
-            // For now, just update the dispatch time to now
             core::Duration ref_consumed = core::Duration{
                 wall_elapsed.count() * proc->speed(reference_performance_)};
             server->consume_budget(ref_consumed);

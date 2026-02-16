@@ -44,12 +44,16 @@ public:
 
     // Scheduler interface
     void on_job_arrival(core::Task& task, core::Job job) override;
+    void set_expected_arrivals(const core::Task& task, std::size_t count) override;
     [[nodiscard]] bool can_admit(core::Duration budget, core::Duration period) const override;
     [[nodiscard]] double utilization() const override;
 
     // EdfScheduler-specific (not in abstract interface)
     [[nodiscard]] std::span<core::Processor* const> processors() const;
     [[nodiscard]] std::size_t processor_count() const noexcept { return processors_.size(); }
+
+    // Server detach check (M-GRUB: remove server from scheduler when Inactive + no future jobs)
+    void try_detach_server(CbsServer& server);
 
     // Server management
     // Add a server with explicit budget and period (throws AdmissionError if over capacity)
@@ -116,6 +120,8 @@ private:
     void schedule_budget_timer(CbsServer& server, core::Processor& proc);
     void cancel_budget_timer(CbsServer& server);
     void on_budget_exhausted(CbsServer& server);
+    void recalculate_all_budget_timers();
+    void flush_running_server_times();
 
     // Helper to find server for a processor
     CbsServer* find_server_on_processor(core::Processor& proc);
@@ -156,6 +162,10 @@ private:
     std::unique_ptr<ReclamationPolicy> reclamation_policy_;
     std::unique_ptr<DvfsPolicy> dvfs_policy_;
     std::unique_ptr<DpmPolicy> dpm_policy_;
+
+    // Arrival tracking for server detach (M-GRUB)
+    std::unordered_map<const core::Task*, std::size_t> expected_arrivals_;
+    std::unordered_map<const core::Task*, std::size_t> arrival_counts_;
 };
 
 } // namespace schedsim::algo

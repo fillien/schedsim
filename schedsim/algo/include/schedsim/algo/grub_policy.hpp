@@ -5,15 +5,18 @@
 #include <schedsim/core/timer.hpp>
 #include <schedsim/core/types.hpp>
 
+#include <set>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace schedsim::algo {
 
 class CbsServer;
 class EdfScheduler;
 
-// GRUB (Greedy Reclamation of Unused Bandwidth) policy
-// Tracks active utilization and uses NonContending state for efficient bandwidth reclamation
+// M-GRUB (Multiprocessor Greedy Reclamation of Unused Bandwidth) policy
+// Tracks both "in-scheduler" utilization (for bandwidth formula) and
+// "active" utilization (for DVFS), using NonContending state for efficient bandwidth reclamation
 class GrubPolicy : public ReclamationPolicy {
 public:
     // Minimum utilization to avoid division by zero in GRUB formula
@@ -30,13 +33,28 @@ public:
     void on_server_state_change(CbsServer& server, ServerStateChange change) override;
     [[nodiscard]] double active_utilization() const override { return active_utilization_; }
 
+    // M-GRUB overrides
+    core::Duration compute_server_budget(const CbsServer& server) const override;
+    bool needs_global_budget_recalculation() const override { return true; }
+
+    // M-GRUB bandwidth computation
+    [[nodiscard]] double compute_bandwidth() const override;
+
 private:
     void schedule_deadline_timer(CbsServer& server);
     void cancel_deadline_timer(CbsServer& server);
     void on_deadline_reached(CbsServer& server);
 
     EdfScheduler& scheduler_;
+
+    // "Active" tracking (Ready/Running servers — for DVFS)
     double active_utilization_{0.0};
+
+    // "In scheduler" tracking (all non-detached servers — for bandwidth formula)
+    double scheduler_utilization_{0.0};
+    std::multiset<double> scheduler_utils_;
+    std::unordered_set<const CbsServer*> in_scheduler_set_;
+
     std::unordered_map<CbsServer*, core::TimerId> deadline_timers_;
 };
 
