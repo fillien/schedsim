@@ -73,6 +73,15 @@ Task& Platform::add_task(Duration period, Duration relative_deadline, Duration w
     return *tasks_.back();
 }
 
+Task& Platform::add_task(std::size_t id, Duration period, Duration relative_deadline, Duration wcet) {
+    if (finalized_) {
+        throw AlreadyFinalizedError("Cannot add task after finalize()");
+    }
+
+    tasks_.push_back(std::make_unique<Task>(id, period, relative_deadline, wcet));
+    return *tasks_.back();
+}
+
 void Platform::finalize() {
     if (finalized_) {
         return;  // Idempotent

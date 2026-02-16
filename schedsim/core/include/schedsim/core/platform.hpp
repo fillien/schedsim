@@ -35,6 +35,7 @@ public:
     Processor& add_processor(ProcessorType& type, ClockDomain& clock_domain,
                              PowerDomain& power_domain);
     Task& add_task(Duration period, Duration relative_deadline, Duration wcet);
+    Task& add_task(std::size_t id, Duration period, Duration relative_deadline, Duration wcet);
 
     // Collection sizes
     [[nodiscard]] std::size_t processor_type_count() const noexcept { return processor_types_.size(); }
