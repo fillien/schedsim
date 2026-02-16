@@ -219,6 +219,25 @@ double EdfScheduler::active_utilization() const {
     return total_utilization_;
 }
 
+double EdfScheduler::scheduler_utilization() const {
+    if (reclamation_policy_) {
+        return reclamation_policy_->scheduler_utilization();
+    }
+    // Default: return total utilization (no reclamation tracking)
+    return total_utilization_;
+}
+
+double EdfScheduler::max_scheduler_utilization() const {
+    if (reclamation_policy_) {
+        double max_val = reclamation_policy_->max_scheduler_utilization();
+        if (max_val > 0.0) {
+            return max_val;
+        }
+    }
+    // Fall back to max across all servers
+    return max_server_utilization();
+}
+
 double EdfScheduler::max_server_utilization() const {
     double max_util = 0.0;
     for (const auto& server : servers_) {

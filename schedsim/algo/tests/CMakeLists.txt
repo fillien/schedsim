@@ -33,6 +33,7 @@ add_executable(schedsim_algo_tests
     ffa_timer_policy_test.cpp
     csf_timer_policy_test.cpp
     allocators_test.cpp
+    dvfs_dpm_utils_test.cpp
 )
 
 target_link_libraries(schedsim_algo_tests PRIVATE

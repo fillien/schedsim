@@ -10,6 +10,7 @@
 namespace schedsim::core {
 class ClockDomain;
 class Engine;
+class Platform;
 class Processor;
 } // namespace schedsim::core
 
@@ -23,6 +24,13 @@ struct PlatformTarget {
     core::Frequency frequency;
     std::size_t active_processors;
 };
+
+// Utilization scale factor for heterogeneous platforms.
+// Returns ref_freq_max / (domain_freq_max * domain_perf) so that
+// raw task utilization (WCET/Period) is converted to the fraction
+// of a domain core's capacity actually consumed.
+double compute_utilization_scale(const core::Platform& platform,
+                                 const core::ClockDomain& domain);
 
 // f_min = f_max * (U_total + (m-1)*U_max) / m
 double compute_freq_min(double freq_max, double total_util, double max_util, double nb_procs);

@@ -56,6 +56,15 @@ public:
     // Get current active utilization (for DVFS integration)
     // Active utilization = sum of U_i for servers in Running or Ready state
     [[nodiscard]] virtual double active_utilization() const = 0;
+
+    // Get "in-scheduler" utilization: sum of U_i for servers that have been
+    // activated at least once and not yet detached. Used by PA DVFS.
+    // Default: same as active_utilization (no distinction without M-GRUB).
+    [[nodiscard]] virtual double scheduler_utilization() const { return active_utilization(); }
+
+    // Get max utilization among in-scheduler servers. Used by PA DVFS.
+    // Default: 0.0 (caller should fall back to max_server_utilization).
+    [[nodiscard]] virtual double max_scheduler_utilization() const { return 0.0; }
 };
 
 } // namespace schedsim::algo

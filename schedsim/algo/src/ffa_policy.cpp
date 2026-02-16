@@ -4,6 +4,7 @@
 
 #include <schedsim/core/clock_domain.hpp>
 #include <schedsim/core/engine.hpp>
+#include <schedsim/core/platform.hpp>
 #include <schedsim/core/processor.hpp>
 
 #include <algorithm>
@@ -28,8 +29,10 @@ void FfaPolicy::on_utilization_changed(EdfScheduler& scheduler, core::ClockDomai
         return;
     }
 
-    double active_util = scheduler.active_utilization();
-    double max_util = scheduler.max_server_utilization();
+    double scale = dvfs_dpm::compute_utilization_scale(
+        scheduler.engine().platform(), domain);
+    double active_util = scheduler.active_utilization() * scale;
+    double max_util = scheduler.max_scheduler_utilization() * scale;
     auto total_procs = domain.processors().size();
 
     auto target = compute_target(active_util, max_util, total_procs, domain);

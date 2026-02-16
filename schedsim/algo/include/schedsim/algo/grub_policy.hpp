@@ -32,6 +32,10 @@ public:
         const CbsServer& server, core::TimePoint current_vt, core::Duration exec_time) const override;
     void on_server_state_change(CbsServer& server, ServerStateChange change) override;
     [[nodiscard]] double active_utilization() const override { return active_utilization_; }
+    [[nodiscard]] double scheduler_utilization() const override { return scheduler_utilization_; }
+    [[nodiscard]] double max_scheduler_utilization() const override {
+        return max_ever_scheduler_util_;
+    }
 
     // M-GRUB overrides
     core::Duration compute_server_budget(const CbsServer& server) const override;
@@ -54,6 +58,9 @@ private:
     double scheduler_utilization_{0.0};
     std::multiset<double> scheduler_utils_;
     std::unordered_set<const CbsServer*> in_scheduler_set_;
+
+    // Max utilization of any server ever in the scheduler (never decremented)
+    double max_ever_scheduler_util_{0.0};
 
     std::unordered_map<CbsServer*, core::TimerId> deadline_timers_;
 };

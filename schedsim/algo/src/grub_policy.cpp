@@ -90,6 +90,7 @@ void GrubPolicy::on_server_state_change(CbsServer& server, ServerStateChange cha
                 scheduler_utilization_ += util;
                 scheduler_utils_.insert(util);
                 in_scheduler_set_.insert(&server);
+                max_ever_scheduler_util_ = std::max(max_ever_scheduler_util_, util);
             }
             // Cancel any pending deadline timer (reactivation from NonContending)
             cancel_deadline_timer(server);

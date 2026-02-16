@@ -1,5 +1,6 @@
 #include <schedsim/algo/edf_scheduler.hpp>
 #include <schedsim/algo/error.hpp>
+#include <schedsim/algo/single_scheduler_allocator.hpp>
 
 #include <schedsim/core/engine.hpp>
 #include <schedsim/core/platform.hpp>
@@ -374,4 +375,56 @@ TEST_F(EdfSchedulerTestBase, EqualDeadlines_OrderedById) {
     // they will have identical deadlines. The EDF scheduler should deterministically
     // dispatch server1 first (lower ID).
     // This test verifies the IDs are assigned correctly for tie-breaking.
+}
+
+// =============================================================================
+// M-GRUB Server Detach Tests
+// =============================================================================
+
+TEST_F(EdfSchedulerTestBase, SetExpectedArrivals_DetachAfterAllArrived) {
+    Engine engine;
+    auto& pt = engine.platform().add_processor_type("cpu", 1.0);
+    auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
+    auto& pd = engine.platform().add_power_domain({
+        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+    });
+    auto* proc = &engine.platform().add_processor(pt, cd, pd);
+    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    engine.platform().finalize();
+
+    EdfScheduler sched(engine, {proc});
+    sched.enable_grub();
+    sched.add_server(task);
+    sched.set_expected_arrivals(task, 1);  // Only 1 arrival expected
+
+    SingleSchedulerAllocator alloc(engine, sched);
+    engine.schedule_job_arrival(task, time(0.0), Duration{2.0});
+    engine.run(time(15.0));
+
+    // Server detached: arrival_counts_[task]=1 >= expected_arrivals_[task]=1
+    EXPECT_DOUBLE_EQ(sched.scheduler_utilization(), 0.0);
+}
+
+TEST_F(EdfSchedulerTestBase, SetExpectedArrivals_NoDetachWhenMoreExpected) {
+    Engine engine;
+    auto& pt = engine.platform().add_processor_type("cpu", 1.0);
+    auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
+    auto& pd = engine.platform().add_power_domain({
+        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+    });
+    auto* proc = &engine.platform().add_processor(pt, cd, pd);
+    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    engine.platform().finalize();
+
+    EdfScheduler sched(engine, {proc});
+    sched.enable_grub();
+    sched.add_server(task);
+    sched.set_expected_arrivals(task, 2);  // 2 arrivals expected, only 1 will occur
+
+    SingleSchedulerAllocator alloc(engine, sched);
+    engine.schedule_job_arrival(task, time(0.0), Duration{2.0});
+    engine.run(time(15.0));
+
+    // Server NOT detached: arrival_counts_[task]=1 < expected_arrivals_[task]=2
+    EXPECT_DOUBLE_EQ(sched.scheduler_utilization(), 0.2);
 }

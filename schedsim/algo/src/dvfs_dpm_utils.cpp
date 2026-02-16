@@ -4,12 +4,40 @@
 
 #include <schedsim/core/clock_domain.hpp>
 #include <schedsim/core/engine.hpp>
+#include <schedsim/core/platform.hpp>
 #include <schedsim/core/processor.hpp>
 
 #include <algorithm>
 #include <cmath>
+#include <stdexcept>
 
 namespace schedsim::algo::dvfs_dpm {
+
+double compute_utilization_scale(const core::Platform& platform,
+                                 const core::ClockDomain& domain) {
+    if (domain.processors().empty()) {
+        return 1.0;
+    }
+
+    // Find the maximum frequency across all clock domains (reference)
+    double ref_freq_max = 0.0;
+    for (std::size_t i = 0; i < platform.clock_domain_count(); ++i) {
+        ref_freq_max = std::max(ref_freq_max, platform.clock_domain(i).freq_max().mhz);
+    }
+    if (ref_freq_max <= 0.0) {
+        return 1.0;
+    }
+
+    double domain_perf = domain.processors()[0]->type().performance();
+    double domain_freq_max = domain.freq_max().mhz;
+    double denominator = domain_freq_max * domain_perf;
+    if (denominator <= 0.0) {
+        throw std::invalid_argument(
+            "compute_utilization_scale: domain freq_max * performance must be positive");
+    }
+
+    return ref_freq_max / denominator;
+}
 
 double compute_freq_min(double freq_max, double total_util, double max_util, double nb_procs) {
     if (nb_procs <= 0.0) {

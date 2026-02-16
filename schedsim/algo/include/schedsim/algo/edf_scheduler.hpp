@@ -94,6 +94,12 @@ public:
     // Active utilization query (for DVFS integration)
     [[nodiscard]] double active_utilization() const;
 
+    // "In-scheduler" utilization: sum of U_i for activated, non-detached servers (for PA DVFS)
+    [[nodiscard]] double scheduler_utilization() const;
+
+    // Max utilization among in-scheduler servers (for PA DVFS u_max)
+    [[nodiscard]] double max_scheduler_utilization() const;
+
     // Maximum individual server utilization (for FFA/CSF u_max)
     [[nodiscard]] double max_server_utilization() const;
 

@@ -65,8 +65,7 @@ private:
     core::TimePoint cooldown_until_{core::Duration{0.0}};
 };
 
-// Power-aware DVFS policy: frequency scales with active utilization
-// Formula: f = f_min + (f_max - f_min) * U_active
+// Power-aware DVFS policy: f_min = f_max * ((m-1)*U_max + U_total) / m
 class PowerAwareDvfsPolicy : public DvfsPolicy {
 public:
     explicit PowerAwareDvfsPolicy(core::Engine& engine,
@@ -78,8 +77,6 @@ public:
     [[nodiscard]] core::Duration cooldown_period() const override { return cooldown_; }
 
 private:
-    [[nodiscard]] core::Frequency compute_target_frequency(
-        const core::ClockDomain& domain, double active_util) const;
     void apply_frequency_change(core::ClockDomain& domain, core::Frequency target);
     [[nodiscard]] CooldownTimer& get_cooldown_timer(core::ClockDomain& domain);
 

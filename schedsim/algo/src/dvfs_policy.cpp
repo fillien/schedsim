@@ -1,9 +1,11 @@
 #include <schedsim/algo/dvfs_policy.hpp>
 
+#include <schedsim/algo/dvfs_dpm_utils.hpp>
 #include <schedsim/algo/edf_scheduler.hpp>
 
 #include <schedsim/core/clock_domain.hpp>
 #include <schedsim/core/engine.hpp>
+#include <schedsim/core/platform.hpp>
 #include <schedsim/core/processor.hpp>
 
 #include <algorithm>
@@ -52,9 +54,18 @@ void PowerAwareDvfsPolicy::on_utilization_changed(EdfScheduler& scheduler,
         return;
     }
 
-    // Compute target frequency based on active utilization
-    double active_util = scheduler.active_utilization();
-    core::Frequency target = compute_target_frequency(domain, active_util);
+    // Scale utilization for heterogeneous platforms
+    double scale = dvfs_dpm::compute_utilization_scale(
+        scheduler.engine().platform(), domain);
+    double total_util = scheduler.scheduler_utilization() * scale;
+    double max_util = scheduler.max_scheduler_utilization() * scale;
+    auto nb_procs = static_cast<double>(domain.processors().size());
+
+    // f_min = f_max * ((m-1)*U_max + U_total) / m
+    double freq_min = dvfs_dpm::compute_freq_min(
+        domain.freq_max().mhz, total_util, max_util, nb_procs);
+    core::Frequency target = domain.ceil_to_mode(
+        core::Frequency{std::min(freq_min, domain.freq_max().mhz)});
 
     // Apply change if different from current
     apply_frequency_change(domain, target);
@@ -70,23 +81,6 @@ void PowerAwareDvfsPolicy::on_processor_active(EdfScheduler& /*scheduler*/,
                                                  core::Processor& /*proc*/) {
     // PowerAware doesn't take specific action on active
     // Utilization-based scaling handles this via on_utilization_changed
-}
-
-core::Frequency PowerAwareDvfsPolicy::compute_target_frequency(
-    const core::ClockDomain& domain, double active_util) const {
-    // Formula: f = f_min + (f_max - f_min) * U_active
-    // Clamp utilization to [0, 1] for the formula
-    double clamped_util = std::clamp(active_util, 0.0, 1.0);
-
-    double f_min = domain.freq_min().mhz;
-    double f_max = domain.freq_max().mhz;
-
-    double target_mhz = f_min + (f_max - f_min) * clamped_util;
-
-    // Clamp to valid range
-    target_mhz = std::clamp(target_mhz, f_min, f_max);
-
-    return core::Frequency{target_mhz};
 }
 
 void PowerAwareDvfsPolicy::apply_frequency_change(core::ClockDomain& domain,
