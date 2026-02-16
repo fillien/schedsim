@@ -19,7 +19,7 @@ void Engine::run() {
     while (!event_queue_.empty()) {
         process_timestep();
     }
-    trace([&](TraceWriter& w) { w.type("sim_finished"); });
+    emit_sim_finished();
 }
 
 void Engine::run(TimePoint until) {
@@ -36,14 +36,14 @@ void Engine::run(TimePoint until) {
     if (current_time_ < until) {
         current_time_ = until;
     }
-    trace([&](TraceWriter& w) { w.type("sim_finished"); });
+    emit_sim_finished();
 }
 
 void Engine::run(std::function<bool()> stop_condition) {
     while (!event_queue_.empty() && !stop_condition()) {
         process_timestep();
     }
-    trace([&](TraceWriter& w) { w.type("sim_finished"); });
+    emit_sim_finished();
 }
 
 TimerId Engine::add_timer(TimePoint when, int priority, std::function<void()> callback) {
@@ -246,6 +246,22 @@ Energy Engine::total_energy() const {
     }
     energy_tracker_->update_to_time(current_time_);
     return energy_tracker_->total_energy();
+}
+
+void Engine::emit_sim_finished() {
+    trace([&](TraceWriter& w) {
+        w.type("sim_finished");
+        if (energy_tracker_) {
+            w.field("total_energy_mj", total_energy().mj);
+        }
+    });
+}
+
+void Engine::notify_processor_state_change(Processor& proc, ProcessorState old_state,
+                                           ProcessorState new_state) {
+    if (energy_tracker_) {
+        energy_tracker_->on_processor_state_change(proc, old_state, new_state, current_time_);
+    }
 }
 
 void Engine::notify_frequency_change(ClockDomain& cd, Frequency old_freq, Frequency new_freq) {

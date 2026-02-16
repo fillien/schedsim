@@ -17,7 +17,9 @@ class ClockDomain;
 class EnergyTracker;
 class Job;
 class Platform;
+class Processor;
 class Task;
+enum class ProcessorState;
 
 // Engine is the simulation event loop (Decisions 66, 68)
 // Non-copyable, non-movable, designed for stack allocation
@@ -98,6 +100,7 @@ public:
 
 private:
     friend class ClockDomain;
+    friend class Processor;
 
     struct DeferredCallback {
         std::function<void()> callback;
@@ -107,7 +110,10 @@ private:
     void process_timestep();
     void dispatch_event(Event& event);
     void fire_deferred_callbacks();
+    void emit_sim_finished();
     void notify_frequency_change(ClockDomain& cd, Frequency old_freq, Frequency new_freq);
+    void notify_processor_state_change(Processor& proc, ProcessorState old_state,
+                                       ProcessorState new_state);
 
     TimePoint current_time_{};
     uint64_t sequence_{0};

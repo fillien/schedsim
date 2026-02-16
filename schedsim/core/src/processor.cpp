@@ -114,8 +114,13 @@ void Processor::request_cstate(int level) {
         throw InvalidStateError("Cannot enter C-state while running, changing, or context switching");
     }
 
+    ProcessorState old_state = state_;
     current_cstate_level_ = level;
     state_ = ProcessorState::Sleep;
+
+    if (engine_) {
+        engine_->notify_processor_state_change(*this, old_state, ProcessorState::Sleep);
+    }
 }
 
 void Processor::set_job_completion_handler(JobCompletionHandler handler) {
@@ -315,6 +320,10 @@ void Processor::begin_wake_up(Job& job) {
         current_cstate_level_ = 0;
         state_ = ProcessorState::Idle;
 
+        if (engine_) {
+            engine_->notify_processor_state_change(*this, ProcessorState::Sleep, ProcessorState::Idle);
+        }
+
         // Now continue with normal assign flow (may trigger context switch)
         Job* saved_pending = pending_job_;
         pending_job_ = nullptr;
@@ -350,6 +359,10 @@ void Processor::on_wake_up_complete() {
     // Transition to Idle
     state_ = ProcessorState::Idle;
     current_cstate_level_ = 0;
+
+    if (engine_) {
+        engine_->notify_processor_state_change(*this, ProcessorState::Sleep, ProcessorState::Idle);
+    }
 
     // Fire ProcessorAvailable ISR
     if (on_processor_available_) {
