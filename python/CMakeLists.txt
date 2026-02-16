@@ -6,7 +6,7 @@ include(UseSWIG)
 
 # Align dev headers with the interpreter actually found
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
-find_package(Python3 ${Python3_VERSION} EXACT REQUIRED COMPONENTS Development)
+find_package(Python3 REQUIRED COMPONENTS Development)
 
 # ============================================================================
 # pyschedlib - Legacy bindings for schedlib
@@ -170,6 +170,15 @@ if(BUILD_TESTING)
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_edge_cases.py
   )
   set_tests_properties(pyschedsim_edge_cases PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  )
+
+  add_test(
+    NAME pyschedsim_new_api
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_new_api.py
+  )
+  set_tests_properties(pyschedsim_new_api PROPERTIES
     ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   )

@@ -5,9 +5,11 @@
 %{
 // Standard library headers
 #include <filesystem>
+#include <fstream>
 #include <functional>
 #include <memory>
 #include <string>
+#include <variant>
 #include <vector>
 
 // Core library headers
@@ -21,18 +23,48 @@
 #include <schedsim/core/power_domain.hpp>
 #include <schedsim/core/task.hpp>
 #include <schedsim/core/job.hpp>
+#include <schedsim/core/trace_writer.hpp>
 
 // Algo library headers
 #include <schedsim/algo/error.hpp>
 #include <schedsim/algo/scheduler.hpp>
 #include <schedsim/algo/edf_scheduler.hpp>
 #include <schedsim/algo/single_scheduler_allocator.hpp>
+#include <schedsim/algo/cluster.hpp>
 
 // IO library headers
 #include <schedsim/io/error.hpp>
 #include <schedsim/io/platform_loader.hpp>
 #include <schedsim/io/scenario_loader.hpp>
 #include <schedsim/io/scenario_injection.hpp>
+#include <schedsim/io/trace_writers.hpp>
+#include <schedsim/io/metrics.hpp>
+
+// ==========================================================================
+// FileJsonTraceWriter: owns the ofstream + JsonTraceWriter for Python use
+// ==========================================================================
+class FileJsonTraceWriter : public schedsim::core::TraceWriter {
+public:
+    explicit FileJsonTraceWriter(const std::string& filename)
+        : stream_(filename), writer_(stream_) {
+        if (!stream_.is_open()) {
+            throw std::runtime_error("Cannot open file: " + filename);
+        }
+    }
+    ~FileJsonTraceWriter() override { writer_.finalize(); }
+
+    void begin(schedsim::core::TimePoint time) override { writer_.begin(time); }
+    void type(std::string_view name) override { writer_.type(name); }
+    void field(std::string_view key, double value) override { writer_.field(key, value); }
+    void field(std::string_view key, uint64_t value) override { writer_.field(key, value); }
+    void field(std::string_view key, std::string_view value) override { writer_.field(key, value); }
+    void end() override { writer_.end(); }
+    void finalize() { writer_.finalize(); }
+
+private:
+    std::ofstream stream_;
+    schedsim::io::JsonTraceWriter writer_;
+};
 %}
 
 // Include standard SWIG typemaps for STL types
@@ -88,6 +120,21 @@
 %ignore schedsim::core::CStateLevel;
 
 // ============================================================================
+// Ignore problematic fields before declarations
+// ============================================================================
+
+// TraceRecord::fields uses variant - provide %extend accessors instead
+%ignore schedsim::io::TraceRecord::fields;
+
+// SimulationMetrics map/vector members - provide %extend accessors instead
+%ignore schedsim::io::SimulationMetrics::energy_per_processor;
+%ignore schedsim::io::SimulationMetrics::utilization_per_processor;
+%ignore schedsim::io::SimulationMetrics::response_times_per_task;
+%ignore schedsim::io::SimulationMetrics::deadline_misses_per_task;
+%ignore schedsim::io::SimulationMetrics::waiting_times_per_task;
+%ignore schedsim::io::SimulationMetrics::frequency_changes;
+
+// ============================================================================
 // Core types declarations - no constructors (obtained from factories only)
 // ============================================================================
 
@@ -108,6 +155,13 @@ enum class CStateScope {
     DomainWide
 };
 
+// TraceWriter abstract base class
+%nodefaultctor TraceWriter;
+class TraceWriter {
+public:
+    virtual ~TraceWriter();
+};
+
 // ProcessorType class - no constructor exposed
 %nodefaultctor ProcessorType;
 class ProcessorType {
@@ -126,6 +180,25 @@ public:
     schedsim::core::Frequency freq_max() const;
     bool is_locked() const;
     bool is_transitioning() const;
+    schedsim::core::Frequency freq_eff() const;
+    void set_freq_eff(schedsim::core::Frequency freq);
+
+    %extend {
+        void set_power_coefficients(PyObject* coeffs_list) {
+            if (!PyList_Check(coeffs_list) || PyList_Size(coeffs_list) != 4) {
+                throw std::invalid_argument("Expected a list of 4 floats [a0, a1, a2, a3]");
+            }
+            std::array<double, 4> coeffs;
+            for (Py_ssize_t i = 0; i < 4; ++i) {
+                PyObject* item = PyList_GetItem(coeffs_list, i);
+                coeffs[i] = PyFloat_AsDouble(item);
+                if (PyErr_Occurred()) {
+                    throw std::invalid_argument("All coefficients must be numeric");
+                }
+            }
+            $self->set_power_coefficients(coeffs);
+        }
+    }
 };
 
 // PowerDomain class - no constructor exposed
@@ -185,6 +258,7 @@ public:
                              PowerDomain& power_domain);
 
     Task& add_task(schedsim::core::Duration period, schedsim::core::Duration relative_deadline, schedsim::core::Duration wcet);
+    Task& add_task(std::size_t id, schedsim::core::Duration period, schedsim::core::Duration relative_deadline, schedsim::core::Duration wcet);
 
     // add_power_domain exposed via %extend below
 
@@ -268,6 +342,9 @@ public:
     schedsim::core::Energy power_domain_energy(std::size_t pd_id) const;
     schedsim::core::Energy total_energy() const;
 
+    // Trace API
+    void set_trace_writer(TraceWriter* writer);
+
     %extend {
         Platform& get_platform() {
             return $self->platform();
@@ -318,6 +395,26 @@ public:
     // Server management
     CbsServer& add_server(schedsim::core::Task& task, schedsim::core::Duration budget, schedsim::core::Duration period);
     CbsServer& add_server(schedsim::core::Task& task);
+
+    // Configuration
+    void set_deadline_miss_policy(DeadlineMissPolicy policy);
+    void set_expected_arrivals(const schedsim::core::Task& task, std::size_t count);
+
+    // Policy convenience methods
+    void enable_grub();
+    void enable_cash();
+    void enable_power_aware_dvfs(schedsim::core::Duration cooldown);
+    void enable_basic_dpm(int target_cstate = 1);
+    void enable_ffa(schedsim::core::Duration cooldown, int sleep_cstate = 1);
+    void enable_csf(schedsim::core::Duration cooldown, int sleep_cstate = 1);
+    void enable_ffa_timer(schedsim::core::Duration cooldown, int sleep_cstate = 1);
+    void enable_csf_timer(schedsim::core::Duration cooldown, int sleep_cstate = 1);
+
+    // Utilization queries
+    double active_utilization() const;
+    double scheduler_utilization() const;
+    double max_scheduler_utilization() const;
+    double max_server_utilization() const;
 };
 
 // Extend with Python-friendly constructor
@@ -351,6 +448,26 @@ class SingleSchedulerAllocator {
 public:
     SingleSchedulerAllocator(schedsim::core::Engine& engine, Scheduler& scheduler);
     ~SingleSchedulerAllocator();
+};
+
+// Cluster class
+class Cluster {
+public:
+    Cluster(schedsim::core::ClockDomain& clock_domain, Scheduler& scheduler,
+            double perf_score, double reference_freq_max);
+
+    schedsim::core::ClockDomain& clock_domain();
+    Scheduler& scheduler();
+
+    double perf() const;
+    double scale_speed() const;
+    double u_target() const;
+    void set_u_target(double target);
+    double scaled_utilization(double task_util) const;
+
+    std::size_t processor_count() const;
+    double utilization() const;
+    bool can_admit(schedsim::core::Duration budget, schedsim::core::Duration period) const;
 };
 
 } // namespace algo
@@ -399,8 +516,254 @@ void schedule_arrivals(schedsim::core::Engine& engine, schedsim::core::Task& tas
 // Scenario writing functions
 void write_scenario(const ScenarioData& scenario, const std::filesystem::path& path);
 
+// --------------------------------------------------------------------------
+// Trace writers
+// --------------------------------------------------------------------------
+
+// NullTraceWriter - discards all traces (for performance testing)
+class NullTraceWriter : public schedsim::core::TraceWriter {
+public:
+    NullTraceWriter();
+    ~NullTraceWriter() override;
+};
+
+// TraceRecord - structured in-memory trace record
+struct TraceRecord {
+    double time;
+    std::string type;
+    // fields member ignored - use get_field/get_fields_dict %extend methods
+};
+
+%extend TraceRecord {
+    PyObject* get_field(const std::string& key) {
+        auto it = $self->fields.find(key);
+        if (it == $self->fields.end()) {
+            Py_RETURN_NONE;
+        }
+        return std::visit([](auto&& val) -> PyObject* {
+            using T = std::decay_t<decltype(val)>;
+            if constexpr (std::is_same_v<T, double>) {
+                return PyFloat_FromDouble(val);
+            } else if constexpr (std::is_same_v<T, uint64_t>) {
+                return PyLong_FromUnsignedLongLong(val);
+            } else if constexpr (std::is_same_v<T, std::string>) {
+                return PyUnicode_FromString(val.c_str());
+            }
+        }, it->second);
+    }
+
+    PyObject* get_fields_dict() {
+        PyObject* dict = PyDict_New();
+        for (const auto& [key, val] : $self->fields) {
+            PyObject* py_val = std::visit([](auto&& v) -> PyObject* {
+                using T = std::decay_t<decltype(v)>;
+                if constexpr (std::is_same_v<T, double>) {
+                    return PyFloat_FromDouble(v);
+                } else if constexpr (std::is_same_v<T, uint64_t>) {
+                    return PyLong_FromUnsignedLongLong(v);
+                } else if constexpr (std::is_same_v<T, std::string>) {
+                    return PyUnicode_FromString(v.c_str());
+                }
+            }, val);
+            PyDict_SetItemString(dict, key.c_str(), py_val);
+            Py_DECREF(py_val);
+        }
+        return dict;
+    }
+
+    PyObject* get_field_names() {
+        PyObject* list = PyList_New(0);
+        for (const auto& [key, val] : $self->fields) {
+            PyObject* py_key = PyUnicode_FromString(key.c_str());
+            PyList_Append(list, py_key);
+            Py_DECREF(py_key);
+        }
+        return list;
+    }
+}
+
+// MemoryTraceWriter - buffers traces in memory
+class MemoryTraceWriter : public schedsim::core::TraceWriter {
+public:
+    MemoryTraceWriter();
+    ~MemoryTraceWriter() override;
+    void clear();
+};
+
+%extend MemoryTraceWriter {
+    std::size_t record_count() {
+        return $self->records().size();
+    }
+
+    const schedsim::io::TraceRecord& record(std::size_t index) {
+        if (index >= $self->records().size()) {
+            throw std::out_of_range("TraceRecord index out of range");
+        }
+        return $self->records()[index];
+    }
+
+    // Convenience: compute metrics from this writer's recorded traces
+    schedsim::io::SimulationMetrics compute_metrics() {
+        return schedsim::io::compute_metrics($self->records());
+    }
+
+    // Time-series analysis on this writer's traces
+    std::vector<schedsim::io::FrequencyInterval> track_frequency_changes() {
+        return schedsim::io::track_frequency_changes($self->records());
+    }
+
+    std::vector<schedsim::io::CoreCountInterval> track_core_changes() {
+        return schedsim::io::track_core_changes($self->records());
+    }
+
+    std::vector<schedsim::io::ConfigInterval> track_config_changes() {
+        return schedsim::io::track_config_changes($self->records());
+    }
+}
+
+// --------------------------------------------------------------------------
+// Metrics
+// --------------------------------------------------------------------------
+
+// SimulationMetrics struct - scalar fields directly accessible,
+// map/vector fields via %extend methods
+struct SimulationMetrics {
+    uint64_t total_jobs;
+    uint64_t completed_jobs;
+    uint64_t deadline_misses;
+    uint64_t preemptions;
+    uint64_t context_switches;
+    double total_energy_mj;
+    double average_utilization;
+    uint64_t rejected_tasks;
+    uint64_t cluster_migrations;
+    uint64_t transitions;
+    uint64_t core_state_requests;
+    uint64_t frequency_requests;
+};
+
+%extend SimulationMetrics {
+    // energy_per_processor -> Python dict {proc_id: energy_mj}
+    PyObject* get_energy_per_processor() {
+        PyObject* dict = PyDict_New();
+        for (const auto& [proc_id, energy] : $self->energy_per_processor) {
+            PyObject* key = PyLong_FromUnsignedLongLong(proc_id);
+            PyObject* val = PyFloat_FromDouble(energy);
+            PyDict_SetItem(dict, key, val);
+            Py_DECREF(key);
+            Py_DECREF(val);
+        }
+        return dict;
+    }
+
+    // utilization_per_processor -> Python dict {proc_id: utilization}
+    PyObject* get_utilization_per_processor() {
+        PyObject* dict = PyDict_New();
+        for (const auto& [proc_id, util] : $self->utilization_per_processor) {
+            PyObject* key = PyLong_FromUnsignedLongLong(proc_id);
+            PyObject* val = PyFloat_FromDouble(util);
+            PyDict_SetItem(dict, key, val);
+            Py_DECREF(key);
+            Py_DECREF(val);
+        }
+        return dict;
+    }
+
+    // response_times_per_task -> Python dict {task_id: [float, ...]}
+    PyObject* get_response_times_per_task() {
+        PyObject* dict = PyDict_New();
+        for (const auto& [tid, times] : $self->response_times_per_task) {
+            PyObject* key = PyLong_FromUnsignedLongLong(tid);
+            PyObject* list = PyList_New(times.size());
+            for (std::size_t i = 0; i < times.size(); ++i) {
+                PyList_SET_ITEM(list, i, PyFloat_FromDouble(times[i]));
+            }
+            PyDict_SetItem(dict, key, list);
+            Py_DECREF(key);
+            Py_DECREF(list);
+        }
+        return dict;
+    }
+
+    // deadline_misses_per_task -> Python dict {task_id: count}
+    PyObject* get_deadline_misses_per_task() {
+        PyObject* dict = PyDict_New();
+        for (const auto& [tid, count] : $self->deadline_misses_per_task) {
+            PyObject* key = PyLong_FromUnsignedLongLong(tid);
+            PyObject* val = PyLong_FromUnsignedLongLong(count);
+            PyDict_SetItem(dict, key, val);
+            Py_DECREF(key);
+            Py_DECREF(val);
+        }
+        return dict;
+    }
+
+    // waiting_times_per_task -> Python dict {task_id: [float, ...]}
+    PyObject* get_waiting_times_per_task() {
+        PyObject* dict = PyDict_New();
+        for (const auto& [tid, times] : $self->waiting_times_per_task) {
+            PyObject* key = PyLong_FromUnsignedLongLong(tid);
+            PyObject* list = PyList_New(times.size());
+            for (std::size_t i = 0; i < times.size(); ++i) {
+                PyList_SET_ITEM(list, i, PyFloat_FromDouble(times[i]));
+            }
+            PyDict_SetItem(dict, key, list);
+            Py_DECREF(key);
+            Py_DECREF(list);
+        }
+        return dict;
+    }
+}
+
+// Compute metrics from JSON trace file
+SimulationMetrics compute_metrics_from_file(const std::filesystem::path& path);
+
+// Response time statistics
+struct ResponseTimeStats {
+    double min;
+    double max;
+    double mean;
+    double median;
+    double stddev;
+    double percentile_95;
+    double percentile_99;
+};
+
+// --------------------------------------------------------------------------
+// Time-series structs
+// --------------------------------------------------------------------------
+
+struct FrequencyInterval {
+    double start;
+    double stop;
+    double frequency;
+    uint64_t cluster_id;
+};
+
+struct CoreCountInterval {
+    double start;
+    double stop;
+    uint64_t active_cores;
+    uint64_t cluster_id;
+};
+
+struct ConfigInterval {
+    double start;
+    double stop;
+    double frequency;
+    uint64_t active_cores;
+};
+
 } // namespace io
 } // namespace schedsim
+
+// FileJsonTraceWriter - writes JSON traces to a file (owns the file handle)
+class FileJsonTraceWriter : public schedsim::core::TraceWriter {
+public:
+    FileJsonTraceWriter(const std::string& filename);
+    ~FileJsonTraceWriter() override;
+    void finalize();
+};
 
 // ============================================================================
 // Template instantiations
@@ -410,6 +773,9 @@ namespace std {
     %template(TaskParamsVector) vector<schedsim::io::TaskParams>;
     %template(JobParamsVector) vector<schedsim::io::JobParams>;
     %template(TaskPtrVector) vector<schedsim::core::Task*>;
+    %template(FrequencyIntervalVector) vector<schedsim::io::FrequencyInterval>;
+    %template(CoreCountIntervalVector) vector<schedsim::io::CoreCountInterval>;
+    %template(ConfigIntervalVector) vector<schedsim::io::ConfigInterval>;
 }
 
 // ============================================================================
@@ -427,6 +793,12 @@ PROC_CONTEXT_SWITCHING = ProcessorState_ContextSwitching
 PROC_RUNNING = ProcessorState_Running
 PROC_SLEEP = ProcessorState_Sleep
 PROC_CHANGING = ProcessorState_Changing
+
+# Convenience constants for DeadlineMissPolicy
+DM_CONTINUE = DeadlineMissPolicy_Continue
+DM_ABORT_JOB = DeadlineMissPolicy_AbortJob
+DM_ABORT_TASK = DeadlineMissPolicy_AbortTask
+DM_STOP_SIMULATION = DeadlineMissPolicy_StopSimulation
 
 def get_all_processors(engine):
     """Helper to get list of all processors from an engine."""
