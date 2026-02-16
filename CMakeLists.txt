@@ -40,6 +40,7 @@ endif()
 # New schedsim library options
 option(SCHEDSIM_BUILD_TESTS "Build schedsim unit tests" ON)
 option(SCHEDSIM_BUILD_EXAMPLES "Build schedsim example programs" OFF)
+option(SCHEDSIM_BUILD_BENCHMARKS "Build schedsim performance benchmarks" OFF)
 
 add_subdirectory(external/cxxopts)
 add_subdirectory(external/json)
