@@ -1,7 +1,10 @@
 #include <schedsim/algo/multi_cluster_allocator.hpp>
 
+#include <schedsim/algo/cluster.hpp>
 #include <schedsim/algo/error.hpp>
 #include <schedsim/algo/scheduler.hpp>
+
+#include <schedsim/core/clock_domain.hpp>
 
 namespace schedsim::algo {
 
@@ -29,20 +32,25 @@ void MultiClusterAllocator::on_job_arrival(core::Task& task, core::Job job) {
     if (!cluster) {
         engine_.trace([&](core::TraceWriter& w) {
             w.type("task_rejected");
-            w.field("task_id", static_cast<uint64_t>(task.id()));
+            w.field("tid", static_cast<uint64_t>(task.id()));
         });
         return;  // rejected
     }
 
     try {
         task_assignments_[&task] = cluster;
+        engine_.trace([&](core::TraceWriter& w) {
+            w.type("task_placed");
+            w.field("tid", static_cast<uint64_t>(task.id()));
+            w.field("cluster_id", static_cast<uint64_t>(cluster->clock_domain().id()));
+        });
         cluster->scheduler().on_job_arrival(task, std::move(job));
     } catch (const AdmissionError&) {
         // Scheduler rejected the task (capacity exceeded)
         task_assignments_.erase(&task);
         engine_.trace([&](core::TraceWriter& w) {
             w.type("task_rejected");
-            w.field("task_id", static_cast<uint64_t>(task.id()));
+            w.field("tid", static_cast<uint64_t>(task.id()));
         });
     }
 }

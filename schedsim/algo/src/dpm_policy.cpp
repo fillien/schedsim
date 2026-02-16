@@ -2,6 +2,8 @@
 
 #include <schedsim/algo/edf_scheduler.hpp>
 
+#include <schedsim/core/clock_domain.hpp>
+#include <schedsim/core/engine.hpp>
 #include <schedsim/core/processor.hpp>
 
 namespace schedsim::algo {
@@ -10,7 +12,7 @@ BasicDpmPolicy::BasicDpmPolicy(int target_cstate, core::Duration idle_threshold)
     : target_cstate_(target_cstate)
     , idle_threshold_(idle_threshold) {}
 
-void BasicDpmPolicy::on_processor_idle(EdfScheduler& /*scheduler*/, core::Processor& proc) {
+void BasicDpmPolicy::on_processor_idle(EdfScheduler& scheduler, core::Processor& proc) {
     // Check if processor is already sleeping
     if (proc.state() == core::ProcessorState::Sleep) {
         return;
@@ -25,6 +27,11 @@ void BasicDpmPolicy::on_processor_idle(EdfScheduler& /*scheduler*/, core::Proces
     // A more sophisticated implementation could schedule a timer
     if (idle_threshold_.count() == 0.0) {
         proc.request_cstate(target_cstate_);
+        scheduler.engine().trace([&](core::TraceWriter& w) {
+            w.type("proc_sleep");
+            w.field("cpu", static_cast<uint64_t>(proc.id()));
+            w.field("cluster_id", static_cast<uint64_t>(proc.clock_domain().id()));
+        });
         sleeping_processors_.insert(&proc);
     }
     // TODO: If idle_threshold > 0, schedule a timer and check again

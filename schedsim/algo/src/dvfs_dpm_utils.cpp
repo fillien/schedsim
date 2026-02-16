@@ -3,6 +3,7 @@
 #include <schedsim/algo/edf_scheduler.hpp>
 
 #include <schedsim/core/clock_domain.hpp>
+#include <schedsim/core/engine.hpp>
 #include <schedsim/core/processor.hpp>
 
 #include <algorithm>
@@ -37,7 +38,8 @@ std::size_t count_active_processors(std::span<core::Processor* const> procs) {
 }
 
 void sleep_excess_processors(std::span<core::Processor* const> procs,
-                             std::size_t target_active, int cstate) {
+                             std::size_t target_active, int cstate,
+                             core::Engine* engine) {
     std::size_t active = count_active_processors(procs);
     for (auto* proc : procs) {
         if (active <= target_active) {
@@ -45,16 +47,24 @@ void sleep_excess_processors(std::span<core::Processor* const> procs,
         }
         if (proc->state() == core::ProcessorState::Idle) {
             proc->request_cstate(cstate);
+            if (engine) {
+                engine->trace([&](core::TraceWriter& w) {
+                    w.type("proc_sleep");
+                    w.field("cpu", static_cast<uint64_t>(proc->id()));
+                    w.field("cluster_id", static_cast<uint64_t>(proc->clock_domain().id()));
+                });
+            }
             --active;
         }
     }
 }
 
-void apply_platform_target(EdfScheduler& /*scheduler*/, core::ClockDomain& domain,
+void apply_platform_target(EdfScheduler& scheduler, core::ClockDomain& domain,
                            const PlatformTarget& target, int sleep_cstate,
                            DvfsPolicy::FrequencyChangedCallback& on_freq_changed) {
     // DPM: sleep excess processors
-    sleep_excess_processors(domain.processors(), target.active_processors, sleep_cstate);
+    sleep_excess_processors(domain.processors(), target.active_processors, sleep_cstate,
+                            &scheduler.engine());
 
     // DVFS: set frequency if different
     if (target.frequency != domain.frequency()) {
