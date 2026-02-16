@@ -3,16 +3,21 @@
 
 #include <cxxopts.hpp>
 
+#include <algorithm>
+#include <filesystem>
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <vector>
 
 namespace {
 
 namespace io = schedsim::io;
+namespace fs = std::filesystem;
 
 struct Config {
     std::string trace_file;
+    std::string directory;
     bool summary{true};
     bool deadline_misses{false};
     bool response_times{false};
@@ -25,6 +30,7 @@ Config parse_args(int argc, char** argv) {
 
     options.add_options()
         ("trace-file", "JSON trace file", cxxopts::value<std::string>())
+        ("d,directory", "Process all *.json trace files in directory", cxxopts::value<std::string>())
         ("summary", "Print summary (default)")
         ("deadline-misses", "Show deadline miss details")
         ("response-times", "Show response time stats")
@@ -42,14 +48,20 @@ Config parse_args(int argc, char** argv) {
         std::exit(0);
     }
 
-    if (result.count("trace-file") == 0U) {
-        std::cerr << "Error: trace file is required" << std::endl;
+    Config config;
+    if (result.count("directory") != 0U) {
+        config.directory = result["directory"].as<std::string>();
+    }
+    if (result.count("trace-file") != 0U) {
+        config.trace_file = result["trace-file"].as<std::string>();
+    }
+
+    if (config.trace_file.empty() && config.directory.empty()) {
+        std::cerr << "Error: trace file or --directory is required" << std::endl;
         std::cerr << options.help() << std::endl;
         std::exit(64);
     }
 
-    Config config;
-    config.trace_file = result["trace-file"].as<std::string>();
     config.summary = true;  // Always show summary
     config.deadline_misses = result.count("deadline-misses") != 0U;
     config.response_times = result.count("response-times") != 0U;
@@ -208,12 +220,128 @@ void print_json_output(const Config& config, const io::SimulationMetrics& metric
     std::cout << "}" << std::endl;
 }
 
+// --- Batch processing ---
+
+std::vector<fs::path> find_trace_files(const fs::path& dir) {
+    std::vector<fs::path> files;
+    for (const auto& entry : fs::directory_iterator(dir)) {
+        if (entry.is_regular_file() && entry.path().extension() == ".json") {
+            files.push_back(entry.path());
+        }
+    }
+    std::sort(files.begin(), files.end());
+    return files;
+}
+
+void print_batch_csv(const Config& config,
+                     const std::vector<std::pair<std::string, io::SimulationMetrics>>& results)
+{
+    // CSV header
+    std::cout << "filename,total_jobs,completed_jobs,deadline_misses,preemptions,"
+              << "context_switches,average_utilization,transitions,"
+              << "cluster_migrations,core_state_requests,frequency_requests";
+    if (config.energy) {
+        std::cout << ",total_energy_mj";
+    }
+    std::cout << "\n";
+
+    for (const auto& [name, m] : results) {
+        std::cout << name
+                  << "," << m.total_jobs
+                  << "," << m.completed_jobs
+                  << "," << m.deadline_misses
+                  << "," << m.preemptions
+                  << "," << m.context_switches
+                  << "," << m.average_utilization
+                  << "," << m.transitions
+                  << "," << m.cluster_migrations
+                  << "," << m.core_state_requests
+                  << "," << m.frequency_requests;
+        if (config.energy) {
+            std::cout << "," << m.total_energy_mj;
+        }
+        std::cout << "\n";
+    }
+}
+
+void print_batch_text(const Config& config,
+                      const std::vector<std::pair<std::string, io::SimulationMetrics>>& results)
+{
+    for (const auto& [name, m] : results) {
+        std::cout << "=== " << name << " ===" << std::endl;
+        print_text_output(config, m);
+        std::cout << std::endl;
+    }
+}
+
+void print_batch_json(const Config& config,
+                      const std::vector<std::pair<std::string, io::SimulationMetrics>>& results)
+{
+    std::cout << "[" << std::endl;
+    for (std::size_t i = 0; i < results.size(); ++i) {
+        if (i > 0) {
+            std::cout << "," << std::endl;
+        }
+        std::cout << "  {\"filename\": \"" << results[i].first << "\", ";
+        std::cout << "\"metrics\": ";
+        // Inline JSON for this file's metrics
+        const auto& m = results[i].second;
+        std::cout << "{\"total_jobs\": " << m.total_jobs
+                  << ", \"completed_jobs\": " << m.completed_jobs
+                  << ", \"deadline_misses\": " << m.deadline_misses
+                  << ", \"preemptions\": " << m.preemptions
+                  << ", \"average_utilization\": " << m.average_utilization
+                  << ", \"transitions\": " << m.transitions
+                  << ", \"cluster_migrations\": " << m.cluster_migrations
+                  << ", \"core_state_requests\": " << m.core_state_requests
+                  << ", \"frequency_requests\": " << m.frequency_requests;
+        if (config.energy) {
+            std::cout << ", \"total_energy_mj\": " << m.total_energy_mj;
+        }
+        std::cout << "}}";
+    }
+    std::cout << std::endl << "]" << std::endl;
+}
+
+int run_batch(const Config& config) {
+    auto files = find_trace_files(config.directory);
+    if (files.empty()) {
+        std::cerr << "No .json files found in " << config.directory << std::endl;
+        return 1;
+    }
+
+    std::vector<std::pair<std::string, io::SimulationMetrics>> results;
+    for (const auto& file : files) {
+        try {
+            auto m = io::compute_metrics_from_file(file);
+            results.emplace_back(file.filename().string(), std::move(m));
+        } catch (const std::exception& e) {
+            std::cerr << "Warning: skipping " << file.filename() << ": " << e.what() << std::endl;
+        }
+    }
+
+    if (config.format == "csv") {
+        print_batch_csv(config, results);
+    } else if (config.format == "json") {
+        print_batch_json(config, results);
+    } else {
+        print_batch_text(config, results);
+    }
+    return 0;
+}
+
 } // anonymous namespace
 
 int main(int argc, char** argv) {
     try {
         auto config = parse_args(argc, argv);
 
+        // Batch mode
+        if (!config.directory.empty()) {
+            return run_batch(config);
+        }
+
+        // Single file mode
         auto metrics = io::compute_metrics_from_file(config.trace_file);
 
         if (config.format == "text") {
