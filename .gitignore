@@ -39,3 +39,4 @@
 *.pyc
 .DS_Store
 .direnv
+package-lock.json
