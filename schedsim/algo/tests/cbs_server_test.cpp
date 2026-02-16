@@ -130,6 +130,8 @@ TEST_F(CbsServerTest, StateTransition_RunningToInactive_NoMoreJobs) {
     server.dispatch();
     EXPECT_EQ(server.state(), CbsServer::State::Running);
 
+    // Dequeue the completed job first (as EdfScheduler does)
+    server.dequeue_job();
     server.complete_job(time(2.0));
 
     EXPECT_EQ(server.state(), CbsServer::State::Inactive);

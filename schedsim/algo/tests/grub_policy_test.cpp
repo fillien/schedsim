@@ -4,6 +4,7 @@
 #include <schedsim/algo/edf_scheduler.hpp>
 
 #include <schedsim/core/engine.hpp>
+#include <schedsim/core/job.hpp>
 #include <schedsim/core/platform.hpp>
 #include <schedsim/core/task.hpp>
 
@@ -98,13 +99,16 @@ TEST_F(GrubPolicyTest, ComputeVirtualTime_GrubFormula) {
     // active_util = 0.2 + 0.3 = 0.5
     EXPECT_DOUBLE_EQ(policy.active_utilization(), 0.5);
 
-    // GRUB formula: vt += exec_time / active_util
-    // vt = 0 + 1.0 / 0.5 = 2.0
+    // M-GRUB formula: vt += (bandwidth / U_i) * exec_time
+    // m=1, u_max=0.3, total_u=0.5
+    // inactive_bw = 1 - 0*0.3 - 0.5 = 0.5
+    // bandwidth = max(1 - 0.5/1, 0.01) = 0.5
+    // vt = 0 + (0.5 / 0.2) * 1.0 = 2.5
     TimePoint new_vt = policy.compute_virtual_time(server, time(0.0), Duration{1.0});
-    EXPECT_DOUBLE_EQ(new_vt.time_since_epoch().count(), 2.0);
+    EXPECT_DOUBLE_EQ(new_vt.time_since_epoch().count(), 2.5);
 }
 
-TEST_F(GrubPolicyTest, ComputeVirtualTime_ClampsMinUtilization) {
+TEST_F(GrubPolicyTest, ComputeVirtualTime_NoServersInScheduler) {
     auto& task = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
     engine_.platform().finalize();
 
@@ -113,16 +117,15 @@ TEST_F(GrubPolicyTest, ComputeVirtualTime_ClampsMinUtilization) {
 
     GrubPolicy policy(sched);
 
-    // active_util = 0 (no servers active)
+    // No servers activated → scheduler_utils_ empty → bandwidth = 1.0
     EXPECT_DOUBLE_EQ(policy.active_utilization(), 0.0);
 
-    // Should clamp to min_utilization (0.01) to avoid division by zero
-    // vt = 0 + 1.0 / 0.01 = 100.0
+    // M-GRUB: vt += (bandwidth / U_i) * exec_time = (1.0 / 0.2) * 1.0 = 5.0
     TimePoint new_vt = policy.compute_virtual_time(server, time(0.0), Duration{1.0});
-    EXPECT_DOUBLE_EQ(new_vt.time_since_epoch().count(), 100.0);
+    EXPECT_DOUBLE_EQ(new_vt.time_since_epoch().count(), 5.0);
 }
 
-TEST_F(GrubPolicyTest, EarlyCompletionReturnsTrue) {
+TEST_F(GrubPolicyTest, EarlyCompletionReturnsTrueWhenVtBetweenNowAndDeadline) {
     auto& task = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
     engine_.platform().finalize();
 
@@ -131,7 +134,14 @@ TEST_F(GrubPolicyTest, EarlyCompletionReturnsTrue) {
 
     GrubPolicy policy(sched);
 
-    // GRUB should return true to enter NonContending state
+    // Activate server so it has a valid deadline (now + period = 10.0)
+    server.enqueue_job(Job{task, Duration{1.0}, time(10.0)});
+    server.activate(time(0.0));
+    server.dispatch();
+    // Set VT to 5.0 (between now=0.0 and deadline=10.0)
+    server.set_virtual_time(time(5.0));
+
+    // M-GRUB: NonContending when vt > now && vt < deadline
     bool enter_nc = policy.on_early_completion(server, Duration{1.0});
     EXPECT_TRUE(enter_nc);
 }

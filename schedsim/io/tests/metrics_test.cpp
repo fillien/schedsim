@@ -15,34 +15,34 @@ protected:
         traces.push_back(TraceRecord{
             .time = 0.0,
             .type = "job_arrival",
-            .fields = {{"task_id", uint64_t{0}}, {"job_id", uint64_t{0}}}
+            .fields = {{"tid", uint64_t{0}}, {"job_id", uint64_t{0}}}
         });
         traces.push_back(TraceRecord{
             .time = 0.0,
             .type = "job_arrival",
-            .fields = {{"task_id", uint64_t{1}}, {"job_id", uint64_t{0}}}
+            .fields = {{"tid", uint64_t{1}}, {"job_id", uint64_t{0}}}
         });
         traces.push_back(TraceRecord{
             .time = 10.0,
             .type = "job_arrival",
-            .fields = {{"task_id", uint64_t{0}}, {"job_id", uint64_t{1}}}
+            .fields = {{"tid", uint64_t{0}}, {"job_id", uint64_t{1}}}
         });
 
         // Job completions
         traces.push_back(TraceRecord{
             .time = 2.0,
-            .type = "job_completion",
-            .fields = {{"task_id", uint64_t{0}}, {"job_id", uint64_t{0}}}
+            .type = "job_finished",
+            .fields = {{"tid", uint64_t{0}}, {"job_id", uint64_t{0}}}
         });
         traces.push_back(TraceRecord{
             .time = 5.0,
-            .type = "job_completion",
-            .fields = {{"task_id", uint64_t{1}}, {"job_id", uint64_t{0}}}
+            .type = "job_finished",
+            .fields = {{"tid", uint64_t{1}}, {"job_id", uint64_t{0}}}
         });
         traces.push_back(TraceRecord{
             .time = 12.0,
-            .type = "job_completion",
-            .fields = {{"task_id", uint64_t{0}}, {"job_id", uint64_t{1}}}
+            .type = "job_finished",
+            .fields = {{"tid", uint64_t{0}}, {"job_id", uint64_t{1}}}
         });
 
         return traces;
@@ -102,21 +102,20 @@ TEST_F(MetricsTest, DeadlineMisses) {
 
 TEST_F(MetricsTest, Preemptions) {
     std::vector<TraceRecord> traces;
-    traces.push_back(TraceRecord{.time = 1.0, .type = "preemption", .fields = {}});
-    traces.push_back(TraceRecord{.time = 2.0, .type = "preemption", .fields = {}});
+    traces.push_back(TraceRecord{.time = 1.0, .type = "task_preempted", .fields = {}});
+    traces.push_back(TraceRecord{.time = 2.0, .type = "task_preempted", .fields = {}});
 
     auto metrics = compute_metrics(traces);
     EXPECT_EQ(metrics.preemptions, 2u);
 }
 
-TEST_F(MetricsTest, ContextSwitches) {
+TEST_F(MetricsTest, ContextSwitchesIgnored) {
+    // context_switch events are no longer emitted; verify metric stays at 0
     std::vector<TraceRecord> traces;
     traces.push_back(TraceRecord{.time = 1.0, .type = "context_switch", .fields = {}});
-    traces.push_back(TraceRecord{.time = 2.0, .type = "context_switch", .fields = {}});
-    traces.push_back(TraceRecord{.time = 3.0, .type = "context_switch", .fields = {}});
 
     auto metrics = compute_metrics(traces);
-    EXPECT_EQ(metrics.context_switches, 3u);
+    EXPECT_EQ(metrics.context_switches, 0u);
 }
 
 TEST_F(MetricsTest, EnergyMetrics) {
@@ -225,16 +224,16 @@ TEST_F(MetricsTest, DeadlineMissesPerTask) {
     // Task 0 misses 2 deadlines
     traces.push_back(TraceRecord{
         .time = 10.0, .type = "deadline_miss",
-        .fields = {{"task_id", uint64_t{0}}}
+        .fields = {{"tid", uint64_t{0}}}
     });
     traces.push_back(TraceRecord{
         .time = 20.0, .type = "deadline_miss",
-        .fields = {{"task_id", uint64_t{0}}}
+        .fields = {{"tid", uint64_t{0}}}
     });
     // Task 1 misses 1 deadline
     traces.push_back(TraceRecord{
         .time = 15.0, .type = "deadline_miss",
-        .fields = {{"task_id", uint64_t{1}}}
+        .fields = {{"tid", uint64_t{1}}}
     });
 
     auto metrics = compute_metrics(traces);
@@ -248,11 +247,11 @@ TEST_F(MetricsTest, RejectedTasks) {
     std::vector<TraceRecord> traces;
     traces.push_back(TraceRecord{
         .time = 1.0, .type = "task_rejected",
-        .fields = {{"task_id", uint64_t{5}}}
+        .fields = {{"tid", uint64_t{5}}}
     });
     traces.push_back(TraceRecord{
         .time = 2.0, .type = "task_rejected",
-        .fields = {{"task_id", uint64_t{6}}}
+        .fields = {{"tid", uint64_t{6}}}
     });
 
     auto metrics = compute_metrics(traces);
@@ -262,19 +261,17 @@ TEST_F(MetricsTest, RejectedTasks) {
 TEST_F(MetricsTest, FrequencyChanges) {
     std::vector<TraceRecord> traces;
     traces.push_back(TraceRecord{
-        .time = 5.0, .type = "frequency_change",
+        .time = 5.0, .type = "frequency_update",
         .fields = {
-            {"clock_domain_id", uint64_t{0}},
-            {"old_freq_mhz", 2000.0},
-            {"new_freq_mhz", 1000.0}
+            {"cluster_id", uint64_t{0}},
+            {"frequency", 1000.0}
         }
     });
     traces.push_back(TraceRecord{
-        .time = 10.0, .type = "frequency_change",
+        .time = 10.0, .type = "frequency_update",
         .fields = {
-            {"clock_domain_id", uint64_t{1}},
-            {"old_freq_mhz", 1500.0},
-            {"new_freq_mhz", 500.0}
+            {"cluster_id", uint64_t{1}},
+            {"frequency", 500.0}
         }
     });
 
@@ -282,11 +279,11 @@ TEST_F(MetricsTest, FrequencyChanges) {
 
     ASSERT_EQ(metrics.frequency_changes.size(), 2u);
     EXPECT_DOUBLE_EQ(metrics.frequency_changes[0].time, 5.0);
-    EXPECT_EQ(metrics.frequency_changes[0].clock_domain_id, 0u);
-    EXPECT_DOUBLE_EQ(metrics.frequency_changes[0].old_freq_mhz, 2000.0);
-    EXPECT_DOUBLE_EQ(metrics.frequency_changes[0].new_freq_mhz, 1000.0);
+    EXPECT_EQ(metrics.frequency_changes[0].cluster_id, 0u);
+    EXPECT_DOUBLE_EQ(metrics.frequency_changes[0].frequency, 1000.0);
     EXPECT_DOUBLE_EQ(metrics.frequency_changes[1].time, 10.0);
-    EXPECT_EQ(metrics.frequency_changes[1].clock_domain_id, 1u);
+    EXPECT_EQ(metrics.frequency_changes[1].cluster_id, 1u);
+    EXPECT_DOUBLE_EQ(metrics.frequency_changes[1].frequency, 500.0);
 }
 
 TEST_F(MetricsTest, WaitingTimes) {
@@ -294,20 +291,20 @@ TEST_F(MetricsTest, WaitingTimes) {
     // Task 0, Job 0: arrives at t=0, starts at t=1
     traces.push_back(TraceRecord{
         .time = 0.0, .type = "job_arrival",
-        .fields = {{"task_id", uint64_t{0}}, {"job_id", uint64_t{0}}}
+        .fields = {{"tid", uint64_t{0}}, {"job_id", uint64_t{0}}}
     });
     traces.push_back(TraceRecord{
-        .time = 1.0, .type = "job_start",
-        .fields = {{"task_id", uint64_t{0}}, {"job_id", uint64_t{0}}}
+        .time = 1.0, .type = "task_scheduled",
+        .fields = {{"tid", uint64_t{0}}, {"job_id", uint64_t{0}}}
     });
     // Task 0, Job 1: arrives at t=5, starts at t=8
     traces.push_back(TraceRecord{
         .time = 5.0, .type = "job_arrival",
-        .fields = {{"task_id", uint64_t{0}}, {"job_id", uint64_t{1}}}
+        .fields = {{"tid", uint64_t{0}}, {"job_id", uint64_t{1}}}
     });
     traces.push_back(TraceRecord{
-        .time = 8.0, .type = "job_start",
-        .fields = {{"task_id", uint64_t{0}}, {"job_id", uint64_t{1}}}
+        .time = 8.0, .type = "task_scheduled",
+        .fields = {{"tid", uint64_t{0}}, {"job_id", uint64_t{1}}}
     });
 
     auto metrics = compute_metrics(traces);
@@ -321,10 +318,10 @@ TEST_F(MetricsTest, WaitingTimes) {
 
 TEST_F(MetricsTest, WaitingTimesMissingStart) {
     std::vector<TraceRecord> traces;
-    // Arrival without a matching job_start — should not crash or produce entry
+    // Arrival without a matching task_scheduled — should not crash or produce entry
     traces.push_back(TraceRecord{
         .time = 0.0, .type = "job_arrival",
-        .fields = {{"task_id", uint64_t{0}}, {"job_id", uint64_t{0}}}
+        .fields = {{"tid", uint64_t{0}}, {"job_id", uint64_t{0}}}
     });
 
     auto metrics = compute_metrics(traces);

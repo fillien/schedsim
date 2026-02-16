@@ -15,6 +15,13 @@
 using namespace schedsim::algo;
 using namespace schedsim::core;
 
+// Test-only subclass to expose protected compute_target()
+class TestableFfaPolicy : public FfaPolicy {
+public:
+    using FfaPolicy::FfaPolicy;
+    using FfaPolicy::compute_target;
+};
+
 // Multi-processor fixture with discrete frequency modes and freq_eff
 class FfaPolicyTest : public ::testing::Test {
 protected:
@@ -264,4 +271,112 @@ TEST_F(FfaPolicyTest, FrequencyCallbackInvoked) {
     policy.on_utilization_changed(sched, *clock_domain_);
 
     EXPECT_TRUE(callback_invoked);
+}
+
+// ---------------------------------------------------------------------------
+// Parametric compute_target() tests
+// ---------------------------------------------------------------------------
+
+TEST_F(FfaPolicyTest, ComputeTarget_BelowFreqEff_CoreReduction) {
+    engine_.platform().finalize();
+    TestableFfaPolicy policy(engine_);
+
+    // U_active=0.4, U_max=0.1, m=4
+    // freq_min = 2000 * (0.4 + 3*0.1)/4 = 2000 * 0.7/4 = 350
+    // 350 < freq_eff(1000) → freq_eff, ceil(4*350/1000)=ceil(1.4)=2
+    auto target = policy.compute_target(0.4, 0.1, 4, *clock_domain_);
+    EXPECT_DOUBLE_EQ(target.frequency.mhz, 1000.0);
+    EXPECT_EQ(target.active_processors, 2u);
+}
+
+TEST_F(FfaPolicyTest, ComputeTarget_AboveFreqEff_AllCores) {
+    engine_.platform().finalize();
+    TestableFfaPolicy policy(engine_);
+
+    // U_active=2.0, U_max=0.5, m=4
+    // freq_min = 2000 * (2.0 + 3*0.5)/4 = 2000 * 3.5/4 = 1750
+    // 1750 >= freq_eff(1000) → ceil_to_mode(1750)=2000, all 4 cores
+    auto target = policy.compute_target(2.0, 0.5, 4, *clock_domain_);
+    EXPECT_DOUBLE_EQ(target.frequency.mhz, 2000.0);
+    EXPECT_EQ(target.active_processors, 4u);
+}
+
+TEST_F(FfaPolicyTest, ComputeTarget_ExactlyAtFreqEff) {
+    engine_.platform().finalize();
+    TestableFfaPolicy policy(engine_);
+
+    // U_active=1.4, U_max=0.2, m=4
+    // freq_min = 2000 * (1.4 + 3*0.2)/4 = 2000 * 2.0/4 = 1000
+    // 1000 >= freq_eff(1000) → NOT less than freq_eff → else branch
+    // ceil_to_mode(1000) = 1000, all 4 cores
+    auto target = policy.compute_target(1.4, 0.2, 4, *clock_domain_);
+    EXPECT_DOUBLE_EQ(target.frequency.mhz, 1000.0);
+    EXPECT_EQ(target.active_processors, 4u);
+}
+
+TEST_F(FfaPolicyTest, ComputeTarget_SingleCore) {
+    // Create a single-processor clock domain for this test
+    Engine engine1;
+    auto& pt = engine1.platform().add_processor_type("cpu", 1.0);
+    auto& cd = engine1.platform().add_clock_domain(Frequency{200.0}, Frequency{2000.0});
+    cd.set_frequency_modes({
+        Frequency{200.0}, Frequency{500.0}, Frequency{800.0},
+        Frequency{1000.0}, Frequency{1500.0}, Frequency{2000.0}
+    });
+    cd.set_freq_eff(Frequency{1000.0});
+    auto& pd = engine1.platform().add_power_domain({
+        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}},
+        {1, CStateScope::PerProcessor, Duration{0.001}, Power{10.0}}
+    });
+    engine1.platform().add_processor(pt, cd, pd);
+    engine1.platform().finalize();
+
+    TestableFfaPolicy policy(engine1);
+
+    // U_active=0.5, U_max=0.5, m=1
+    // freq_min = 2000 * (0.5 + 0*0.5)/1 = 1000
+    // 1000 >= freq_eff(1000) → ceil_to_mode(1000)=1000, 1 core
+    auto target = policy.compute_target(0.5, 0.5, 1, cd);
+    EXPECT_DOUBLE_EQ(target.frequency.mhz, 1000.0);
+    EXPECT_EQ(target.active_processors, 1u);
+}
+
+TEST_F(FfaPolicyTest, ComputeTarget_FullLoad) {
+    engine_.platform().finalize();
+    TestableFfaPolicy policy(engine_);
+
+    // U_active=4.0, U_max=1.0, m=4
+    // freq_min = 2000 * (4.0 + 3*1.0)/4 = 2000 * 7/4 = 3500 → min(3500,2000)=2000
+    // 2000 >= freq_eff(1000) → ceil_to_mode(2000)=2000, all 4 cores
+    auto target = policy.compute_target(4.0, 1.0, 4, *clock_domain_);
+    EXPECT_DOUBLE_EQ(target.frequency.mhz, 2000.0);
+    EXPECT_EQ(target.active_processors, 4u);
+}
+
+TEST_F(FfaPolicyTest, ComputeTarget_ZeroMaxUtil) {
+    engine_.platform().finalize();
+    TestableFfaPolicy policy(engine_);
+
+    // U_active=0.2, U_max=0.0, m=4
+    // freq_min = 2000 * (0.2 + 3*0.0)/4 = 2000 * 0.2/4 = 100
+    // 100 < freq_eff(1000) → freq_eff, ceil(4*100/1000)=ceil(0.4)=1
+    auto target = policy.compute_target(0.2, 0.0, 4, *clock_domain_);
+    EXPECT_DOUBLE_EQ(target.frequency.mhz, 1000.0);
+    EXPECT_EQ(target.active_processors, 1u);
+}
+
+TEST_F(FfaPolicyTest, ComputeTarget_NoFreqEff_LowUtil) {
+    // freq_eff=0 → else branch always taken
+    clock_domain_->set_freq_eff(Frequency{0.0});
+    engine_.platform().finalize();
+
+    TestableFfaPolicy policy(engine_);
+
+    // U_active=0.2, U_max=0.05, m=4
+    // freq_min = 2000 * (0.2 + 3*0.05)/4 = 2000 * 0.35/4 = 175
+    // freq_eff=0 → !(0>0 && 175<0) → else branch
+    // ceil_to_mode(175) = 200, all 4 cores
+    auto target = policy.compute_target(0.2, 0.05, 4, *clock_domain_);
+    EXPECT_DOUBLE_EQ(target.frequency.mhz, 200.0);
+    EXPECT_EQ(target.active_processors, 4u);
 }

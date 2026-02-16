@@ -25,6 +25,8 @@ add_executable(schedsim_algo_tests
     # FFA/CSF policy tests
     ffa_policy_test.cpp
     csf_policy_test.cpp
+    # FFA/CSF integration tests
+    ffa_csf_integration_test.cpp
     # Cluster, multi-cluster allocator, and timer policy tests
     cluster_test.cpp
     multi_cluster_allocator_test.cpp

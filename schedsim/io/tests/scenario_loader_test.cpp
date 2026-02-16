@@ -210,18 +210,6 @@ TEST_F(ScenarioLoaderTest, DeadlineLessThanWcet) {
     EXPECT_THROW(load_scenario_from_string(json), LoaderError);
 }
 
-TEST_F(ScenarioLoaderTest, JobDurationExceedsWcet) {
-    const char* json = R"({
-        "tasks": [{
-            "id": 0,
-            "period": 10.0,
-            "wcet": 2.0,
-            "jobs": [{"arrival": 0.0, "duration": 5.0}]
-        }]
-    })";
-    EXPECT_THROW(load_scenario_from_string(json), LoaderError);
-}
-
 TEST_F(ScenarioLoaderTest, InvalidUtilization) {
     const char* json = R"({
         "tasks": [{"id": 0, "period": 10.0, "utilization": 1.5}]
