@@ -67,10 +67,13 @@ class ClusterInfo:
     effective_freq: float
     perf_score: float
     freq_max: float = 0.0
+    power_model: list = None  # [a0, a1, a2, a3] coefficients
 
     def __post_init__(self):
         self.frequencies = sorted(self.frequencies, reverse=True)
         self.freq_max = self.frequencies[0]
+        if self.power_model is None:
+            self.power_model = [0.0, 0.0, 0.0, 0.0]
 
     def ceil_to_mode(self, freq: float) -> float:
         """Round up to the next available frequency mode (mirrors C++ logic)."""
@@ -83,6 +86,12 @@ class ClusterInfo:
                 return self.frequencies[i - 1]
         # All frequencies >= freq means freq <= smallest; return smallest
         return self.frequencies[-1]
+
+    def power_at_freq(self, freq_mhz: float) -> float:
+        """Compute power in mW at given frequency. Matches clock_domain.cpp."""
+        f_ghz = freq_mhz / 1000.0
+        a = self.power_model
+        return a[0] + a[1] * f_ghz + a[2] * f_ghz**2 + a[3] * f_ghz**3
 
     @property
     def scale_speed(self) -> float:
@@ -102,12 +111,14 @@ def load_platform(path: str) -> list:
 
     clusters = []
     for i, c in enumerate(data["clusters"]):
+        power_model = c.get("power_model", [0.0, 0.0, 0.0, 0.0])
         ci = ClusterInfo(
             cluster_id=i,  # 0-based, matching new architecture clock domain IDs
             num_procs=c["procs"],
             frequencies=c["frequencies"],
             effective_freq=c["effective_freq"],
             perf_score=c["perf_score"],
+            power_model=power_model,
         )
         clusters.append(ci)
 
@@ -856,7 +867,7 @@ class StateTracker:
 
 
 def run_simulation(schedsim: str, scenario: str, platform: str,
-                   scheduler: str) -> Optional[list]:
+                   scheduler: str, extra_flags: list = None) -> Optional[list]:
     """Run schedsim-new and return parsed trace, or None on failure."""
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
         tmp_path = tmp.name
@@ -867,6 +878,7 @@ def run_simulation(schedsim: str, scenario: str, platform: str,
             "-i", scenario,
             "-p", platform,
             *SCHED_FLAGS.get(scheduler, []),
+            *(extra_flags or []),
             "-o", tmp_path,
         ]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
@@ -885,10 +897,130 @@ def run_simulation(schedsim: str, scenario: str, platform: str,
             pass
 
 
+class EnergyReconstructor:
+    """Reconstruct energy from trace events and compare with sim_finished total.
+
+    Tracks per-processor active/sleeping state and per-cluster frequency to
+    compute energy as: sum over intervals of P(freq) * active_cores * duration.
+    Sleeping cores contribute 0 mW (matching exynos5422LITTLE C-state power).
+    """
+
+    def __init__(self, clusters: list):
+        self.clusters = {c.cluster_id: c for c in clusters}
+        # Per-cluster frequency (initialized to f_max)
+        self.cluster_freq: dict[int, float] = {}
+        # Per-cluster active core count (all cores start idle = active)
+        self.active_cores: dict[int, int] = {}
+        # Per-processor: True = active (idle/running), False = sleeping
+        self.proc_active: dict[int, bool] = {}
+        # Map cpu -> cluster_id
+        self.proc_cluster: dict[int, int] = {}
+
+        # Interval tracking: (cluster_id, freq, active_cores, start_time, end_time)
+        self.intervals: list[tuple[int, float, int, float, float]] = []
+        self.last_change_time: dict[int, float] = {}
+        self.reported_energy: Optional[float] = None
+
+        # Initialize
+        cpu_id = 0
+        for c in clusters:
+            self.cluster_freq[c.cluster_id] = c.freq_max
+            self.active_cores[c.cluster_id] = c.num_procs
+            self.last_change_time[c.cluster_id] = 0.0
+            for _ in range(c.num_procs):
+                self.proc_active[cpu_id] = True
+                self.proc_cluster[cpu_id] = c.cluster_id
+                cpu_id += 1
+
+    def _close_interval(self, cluster_id: int, time: float):
+        """Close current interval for a cluster and record it."""
+        start = self.last_change_time.get(cluster_id, 0.0)
+        if time > start:
+            freq = self.cluster_freq.get(cluster_id, 0.0)
+            cores = self.active_cores.get(cluster_id, 0)
+            self.intervals.append((cluster_id, freq, cores, start, time))
+        self.last_change_time[cluster_id] = time
+
+    def process_event(self, time: float, event: dict):
+        etype = event["type"]
+
+        if etype == "frequency_update":
+            cluster_id = event["cluster_id"]
+            freq = event["frequency"]
+            self._close_interval(cluster_id, time)
+            self.cluster_freq[cluster_id] = freq
+
+        elif etype == "proc_sleep":
+            cpu = event["cpu"]
+            cluster_id = event["cluster_id"]
+            # Only decrement if this core was actually active
+            if self.proc_active.get(cpu, True):
+                self._close_interval(cluster_id, time)
+                self.proc_active[cpu] = False
+                self.active_cores[cluster_id] = max(
+                    0, self.active_cores.get(cluster_id, 0) - 1)
+
+        elif etype == "proc_activated":
+            cpu = event["cpu"]
+            cluster_id = event["cluster_id"]
+            # Only increment if this core was actually sleeping
+            if not self.proc_active.get(cpu, True):
+                self._close_interval(cluster_id, time)
+                self.proc_active[cpu] = True
+                self.active_cores[cluster_id] = \
+                    self.active_cores.get(cluster_id, 0) + 1
+
+        elif etype == "sim_finished":
+            self.reported_energy = event.get("total_energy_mj")
+            # Close all open intervals
+            for cid in self.clusters:
+                self._close_interval(cid, time)
+
+    def _compute_energy(self) -> float:
+        """Compute total energy from recorded intervals."""
+        total_energy = 0.0
+        for cid, freq, cores, start, end in self.intervals:
+            cluster = self.clusters.get(cid)
+            if cluster is None:
+                continue
+            duration = end - start
+            if duration <= 0:
+                continue
+            power_per_core = cluster.power_at_freq(freq)
+            total_energy += power_per_core * cores * duration
+        return total_energy
+
+    def check(self) -> Optional[str]:
+        """Compare reconstructed vs reported energy. Returns error message or None."""
+        if self.reported_energy is None:
+            return "sim_finished has no total_energy_mj (--energy not passed?)"
+
+        reconstructed = self._compute_energy()
+        reported = self.reported_energy
+
+        # Tolerance: max(1e-3, 1% relative)
+        tolerance = max(1e-3, 0.01 * abs(reported))
+        diff = abs(reconstructed - reported)
+        if diff > tolerance:
+            return (f"Energy mismatch: reconstructed={reconstructed:.4f} mJ "
+                    f"vs reported={reported:.4f} mJ (diff={diff:.4f}, tol={tolerance:.4f})")
+        return None
+
+
 def verify_trace(trace: list, clusters: list, tasks: list,
-                 sched_name: str, dump_violations: bool = False) -> list:
+                 sched_name: str, dump_violations: bool = False,
+                 check_energy: bool = False) -> list:
     """Process trace events and check all invariants. Return violations."""
     tracker = StateTracker(clusters, tasks, dump_violations=dump_violations)
+
+    # Energy reconstructor (only if --check-energy)
+    energy_checker = EnergyReconstructor(clusters) if check_energy else None
+
+    # Guard: skip energy check if all power model coefficients are zero
+    if energy_checker:
+        all_zero = all(all(c == 0.0 for c in cl.power_model) for cl in clusters)
+        if all_zero:
+            energy_checker = None
 
     # Pre-scan trace for all job_arrival times per tid
     for entry in trace:
@@ -916,6 +1048,10 @@ def verify_trace(trace: list, clusters: list, tasks: list,
         # Process all events in this batch, running checkers as appropriate
         for event in batch:
             etype = event["type"]
+
+            # Feed energy reconstructor
+            if energy_checker:
+                energy_checker.process_event(current_time, event)
 
             # Process event to update state FIRST for some events,
             # AFTER checking for others
@@ -956,21 +1092,31 @@ def verify_trace(trace: list, clusters: list, tasks: list,
             else:
                 tracker.process_event(current_time, event)
 
+    # Check energy invariant
+    if energy_checker:
+        err = energy_checker.check()
+        if err:
+            tracker.add_violation("energy", 0.0, None, err)
+
     return tracker.violations
 
 
 def run_and_verify(schedsim, scenario_path, platform_path, sched,
-                   clusters, tasks, scenario_name, dump_violations=False):
+                   clusters, tasks, scenario_name, dump_violations=False,
+                   check_energy=False):
     """Run simulation + verification for one (scenario, scheduler) pair.
 
     Designed to be called from a process pool. Returns
     (scenario_name, sched, violations_or_None).
     """
-    trace = run_simulation(schedsim, scenario_path, platform_path, sched)
+    extra_flags = ["--energy"] if check_energy else None
+    trace = run_simulation(schedsim, scenario_path, platform_path, sched,
+                           extra_flags=extra_flags)
     if trace is None:
         return (scenario_name, sched, None)
     violations = verify_trace(trace, clusters, tasks, sched,
-                              dump_violations=dump_violations)
+                              dump_violations=dump_violations,
+                              check_energy=check_energy)
     return (scenario_name, sched, violations)
 
 
@@ -1024,6 +1170,7 @@ INVARIANT_NAMES = [
     "frequency_formula",
     "ffa_frequency",
     "csf_frequency",
+    "energy",
 ]
 
 INVARIANT_LABELS = {
@@ -1035,6 +1182,7 @@ INVARIANT_LABELS = {
     "frequency_formula": "Frequency (PA)",
     "ffa_frequency": "Frequency (FFA)",
     "csf_frequency": "Frequency (CSF)",
+    "energy": "Energy",
 }
 
 
@@ -1231,6 +1379,9 @@ def main():
     parser.add_argument(
         "--scenario-filter", default=None,
         help="Only run scenarios whose name contains this substring")
+    parser.add_argument(
+        "--check-energy", action="store_true",
+        help="Enable energy reconstruction invariant check (requires --energy in sim)")
     args = parser.parse_args()
 
     # Resolve paths relative to repo root
@@ -1304,8 +1455,10 @@ def main():
                 label = f"[{done}/{total}] {scenario_name}:{sched}"
                 print(f"  Running {label}...", end=" ", flush=True)
 
+                extra_flags = ["--energy"] if args.check_energy else None
                 trace = run_simulation(
-                    schedsim_path, scenario_path, platform_path, sched)
+                    schedsim_path, scenario_path, platform_path, sched,
+                    extra_flags=extra_flags)
 
                 if trace is None:
                     print("SKIP (simulation failed)")
@@ -1313,7 +1466,8 @@ def main():
                     continue
 
                 violations = verify_trace(trace, clusters, tasks, sched,
-                                          dump_violations=args.dump_violations)
+                                          dump_violations=args.dump_violations,
+                                          check_energy=args.check_energy)
 
                 if violations:
                     print(f"FAIL ({len(violations)} violations)")
@@ -1377,7 +1531,8 @@ def main():
                     fut = pool.submit(
                         run_and_verify, schedsim_path, scenario_path,
                         platform_path, sched, clusters, tasks,
-                        scenario_name, dump_violations=args.dump_violations)
+                        scenario_name, dump_violations=args.dump_violations,
+                        check_energy=args.check_energy)
                     futures[fut] = (scenario_name, sched, ulevel)
 
                 for future in concurrent.futures.as_completed(futures):
