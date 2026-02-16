@@ -203,6 +203,11 @@ class StateTracker:
 
         self.violations: list[Violation] = []
 
+        # PA frequency check: max_ever_scheduler_util per cluster
+        # Tracks the maximum server utilization ever seen in the in-scheduler set
+        # (never decremented on detach, matching C++ GrubPolicy behavior)
+        self.max_ever_scheduler_util: dict[int, float] = {c.cluster_id: 0.0 for c in clusters}
+
         # Diagnostic dump support
         self.dump_violations = dump_violations
         self._event_history: list[tuple[float, dict]] = []
@@ -431,6 +436,15 @@ class StateTracker:
         srv.state = "ready"
         srv.deadline = deadline
         srv.in_scheduler = True
+
+        # Track max_ever_scheduler_util (matches C++ GrubPolicy::on_attach)
+        cid = self.tid_to_cluster.get(tid)
+        if cid is not None:
+            cluster = self.clusters.get(cid)
+            if cluster:
+                scaled_u = utilization * cluster.scale_speed / cluster.perf_score
+                self.max_ever_scheduler_util[cid] = max(
+                    self.max_ever_scheduler_util.get(cid, 0.0), scaled_u)
 
         # When transitioning from inactive to ready, VT is set to current time
         if old_state == "inactive":
@@ -712,14 +726,15 @@ class StateTracker:
         scale = cluster.scale_speed
         perf = cluster.perf_score
 
-        # Compute total_U and u_max for servers in this cluster
+        # Compute total_U for servers currently in this cluster's scheduler set
         srvs = self._servers_in_cluster(cluster_id)
         if not srvs:
             return
 
         scaled_utils = [(s.utilization * scale / perf) for s in srvs]
         total_u = sum(scaled_utils)
-        u_max_val = max(scaled_utils)
+        # PA uses max_ever_scheduler_util (never decremented on detach)
+        u_max_val = self.max_ever_scheduler_util.get(cluster_id, max(scaled_utils))
 
         raw_freq = f_max * ((m - 1) * u_max_val + total_u) / m
         expected_freq = cluster.ceil_to_mode(min(raw_freq, f_max))
