@@ -135,4 +135,64 @@ void MemoryTraceWriter::end() {
     current_ = TraceRecord{};
 }
 
+// =============================================================================
+// TextualTraceWriter
+// =============================================================================
+
+TextualTraceWriter::TextualTraceWriter(std::ostream& output, bool color_enabled)
+    : output_(output)
+    , color_enabled_(color_enabled) {}
+
+void TextualTraceWriter::begin(core::TimePoint time) {
+    current_time_ = time.time_since_epoch().count();
+    current_type_.clear();
+    current_fields_.clear();
+}
+
+void TextualTraceWriter::type(std::string_view name) {
+    current_type_ = std::string(name);
+}
+
+void TextualTraceWriter::field(std::string_view key, double value) {
+    std::ostringstream oss;
+    oss << std::setprecision(10) << value;
+    current_fields_.push_back({std::string(key), oss.str()});
+}
+
+void TextualTraceWriter::field(std::string_view key, uint64_t value) {
+    current_fields_.push_back({std::string(key), std::to_string(value)});
+}
+
+void TextualTraceWriter::field(std::string_view key, std::string_view value) {
+    current_fields_.push_back({std::string(key), std::string(value)});
+}
+
+void TextualTraceWriter::end() {
+    // Format: [  timestamp] (+  delta)   event_name: key = value, key = value
+    output_ << "[" << std::setw(10) << std::fixed << std::setprecision(5)
+            << current_time_ << "] ";
+
+    // Delta from previous event
+    if (prev_time_ >= 0.0 && current_time_ != prev_time_) {
+        output_ << "(+" << std::setw(10) << std::fixed << std::setprecision(5)
+                << (current_time_ - prev_time_) << ") ";
+    } else {
+        output_ << "(           ) ";
+    }
+
+    // Event name (right-aligned in 30 chars)
+    output_ << std::setw(30) << std::right << current_type_ << ":";
+
+    // Fields
+    for (std::size_t i = 0; i < current_fields_.size(); ++i) {
+        if (i > 0) {
+            output_ << ",";
+        }
+        output_ << " " << current_fields_[i].key << " = " << current_fields_[i].value;
+    }
+
+    output_ << "\n";
+    prev_time_ = current_time_;
+}
+
 } // namespace schedsim::io

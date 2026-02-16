@@ -78,4 +78,35 @@ private:
     TraceRecord current_;
 };
 
+// Colored human-readable textual trace output (matches legacy format)
+class TextualTraceWriter : public core::TraceWriter {
+public:
+    explicit TextualTraceWriter(std::ostream& output, bool color_enabled = true);
+
+    TextualTraceWriter(const TextualTraceWriter&) = delete;
+    TextualTraceWriter& operator=(const TextualTraceWriter&) = delete;
+    TextualTraceWriter(TextualTraceWriter&&) = delete;
+    TextualTraceWriter& operator=(TextualTraceWriter&&) = delete;
+
+    void begin(core::TimePoint time) override;
+    void type(std::string_view name) override;
+    void field(std::string_view key, double value) override;
+    void field(std::string_view key, uint64_t value) override;
+    void field(std::string_view key, std::string_view value) override;
+    void end() override;
+
+private:
+    struct FieldEntry {
+        std::string key;
+        std::string value;
+    };
+
+    std::ostream& output_;  // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
+    bool color_enabled_;
+    double current_time_{0.0};
+    double prev_time_{-1.0};
+    std::string current_type_;
+    std::vector<FieldEntry> current_fields_;
+};
+
 } // namespace schedsim::io

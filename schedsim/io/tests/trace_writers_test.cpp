@@ -237,3 +237,68 @@ TEST_F(TraceWritersTest, MemoryWriterRecordWithNoFields) {
     EXPECT_EQ(writer.records()[0].type, "empty_event");
     EXPECT_TRUE(writer.records()[0].fields.empty());
 }
+
+// =============================================================================
+// TextualTraceWriter Tests
+// =============================================================================
+
+TEST_F(TraceWritersTest, TextualTraceWriter_BasicOutput) {
+    std::ostringstream oss;
+    TextualTraceWriter writer(oss);
+
+    writer.begin(time(1.5));
+    writer.type("job_arrival");
+    writer.field("tid", uint64_t{1});
+    writer.field("duration", 0.5);
+    writer.end();
+
+    std::string output = oss.str();
+    EXPECT_NE(output.find("1.50000"), std::string::npos);
+    EXPECT_NE(output.find("job_arrival"), std::string::npos);
+    EXPECT_NE(output.find("tid = 1"), std::string::npos);
+    EXPECT_NE(output.find("duration = 0.5"), std::string::npos);
+}
+
+TEST_F(TraceWritersTest, TextualTraceWriter_DeltaTracking) {
+    std::ostringstream oss;
+    TextualTraceWriter writer(oss);
+
+    writer.begin(time(1.0));
+    writer.type("event1");
+    writer.end();
+
+    writer.begin(time(3.0));
+    writer.type("event2");
+    writer.end();
+
+    std::string output = oss.str();
+    // First line should have no delta: "(           )"
+    // Find the first line (up to first newline)
+    auto first_nl = output.find('\n');
+    ASSERT_NE(first_nl, std::string::npos);
+    std::string first_line = output.substr(0, first_nl);
+    EXPECT_NE(first_line.find("(           )"), std::string::npos);
+
+    // Second line should show delta of +2.0
+    std::string second_line = output.substr(first_nl + 1);
+    EXPECT_NE(second_line.find("2.00000"), std::string::npos);
+    EXPECT_NE(second_line.find("+"), std::string::npos);
+}
+
+TEST_F(TraceWritersTest, TextualTraceWriter_NoColor) {
+    std::ostringstream oss;
+    TextualTraceWriter writer(oss, /*color_enabled=*/false);
+
+    writer.begin(time(0.0));
+    writer.type("test_event");
+    writer.field("val", uint64_t{42});
+    writer.end();
+
+    std::string output = oss.str();
+    // Verify no ANSI escape codes
+    EXPECT_EQ(output.find("\033["), std::string::npos);
+    EXPECT_EQ(output.find("\x1b["), std::string::npos);
+    // Still contains the actual content
+    EXPECT_NE(output.find("test_event"), std::string::npos);
+    EXPECT_NE(output.find("val = 42"), std::string::npos);
+}
