@@ -27,6 +27,8 @@ add_executable(schedsim_algo_tests
     csf_policy_test.cpp
     # FFA/CSF integration tests
     ffa_csf_integration_test.cpp
+    # DVFS energy integration tests
+    dvfs_integration_test.cpp
     # Cluster, multi-cluster allocator, and timer policy tests
     cluster_test.cpp
     multi_cluster_allocator_test.cpp
