@@ -40,9 +40,8 @@ struct SimulationMetrics {
     // Frequency change log
     struct FrequencyChange {
         double time;
-        uint64_t clock_domain_id;
-        double old_freq_mhz;
-        double new_freq_mhz;
+        uint64_t cluster_id;
+        double frequency;
     };
     std::vector<FrequencyChange> frequency_changes;
 };

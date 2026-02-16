@@ -132,9 +132,6 @@ void parse_scenario_impl(ScenarioData& result, const rapidjson::Document& doc) {
                     if (duration <= 0) {
                         throw LoaderError("job duration must be positive", jctx.c_str());
                     }
-                    if (duration > task_params.wcet.count() + FP_TOLERANCE) {
-                        throw LoaderError("job duration exceeds wcet", jctx.c_str());
-                    }
 
                     task_params.jobs.push_back(JobParams{
                         TimePoint{Duration{arrival}},

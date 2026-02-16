@@ -12,6 +12,7 @@ std::vector<core::Task*> inject_scenario(core::Engine& engine, const ScenarioDat
 
     for (const auto& task_params : scenario.tasks) {
         auto& task = platform.add_task(
+            task_params.id,
             task_params.period,
             task_params.relative_deadline,
             task_params.wcet);

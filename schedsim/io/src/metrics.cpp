@@ -61,13 +61,13 @@ SimulationMetrics compute_metrics(const std::vector<TraceRecord>& traces) {
 
         if (record.type == "job_arrival") {
             metrics.total_jobs++;
-            uint64_t tid = get_uint64_field(record, "task_id");
+            uint64_t tid = get_uint64_field(record, "tid");
             uint64_t jid = get_uint64_field(record, "job_id");
             arrival_times[tid][jid] = record.time;
         }
-        else if (record.type == "job_completion") {
+        else if (record.type == "job_finished") {
             metrics.completed_jobs++;
-            uint64_t tid = get_uint64_field(record, "task_id");
+            uint64_t tid = get_uint64_field(record, "tid");
             uint64_t jid = get_uint64_field(record, "job_id");
 
             // Compute response time
@@ -82,22 +82,21 @@ SimulationMetrics compute_metrics(const std::vector<TraceRecord>& traces) {
         }
         else if (record.type == "deadline_miss") {
             metrics.deadline_misses++;
-            uint64_t tid = get_uint64_field(record, "task_id");
+            uint64_t tid = get_uint64_field(record, "tid");
             metrics.deadline_misses_per_task[tid]++;
         }
         else if (record.type == "task_rejected") {
             metrics.rejected_tasks++;
         }
-        else if (record.type == "frequency_change") {
+        else if (record.type == "frequency_update") {
             SimulationMetrics::FrequencyChange fc;
             fc.time = record.time;
-            fc.clock_domain_id = get_uint64_field(record, "clock_domain_id");
-            fc.old_freq_mhz = get_double_field(record, "old_freq_mhz");
-            fc.new_freq_mhz = get_double_field(record, "new_freq_mhz");
+            fc.cluster_id = get_uint64_field(record, "cluster_id");
+            fc.frequency = get_double_field(record, "frequency");
             metrics.frequency_changes.push_back(fc);
         }
-        else if (record.type == "job_start") {
-            uint64_t tid = get_uint64_field(record, "task_id");
+        else if (record.type == "task_scheduled") {
+            uint64_t tid = get_uint64_field(record, "tid");
             auto task_it = arrival_times.find(tid);
             if (task_it != arrival_times.end()) {
                 uint64_t jid = get_uint64_field(record, "job_id");
@@ -108,11 +107,8 @@ SimulationMetrics compute_metrics(const std::vector<TraceRecord>& traces) {
                 }
             }
         }
-        else if (record.type == "preemption") {
+        else if (record.type == "task_preempted") {
             metrics.preemptions++;
-        }
-        else if (record.type == "context_switch") {
-            metrics.context_switches++;
         }
         else if (record.type == "energy") {
             uint64_t proc = get_uint64_field(record, "proc");
