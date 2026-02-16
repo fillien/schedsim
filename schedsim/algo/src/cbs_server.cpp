@@ -81,8 +81,8 @@ void CbsServer::preempt() {
 void CbsServer::complete_job(core::TimePoint /*current_time*/) {
     assert(state_ == State::Running && "Can only complete job from Running state");
 
-    if (has_pending_jobs() && job_queue_.size() > 1) {
-        // More jobs in queue (besides the one completing), stay Ready
+    if (!job_queue_.empty()) {
+        // More jobs in queue, stay Ready
         state_ = State::Ready;
     } else {
         // No more jobs, go Inactive
@@ -97,6 +97,11 @@ void CbsServer::exhaust_budget(core::TimePoint /*current_time*/) {
     postpone_deadline();
 
     // Transition to Ready (will be re-dispatched with new deadline)
+    state_ = State::Ready;
+}
+
+void CbsServer::reactivate_from_non_contending() {
+    assert(state_ == State::NonContending && "Can only reactivate from NonContending state");
     state_ = State::Ready;
 }
 

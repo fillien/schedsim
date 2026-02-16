@@ -36,9 +36,22 @@ public:
         Preempted,       // Running -> Ready
         Completed,       // Running -> Inactive
         NonContending,   // Running -> NonContending (GRUB)
-        DeadlineReached  // NonContending -> Inactive (GRUB)
+        DeadlineReached, // NonContending -> Inactive (GRUB)
+        Detached         // Server removed from scheduler (Inactive, no future arrivals)
     };
     virtual void on_server_state_change(CbsServer& server, ServerStateChange change) = 0;
+
+    // Compute dynamic budget for a running server.
+    // Default: CBS static budget (server.remaining_budget())
+    virtual core::Duration compute_server_budget(const CbsServer& server) const;
+
+    // Whether the scheduler should recalculate budget timers for ALL running servers
+    // after each reschedule. Default: false.
+    virtual bool needs_global_budget_recalculation() const { return false; }
+
+    // Current bandwidth used for virtual time rate computation.
+    // Default: 1.0 (no reclamation effect). GRUB overrides with M-GRUB formula.
+    [[nodiscard]] virtual double compute_bandwidth() const { return 1.0; }
 
     // Get current active utilization (for DVFS integration)
     // Active utilization = sum of U_i for servers in Running or Ready state

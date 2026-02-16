@@ -59,6 +59,10 @@ void CashPolicy::on_server_state_change(CbsServer& server, ServerStateChange cha
         case ServerStateChange::DeadlineReached:
             // CASH doesn't use NonContending, but handle it for completeness
             break;
+
+        case ServerStateChange::Detached:
+            // CASH doesn't use detach, but handle for completeness
+            break;
     }
 
     // Ensure we don't go negative due to floating point errors

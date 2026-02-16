@@ -88,6 +88,9 @@ public:
     // Running -> NonContending: job completed early, waiting for deadline (GRUB)
     void enter_non_contending(core::TimePoint current_time);
 
+    // NonContending -> Ready: new job arrives while waiting for deadline (GRUB)
+    void reactivate_from_non_contending();
+
     // NonContending -> Inactive: server deadline reached (GRUB)
     void reach_deadline(core::TimePoint current_time);
 

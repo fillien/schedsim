@@ -11,4 +11,9 @@ core::TimePoint ReclamationPolicy::compute_virtual_time(
     return core::TimePoint{current_vt.time_since_epoch() + vt_increment};
 }
 
+core::Duration ReclamationPolicy::compute_server_budget(const CbsServer& server) const {
+    // Default: CBS static budget
+    return server.remaining_budget();
+}
+
 } // namespace schedsim::algo

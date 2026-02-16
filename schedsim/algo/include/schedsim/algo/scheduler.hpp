@@ -21,6 +21,9 @@ public:
     // Get the total server utilization of this scheduler
     virtual double utilization() const = 0;
 
+    // Set expected number of job arrivals for a task (for server detach tracking)
+    virtual void set_expected_arrivals(const core::Task& /*task*/, std::size_t /*count*/) {}
+
     virtual ~Scheduler() = default;
 };
 
