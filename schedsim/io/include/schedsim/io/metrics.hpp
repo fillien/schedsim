@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace schedsim::io {
@@ -44,6 +45,12 @@ struct SimulationMetrics {
         double frequency;
     };
     std::vector<FrequencyChange> frequency_changes;
+
+    // Migration and transition counts (Item 4)
+    uint64_t cluster_migrations{0};   // migration_cluster events
+    uint64_t transitions{0};          // task_placed events (placement count)
+    uint64_t core_state_requests{0};  // proc activation/sleep transitions
+    uint64_t frequency_requests{0};   // distinct frequency change timestamps
 };
 
 // Compute metrics from in-memory traces
@@ -64,5 +71,37 @@ struct ResponseTimeStats {
 };
 
 ResponseTimeStats compute_response_time_stats(const std::vector<double>& response_times);
+
+// --- Time-series tracking (Item 3) ---
+
+struct FrequencyInterval {
+    double start;
+    double stop;
+    double frequency;
+    uint64_t cluster_id;
+};
+
+struct CoreCountInterval {
+    double start;
+    double stop;
+    uint64_t active_cores;
+    uint64_t cluster_id;
+};
+
+struct ConfigInterval {
+    double start;
+    double stop;
+    double frequency;
+    uint64_t active_cores;
+};
+
+std::vector<FrequencyInterval> track_frequency_changes(
+    const std::vector<TraceRecord>& traces);
+
+std::vector<CoreCountInterval> track_core_changes(
+    const std::vector<TraceRecord>& traces);
+
+std::vector<ConfigInterval> track_config_changes(
+    const std::vector<TraceRecord>& traces);
 
 } // namespace schedsim::io

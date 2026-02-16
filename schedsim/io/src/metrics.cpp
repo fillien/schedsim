@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <fstream>
+#include <set>
 #include <sstream>
 #include <unordered_map>
 
@@ -56,6 +57,9 @@ SimulationMetrics compute_metrics(const std::vector<TraceRecord>& traces) {
     std::unordered_map<uint64_t, double> active_time;
     double simulation_end = 0.0;
 
+    // Track distinct frequency change timestamps
+    std::set<double> freq_change_times;
+
     for (const auto& record : traces) {
         simulation_end = std::max(simulation_end, record.time);
 
@@ -94,6 +98,7 @@ SimulationMetrics compute_metrics(const std::vector<TraceRecord>& traces) {
             fc.cluster_id = get_uint64_field(record, "cluster_id");
             fc.frequency = get_double_field(record, "frequency");
             metrics.frequency_changes.push_back(fc);
+            freq_change_times.insert(record.time);
         }
         else if (record.type == "task_scheduled") {
             uint64_t tid = get_uint64_field(record, "tid");
@@ -106,6 +111,15 @@ SimulationMetrics compute_metrics(const std::vector<TraceRecord>& traces) {
                     metrics.waiting_times_per_task[tid].push_back(wait);
                 }
             }
+        }
+        else if (record.type == "task_placed") {
+            metrics.transitions++;
+        }
+        else if (record.type == "migration_cluster") {
+            metrics.cluster_migrations++;
+        }
+        else if (record.type == "proc_activated" || record.type == "proc_sleep") {
+            metrics.core_state_requests++;
         }
         else if (record.type == "task_preempted") {
             metrics.preemptions++;
@@ -122,6 +136,9 @@ SimulationMetrics compute_metrics(const std::vector<TraceRecord>& traces) {
             active_time[proc] += duration;
         }
     }
+
+    // Count distinct frequency change timestamps
+    metrics.frequency_requests = freq_change_times.size();
 
     // Compute utilization
     if (simulation_end > 0.0) {
@@ -257,6 +274,131 @@ ResponseTimeStats compute_response_time_stats(const std::vector<double>& respons
     stats.percentile_99 = percentile(99.0);
 
     return stats;
+}
+
+// --- Time-series tracking (Item 3) ---
+
+std::vector<FrequencyInterval> track_frequency_changes(
+    const std::vector<TraceRecord>& traces)
+{
+    // Per-cluster: (start_time, frequency)
+    std::unordered_map<uint64_t, std::pair<double, double>> open;
+    std::vector<FrequencyInterval> result;
+    double sim_end = 0.0;
+
+    for (const auto& rec : traces) {
+        sim_end = std::max(sim_end, rec.time);
+
+        if (rec.type == "frequency_update") {
+            uint64_t cid = get_uint64_field(rec, "cluster_id");
+            double freq = get_double_field(rec, "frequency");
+
+            auto it = open.find(cid);
+            if (it != open.end()) {
+                result.push_back({it->second.first, rec.time, it->second.second, cid});
+            }
+            open[cid] = {rec.time, freq};
+        }
+    }
+    // Close remaining intervals at simulation end
+    for (auto& [cid, state] : open) {
+        result.push_back({state.first, sim_end, state.second, cid});
+    }
+    return result;
+}
+
+std::vector<CoreCountInterval> track_core_changes(
+    const std::vector<TraceRecord>& traces)
+{
+    // Per-cluster: active core count + interval start
+    struct ClusterState {
+        uint64_t active_cores{0};
+        double start{0.0};
+    };
+    std::unordered_map<uint64_t, ClusterState> state;
+    std::vector<CoreCountInterval> result;
+    double sim_end = 0.0;
+
+    for (const auto& rec : traces) {
+        sim_end = std::max(sim_end, rec.time);
+
+        if (rec.type == "proc_activated") {
+            uint64_t cid = get_uint64_field(rec, "cluster_id");
+            auto& cs = state[cid];
+            if (cs.active_cores > 0) {
+                result.push_back({cs.start, rec.time, cs.active_cores, cid});
+            }
+            cs.active_cores++;
+            cs.start = rec.time;
+        }
+        else if (rec.type == "proc_idled" || rec.type == "proc_sleep") {
+            uint64_t cid = get_uint64_field(rec, "cluster_id");
+            auto& cs = state[cid];
+            if (cs.active_cores > 0) {
+                result.push_back({cs.start, rec.time, cs.active_cores, cid});
+                cs.active_cores--;
+                cs.start = rec.time;
+            }
+        }
+    }
+    // Close remaining intervals at simulation end
+    for (auto& [cid, cs] : state) {
+        if (cs.active_cores > 0) {
+            result.push_back({cs.start, sim_end, cs.active_cores, cid});
+        }
+    }
+    return result;
+}
+
+std::vector<ConfigInterval> track_config_changes(
+    const std::vector<TraceRecord>& traces)
+{
+    // Single-cluster combined tracking (frequency + core count)
+    struct CombinedState {
+        double frequency{0.0};
+        uint64_t active_cores{0};
+        double start{0.0};
+        bool started{false};
+    };
+    CombinedState cs;
+    std::vector<ConfigInterval> result;
+    double sim_end = 0.0;
+
+    for (const auto& rec : traces) {
+        sim_end = std::max(sim_end, rec.time);
+
+        bool changed = false;
+        if (rec.type == "frequency_update") {
+            double freq = get_double_field(rec, "frequency");
+            if (freq != cs.frequency) {
+                changed = true;
+                cs.frequency = freq;
+            }
+        }
+        else if (rec.type == "proc_activated") {
+            changed = true;
+            cs.active_cores++;
+        }
+        else if (rec.type == "proc_idled" || rec.type == "proc_sleep") {
+            if (cs.active_cores > 0) {
+                changed = true;
+                cs.active_cores--;
+            }
+        }
+
+        if (changed) {
+            if (cs.started) {
+                result.push_back({cs.start, rec.time, cs.frequency, cs.active_cores});
+            }
+            cs.start = rec.time;
+            cs.started = true;
+        }
+    }
+    // Close final interval
+    if (cs.started) {
+        result.push_back({cs.start, sim_end, cs.frequency, cs.active_cores});
+    }
+    return result;
 }
 
 } // namespace schedsim::io

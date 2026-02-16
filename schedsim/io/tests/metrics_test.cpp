@@ -1,8 +1,11 @@
 #include <schedsim/io/metrics.hpp>
+#include <schedsim/io/error.hpp>
 
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <filesystem>
+#include <fstream>
 
 using namespace schedsim::io;
 
@@ -328,4 +331,285 @@ TEST_F(MetricsTest, WaitingTimesMissingStart) {
 
     // No waiting time should be recorded since there's no job_start
     EXPECT_TRUE(metrics.waiting_times_per_task.empty());
+}
+
+// =============================================================================
+// Time-Series Tracking Tests
+// =============================================================================
+
+TEST_F(MetricsTest, TrackFrequencyChanges_Basic) {
+    std::vector<TraceRecord> traces;
+    traces.push_back(TraceRecord{
+        .time = 0.0, .type = "frequency_update",
+        .fields = {{"cluster_id", uint64_t{0}}, {"frequency", 1000.0}}
+    });
+    traces.push_back(TraceRecord{
+        .time = 5.0, .type = "frequency_update",
+        .fields = {{"cluster_id", uint64_t{0}}, {"frequency", 2000.0}}
+    });
+
+    auto intervals = track_frequency_changes(traces);
+
+    ASSERT_EQ(intervals.size(), 2u);
+    // First interval: [0,5] @ 1000
+    EXPECT_DOUBLE_EQ(intervals[0].start, 0.0);
+    EXPECT_DOUBLE_EQ(intervals[0].stop, 5.0);
+    EXPECT_DOUBLE_EQ(intervals[0].frequency, 1000.0);
+    EXPECT_EQ(intervals[0].cluster_id, 0u);
+    // Second interval: [5,5] @ 2000 (closed at sim_end=5)
+    EXPECT_DOUBLE_EQ(intervals[1].start, 5.0);
+    EXPECT_DOUBLE_EQ(intervals[1].stop, 5.0);
+    EXPECT_DOUBLE_EQ(intervals[1].frequency, 2000.0);
+    EXPECT_EQ(intervals[1].cluster_id, 0u);
+}
+
+TEST_F(MetricsTest, TrackFrequencyChanges_Empty) {
+    std::vector<TraceRecord> traces;
+    auto intervals = track_frequency_changes(traces);
+    EXPECT_TRUE(intervals.empty());
+}
+
+TEST_F(MetricsTest, TrackCoreChanges_Basic) {
+    std::vector<TraceRecord> traces;
+    traces.push_back(TraceRecord{
+        .time = 0.0, .type = "proc_activated",
+        .fields = {{"cluster_id", uint64_t{0}}}
+    });
+    traces.push_back(TraceRecord{
+        .time = 5.0, .type = "proc_idled",
+        .fields = {{"cluster_id", uint64_t{0}}}
+    });
+
+    auto intervals = track_core_changes(traces);
+
+    // Exactly 1 interval: [0,5] with active_cores=1
+    // The close-remaining loop filters out active_cores == 0
+    ASSERT_EQ(intervals.size(), 1u);
+    EXPECT_DOUBLE_EQ(intervals[0].start, 0.0);
+    EXPECT_DOUBLE_EQ(intervals[0].stop, 5.0);
+    EXPECT_EQ(intervals[0].active_cores, 1u);
+    EXPECT_EQ(intervals[0].cluster_id, 0u);
+}
+
+TEST_F(MetricsTest, TrackCoreChanges_SleepEvent) {
+    std::vector<TraceRecord> traces;
+    traces.push_back(TraceRecord{
+        .time = 0.0, .type = "proc_activated",
+        .fields = {{"cluster_id", uint64_t{0}}}
+    });
+    traces.push_back(TraceRecord{
+        .time = 5.0, .type = "proc_sleep",
+        .fields = {{"cluster_id", uint64_t{0}}}
+    });
+
+    auto intervals = track_core_changes(traces);
+
+    // Same as Basic but with proc_sleep instead of proc_idled
+    ASSERT_EQ(intervals.size(), 1u);
+    EXPECT_DOUBLE_EQ(intervals[0].start, 0.0);
+    EXPECT_DOUBLE_EQ(intervals[0].stop, 5.0);
+    EXPECT_EQ(intervals[0].active_cores, 1u);
+    EXPECT_EQ(intervals[0].cluster_id, 0u);
+}
+
+TEST_F(MetricsTest, TrackConfigChanges_Basic) {
+    std::vector<TraceRecord> traces;
+    traces.push_back(TraceRecord{
+        .time = 0.0, .type = "frequency_update",
+        .fields = {{"frequency", 1000.0}}
+    });
+    traces.push_back(TraceRecord{
+        .time = 1.0, .type = "proc_activated",
+        .fields = {}
+    });
+    traces.push_back(TraceRecord{
+        .time = 5.0, .type = "frequency_update",
+        .fields = {{"frequency", 2000.0}}
+    });
+
+    auto intervals = track_config_changes(traces);
+
+    ASSERT_EQ(intervals.size(), 3u);
+    // [0,1]: state is post-update (freq=1000, cores=1 after activation)
+    EXPECT_DOUBLE_EQ(intervals[0].start, 0.0);
+    EXPECT_DOUBLE_EQ(intervals[0].stop, 1.0);
+    EXPECT_DOUBLE_EQ(intervals[0].frequency, 1000.0);
+    EXPECT_EQ(intervals[0].active_cores, 1u);
+    // [1,5]: state is post-update (freq=2000 after freq change, cores=1)
+    EXPECT_DOUBLE_EQ(intervals[1].start, 1.0);
+    EXPECT_DOUBLE_EQ(intervals[1].stop, 5.0);
+    EXPECT_DOUBLE_EQ(intervals[1].frequency, 2000.0);
+    EXPECT_EQ(intervals[1].active_cores, 1u);
+    // [5,5]: final interval closed at sim_end=5
+    EXPECT_DOUBLE_EQ(intervals[2].start, 5.0);
+    EXPECT_DOUBLE_EQ(intervals[2].stop, 5.0);
+    EXPECT_DOUBLE_EQ(intervals[2].frequency, 2000.0);
+    EXPECT_EQ(intervals[2].active_cores, 1u);
+}
+
+TEST_F(MetricsTest, TrackConfigChanges_Empty) {
+    std::vector<TraceRecord> traces;
+    auto intervals = track_config_changes(traces);
+    EXPECT_TRUE(intervals.empty());
+}
+
+// =============================================================================
+// Metrics Counter Tests (Category C)
+// =============================================================================
+
+TEST_F(MetricsTest, ComputeMetrics_TransitionsAndCoreRequests) {
+    std::vector<TraceRecord> traces;
+    traces.push_back(TraceRecord{.time = 0.0, .type = "task_placed", .fields = {}});
+    traces.push_back(TraceRecord{.time = 1.0, .type = "task_placed", .fields = {}});
+    traces.push_back(TraceRecord{.time = 2.0, .type = "proc_activated", .fields = {}});
+    traces.push_back(TraceRecord{.time = 3.0, .type = "proc_sleep", .fields = {}});
+
+    auto metrics = compute_metrics(traces);
+    EXPECT_EQ(metrics.transitions, 2u);
+    EXPECT_EQ(metrics.core_state_requests, 2u);
+}
+
+TEST_F(MetricsTest, ComputeMetrics_FrequencyRequests) {
+    std::vector<TraceRecord> traces;
+    // Two events at same timestamp → 1 distinct timestamp
+    traces.push_back(TraceRecord{
+        .time = 0.0, .type = "frequency_update",
+        .fields = {{"cluster_id", uint64_t{0}}, {"frequency", 1000.0}}
+    });
+    traces.push_back(TraceRecord{
+        .time = 0.0, .type = "frequency_update",
+        .fields = {{"cluster_id", uint64_t{1}}, {"frequency", 2000.0}}
+    });
+    // New timestamp
+    traces.push_back(TraceRecord{
+        .time = 5.0, .type = "frequency_update",
+        .fields = {{"cluster_id", uint64_t{0}}, {"frequency", 1500.0}}
+    });
+
+    auto metrics = compute_metrics(traces);
+    EXPECT_EQ(metrics.frequency_requests, 2u);
+    EXPECT_EQ(metrics.frequency_changes.size(), 3u);
+}
+
+TEST_F(MetricsTest, ComputeMetrics_ClusterMigrations) {
+    std::vector<TraceRecord> traces;
+    traces.push_back(TraceRecord{.time = 0.0, .type = "migration_cluster", .fields = {}});
+    traces.push_back(TraceRecord{.time = 1.0, .type = "migration_cluster", .fields = {}});
+
+    auto metrics = compute_metrics(traces);
+    EXPECT_EQ(metrics.cluster_migrations, 2u);
+}
+
+// =============================================================================
+// Edge Case Tests (Category E)
+// =============================================================================
+
+TEST_F(MetricsTest, TrackCoreChanges_MultiCluster) {
+    std::vector<TraceRecord> traces;
+    traces.push_back(TraceRecord{
+        .time = 0.0, .type = "proc_activated",
+        .fields = {{"cluster_id", uint64_t{0}}}
+    });
+    traces.push_back(TraceRecord{
+        .time = 0.0, .type = "proc_activated",
+        .fields = {{"cluster_id", uint64_t{1}}}
+    });
+    traces.push_back(TraceRecord{
+        .time = 5.0, .type = "proc_idled",
+        .fields = {{"cluster_id", uint64_t{0}}}
+    });
+    traces.push_back(TraceRecord{
+        .time = 5.0, .type = "sim_finished", .fields = {}
+    });
+
+    auto intervals = track_core_changes(traces);
+
+    // Cluster 0: [0,5] cores=1 (activated then idled)
+    // Cluster 1: [0,5] cores=1 (activated, closed at sim_end=5)
+    ASSERT_EQ(intervals.size(), 2u);
+
+    // Find intervals by cluster_id (order may vary due to unordered_map)
+    const CoreCountInterval* c0 = nullptr;
+    const CoreCountInterval* c1 = nullptr;
+    for (const auto& iv : intervals) {
+        if (iv.cluster_id == 0) c0 = &iv;
+        if (iv.cluster_id == 1) c1 = &iv;
+    }
+    ASSERT_NE(c0, nullptr);
+    ASSERT_NE(c1, nullptr);
+
+    EXPECT_DOUBLE_EQ(c0->start, 0.0);
+    EXPECT_DOUBLE_EQ(c0->stop, 5.0);
+    EXPECT_EQ(c0->active_cores, 1u);
+
+    EXPECT_DOUBLE_EQ(c1->start, 0.0);
+    EXPECT_DOUBLE_EQ(c1->stop, 5.0);
+    EXPECT_EQ(c1->active_cores, 1u);
+}
+
+TEST_F(MetricsTest, TrackConfigChanges_SimultaneousEvents) {
+    std::vector<TraceRecord> traces;
+    traces.push_back(TraceRecord{
+        .time = 0.0, .type = "frequency_update",
+        .fields = {{"frequency", 1000.0}}
+    });
+    traces.push_back(TraceRecord{
+        .time = 5.0, .type = "frequency_update",
+        .fields = {{"frequency", 2000.0}}
+    });
+    traces.push_back(TraceRecord{
+        .time = 5.0, .type = "proc_activated",
+        .fields = {}
+    });
+    traces.push_back(TraceRecord{
+        .time = 10.0, .type = "sim_finished", .fields = {}
+    });
+
+    auto intervals = track_config_changes(traces);
+
+    // Interval 1: [0,5] freq=2000, cores=0 (pushed at freq_update t=5, freq already mutated)
+    // Interval 2: [5,5] freq=2000, cores=1 (zero-length, pushed at proc_activated t=5)
+    // Interval 3: [5,10] freq=2000, cores=1 (close-remaining at sim_end=10)
+    ASSERT_EQ(intervals.size(), 3u);
+
+    EXPECT_DOUBLE_EQ(intervals[0].start, 0.0);
+    EXPECT_DOUBLE_EQ(intervals[0].stop, 5.0);
+    EXPECT_DOUBLE_EQ(intervals[0].frequency, 2000.0);
+    EXPECT_EQ(intervals[0].active_cores, 0u);
+
+    EXPECT_DOUBLE_EQ(intervals[1].start, 5.0);
+    EXPECT_DOUBLE_EQ(intervals[1].stop, 5.0);
+    EXPECT_DOUBLE_EQ(intervals[1].frequency, 2000.0);
+    EXPECT_EQ(intervals[1].active_cores, 1u);
+
+    EXPECT_DOUBLE_EQ(intervals[2].start, 5.0);
+    EXPECT_DOUBLE_EQ(intervals[2].stop, 10.0);
+    EXPECT_DOUBLE_EQ(intervals[2].frequency, 2000.0);
+    EXPECT_EQ(intervals[2].active_cores, 1u);
+}
+
+// =============================================================================
+// compute_metrics_from_file Tests
+// =============================================================================
+
+TEST_F(MetricsTest, ComputeMetricsFromFile_ValidTrace) {
+    auto tmp_path = std::filesystem::temp_directory_path() / "schedsim_test_trace.json";
+    {
+        std::ofstream ofs(tmp_path);
+        ofs << R"([{"time":0.0,"type":"job_arrival","tid":0,"job_id":0},)"
+            << R"({"time":2.0,"type":"job_finished","tid":0,"job_id":0}])";
+    }
+
+    auto metrics = compute_metrics_from_file(tmp_path);
+    EXPECT_EQ(metrics.total_jobs, 1u);
+    EXPECT_EQ(metrics.completed_jobs, 1u);
+
+    std::filesystem::remove(tmp_path);
+}
+
+TEST_F(MetricsTest, ComputeMetricsFromFile_MissingFile) {
+    EXPECT_THROW(
+        compute_metrics_from_file("/nonexistent/trace.json"),
+        LoaderError
+    );
 }
