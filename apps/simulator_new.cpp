@@ -1,3 +1,4 @@
+#include <schedsim/core/clock_domain.hpp>
 #include <schedsim/core/engine.hpp>
 #include <schedsim/core/platform.hpp>
 #include <schedsim/core/types.hpp>
@@ -154,6 +155,11 @@ int main(int argc, char** argv) {
             scheduler.add_server(engine.platform().task(i));
         }
 
+        // 8b. Set expected arrivals for server detach tracking (M-GRUB)
+        for (std::size_t i = 0; i < scenario.tasks.size(); ++i) {
+            scheduler.set_expected_arrivals(*scenario_tasks[i], scenario.tasks[i].jobs.size());
+        }
+
         // 9. Configure policies
         if (config.reclaim == "grub") {
             scheduler.enable_grub();
@@ -178,7 +184,9 @@ int main(int argc, char** argv) {
         }
 
         // 10. Create allocator (automatically sets job arrival handler)
-        algo::SingleSchedulerAllocator allocator(engine, scheduler);
+        // Pass first processor's clock domain for task_placed trace events
+        core::ClockDomain* clock_domain = procs.empty() ? nullptr : &procs[0]->clock_domain();
+        algo::SingleSchedulerAllocator allocator(engine, scheduler, clock_domain);
 
         // 11. Setup trace writer
         std::unique_ptr<core::TraceWriter> writer;

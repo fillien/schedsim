@@ -20,6 +20,7 @@ import tempfile
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
+import math
 from typing import Optional
 
 
@@ -28,8 +29,15 @@ from typing import Optional
 # ---------------------------------------------------------------------------
 
 SKIP_FILES = {"ci-output.json", "ci-input.json", "ex1.json", "ex2.json"}
-SCHEDULERS = ["grub", "pa"]
-ALLOCATOR = "ff_cap"
+SCHEDULERS = ["grub", "pa", "ffa", "csf"]
+
+# Mapping from scheduler name to schedsim-new CLI flags
+SCHED_FLAGS = {
+    "grub": ["--reclaim", "grub"],
+    "pa":   ["--reclaim", "grub", "--dvfs", "power-aware"],
+    "ffa":  ["--reclaim", "grub", "--dvfs", "ffa"],
+    "csf":  ["--reclaim", "grub", "--dvfs", "csf"],
+}
 
 # Numerical tolerance for floating-point comparisons
 ABS_TOL = 1e-4
@@ -95,7 +103,7 @@ def load_platform(path: str) -> list:
     clusters = []
     for i, c in enumerate(data["clusters"]):
         ci = ClusterInfo(
-            cluster_id=i + 1,  # Cluster IDs start at 1 in the simulator
+            cluster_id=i,  # 0-based, matching new architecture clock domain IDs
             num_procs=c["procs"],
             frequencies=c["frequencies"],
             effective_freq=c["effective_freq"],
@@ -211,6 +219,28 @@ class StateTracker:
         return [
             s for s in self.servers.values()
             if s.in_scheduler and self.tid_to_cluster.get(s.tid) == cluster_id
+        ]
+
+    def _active_servers_in_cluster(self, cluster_id: int) -> list:
+        """Return servers in ready or running state for a given cluster.
+
+        NOTE: FFA/CSF checkers compute utilization per-cluster using this
+        method, while the C++ implementation uses the global
+        scheduler.active_utilization() / max_server_utilization(). These
+        are equivalent for single-cluster platforms (e.g. exynos5422LITTLE)
+        but would diverge for multi-cluster platforms.
+        """
+        return [
+            s for s in self.servers.values()
+            if s.state in ("ready", "running")
+            and self.tid_to_cluster.get(s.tid) == cluster_id
+        ]
+
+    def _all_servers_in_cluster(self, cluster_id: int) -> list:
+        """Return ALL tracked servers for a given cluster (regardless of state/in_scheduler)."""
+        return [
+            s for s in self.servers.values()
+            if self.tid_to_cluster.get(s.tid) == cluster_id
         ]
 
     def _compute_bandwidth(self, cluster_id: int) -> float:
@@ -701,60 +731,127 @@ class StateTracker:
                 f"(raw={raw_freq:.4f}, total_U={total_u:.6f}, "
                 f"u_max={u_max_val:.6f}, m={m})")
 
+    def check_ffa_frequency(self, time: float, event: dict, sched_name: str):
+        """Invariant 7 (FFA only): FFA frequency formula check."""
+        if sched_name != "ffa":
+            return
+
+        cluster_id = event["cluster_id"]
+        freq = event["frequency"]
+        cluster = self.clusters.get(cluster_id)
+        if cluster is None:
+            return
+
+        m = cluster.num_procs
+        f_max = cluster.freq_max
+        f_eff = cluster.effective_freq
+        scale = cluster.scale_speed
+        perf = cluster.perf_score
+
+        # Active utilization: sum of scaled utils for ready/running servers
+        active_srvs = self._active_servers_in_cluster(cluster_id)
+        if not active_srvs:
+            return
+
+        active_scaled_utils = [(s.utilization * scale / perf) for s in active_srvs]
+        active_util = sum(active_scaled_utils)
+
+        # Max server utilization: max across ALL tracked servers for cluster
+        all_srvs = self._all_servers_in_cluster(cluster_id)
+        if not all_srvs:
+            return
+        all_scaled_utils = [(s.utilization * scale / perf) for s in all_srvs]
+        max_util = max(all_scaled_utils)
+
+        # FFA formula: freq_min = f_max * (U_active + (m-1)*U_max) / m
+        raw_freq = f_max * (active_util + (m - 1) * max_util) / m
+        freq_min = min(raw_freq, f_max)
+
+        if f_eff > 0 and freq_min < f_eff:
+            expected_freq = cluster.ceil_to_mode(f_eff)
+        else:
+            expected_freq = cluster.ceil_to_mode(freq_min)
+
+        if not approx_eq(freq, expected_freq):
+            self.add_violation(
+                "ffa_frequency", time, None,
+                f"freq={freq:.2f} but expected={expected_freq:.2f} "
+                f"(raw={raw_freq:.4f}, active_U={active_util:.6f}, "
+                f"u_max={max_util:.6f}, m={m}, f_eff={f_eff:.2f})")
+
+    def check_csf_frequency(self, time: float, event: dict, sched_name: str):
+        """Invariant 8 (CSF only): CSF frequency formula check."""
+        if sched_name != "csf":
+            return
+
+        cluster_id = event["cluster_id"]
+        freq = event["frequency"]
+        cluster = self.clusters.get(cluster_id)
+        if cluster is None:
+            return
+
+        m = cluster.num_procs
+        f_max = cluster.freq_max
+        f_eff = cluster.effective_freq
+        scale = cluster.scale_speed
+        perf = cluster.perf_score
+
+        # Active utilization: sum of scaled utils for ready/running servers
+        active_srvs = self._active_servers_in_cluster(cluster_id)
+        if not active_srvs:
+            return
+
+        active_scaled_utils = [(s.utilization * scale / perf) for s in active_srvs]
+        active_util = sum(active_scaled_utils)
+
+        # Max server utilization: max across ALL tracked servers for cluster
+        all_srvs = self._all_servers_in_cluster(cluster_id)
+        if not all_srvs:
+            return
+        all_scaled_utils = [(s.utilization * scale / perf) for s in all_srvs]
+        max_util = max(all_scaled_utils)
+
+        # CSF formula: m_min = ceil((U_active - U_max) / (1 - U_max))
+        if max_util >= 1.0:
+            m_min = m
+        else:
+            needed = (active_util - max_util) / (1.0 - max_util)
+            m_min = max(1, min(int(math.ceil(needed)), m))
+
+        # freq_min with m_min
+        raw_freq = f_max * (active_util + (m_min - 1) * max_util) / m_min
+        freq_min = min(raw_freq, f_max)
+
+        if f_eff > 0 and freq_min < f_eff:
+            expected_freq = cluster.ceil_to_mode(f_eff)
+        else:
+            expected_freq = cluster.ceil_to_mode(freq_min)
+
+        if not approx_eq(freq, expected_freq):
+            self.add_violation(
+                "csf_frequency", time, None,
+                f"freq={freq:.2f} but expected={expected_freq:.2f} "
+                f"(raw={raw_freq:.4f}, active_U={active_util:.6f}, "
+                f"u_max={max_util:.6f}, m_min={m_min}, m={m}, f_eff={f_eff:.2f})")
+
 
 # ---------------------------------------------------------------------------
 # Runner
 # ---------------------------------------------------------------------------
 
-def ensure_floats(scenario_path: str) -> str:
-    """Preprocess scenario to ensure all numeric fields are floats.
-
-    The C++ RapidJSON parser requires period/arrival/duration/utilization
-    to be JSON doubles (e.g. 8.0 not 8). Returns path to a temporary file
-    with corrected values, or the original path if no conversion needed.
-    """
-    with open(scenario_path) as f:
-        data = json.load(f)
-
-    needs_conversion = False
-    for task in data.get("tasks", []):
-        for key in ("period", "utilization"):
-            if key in task and isinstance(task[key], int):
-                task[key] = float(task[key])
-                needs_conversion = True
-        for job in task.get("jobs", []):
-            for key in ("arrival", "duration"):
-                if key in job and isinstance(job[key], int):
-                    job[key] = float(job[key])
-                    needs_conversion = True
-
-    if not needs_conversion:
-        return scenario_path
-
-    tmp = tempfile.NamedTemporaryFile(
-        suffix=".json", delete=False, mode="w", prefix="scenario_")
-    json.dump(data, tmp)
-    tmp.close()
-    return tmp.name
-
 
 def run_simulation(schedsim: str, scenario: str, platform: str,
-                   scheduler: str, allocator: str) -> Optional[list]:
-    """Run schedsim and return parsed trace, or None on failure."""
+                   scheduler: str) -> Optional[list]:
+    """Run schedsim-new and return parsed trace, or None on failure."""
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
         tmp_path = tmp.name
 
-    converted_scenario = None
     try:
-        # Preprocess scenario to ensure float values
-        converted_scenario = ensure_floats(scenario)
-
         cmd = [
             schedsim,
-            "-i", converted_scenario,
+            "-i", scenario,
             "-p", platform,
-            "-s", scheduler,
-            "-a", allocator,
+            *SCHED_FLAGS.get(scheduler, []),
             "-o", tmp_path,
         ]
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
@@ -771,11 +868,6 @@ def run_simulation(schedsim: str, scenario: str, platform: str,
             os.unlink(tmp_path)
         except OSError:
             pass
-        if converted_scenario and converted_scenario != scenario:
-            try:
-                os.unlink(converted_scenario)
-            except OSError:
-                pass
 
 
 def verify_trace(trace: list, clusters: list, tasks: list,
@@ -837,6 +929,8 @@ def verify_trace(trace: list, clusters: list, tasks: list,
                 # Process first (updates cluster freq), then check
                 tracker.process_event(current_time, event)
                 tracker.check_frequency(current_time, event, sched_name)
+                tracker.check_ffa_frequency(current_time, event, sched_name)
+                tracker.check_csf_frequency(current_time, event, sched_name)
 
             elif etype == "task_scheduled":
                 # Process to update CPU mapping and states
@@ -850,14 +944,14 @@ def verify_trace(trace: list, clusters: list, tasks: list,
     return tracker.violations
 
 
-def run_and_verify(schedsim, scenario_path, platform_path, sched, allocator,
+def run_and_verify(schedsim, scenario_path, platform_path, sched,
                    clusters, tasks, scenario_name, dump_violations=False):
     """Run simulation + verification for one (scenario, scheduler) pair.
 
     Designed to be called from a process pool. Returns
     (scenario_name, sched, violations_or_None).
     """
-    trace = run_simulation(schedsim, scenario_path, platform_path, sched, allocator)
+    trace = run_simulation(schedsim, scenario_path, platform_path, sched)
     if trace is None:
         return (scenario_name, sched, None)
     violations = verify_trace(trace, clusters, tasks, sched,
@@ -913,6 +1007,8 @@ INVARIANT_NAMES = [
     "budget_formula",
     "vt_rate",
     "frequency_formula",
+    "ffa_frequency",
+    "csf_frequency",
 ]
 
 INVARIANT_LABELS = {
@@ -922,6 +1018,8 @@ INVARIANT_LABELS = {
     "budget_formula": "Budget Formula",
     "vt_rate": "VT Rate",
     "frequency_formula": "Frequency (PA)",
+    "ffa_frequency": "Frequency (FFA)",
+    "csf_frequency": "Frequency (CSF)",
 }
 
 
@@ -966,6 +1064,10 @@ def print_summary(results: dict):
         print(f"{name:<{name_width}}", end="")
         for inv in INVARIANT_NAMES:
             if inv == "frequency_formula" and scheduler != "pa":
+                status = "N/A"
+            elif inv == "ffa_frequency" and scheduler != "ffa":
+                status = "N/A"
+            elif inv == "csf_frequency" and scheduler != "csf":
                 status = "N/A"
             elif inv in violations_by_inv:
                 status = "FAIL"
@@ -1098,7 +1200,7 @@ def main():
         help="Directory with generated scenarios (default: tests/scenarios/generated/)")
     parser.add_argument(
         "--schedsim", default=None,
-        help="Path to schedsim binary (default: build/apps/schedsim)")
+        help="Path to schedsim-new binary (default: build/apps/schedsim-new)")
     parser.add_argument(
         "-j", "--jobs", type=int, default=os.cpu_count(),
         help="Parallel workers (default: os.cpu_count())")
@@ -1123,7 +1225,7 @@ def main():
     platform_path = args.platform or str(repo_root / "platforms" / "exynos5422LITTLE.json")
     scenarios_dir = args.scenarios_dir or str(repo_root / "tests" / "scenarios")
     generated_dir = args.generated_dir or str(repo_root / "tests" / "scenarios" / "generated")
-    schedsim_path = args.schedsim or str(repo_root / "build" / "apps" / "schedsim")
+    schedsim_path = args.schedsim or str(repo_root / "build" / "apps" / "schedsim-new")
 
     # Validate paths
     if not os.path.isfile(platform_path):
@@ -1148,7 +1250,6 @@ def main():
               f"scale_speed={c.scale_speed}")
 
     print(f"Schedulers: {SCHEDULERS}")
-    print(f"Allocator: {ALLOCATOR}")
     print(f"Workers: {args.jobs}")
 
     overall_pass = True
@@ -1189,7 +1290,7 @@ def main():
                 print(f"  Running {label}...", end=" ", flush=True)
 
                 trace = run_simulation(
-                    schedsim_path, scenario_path, platform_path, sched, ALLOCATOR)
+                    schedsim_path, scenario_path, platform_path, sched)
 
                 if trace is None:
                     print("SKIP (simulation failed)")
@@ -1260,7 +1361,7 @@ def main():
                     tasks = tasks_cache[scenario_path]
                     fut = pool.submit(
                         run_and_verify, schedsim_path, scenario_path,
-                        platform_path, sched, ALLOCATOR, clusters, tasks,
+                        platform_path, sched, clusters, tasks,
                         scenario_name, dump_violations=args.dump_violations)
                     futures[fut] = (scenario_name, sched, ulevel)
 
