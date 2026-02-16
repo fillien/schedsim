@@ -239,19 +239,19 @@ int main(int argc, char** argv) {
 
             if (config.dvfs == "power-aware") {
                 sched->enable_power_aware_dvfs(
-                    core::Duration{config.dvfs_cooldown_ms / 1000.0});
+                    core::duration_from_seconds(config.dvfs_cooldown_ms / 1000.0));
             } else if (config.dvfs == "ffa") {
                 sched->enable_ffa(
-                    core::Duration{config.dvfs_cooldown_ms / 1000.0});
+                    core::duration_from_seconds(config.dvfs_cooldown_ms / 1000.0));
             } else if (config.dvfs == "csf") {
                 sched->enable_csf(
-                    core::Duration{config.dvfs_cooldown_ms / 1000.0});
+                    core::duration_from_seconds(config.dvfs_cooldown_ms / 1000.0));
             } else if (config.dvfs == "ffa-timer") {
                 sched->enable_ffa_timer(
-                    core::Duration{config.dvfs_cooldown_ms / 1000.0});
+                    core::duration_from_seconds(config.dvfs_cooldown_ms / 1000.0));
             } else if (config.dvfs == "csf-timer") {
                 sched->enable_csf_timer(
-                    core::Duration{config.dvfs_cooldown_ms / 1000.0});
+                    core::duration_from_seconds(config.dvfs_cooldown_ms / 1000.0));
             }
         }
 
@@ -261,7 +261,7 @@ int main(int argc, char** argv) {
         // 9. Set expected_total_util on adaptive allocators
         double total_util = 0.0;
         for (const auto& tp : scenario.tasks) {
-            total_util += tp.wcet.count() / tp.period.count();
+            total_util += core::duration_ratio(tp.wcet, tp.period);
         }
 
         if (auto* adaptive =

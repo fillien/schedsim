@@ -52,7 +52,7 @@ private:
 class TraceWriterTest : public ::testing::Test {
 protected:
     TimePoint time(double seconds) {
-        return TimePoint{Duration{seconds}};
+        return time_from_seconds(seconds);
     }
 };
 

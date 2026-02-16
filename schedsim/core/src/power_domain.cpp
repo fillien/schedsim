@@ -45,7 +45,7 @@ int PowerDomain::achieved_cstate_for_processor(const Processor& proc) const {
 Duration PowerDomain::wake_latency(int level) const {
     // C0 (active) has no wake latency
     if (level <= 0) {
-        return Duration{0.0};
+        return Duration::zero();
     }
 
     // Find the CStateLevel entry for this level
@@ -56,7 +56,7 @@ Duration PowerDomain::wake_latency(int level) const {
     }
 
     // Level not found
-    return Duration{0.0};
+    return Duration::zero();
 }
 
 Power PowerDomain::cstate_power(int level) const {

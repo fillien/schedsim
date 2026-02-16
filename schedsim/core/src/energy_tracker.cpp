@@ -27,10 +27,10 @@ void EnergyTracker::on_processor_state_change(Processor& proc, ProcessorState ol
 
     // Accumulate energy for time spent in old state
     Duration elapsed = now - ps.last_update;
-    if (elapsed.count() > 0.0) {
+    if (elapsed > Duration::zero()) {
         Power power = compute_processor_power(proc, old_state, ps.last_cstate_level);
         // Energy (mJ) = Power (mW) * Time (s)
-        ps.accumulated.mj += power.mw * elapsed.count();
+        ps.accumulated.mj += power.mw * duration_to_seconds(elapsed);
     }
 
     // Update state
@@ -52,7 +52,7 @@ void EnergyTracker::on_frequency_change(ClockDomain& cd, Frequency old_freq,
 
         // Accumulate energy at old frequency
         Duration elapsed = now - ps.last_update;
-        if (elapsed.count() > 0.0) {
+        if (elapsed > Duration::zero()) {
             // Use old_freq for power calculation since current_freq has already changed
             Power power;
             if (ps.last_state == ProcessorState::Sleep) {
@@ -60,7 +60,7 @@ void EnergyTracker::on_frequency_change(ClockDomain& cd, Frequency old_freq,
             } else {
                 power = cd.power_at_frequency(old_freq);
             }
-            ps.accumulated.mj += power.mw * elapsed.count();
+            ps.accumulated.mj += power.mw * duration_to_seconds(elapsed);
         }
 
         ps.last_update = now;
@@ -77,9 +77,9 @@ void EnergyTracker::on_cstate_change(Processor& proc, int old_level, int new_lev
 
     // Accumulate energy at old C-state level
     Duration elapsed = now - ps.last_update;
-    if (elapsed.count() > 0.0) {
+    if (elapsed > Duration::zero()) {
         Power power = compute_processor_power(proc, ps.last_state, old_level);
-        ps.accumulated.mj += power.mw * elapsed.count();
+        ps.accumulated.mj += power.mw * duration_to_seconds(elapsed);
     }
 
     // Update state
@@ -93,10 +93,10 @@ void EnergyTracker::update_to_time(TimePoint now) {
         const Processor& proc = platform_.processor(i);
 
         Duration elapsed = now - ps.last_update;
-        if (elapsed.count() > 0.0) {
+        if (elapsed > Duration::zero()) {
             // Use the processor's current state for power computation
             Power power = compute_processor_power(proc, proc.state(), proc.current_cstate_level());
-            ps.accumulated.mj += power.mw * elapsed.count();
+            ps.accumulated.mj += power.mw * duration_to_seconds(elapsed);
             ps.last_update = now;
         }
     }

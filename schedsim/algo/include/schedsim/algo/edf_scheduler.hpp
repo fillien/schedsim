@@ -84,12 +84,12 @@ public:
     // Convenience methods for enabling policies
     void enable_grub();
     void enable_cash();
-    void enable_power_aware_dvfs(core::Duration cooldown = core::Duration{0.0});
+    void enable_power_aware_dvfs(core::Duration cooldown = core::duration_from_seconds(0.0));
     void enable_basic_dpm(int target_cstate = 1);
-    void enable_ffa(core::Duration cooldown = core::Duration{0.0}, int sleep_cstate = 1);
-    void enable_csf(core::Duration cooldown = core::Duration{0.0}, int sleep_cstate = 1);
-    void enable_ffa_timer(core::Duration cooldown = core::Duration{0.0}, int sleep_cstate = 1);
-    void enable_csf_timer(core::Duration cooldown = core::Duration{0.0}, int sleep_cstate = 1);
+    void enable_ffa(core::Duration cooldown = core::duration_from_seconds(0.0), int sleep_cstate = 1);
+    void enable_csf(core::Duration cooldown = core::duration_from_seconds(0.0), int sleep_cstate = 1);
+    void enable_ffa_timer(core::Duration cooldown = core::duration_from_seconds(0.0), int sleep_cstate = 1);
+    void enable_csf_timer(core::Duration cooldown = core::duration_from_seconds(0.0), int sleep_cstate = 1);
 
     // Active utilization query (for DVFS integration)
     [[nodiscard]] double active_utilization() const;

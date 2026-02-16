@@ -14,16 +14,16 @@
 
 %typemap(in) schedsim::core::Duration {
     if (PyFloat_Check($input)) {
-        $1 = schedsim::core::Duration{PyFloat_AsDouble($input)};
+        $1 = schedsim::core::duration_from_seconds(PyFloat_AsDouble($input));
     } else if (PyLong_Check($input)) {
-        $1 = schedsim::core::Duration{static_cast<double>(PyLong_AsLong($input))};
+        $1 = schedsim::core::duration_from_seconds(static_cast<double>(PyLong_AsLong($input)));
     } else {
         SWIG_exception_fail(SWIG_TypeError, "Expected a float or int for Duration");
     }
 }
 
 %typemap(out) schedsim::core::Duration {
-    $result = PyFloat_FromDouble($1.count());
+    $result = PyFloat_FromDouble(schedsim::core::duration_to_seconds($1));
 }
 
 %typemap(typecheck, precedence=SWIG_TYPECHECK_DOUBLE) schedsim::core::Duration {
@@ -33,9 +33,9 @@
 // Const reference variant
 %typemap(in) const schedsim::core::Duration& (schedsim::core::Duration temp) {
     if (PyFloat_Check($input)) {
-        temp = schedsim::core::Duration{PyFloat_AsDouble($input)};
+        temp = schedsim::core::duration_from_seconds(PyFloat_AsDouble($input));
     } else if (PyLong_Check($input)) {
-        temp = schedsim::core::Duration{static_cast<double>(PyLong_AsLong($input))};
+        temp = schedsim::core::duration_from_seconds(static_cast<double>(PyLong_AsLong($input)));
     } else {
         SWIG_exception_fail(SWIG_TypeError, "Expected a float or int for Duration");
     }
@@ -52,16 +52,16 @@
 
 %typemap(in) schedsim::core::TimePoint {
     if (PyFloat_Check($input)) {
-        $1 = schedsim::core::TimePoint{schedsim::core::Duration{PyFloat_AsDouble($input)}};
+        $1 = schedsim::core::time_from_seconds(PyFloat_AsDouble($input));
     } else if (PyLong_Check($input)) {
-        $1 = schedsim::core::TimePoint{schedsim::core::Duration{static_cast<double>(PyLong_AsLong($input))}};
+        $1 = schedsim::core::time_from_seconds(static_cast<double>(PyLong_AsLong($input)));
     } else {
         SWIG_exception_fail(SWIG_TypeError, "Expected a float or int for TimePoint");
     }
 }
 
 %typemap(out) schedsim::core::TimePoint {
-    $result = PyFloat_FromDouble($1.time_since_epoch().count());
+    $result = PyFloat_FromDouble(schedsim::core::time_to_seconds($1));
 }
 
 %typemap(typecheck, precedence=SWIG_TYPECHECK_DOUBLE) schedsim::core::TimePoint {
@@ -71,9 +71,9 @@
 // Const reference variant
 %typemap(in) const schedsim::core::TimePoint& (schedsim::core::TimePoint temp) {
     if (PyFloat_Check($input)) {
-        temp = schedsim::core::TimePoint{schedsim::core::Duration{PyFloat_AsDouble($input)}};
+        temp = schedsim::core::time_from_seconds(PyFloat_AsDouble($input));
     } else if (PyLong_Check($input)) {
-        temp = schedsim::core::TimePoint{schedsim::core::Duration{static_cast<double>(PyLong_AsLong($input))}};
+        temp = schedsim::core::time_from_seconds(static_cast<double>(PyLong_AsLong($input)));
     } else {
         SWIG_exception_fail(SWIG_TypeError, "Expected a float or int for TimePoint");
     }
@@ -242,7 +242,7 @@
 
         $1.push_back(schedsim::core::CStateLevel{
             level, scope,
-            schedsim::core::Duration{wake_latency},
+            schedsim::core::duration_from_seconds(wake_latency),
             schedsim::core::Power{power}
         });
     }
@@ -292,8 +292,8 @@
         if (PyErr_Occurred()) SWIG_fail;
 
         temp.push_back(schedsim::io::JobParams{
-            schedsim::core::TimePoint{schedsim::core::Duration{arrival}},
-            schedsim::core::Duration{duration}
+            schedsim::core::time_from_seconds(arrival),
+            schedsim::core::duration_from_seconds(duration)
         });
     }
     $1 = &temp;

@@ -18,15 +18,15 @@ bool CashPolicy::on_early_completion(CbsServer& /*server*/, core::Duration remai
 
 core::Duration CashPolicy::on_budget_exhausted(CbsServer& /*server*/) {
     // CASH: Try to borrow from spare queue
-    if (spare_budget_.count() > 0.0) {
+    if (spare_budget_ > core::Duration::zero()) {
         // Grant all available spare budget
         core::Duration granted = spare_budget_;
-        spare_budget_ = core::Duration{0.0};
+        spare_budget_ = core::Duration::zero();
         return granted;
     }
 
     // No spare budget available, standard CBS postpone will occur
-    return core::Duration{0.0};
+    return core::Duration::zero();
 }
 
 void CashPolicy::on_server_state_change(CbsServer& server, ServerStateChange change) {

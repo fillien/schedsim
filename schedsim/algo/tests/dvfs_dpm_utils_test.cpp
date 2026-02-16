@@ -49,7 +49,7 @@ TEST(DvfsDpmUtilsTest, ComputeUtilizationScale_Valid) {
     auto& pt = engine.platform().add_processor_type("big", 2.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     engine.platform().add_processor(pt, cd, pd);
     engine.platform().finalize();
@@ -70,8 +70,8 @@ TEST(DvfsDpmUtilsTest, CountActiveProcessors_MixedStates) {
     auto& pt = engine.platform().add_processor_type("big", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}},
-        {1, CStateScope::PerProcessor, Duration{0.01}, Power{50.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}},
+        {1, CStateScope::PerProcessor, duration_from_seconds(0.01), Power{50.0}}
     });
     auto& proc0 = engine.platform().add_processor(pt, cd, pd);
     auto& proc1 = engine.platform().add_processor(pt, cd, pd);

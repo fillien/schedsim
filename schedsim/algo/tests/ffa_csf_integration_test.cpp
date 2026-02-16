@@ -32,8 +32,8 @@ protected:
         clock_domain_->set_freq_eff(Frequency{1000.0});
 
         auto& pd = engine_.platform().add_power_domain({
-            {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}},
-            {1, CStateScope::PerProcessor, Duration{0.001}, Power{10.0}}
+            {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}},
+            {1, CStateScope::PerProcessor, duration_from_seconds(0.001), Power{10.0}}
         });
 
         for (int i = 0; i < 4; ++i) {
@@ -42,7 +42,7 @@ protected:
     }
 
     TimePoint time(double seconds) {
-        return TimePoint{Duration{seconds}};
+        return time_from_seconds(seconds);
     }
 
     int count_sleeping() const {
@@ -61,7 +61,7 @@ protected:
 };
 
 TEST_F(GrubFfaIntegrationTest, LowUtil_SleepsCores) {
-    auto& task = engine_.platform().add_task(Duration{10.0}, Duration{1.0}, Duration{1.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(1.0), duration_from_seconds(1.0));
     engine_.platform().finalize();
 
     std::vector<Processor*> proc_vec(procs_, procs_ + 4);
@@ -69,13 +69,13 @@ TEST_F(GrubFfaIntegrationTest, LowUtil_SleepsCores) {
     sched.enable_grub();
     sched.enable_ffa();
 
-    sched.add_server(task, Duration{1.0}, Duration{10.0});
+    sched.add_server(task, duration_from_seconds(1.0), duration_from_seconds(10.0));
 
     engine_.set_job_arrival_handler([&](Task& t, Job job) {
         sched.on_job_arrival(t, std::move(job));
     });
 
-    engine_.schedule_job_arrival(task, time(0.0), Duration{0.5});
+    engine_.schedule_job_arrival(task, time(0.0), duration_from_seconds(0.5));
     engine_.run(time(0.1));
 
     // U=0.1, freq_min=200 < freq_eff=1000 → freq_eff, 1 core active
@@ -84,10 +84,10 @@ TEST_F(GrubFfaIntegrationTest, LowUtil_SleepsCores) {
 }
 
 TEST_F(GrubFfaIntegrationTest, HighUtil_MaxFreq) {
-    auto& task1 = engine_.platform().add_task(Duration{1.0}, Duration{0.9}, Duration{0.9});
-    auto& task2 = engine_.platform().add_task(Duration{1.0}, Duration{0.9}, Duration{0.9});
-    auto& task3 = engine_.platform().add_task(Duration{1.0}, Duration{0.9}, Duration{0.9});
-    auto& task4 = engine_.platform().add_task(Duration{1.0}, Duration{0.9}, Duration{0.9});
+    auto& task1 = engine_.platform().add_task(duration_from_seconds(1.0), duration_from_seconds(0.9), duration_from_seconds(0.9));
+    auto& task2 = engine_.platform().add_task(duration_from_seconds(1.0), duration_from_seconds(0.9), duration_from_seconds(0.9));
+    auto& task3 = engine_.platform().add_task(duration_from_seconds(1.0), duration_from_seconds(0.9), duration_from_seconds(0.9));
+    auto& task4 = engine_.platform().add_task(duration_from_seconds(1.0), duration_from_seconds(0.9), duration_from_seconds(0.9));
     engine_.platform().finalize();
 
     std::vector<Processor*> proc_vec(procs_, procs_ + 4);
@@ -95,19 +95,19 @@ TEST_F(GrubFfaIntegrationTest, HighUtil_MaxFreq) {
     sched.enable_grub();
     sched.enable_ffa();
 
-    sched.add_server(task1, Duration{0.9}, Duration{1.0});
-    sched.add_server(task2, Duration{0.9}, Duration{1.0});
-    sched.add_server(task3, Duration{0.9}, Duration{1.0});
-    sched.add_server(task4, Duration{0.9}, Duration{1.0});
+    sched.add_server(task1, duration_from_seconds(0.9), duration_from_seconds(1.0));
+    sched.add_server(task2, duration_from_seconds(0.9), duration_from_seconds(1.0));
+    sched.add_server(task3, duration_from_seconds(0.9), duration_from_seconds(1.0));
+    sched.add_server(task4, duration_from_seconds(0.9), duration_from_seconds(1.0));
 
     engine_.set_job_arrival_handler([&](Task& t, Job job) {
         sched.on_job_arrival(t, std::move(job));
     });
 
-    engine_.schedule_job_arrival(task1, time(0.0), Duration{0.5});
-    engine_.schedule_job_arrival(task2, time(0.0), Duration{0.5});
-    engine_.schedule_job_arrival(task3, time(0.0), Duration{0.5});
-    engine_.schedule_job_arrival(task4, time(0.0), Duration{0.5});
+    engine_.schedule_job_arrival(task1, time(0.0), duration_from_seconds(0.5));
+    engine_.schedule_job_arrival(task2, time(0.0), duration_from_seconds(0.5));
+    engine_.schedule_job_arrival(task3, time(0.0), duration_from_seconds(0.5));
+    engine_.schedule_job_arrival(task4, time(0.0), duration_from_seconds(0.5));
     engine_.run(time(0.1));
 
     // 4 tasks * U=0.9 = total 3.6, max=0.9
@@ -119,8 +119,8 @@ TEST_F(GrubFfaIntegrationTest, HighUtil_MaxFreq) {
 
 TEST_F(GrubFfaIntegrationTest, Reclamation_FreqDrops) {
     // Two tasks: one finishes early → GRUB reclaims → freq should adjust
-    auto& task1 = engine_.platform().add_task(Duration{10.0}, Duration{5.0}, Duration{5.0});
-    auto& task2 = engine_.platform().add_task(Duration{10.0}, Duration{5.0}, Duration{5.0});
+    auto& task1 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(5.0), duration_from_seconds(5.0));
+    auto& task2 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(5.0), duration_from_seconds(5.0));
     engine_.platform().finalize();
 
     std::vector<Processor*> proc_vec(procs_, procs_ + 4);
@@ -128,23 +128,23 @@ TEST_F(GrubFfaIntegrationTest, Reclamation_FreqDrops) {
     sched.enable_grub();
     sched.enable_ffa();
 
-    sched.add_server(task1, Duration{5.0}, Duration{10.0});
-    sched.add_server(task2, Duration{5.0}, Duration{10.0});
+    sched.add_server(task1, duration_from_seconds(5.0), duration_from_seconds(10.0));
+    sched.add_server(task2, duration_from_seconds(5.0), duration_from_seconds(10.0));
 
     engine_.set_job_arrival_handler([&](Task& t, Job job) {
         sched.on_job_arrival(t, std::move(job));
     });
 
     // task1 has a short job (0.1s), task2 has full job (5.0s)
-    engine_.schedule_job_arrival(task1, time(0.0), Duration{0.1});
-    engine_.schedule_job_arrival(task2, time(0.0), Duration{5.0});
+    engine_.schedule_job_arrival(task1, time(0.0), duration_from_seconds(0.1));
+    engine_.schedule_job_arrival(task2, time(0.0), duration_from_seconds(5.0));
 
     // Run past task1 completion
     engine_.run(time(0.5));
 
     // After task1's short job completes, utilization should have changed.
     // The simulation ran without errors, verifying GRUB+FFA interact correctly.
-    EXPECT_GE(engine_.time().time_since_epoch().count(), 0.5);
+    EXPECT_GE(time_to_seconds(engine_.time()), 0.5);
 }
 
 // ---------------------------------------------------------------------------
@@ -164,8 +164,8 @@ protected:
         clock_domain_->set_freq_eff(Frequency{1000.0});
 
         auto& pd = engine_.platform().add_power_domain({
-            {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}},
-            {1, CStateScope::PerProcessor, Duration{0.001}, Power{10.0}}
+            {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}},
+            {1, CStateScope::PerProcessor, duration_from_seconds(0.001), Power{10.0}}
         });
 
         for (int i = 0; i < 4; ++i) {
@@ -174,7 +174,7 @@ protected:
     }
 
     TimePoint time(double seconds) {
-        return TimePoint{Duration{seconds}};
+        return time_from_seconds(seconds);
     }
 
     int count_sleeping() const {
@@ -193,7 +193,7 @@ protected:
 };
 
 TEST_F(GrubCsfIntegrationTest, LowUtil_AggressiveCoreReduction) {
-    auto& task = engine_.platform().add_task(Duration{10.0}, Duration{1.0}, Duration{1.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(1.0), duration_from_seconds(1.0));
     engine_.platform().finalize();
 
     std::vector<Processor*> proc_vec(procs_, procs_ + 4);
@@ -201,13 +201,13 @@ TEST_F(GrubCsfIntegrationTest, LowUtil_AggressiveCoreReduction) {
     sched.enable_grub();
     sched.enable_csf();
 
-    sched.add_server(task, Duration{1.0}, Duration{10.0});
+    sched.add_server(task, duration_from_seconds(1.0), duration_from_seconds(10.0));
 
     engine_.set_job_arrival_handler([&](Task& t, Job job) {
         sched.on_job_arrival(t, std::move(job));
     });
 
-    engine_.schedule_job_arrival(task, time(0.0), Duration{0.5});
+    engine_.schedule_job_arrival(task, time(0.0), duration_from_seconds(0.5));
     engine_.run(time(0.1));
 
     // U_active=0.1, U_max=0.1, m_min=ceil(0/0.9)=0→1
@@ -218,8 +218,8 @@ TEST_F(GrubCsfIntegrationTest, LowUtil_AggressiveCoreReduction) {
 }
 
 TEST_F(GrubCsfIntegrationTest, MediumUtil_AllCoresHigherFreq) {
-    auto& task1 = engine_.platform().add_task(Duration{10.0}, Duration{3.0}, Duration{3.0});
-    auto& task2 = engine_.platform().add_task(Duration{10.0}, Duration{3.0}, Duration{3.0});
+    auto& task1 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(3.0), duration_from_seconds(3.0));
+    auto& task2 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(3.0), duration_from_seconds(3.0));
     engine_.platform().finalize();
 
     std::vector<Processor*> proc_vec(procs_, procs_ + 4);
@@ -227,15 +227,15 @@ TEST_F(GrubCsfIntegrationTest, MediumUtil_AllCoresHigherFreq) {
     sched.enable_grub();
     sched.enable_csf();
 
-    sched.add_server(task1, Duration{3.0}, Duration{10.0});
-    sched.add_server(task2, Duration{3.0}, Duration{10.0});
+    sched.add_server(task1, duration_from_seconds(3.0), duration_from_seconds(10.0));
+    sched.add_server(task2, duration_from_seconds(3.0), duration_from_seconds(10.0));
 
     engine_.set_job_arrival_handler([&](Task& t, Job job) {
         sched.on_job_arrival(t, std::move(job));
     });
 
-    engine_.schedule_job_arrival(task1, time(0.0), Duration{2.0});
-    engine_.schedule_job_arrival(task2, time(0.0), Duration{2.0});
+    engine_.schedule_job_arrival(task1, time(0.0), duration_from_seconds(2.0));
+    engine_.schedule_job_arrival(task2, time(0.0), duration_from_seconds(2.0));
     engine_.run(time(0.1));
 
     // Steady-state target: freq_min=1200 >= freq_eff → ceil_to_mode(1200)=1500
@@ -254,8 +254,8 @@ TEST_F(GrubCsfIntegrationTest, MediumUtil_AllCoresHigherFreq) {
 
 TEST_F(GrubCsfIntegrationTest, Reclamation_AdjustsCores) {
     // Two tasks, one finishes early → GRUB reclaims → CSF adjusts
-    auto& task1 = engine_.platform().add_task(Duration{10.0}, Duration{5.0}, Duration{5.0});
-    auto& task2 = engine_.platform().add_task(Duration{10.0}, Duration{5.0}, Duration{5.0});
+    auto& task1 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(5.0), duration_from_seconds(5.0));
+    auto& task2 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(5.0), duration_from_seconds(5.0));
     engine_.platform().finalize();
 
     std::vector<Processor*> proc_vec(procs_, procs_ + 4);
@@ -263,18 +263,18 @@ TEST_F(GrubCsfIntegrationTest, Reclamation_AdjustsCores) {
     sched.enable_grub();
     sched.enable_csf();
 
-    sched.add_server(task1, Duration{5.0}, Duration{10.0});
-    sched.add_server(task2, Duration{5.0}, Duration{10.0});
+    sched.add_server(task1, duration_from_seconds(5.0), duration_from_seconds(10.0));
+    sched.add_server(task2, duration_from_seconds(5.0), duration_from_seconds(10.0));
 
     engine_.set_job_arrival_handler([&](Task& t, Job job) {
         sched.on_job_arrival(t, std::move(job));
     });
 
-    engine_.schedule_job_arrival(task1, time(0.0), Duration{0.1});
-    engine_.schedule_job_arrival(task2, time(0.0), Duration{5.0});
+    engine_.schedule_job_arrival(task1, time(0.0), duration_from_seconds(0.1));
+    engine_.schedule_job_arrival(task2, time(0.0), duration_from_seconds(5.0));
 
     engine_.run(time(0.5));
 
     // Simulation ran without errors, verifying GRUB+CSF interact correctly.
-    EXPECT_GE(engine_.time().time_since_epoch().count(), 0.5);
+    EXPECT_GE(time_to_seconds(engine_.time()), 0.5);
 }

@@ -15,12 +15,6 @@ namespace schedsim::io {
 
 namespace {
 
-// Tolerance for floating-point comparisons in scenario validation.
-// 1e-9 provides ~1 nanosecond precision which is sufficient for typical
-// real-time periods (milliseconds to seconds). This handles rounding errors
-// when wcet is computed as period * utilization.
-constexpr double FP_TOLERANCE = 1e-9;
-
 using namespace schedsim::core;
 
 // Helper to get required member with error context
@@ -90,11 +84,11 @@ void parse_scenario_impl(ScenarioData& result, const rapidjson::Document& doc) {
         if (period <= 0) {
             throw LoaderError("period must be positive", ctx.c_str());
         }
-        task_params.period = Duration{period};
+        task_params.period = duration_from_seconds(period);
 
         // Relative deadline (optional, defaults to period)
         double deadline = get_double_or(task_obj, "relative_deadline", period);
-        task_params.relative_deadline = Duration{deadline};
+        task_params.relative_deadline = duration_from_seconds(deadline);
 
         // WCET: new format uses "wcet", legacy uses "utilization"
         if (task_obj.HasMember("wcet")) {
@@ -102,19 +96,19 @@ void parse_scenario_impl(ScenarioData& result, const rapidjson::Document& doc) {
             if (wcet <= 0) {
                 throw LoaderError("wcet must be positive", ctx.c_str());
             }
-            task_params.wcet = Duration{wcet};
+            task_params.wcet = duration_from_seconds(wcet);
         } else if (task_obj.HasMember("utilization")) {
             double utilization = get_double(task_obj, "utilization", ctx.c_str());
             if (utilization <= 0 || utilization > 1.0) {
                 throw LoaderError("utilization must be in (0, 1]", ctx.c_str());
             }
-            task_params.wcet = Duration{period * utilization};
+            task_params.wcet = duration_from_seconds(period * utilization);
         } else {
             throw LoaderError("either 'wcet' or 'utilization' must be specified", ctx.c_str());
         }
 
-        // Validate deadline >= wcet (with epsilon tolerance for floating-point)
-        if (task_params.relative_deadline.count() < task_params.wcet.count() - FP_TOLERANCE) {
+        // Validate deadline >= wcet
+        if (task_params.relative_deadline < task_params.wcet) {
             throw LoaderError("relative_deadline must be >= wcet", ctx.c_str());
         }
 
@@ -134,8 +128,8 @@ void parse_scenario_impl(ScenarioData& result, const rapidjson::Document& doc) {
                     }
 
                     task_params.jobs.push_back(JobParams{
-                        TimePoint{Duration{arrival}},
-                        Duration{duration}
+                        time_from_seconds(arrival),
+                        duration_from_seconds(duration)
                     });
                 }
 
@@ -198,13 +192,13 @@ void write_scenario_to_stream(const ScenarioData& scenario, std::ostream& out) {
         writer.Uint64(task.id);
 
         writer.Key("period");
-        writer.Double(task.period.count());
+        writer.Double(duration_to_seconds(task.period));
 
         writer.Key("relative_deadline");
-        writer.Double(task.relative_deadline.count());
+        writer.Double(duration_to_seconds(task.relative_deadline));
 
         writer.Key("wcet");
-        writer.Double(task.wcet.count());
+        writer.Double(duration_to_seconds(task.wcet));
 
         if (!task.jobs.empty()) {
             writer.Key("jobs");
@@ -212,9 +206,9 @@ void write_scenario_to_stream(const ScenarioData& scenario, std::ostream& out) {
             for (const auto& job : task.jobs) {
                 writer.StartObject();
                 writer.Key("arrival");
-                writer.Double(job.arrival.time_since_epoch().count());
+                writer.Double(time_to_seconds(job.arrival));
                 writer.Key("duration");
-                writer.Double(job.duration.count());
+                writer.Double(duration_to_seconds(job.duration));
                 writer.EndObject();
             }
             writer.EndArray();

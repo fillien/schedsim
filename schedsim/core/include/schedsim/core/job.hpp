@@ -17,7 +17,7 @@ public:
     [[nodiscard]] Duration remaining_work() const noexcept { return remaining_work_; }
     [[nodiscard]] Duration total_work() const noexcept { return total_work_; }
     [[nodiscard]] TimePoint absolute_deadline() const noexcept { return absolute_deadline_; }
-    [[nodiscard]] bool is_complete() const noexcept { return remaining_work_.count() <= 0.0; }
+    [[nodiscard]] bool is_complete() const noexcept { return remaining_work_ <= Duration::zero(); }
 
     // Called by Processor during execution tracking.
     // Amount is in reference units.

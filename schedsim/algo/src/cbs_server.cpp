@@ -10,12 +10,12 @@ CbsServer::CbsServer(std::size_t id, core::Duration budget, core::Duration perio
     : id_(id)
     , budget_(budget)
     , period_(period)
-    , utilization_(budget.count() / period.count())
+    , utilization_(core::duration_ratio(budget, period))
     , overrun_policy_(policy)
     , remaining_budget_(budget) {
-    assert(budget.count() > 0.0 && "Budget must be positive");
-    assert(period.count() > 0.0 && "Period must be positive");
-    assert(budget.count() <= period.count() && "Budget cannot exceed period");
+    assert(budget > core::Duration::zero() && "Budget must be positive");
+    assert(period > core::Duration::zero() && "Period must be positive");
+    assert(budget <= period && "Budget cannot exceed period");
 }
 
 core::Job* CbsServer::current_job() {
@@ -124,8 +124,8 @@ void CbsServer::reach_deadline(core::TimePoint /*current_time*/) {
 void CbsServer::update_virtual_time(core::Duration execution_time) {
     // CBS formula: vt += execution_time / U
     // This represents the progress in "virtual" time based on utilization
-    core::Duration vt_increment{execution_time.count() / utilization_};
-    virtual_time_ = core::TimePoint{virtual_time_.time_since_epoch() + vt_increment};
+    core::Duration vt_increment = core::divide_duration(execution_time, utilization_);
+    virtual_time_ = virtual_time_ + vt_increment;
 }
 
 void CbsServer::postpone_deadline() {
@@ -135,10 +135,10 @@ void CbsServer::postpone_deadline() {
 }
 
 void CbsServer::consume_budget(core::Duration amount) {
-    assert(amount.count() >= 0.0 && "Cannot consume negative budget");
+    assert(amount >= core::Duration::zero() && "Cannot consume negative budget");
     remaining_budget_ -= amount;
-    if (remaining_budget_.count() < 0.0) {
-        remaining_budget_ = core::Duration{0.0};
+    if (remaining_budget_ < core::Duration::zero()) {
+        remaining_budget_ = core::Duration::zero();
     }
 }
 

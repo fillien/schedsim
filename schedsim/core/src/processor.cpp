@@ -44,7 +44,7 @@ void Processor::assign(Job& job) {
     // From Idle: check if context switch is enabled and has non-zero delay
     if (engine_ && engine_->context_switch_enabled()) {
         Duration cs_delay = type_->context_switch_delay();
-        if (cs_delay.count() > 0.0) {
+        if (cs_delay > Duration::zero()) {
             begin_context_switch(job);
             return;
         }
@@ -182,7 +182,7 @@ void Processor::schedule_completion() {
     // Calculate time to completion based on remaining work and speed
     Duration remaining = current_job_->remaining_work();
 
-    if (remaining.count() <= 0.0) {
+    if (remaining <= Duration::zero()) {
         // Job already complete (floating-point rounding from DVFS) — fire immediately
         on_completion_timer();
         return;
@@ -195,7 +195,7 @@ void Processor::schedule_completion() {
     }
 
     // Wall time = reference_work / speed
-    Duration wall_time{remaining.count() / spd};
+    Duration wall_time = divide_duration(remaining, spd);
     TimePoint completion_time = engine_->time() + wall_time;
 
     completion_timer_ = engine_->add_timer(
@@ -221,7 +221,7 @@ void Processor::update_consumed_work() {
 
     // Work consumed = elapsed_wall_time * speed (in reference units)
     double spd = speed(reference_performance_);
-    Duration work_done{elapsed.count() * spd};
+    Duration work_done = scale_duration(elapsed, spd);
 
     current_job_->consume_work(work_done);
     last_update_time_ = now;
@@ -310,7 +310,7 @@ void Processor::begin_wake_up(Job& job) {
     // Get wake-up latency based on current C-state level
     Duration wake_latency = power_domain_->wake_latency(current_cstate_level_);
 
-    if (wake_latency.count() <= 0.0) {
+    if (wake_latency <= Duration::zero()) {
         // No wake-up latency - immediate transition
         current_cstate_level_ = 0;
         state_ = ProcessorState::Idle;
@@ -362,7 +362,7 @@ void Processor::on_wake_up_complete() {
 
     if (engine_ && engine_->context_switch_enabled()) {
         Duration cs_delay = type_->context_switch_delay();
-        if (cs_delay.count() > 0.0) {
+        if (cs_delay > Duration::zero()) {
             begin_context_switch(*saved_pending);
             return;
         }

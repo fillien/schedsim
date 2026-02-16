@@ -16,7 +16,7 @@ using namespace schedsim::core;
 class EdfSchedulerTestBase : public ::testing::Test {
 protected:
     TimePoint time(double seconds) {
-        return TimePoint{Duration{seconds}};
+        return time_from_seconds(seconds);
     }
 };
 
@@ -25,7 +25,7 @@ TEST_F(EdfSchedulerTestBase, Construction) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     auto* proc = &engine.platform().add_processor(pt, cd, pd);
     engine.platform().finalize();
@@ -42,14 +42,14 @@ TEST_F(EdfSchedulerTestBase, AddServer_Basic) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     auto* proc = &engine.platform().add_processor(pt, cd, pd);
-    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     engine.platform().finalize();
 
     EdfScheduler sched(engine, {proc});
-    auto& server = sched.add_server(task, Duration{2.0}, Duration{10.0});
+    auto& server = sched.add_server(task, duration_from_seconds(2.0), duration_from_seconds(10.0));
 
     EXPECT_EQ(sched.server_count(), 1U);
     EXPECT_DOUBLE_EQ(sched.utilization(), 0.2);
@@ -61,17 +61,17 @@ TEST_F(EdfSchedulerTestBase, AddServer_FromTaskParams) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     auto* proc = &engine.platform().add_processor(pt, cd, pd);
-    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     engine.platform().finalize();
 
     EdfScheduler sched(engine, {proc});
     auto& server = sched.add_server(task);
 
-    EXPECT_EQ(server.budget().count(), 2.0);  // task.wcet()
-    EXPECT_EQ(server.period().count(), 10.0);  // task.period()
+    EXPECT_EQ(duration_to_seconds(server.budget()), 2.0);  // task.wcet()
+    EXPECT_EQ(duration_to_seconds(server.period()), 10.0);  // task.period()
 }
 
 TEST_F(EdfSchedulerTestBase, FindServer) {
@@ -79,10 +79,10 @@ TEST_F(EdfSchedulerTestBase, FindServer) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     auto* proc = &engine.platform().add_processor(pt, cd, pd);
-    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     engine.platform().finalize();
 
     EdfScheduler sched(engine, {proc});
@@ -98,10 +98,10 @@ TEST_F(EdfSchedulerTestBase, FindServer_NotFound) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     auto* proc = &engine.platform().add_processor(pt, cd, pd);
-    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     engine.platform().finalize();
 
     EdfScheduler sched(engine, {proc});
@@ -115,7 +115,7 @@ TEST_F(EdfSchedulerTestBase, AdmissionTest_Uniprocessor_Accepts) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     auto* proc = &engine.platform().add_processor(pt, cd, pd);
     engine.platform().finalize();
@@ -123,10 +123,10 @@ TEST_F(EdfSchedulerTestBase, AdmissionTest_Uniprocessor_Accepts) {
     EdfScheduler sched(engine, {proc});
 
     // Can admit U=0.5 on single processor
-    EXPECT_TRUE(sched.can_admit(Duration{5.0}, Duration{10.0}));
+    EXPECT_TRUE(sched.can_admit(duration_from_seconds(5.0), duration_from_seconds(10.0)));
 
     // Can admit U=1.0 exactly
-    EXPECT_TRUE(sched.can_admit(Duration{10.0}, Duration{10.0}));
+    EXPECT_TRUE(sched.can_admit(duration_from_seconds(10.0), duration_from_seconds(10.0)));
 }
 
 TEST_F(EdfSchedulerTestBase, AdmissionTest_Uniprocessor_Rejects) {
@@ -134,7 +134,7 @@ TEST_F(EdfSchedulerTestBase, AdmissionTest_Uniprocessor_Rejects) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     auto* proc = &engine.platform().add_processor(pt, cd, pd);
     engine.platform().finalize();
@@ -142,7 +142,7 @@ TEST_F(EdfSchedulerTestBase, AdmissionTest_Uniprocessor_Rejects) {
     EdfScheduler sched(engine, {proc});
 
     // Cannot admit U>1.0 on single processor
-    EXPECT_FALSE(sched.can_admit(Duration{11.0}, Duration{10.0}));
+    EXPECT_FALSE(sched.can_admit(duration_from_seconds(11.0), duration_from_seconds(10.0)));
 }
 
 TEST_F(EdfSchedulerTestBase, AddServer_ThrowsOnOverUtilization) {
@@ -150,11 +150,11 @@ TEST_F(EdfSchedulerTestBase, AddServer_ThrowsOnOverUtilization) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     auto* proc = &engine.platform().add_processor(pt, cd, pd);
-    auto& task1 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{8.0});
-    auto& task2 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{4.0});
+    auto& task1 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(8.0));
+    auto& task2 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(4.0));
     engine.platform().finalize();
 
     EdfScheduler sched(engine, {proc});
@@ -172,11 +172,11 @@ TEST_F(EdfSchedulerTestBase, AddServerUnchecked_BypassesAdmission) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     auto* proc = &engine.platform().add_processor(pt, cd, pd);
-    auto& task1 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{8.0});
-    auto& task2 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{4.0});
+    auto& task1 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(8.0));
+    auto& task2 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(4.0));
     engine.platform().finalize();
 
     EdfScheduler sched(engine, {proc});
@@ -184,7 +184,7 @@ TEST_F(EdfSchedulerTestBase, AddServerUnchecked_BypassesAdmission) {
 
     // Unchecked allows over-utilization
     EXPECT_NO_THROW(
-        sched.add_server_unchecked(task2, Duration{4.0}, Duration{10.0})
+        sched.add_server_unchecked(task2, duration_from_seconds(4.0), duration_from_seconds(10.0))
     );
 
     EXPECT_DOUBLE_EQ(sched.utilization(), 1.2);
@@ -195,7 +195,7 @@ TEST_F(EdfSchedulerTestBase, DeadlineMissPolicy_Default) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     auto* proc = &engine.platform().add_processor(pt, cd, pd);
     engine.platform().finalize();
@@ -211,7 +211,7 @@ TEST_F(EdfSchedulerTestBase, DeadlineMissHandler) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     auto* proc = &engine.platform().add_processor(pt, cd, pd);
     engine.platform().finalize();
@@ -232,7 +232,7 @@ TEST_F(EdfSchedulerTestBase, Processors_ReturnsSpan) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     auto* proc = &engine.platform().add_processor(pt, cd, pd);
     engine.platform().finalize();
@@ -250,7 +250,7 @@ TEST_F(EdfSchedulerTestBase, AdmissionTest_Multiprocessor) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
 
     std::vector<Processor*> procs;
@@ -262,11 +262,11 @@ TEST_F(EdfSchedulerTestBase, AdmissionTest_Multiprocessor) {
     EdfScheduler sched(engine, procs);
 
     // Can admit up to U=4.0 on 4 processors
-    EXPECT_TRUE(sched.can_admit(Duration{10.0}, Duration{10.0}));  // U=1.0
-    EXPECT_TRUE(sched.can_admit(Duration{40.0}, Duration{10.0}));  // U=4.0
+    EXPECT_TRUE(sched.can_admit(duration_from_seconds(10.0), duration_from_seconds(10.0)));  // U=1.0
+    EXPECT_TRUE(sched.can_admit(duration_from_seconds(40.0), duration_from_seconds(10.0)));  // U=4.0
 
     // Cannot admit U>4.0
-    EXPECT_FALSE(sched.can_admit(Duration{41.0}, Duration{10.0}));  // U=4.1
+    EXPECT_FALSE(sched.can_admit(duration_from_seconds(41.0), duration_from_seconds(10.0)));  // U=4.1
 }
 
 TEST_F(EdfSchedulerTestBase, AdmissionTest_AccumulatesUtilization) {
@@ -274,15 +274,15 @@ TEST_F(EdfSchedulerTestBase, AdmissionTest_AccumulatesUtilization) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
 
     std::vector<Processor*> procs;
     for (int i = 0; i < 4; ++i) {
         procs.push_back(&engine.platform().add_processor(pt, cd, pd));
     }
-    auto& task1 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{10.0});
-    auto& task2 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{10.0});
+    auto& task1 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(10.0));
+    auto& task2 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(10.0));
     engine.platform().finalize();
 
     EdfScheduler sched(engine, procs);
@@ -292,10 +292,10 @@ TEST_F(EdfSchedulerTestBase, AdmissionTest_AccumulatesUtilization) {
     EXPECT_DOUBLE_EQ(sched.utilization(), 2.0);
 
     // Can still admit up to U=2.0 more
-    EXPECT_TRUE(sched.can_admit(Duration{20.0}, Duration{10.0}));  // +2.0
+    EXPECT_TRUE(sched.can_admit(duration_from_seconds(20.0), duration_from_seconds(10.0)));  // +2.0
 
     // Cannot admit more than remaining capacity
-    EXPECT_FALSE(sched.can_admit(Duration{21.0}, Duration{10.0}));  // +2.1
+    EXPECT_FALSE(sched.can_admit(duration_from_seconds(21.0), duration_from_seconds(10.0)));  // +2.1
 }
 
 TEST_F(EdfSchedulerTestBase, ProcessorCount) {
@@ -303,7 +303,7 @@ TEST_F(EdfSchedulerTestBase, ProcessorCount) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
 
     std::vector<Processor*> procs;
@@ -323,16 +323,16 @@ TEST_F(EdfSchedulerTestBase, ServerIds_Monotonic) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
 
     std::vector<Processor*> procs;
     for (int i = 0; i < 4; ++i) {
         procs.push_back(&engine.platform().add_processor(pt, cd, pd));
     }
-    auto& task1 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
-    auto& task2 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
-    auto& task3 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
+    auto& task1 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
+    auto& task2 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
+    auto& task3 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
     engine.platform().finalize();
 
     EdfScheduler sched(engine, procs);
@@ -354,13 +354,13 @@ TEST_F(EdfSchedulerTestBase, EqualDeadlines_OrderedById) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     auto* proc = &engine.platform().add_processor(pt, cd, pd);
 
     // Create tasks with identical periods (so servers get identical initial deadlines)
-    auto& task1 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
-    auto& task2 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
+    auto& task1 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
+    auto& task2 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
     engine.platform().finalize();
 
     EdfScheduler sched(engine, {proc});
@@ -386,10 +386,10 @@ TEST_F(EdfSchedulerTestBase, SetExpectedArrivals_DetachAfterAllArrived) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     auto* proc = &engine.platform().add_processor(pt, cd, pd);
-    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     engine.platform().finalize();
 
     EdfScheduler sched(engine, {proc});
@@ -398,7 +398,7 @@ TEST_F(EdfSchedulerTestBase, SetExpectedArrivals_DetachAfterAllArrived) {
     sched.set_expected_arrivals(task, 1);  // Only 1 arrival expected
 
     SingleSchedulerAllocator alloc(engine, sched);
-    engine.schedule_job_arrival(task, time(0.0), Duration{2.0});
+    engine.schedule_job_arrival(task, time(0.0), duration_from_seconds(2.0));
     engine.run(time(15.0));
 
     // Server detached: arrival_counts_[task]=1 >= expected_arrivals_[task]=1
@@ -410,10 +410,10 @@ TEST_F(EdfSchedulerTestBase, SetExpectedArrivals_NoDetachWhenMoreExpected) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     auto* proc = &engine.platform().add_processor(pt, cd, pd);
-    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     engine.platform().finalize();
 
     EdfScheduler sched(engine, {proc});
@@ -422,7 +422,7 @@ TEST_F(EdfSchedulerTestBase, SetExpectedArrivals_NoDetachWhenMoreExpected) {
     sched.set_expected_arrivals(task, 2);  // 2 arrivals expected, only 1 will occur
 
     SingleSchedulerAllocator alloc(engine, sched);
-    engine.schedule_job_arrival(task, time(0.0), Duration{2.0});
+    engine.schedule_job_arrival(task, time(0.0), duration_from_seconds(2.0));
     engine.run(time(15.0));
 
     // Server NOT detached: arrival_counts_[task]=1 < expected_arrivals_[task]=2

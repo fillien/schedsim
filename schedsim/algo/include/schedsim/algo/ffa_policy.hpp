@@ -23,7 +23,7 @@ class EdfScheduler;
 class FfaPolicy : public DvfsPolicy {
 public:
     FfaPolicy(core::Engine& engine,
-              core::Duration dvfs_cooldown = core::Duration{0.0},
+              core::Duration dvfs_cooldown = core::duration_from_seconds(0.0),
               int sleep_cstate = 1);
 
     void on_utilization_changed(EdfScheduler& scheduler, core::ClockDomain& domain) override;

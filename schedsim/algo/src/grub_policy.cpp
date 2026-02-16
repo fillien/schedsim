@@ -40,7 +40,7 @@ bool GrubPolicy::on_early_completion(CbsServer& server, core::Duration /*remaini
 
 core::Duration GrubPolicy::on_budget_exhausted(CbsServer& /*server*/) {
     // GRUB doesn't grant extra budget on exhaustion
-    return core::Duration{0.0};
+    return core::Duration::zero();
 }
 
 core::TimePoint GrubPolicy::compute_virtual_time(
@@ -48,8 +48,8 @@ core::TimePoint GrubPolicy::compute_virtual_time(
     // M-GRUB per-server formula (matches legacy parallel.cpp:59-68):
     // vt += (bandwidth / U_i) * exec_time
     double bandwidth = compute_bandwidth();
-    double vt_increment = (bandwidth / server.utilization()) * exec_time.count();
-    return core::TimePoint{current_vt.time_since_epoch() + core::Duration{vt_increment}};
+    double vt_increment = (bandwidth / server.utilization()) * core::duration_to_seconds(exec_time);
+    return current_vt + core::duration_from_seconds(vt_increment);
 }
 
 double GrubPolicy::compute_bandwidth() const {
@@ -70,12 +70,12 @@ core::Duration GrubPolicy::compute_server_budget(const CbsServer& server) const 
     // M-GRUB dynamic budget (matches legacy parallel.cpp:41-51):
     // budget = (U_i / bandwidth) * (deadline - vt)
     double bandwidth = compute_bandwidth();
-    double dt = (server.deadline() - server.virtual_time()).count();
+    double dt = core::duration_to_seconds(server.deadline() - server.virtual_time());
     if (dt <= 0.0) {
-        return core::Duration{0.0};
+        return core::Duration::zero();
     }
     double budget = (server.utilization() / bandwidth) * dt;
-    return core::Duration{std::max(budget, 0.0)};
+    return core::duration_from_seconds(std::max(budget, 0.0));
 }
 
 void GrubPolicy::on_server_state_change(CbsServer& server, ServerStateChange change) {

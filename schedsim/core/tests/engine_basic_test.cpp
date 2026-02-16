@@ -12,7 +12,7 @@ using namespace schedsim::core;
 class EngineBasicTest : public ::testing::Test {
 protected:
     TimePoint time(double seconds) {
-        return TimePoint{Duration{seconds}};
+        return time_from_seconds(seconds);
     }
 };
 
@@ -143,10 +143,10 @@ TEST_F(EngineBasicTest, ScheduleJobArrivalPastTimeThrows) {
     auto& pt = engine.platform().add_processor_type("big", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{1000.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     engine.platform().add_processor(pt, cd, pd);
-    Task task(0, Duration{10.0}, Duration{10.0}, Duration{2.0});
+    Task task(0, duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     engine.platform().finalize();
 
     engine.set_job_arrival_handler([](Task&, Job) {});
@@ -156,7 +156,7 @@ TEST_F(EngineBasicTest, ScheduleJobArrivalPastTimeThrows) {
     EXPECT_EQ(engine.time(), time(5.0));
 
     EXPECT_THROW(
-        engine.schedule_job_arrival(task, time(2.0), Duration{1.0}),
+        engine.schedule_job_arrival(task, time(2.0), duration_from_seconds(1.0)),
         InvalidStateError
     );
 }

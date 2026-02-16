@@ -306,7 +306,7 @@ public:
 
                 c_states.push_back(schedsim::core::CStateLevel{
                     level, scope,
-                    schedsim::core::Duration{wake_latency},
+                    schedsim::core::duration_from_seconds(wake_latency),
                     schedsim::core::Power{power}
                 });
             }

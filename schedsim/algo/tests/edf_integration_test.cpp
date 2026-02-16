@@ -15,14 +15,14 @@ protected:
         auto& pt = engine_.platform().add_processor_type("cpu", 1.0);
         auto& cd = engine_.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
         auto& pd = engine_.platform().add_power_domain({
-            {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+            {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
         });
 
         proc_ = &engine_.platform().add_processor(pt, cd, pd);
     }
 
     TimePoint time(double seconds) {
-        return TimePoint{Duration{seconds}};
+        return time_from_seconds(seconds);
     }
 
     Engine engine_;
@@ -30,7 +30,7 @@ protected:
 };
 
 TEST_F(EdfIntegrationTest, SingleTask_RunsToCompletion) {
-    auto& task = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc_});
@@ -38,7 +38,7 @@ TEST_F(EdfIntegrationTest, SingleTask_RunsToCompletion) {
     SingleSchedulerAllocator alloc(engine_, sched);
 
     // Schedule a job arrival
-    engine_.schedule_job_arrival(task, time(0.0), Duration{2.0});
+    engine_.schedule_job_arrival(task, time(0.0), duration_from_seconds(2.0));
 
     // Run until job completes (2.0 time units execution)
     engine_.run(time(10.0));
@@ -51,13 +51,13 @@ TEST_F(EdfIntegrationTest, SingleTask_RunsToCompletion) {
 }
 
 TEST_F(EdfIntegrationTest, TwoTasks_EdfOrder) {
-    auto& task1 = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
-    auto& task2 = engine_.platform().add_task(Duration{20.0}, Duration{5.0}, Duration{1.0});  // Earlier deadline
+    auto& task1 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
+    auto& task2 = engine_.platform().add_task(duration_from_seconds(20.0), duration_from_seconds(5.0), duration_from_seconds(1.0));  // Earlier deadline
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc_});
-    sched.add_server(task1, Duration{2.0}, Duration{10.0});
-    sched.add_server(task2, Duration{1.0}, Duration{20.0});
+    sched.add_server(task1, duration_from_seconds(2.0), duration_from_seconds(10.0));
+    sched.add_server(task2, duration_from_seconds(1.0), duration_from_seconds(20.0));
     SingleSchedulerAllocator alloc(engine_, sched);
 
     std::vector<std::size_t> completion_order;
@@ -67,8 +67,8 @@ TEST_F(EdfIntegrationTest, TwoTasks_EdfOrder) {
     // For this test, we just verify state after run
 
     // Both jobs arrive at t=0
-    engine_.schedule_job_arrival(task1, time(0.0), Duration{2.0});  // deadline=10
-    engine_.schedule_job_arrival(task2, time(0.0), Duration{1.0});  // deadline=5
+    engine_.schedule_job_arrival(task1, time(0.0), duration_from_seconds(2.0));  // deadline=10
+    engine_.schedule_job_arrival(task2, time(0.0), duration_from_seconds(1.0));  // deadline=5
 
     engine_.run(time(10.0));
 
@@ -79,19 +79,19 @@ TEST_F(EdfIntegrationTest, TwoTasks_EdfOrder) {
 }
 
 TEST_F(EdfIntegrationTest, Preemption_EarlierDeadlineArrives) {
-    auto& task1 = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{4.0});
-    auto& task2 = engine_.platform().add_task(Duration{5.0}, Duration{3.0}, Duration{1.0});  // Earlier deadline
+    auto& task1 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(4.0));
+    auto& task2 = engine_.platform().add_task(duration_from_seconds(5.0), duration_from_seconds(3.0), duration_from_seconds(1.0));  // Earlier deadline
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc_});
-    sched.add_server(task1, Duration{4.0}, Duration{10.0});
-    sched.add_server(task2, Duration{1.0}, Duration{5.0});
+    sched.add_server(task1, duration_from_seconds(4.0), duration_from_seconds(10.0));
+    sched.add_server(task2, duration_from_seconds(1.0), duration_from_seconds(5.0));
     SingleSchedulerAllocator alloc(engine_, sched);
 
     // Task1 arrives at t=0, deadline=10
-    engine_.schedule_job_arrival(task1, time(0.0), Duration{4.0});
+    engine_.schedule_job_arrival(task1, time(0.0), duration_from_seconds(4.0));
     // Task2 arrives at t=1, deadline=1+3=4 (earlier than task1)
-    engine_.schedule_job_arrival(task2, time(1.0), Duration{1.0});
+    engine_.schedule_job_arrival(task2, time(1.0), duration_from_seconds(1.0));
 
     engine_.run(time(10.0));
 
@@ -101,15 +101,15 @@ TEST_F(EdfIntegrationTest, Preemption_EarlierDeadlineArrives) {
 
 TEST_F(EdfIntegrationTest, BudgetExhaustion_PostponesDeadline) {
     // Create a task with job longer than budget
-    auto& task = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{5.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(5.0));
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc_});
     // Budget=2, Period=10, but job needs 5 time units
-    sched.add_server(task, Duration{2.0}, Duration{10.0});
+    sched.add_server(task, duration_from_seconds(2.0), duration_from_seconds(10.0));
     SingleSchedulerAllocator alloc(engine_, sched);
 
-    engine_.schedule_job_arrival(task, time(0.0), Duration{5.0});
+    engine_.schedule_job_arrival(task, time(0.0), duration_from_seconds(5.0));
 
     engine_.run(time(20.0));
 
@@ -118,7 +118,7 @@ TEST_F(EdfIntegrationTest, BudgetExhaustion_PostponesDeadline) {
 }
 
 TEST_F(EdfIntegrationTest, MultipleJobArrivals) {
-    auto& task = engine_.platform().add_task(Duration{5.0}, Duration{5.0}, Duration{1.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(5.0), duration_from_seconds(5.0), duration_from_seconds(1.0));
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc_});
@@ -126,9 +126,9 @@ TEST_F(EdfIntegrationTest, MultipleJobArrivals) {
     SingleSchedulerAllocator alloc(engine_, sched);
 
     // Three job arrivals at different times
-    engine_.schedule_job_arrival(task, time(0.0), Duration{1.0});
-    engine_.schedule_job_arrival(task, time(5.0), Duration{1.0});
-    engine_.schedule_job_arrival(task, time(10.0), Duration{1.0});
+    engine_.schedule_job_arrival(task, time(0.0), duration_from_seconds(1.0));
+    engine_.schedule_job_arrival(task, time(5.0), duration_from_seconds(1.0));
+    engine_.schedule_job_arrival(task, time(10.0), duration_from_seconds(1.0));
 
     engine_.run(time(15.0));
 
@@ -143,7 +143,7 @@ protected:
         auto& pt = engine_.platform().add_processor_type("cpu", 1.0);
         auto& cd = engine_.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
         auto& pd = engine_.platform().add_power_domain({
-            {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+            {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
         });
 
         proc1_ = &engine_.platform().add_processor(pt, cd, pd);
@@ -151,7 +151,7 @@ protected:
     }
 
     TimePoint time(double seconds) {
-        return TimePoint{Duration{seconds}};
+        return time_from_seconds(seconds);
     }
 
     Engine engine_;
@@ -160,8 +160,8 @@ protected:
 };
 
 TEST_F(EdfMultiProcIntegrationTest, TwoTasks_ParallelExecution) {
-    auto& task1 = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
-    auto& task2 = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task1 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
+    auto& task2 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc1_, proc2_});
@@ -170,8 +170,8 @@ TEST_F(EdfMultiProcIntegrationTest, TwoTasks_ParallelExecution) {
     SingleSchedulerAllocator alloc(engine_, sched);
 
     // Both jobs arrive at t=0
-    engine_.schedule_job_arrival(task1, time(0.0), Duration{2.0});
-    engine_.schedule_job_arrival(task2, time(0.0), Duration{2.0});
+    engine_.schedule_job_arrival(task1, time(0.0), duration_from_seconds(2.0));
+    engine_.schedule_job_arrival(task2, time(0.0), duration_from_seconds(2.0));
 
     engine_.run(time(5.0));
 
@@ -181,21 +181,21 @@ TEST_F(EdfMultiProcIntegrationTest, TwoTasks_ParallelExecution) {
 }
 
 TEST_F(EdfMultiProcIntegrationTest, ThreeTasks_TwoProcessors) {
-    auto& task1 = engine_.platform().add_task(Duration{10.0}, Duration{5.0}, Duration{2.0});   // d=5
-    auto& task2 = engine_.platform().add_task(Duration{10.0}, Duration{8.0}, Duration{2.0});   // d=8
-    auto& task3 = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0}); // d=10
+    auto& task1 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(5.0), duration_from_seconds(2.0));   // d=5
+    auto& task2 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(8.0), duration_from_seconds(2.0));   // d=8
+    auto& task3 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0)); // d=10
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc1_, proc2_});
-    sched.add_server(task1, Duration{2.0}, Duration{10.0});
-    sched.add_server(task2, Duration{2.0}, Duration{10.0});
-    sched.add_server(task3, Duration{2.0}, Duration{10.0});
+    sched.add_server(task1, duration_from_seconds(2.0), duration_from_seconds(10.0));
+    sched.add_server(task2, duration_from_seconds(2.0), duration_from_seconds(10.0));
+    sched.add_server(task3, duration_from_seconds(2.0), duration_from_seconds(10.0));
     SingleSchedulerAllocator alloc(engine_, sched);
 
     // All three arrive at t=0
-    engine_.schedule_job_arrival(task1, time(0.0), Duration{2.0});
-    engine_.schedule_job_arrival(task2, time(0.0), Duration{2.0});
-    engine_.schedule_job_arrival(task3, time(0.0), Duration{2.0});
+    engine_.schedule_job_arrival(task1, time(0.0), duration_from_seconds(2.0));
+    engine_.schedule_job_arrival(task2, time(0.0), duration_from_seconds(2.0));
+    engine_.schedule_job_arrival(task3, time(0.0), duration_from_seconds(2.0));
 
     engine_.run(time(10.0));
 
@@ -205,8 +205,8 @@ TEST_F(EdfMultiProcIntegrationTest, ThreeTasks_TwoProcessors) {
 }
 
 TEST_F(EdfMultiProcIntegrationTest, GlobalEdf_Migration) {
-    auto& task1 = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{3.0});
-    auto& task2 = engine_.platform().add_task(Duration{10.0}, Duration{4.0}, Duration{2.0});  // Higher priority
+    auto& task1 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(3.0));
+    auto& task2 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(4.0), duration_from_seconds(2.0));  // Higher priority
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc1_, proc2_});
@@ -215,10 +215,10 @@ TEST_F(EdfMultiProcIntegrationTest, GlobalEdf_Migration) {
     SingleSchedulerAllocator alloc(engine_, sched);
 
     // task1 starts at t=0 on proc1
-    engine_.schedule_job_arrival(task1, time(0.0), Duration{3.0});
+    engine_.schedule_job_arrival(task1, time(0.0), duration_from_seconds(3.0));
 
     // task2 arrives at t=1, should preempt or run on proc2
-    engine_.schedule_job_arrival(task2, time(1.0), Duration{2.0});
+    engine_.schedule_job_arrival(task2, time(1.0), duration_from_seconds(2.0));
 
     engine_.run(time(10.0));
 
@@ -231,12 +231,12 @@ TEST_F(EdfIntegrationTest, DeadlineMissHandler_Called) {
     // Create a task where execution time exceeds relative deadline
     // Task: period=10, relative_deadline=2, wcet=5
     // Job execution time will be 3 (less than wcet but more than deadline)
-    auto& task = engine_.platform().add_task(Duration{10.0}, Duration{2.0}, Duration{5.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(2.0), duration_from_seconds(5.0));
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc_});
     // Use budget=5, period=10 (matching task)
-    sched.add_server(task, Duration{5.0}, Duration{10.0});
+    sched.add_server(task, duration_from_seconds(5.0), duration_from_seconds(10.0));
 
     bool deadline_missed = false;
     sched.set_deadline_miss_handler([&](Processor&, Job&) {
@@ -248,7 +248,7 @@ TEST_F(EdfIntegrationTest, DeadlineMissHandler_Called) {
 
     // Job with 3 time units but deadline at t=2
     // Deadline miss at t=2, job completes at t=3
-    engine_.schedule_job_arrival(task, time(0.0), Duration{3.0});
+    engine_.schedule_job_arrival(task, time(0.0), duration_from_seconds(3.0));
 
     engine_.run(time(10.0));
 
@@ -256,14 +256,14 @@ TEST_F(EdfIntegrationTest, DeadlineMissHandler_Called) {
 }
 
 TEST_F(EdfIntegrationTest, AutoCreateServer_OnJobArrival) {
-    auto& task = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc_});
     // Don't add server explicitly
     SingleSchedulerAllocator alloc(engine_, sched);
 
-    engine_.schedule_job_arrival(task, time(0.0), Duration{2.0});
+    engine_.schedule_job_arrival(task, time(0.0), duration_from_seconds(2.0));
 
     engine_.run(time(5.0));
 

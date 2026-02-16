@@ -17,9 +17,9 @@ TEST(ClockDomainTest, Construction) {
 }
 
 TEST(ClockDomainTest, ConstructionWithDelay) {
-    ClockDomain cd(0, Frequency{500.0}, Frequency{2000.0}, Duration{0.001});
+    ClockDomain cd(0, Frequency{500.0}, Frequency{2000.0}, duration_from_seconds(0.001));
 
-    EXPECT_EQ(cd.transition_delay().count(), 0.001);
+    EXPECT_EQ(duration_to_seconds(cd.transition_delay()), 0.001);
 }
 
 TEST(ClockDomainTest, SetFrequency) {

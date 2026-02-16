@@ -33,7 +33,7 @@ void ClockDomain::set_frequency(Frequency freq) {
     }
 
     // If no delay or no engine, apply immediately
-    if (transition_delay_.count() <= 0.0 || !engine_) {
+    if (transition_delay_ <= Duration::zero() || !engine_) {
         Frequency old_freq = current_freq_;
         current_freq_ = freq;
         // Notify energy tracker of immediate frequency change

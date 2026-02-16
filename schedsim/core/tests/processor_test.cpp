@@ -18,7 +18,7 @@ protected:
         type_ = std::make_unique<ProcessorType>(0, "big", 1.0);
         clock_domain_ = std::make_unique<ClockDomain>(0, Frequency{500.0}, Frequency{2000.0});
         power_domain_ = std::make_unique<PowerDomain>(0, std::vector<CStateLevel>{
-            {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+            {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
         });
     }
 
@@ -88,9 +88,9 @@ TEST_F(ProcessorTest, RequestCStateFromIdle) {
 
 TEST_F(ProcessorTest, RequestCStateWhileRunningThrows) {
     Processor proc(0, *type_, *clock_domain_, *power_domain_);
-    Task task(0, Duration{10.0}, Duration{10.0}, Duration{2.0});
-    TimePoint deadline{Duration{10.0}};
-    Job job(task, Duration{2.0}, deadline);
+    Task task(0, duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
+    TimePoint deadline = time_from_seconds(10.0);
+    Job job(task, duration_from_seconds(2.0), deadline);
 
     proc.assign(job);
     EXPECT_EQ(proc.state(), ProcessorState::Running);
@@ -129,12 +129,12 @@ protected:
         auto& pt = engine_.platform().add_processor_type("big", 1.0);
         auto& cd = engine_.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
         auto& pd = engine_.platform().add_power_domain({
-            {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+            {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
         });
         proc_ = &engine_.platform().add_processor(pt, cd, pd);
         engine_.platform().finalize();
 
-        task_ = std::make_unique<Task>(0, Duration{10.0}, Duration{10.0}, Duration{2.0});
+        task_ = std::make_unique<Task>(0, duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     }
 
     Engine engine_;
@@ -143,8 +143,8 @@ protected:
 };
 
 TEST_F(ProcessorEngineTest, AssignJob) {
-    TimePoint deadline{Duration{10.0}};
-    Job job(*task_, Duration{2.0}, deadline);
+    TimePoint deadline = time_from_seconds(10.0);
+    Job job(*task_, duration_from_seconds(2.0), deadline);
 
     proc_->assign(job);
 
@@ -154,9 +154,9 @@ TEST_F(ProcessorEngineTest, AssignJob) {
 }
 
 TEST_F(ProcessorEngineTest, AssignWhenNotIdleThrows) {
-    TimePoint deadline{Duration{10.0}};
-    Job job1(*task_, Duration{2.0}, deadline);
-    Job job2(*task_, Duration{2.0}, deadline);
+    TimePoint deadline = time_from_seconds(10.0);
+    Job job1(*task_, duration_from_seconds(2.0), deadline);
+    Job job2(*task_, duration_from_seconds(2.0), deadline);
 
     proc_->assign(job1);
 
@@ -164,8 +164,8 @@ TEST_F(ProcessorEngineTest, AssignWhenNotIdleThrows) {
 }
 
 TEST_F(ProcessorEngineTest, ClearAfterAssign) {
-    TimePoint deadline{Duration{10.0}};
-    Job job(*task_, Duration{2.0}, deadline);
+    TimePoint deadline = time_from_seconds(10.0);
+    Job job(*task_, duration_from_seconds(2.0), deadline);
 
     proc_->assign(job);
     proc_->clear();
@@ -184,13 +184,13 @@ TEST_F(ProcessorEngineTest, JobCompletionHandler) {
         EXPECT_EQ(&p, proc_);
     });
 
-    TimePoint deadline{Duration{10.0}};
-    Job job(*task_, Duration{2.0}, deadline);
+    TimePoint deadline = time_from_seconds(10.0);
+    Job job(*task_, duration_from_seconds(2.0), deadline);
 
     proc_->assign(job);
 
     // Run simulation until completion (2.0 time units at speed 1.0)
-    engine_.run(TimePoint{Duration{3.0}});
+    engine_.run(time_from_seconds(3.0));
 
     EXPECT_TRUE(handler_called);
     EXPECT_EQ(completed_job, &job);
@@ -207,13 +207,13 @@ TEST_F(ProcessorEngineTest, DeadlineMissHandler) {
     });
 
     // Job that takes longer than deadline
-    TimePoint deadline{Duration{1.0}};  // Deadline at t=1
-    Job job(*task_, Duration{2.0}, deadline);  // Takes 2.0 time units
+    TimePoint deadline = time_from_seconds(1.0);  // Deadline at t=1
+    Job job(*task_, duration_from_seconds(2.0), deadline);  // Takes 2.0 time units
 
     proc_->assign(job);
 
     // Run simulation past deadline
-    engine_.run(TimePoint{Duration{1.5}});
+    engine_.run(time_from_seconds(1.5));
 
     EXPECT_TRUE(handler_called);
 }
@@ -230,16 +230,16 @@ TEST_F(ProcessorEngineTest, SpeedAffectsCompletionTime) {
         completion_time = engine_.time();
     });
 
-    TimePoint deadline{Duration{10.0}};
-    Job job(*task_, Duration{2.0}, deadline);  // 2.0 reference units
+    TimePoint deadline = time_from_seconds(10.0);
+    Job job(*task_, duration_from_seconds(2.0), deadline);  // 2.0 reference units
 
     proc_->assign(job);
 
     // At speed 0.5, job should take 4.0 wall-clock seconds
-    engine_.run(TimePoint{Duration{5.0}});
+    engine_.run(time_from_seconds(5.0));
 
     EXPECT_TRUE(handler_called);
-    EXPECT_DOUBLE_EQ(completion_time.time_since_epoch().count(), 4.0);
+    EXPECT_DOUBLE_EQ(time_to_seconds(completion_time), 4.0);
 }
 
 TEST_F(ProcessorEngineTest, DeadlineThenCompletion_SafeCancellation) {
@@ -256,13 +256,13 @@ TEST_F(ProcessorEngineTest, DeadlineThenCompletion_SafeCancellation) {
 
     // Job: deadline at t=1.0, execution time 2.0
     // Deadline fires at t=1.0, completion fires at t=2.0
-    TimePoint deadline{Duration{1.0}};
-    Job job(*task_, Duration{2.0}, deadline);
+    TimePoint deadline = time_from_seconds(1.0);
+    Job job(*task_, duration_from_seconds(2.0), deadline);
 
     proc_->assign(job);
 
     // Run past both events
-    engine_.run(TimePoint{Duration{3.0}});
+    engine_.run(time_from_seconds(3.0));
 
     // Both handlers should have been called without crash
     EXPECT_TRUE(deadline_called);
@@ -284,12 +284,12 @@ TEST_F(ProcessorEngineTest, CompletionAndDeadlineAtSameTime) {
 
     // Job: deadline at t=2.0, execution time 2.0
     // Both events at t=2.0 - completion should fire first (lower priority number)
-    TimePoint deadline{Duration{2.0}};
-    Job job(*task_, Duration{2.0}, deadline);
+    TimePoint deadline = time_from_seconds(2.0);
+    Job job(*task_, duration_from_seconds(2.0), deadline);
 
     proc_->assign(job);
 
-    engine_.run(TimePoint{Duration{3.0}});
+    engine_.run(time_from_seconds(3.0));
 
     // Completion fires first (priority 10), cancels deadline timer
     // Deadline handler should NOT be called

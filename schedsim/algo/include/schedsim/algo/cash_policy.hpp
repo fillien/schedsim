@@ -28,7 +28,7 @@ public:
 
 private:
     EdfScheduler& scheduler_;
-    core::Duration spare_budget_{0.0};
+    core::Duration spare_budget_{};
     double active_utilization_{0.0};
 };
 

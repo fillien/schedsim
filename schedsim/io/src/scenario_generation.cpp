@@ -123,8 +123,8 @@ std::vector<TaskParams> generate_task_set(
     auto utilizations = uunifast(num_tasks, target_utilization, rng);
 
     // Generate periods
-    double min_period = period_dist.min.count();
-    double max_period = period_dist.max.count();
+    double min_period = duration_to_seconds(period_dist.min);
+    double max_period = duration_to_seconds(period_dist.max);
 
     std::vector<TaskParams> tasks;
     tasks.reserve(num_tasks);
@@ -147,9 +147,9 @@ std::vector<TaskParams> generate_task_set(
             period = uniform_dist(rng);
         }
 
-        task_params.period = Duration{period};
-        task_params.relative_deadline = Duration{period};  // Implicit deadline
-        task_params.wcet = Duration{period * utilizations[idx]};
+        task_params.period = duration_from_seconds(period);
+        task_params.relative_deadline = duration_from_seconds(period);  // Implicit deadline
+        task_params.wcet = duration_from_seconds(period * utilizations[idx]);
 
         tasks.push_back(std::move(task_params));
     }
@@ -163,13 +163,13 @@ void generate_arrivals(
     std::mt19937& rng,
     double exec_ratio) {
 
-    double sim_end = simulation_duration.count();
+    double sim_end = duration_to_seconds(simulation_duration);
 
     for (auto& task : tasks) {
         task.jobs.clear();
 
-        double period = task.period.count();
-        double wcet = task.wcet.count();
+        double period = duration_to_seconds(task.period);
+        double wcet = duration_to_seconds(task.wcet);
 
         // Generate job arrivals at periodic intervals
         for (double arrival = 0.0; arrival < sim_end; arrival += period) {
@@ -186,8 +186,8 @@ void generate_arrivals(
             }
 
             task.jobs.push_back(JobParams{
-                TimePoint{Duration{arrival}},
-                Duration{duration}
+                time_from_seconds(arrival),
+                duration_from_seconds(duration)
             });
         }
     }
@@ -210,7 +210,7 @@ ScenarioData generate_scenario(
 Duration pick_harmonic_period(std::mt19937& rng) {
     std::uniform_int_distribution<std::size_t> dist(0, HARMONIC_PERIODS_US.size() - 1);
     int period_us = HARMONIC_PERIODS_US[dist(rng)];
-    return Duration{static_cast<double>(period_us) / 1'000'000.0};  // Convert us to seconds
+    return duration_from_seconds(static_cast<double>(period_us) / 1'000'000.0);  // Convert us to seconds
 }
 
 std::vector<JobParams> generate_weibull_jobs(
@@ -224,8 +224,8 @@ std::vector<JobParams> generate_weibull_jobs(
         return {};
     }
 
-    double wcet_sec = wcet.count();
-    double period_sec = period.count();
+    double wcet_sec = duration_to_seconds(wcet);
+    double period_sec = duration_to_seconds(period);
 
     // Generate durations with Weibull distribution
     std::vector<double> durations(hyperperiod_jobs);
@@ -254,8 +254,8 @@ std::vector<JobParams> generate_weibull_jobs(
     double arrival_time = 0.0;
     for (std::size_t idx = 0; idx < hyperperiod_jobs; ++idx) {
         jobs.push_back(JobParams{
-            TimePoint{Duration{arrival_time}},
-            Duration{durations[idx]}
+            time_from_seconds(arrival_time),
+            duration_from_seconds(durations[idx])
         });
         arrival_time += period_sec;
     }
@@ -311,9 +311,9 @@ ScenarioData generate_uunifast_discard_weibull(
     for (std::size_t idx = 0; idx < num_tasks; ++idx) {
         Duration period = pick_harmonic_period(rng);
         double util = utilizations[idx];
-        Duration wcet{period.count() * util};
+        Duration wcet = scale_duration(period, util);
 
-        int period_us = static_cast<int>(period.count() * 1'000'000.0);
+        int period_us = static_cast<int>(duration_to_seconds(period) * 1'000'000.0);
         std::size_t num_jobs = static_cast<std::size_t>(HYPERPERIOD_US / period_us);
 
         auto jobs = generate_weibull_jobs(period, wcet, num_jobs, config, rng);
@@ -383,9 +383,9 @@ std::vector<TaskParams> from_utilizations(
     for (std::size_t idx = 0; idx < utilizations.size(); ++idx) {
         Duration period = pick_harmonic_period(rng);
         double util = utilizations[idx];
-        Duration wcet{period.count() * util};
+        Duration wcet = scale_duration(period, util);
 
-        int period_us = static_cast<int>(period.count() * 1'000'000.0);
+        int period_us = static_cast<int>(duration_to_seconds(period) * 1'000'000.0);
         std::size_t num_jobs = static_cast<std::size_t>(HYPERPERIOD_US / period_us);
 
         auto jobs = generate_weibull_jobs(period, wcet, num_jobs, config, rng);

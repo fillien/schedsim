@@ -18,7 +18,7 @@ class Processor;
 class ClockDomain {
 public:
     ClockDomain(std::size_t id, Frequency freq_min, Frequency freq_max,
-                Duration transition_delay = Duration{0.0});
+                Duration transition_delay = duration_from_seconds(0.0));
 
     [[nodiscard]] std::size_t id() const noexcept { return id_; }
     [[nodiscard]] Frequency frequency() const noexcept { return current_freq_; }

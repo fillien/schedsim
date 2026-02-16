@@ -28,9 +28,9 @@ public:
 
     // Factory methods (before finalize)
     ProcessorType& add_processor_type(std::string_view name, double performance,
-                                       Duration context_switch_delay = Duration{0.0});
+                                       Duration context_switch_delay = duration_from_seconds(0.0));
     ClockDomain& add_clock_domain(Frequency freq_min, Frequency freq_max,
-                                   Duration transition_delay = Duration{0.0});
+                                   Duration transition_delay = duration_from_seconds(0.0));
     PowerDomain& add_power_domain(std::vector<CStateLevel> c_states);
     Processor& add_processor(ProcessorType& type, ClockDomain& clock_domain,
                              PowerDomain& power_domain);

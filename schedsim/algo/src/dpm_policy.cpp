@@ -25,7 +25,7 @@ void BasicDpmPolicy::on_processor_idle(EdfScheduler& scheduler, core::Processor&
 
     // For simplicity, we ignore idle_threshold and enter sleep immediately
     // A more sophisticated implementation could schedule a timer
-    if (idle_threshold_.count() == 0.0) {
+    if (idle_threshold_ == core::Duration::zero()) {
         proc.request_cstate(target_cstate_);
         scheduler.engine().trace([&](core::TraceWriter& w) {
             w.type("proc_sleep");

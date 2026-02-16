@@ -244,8 +244,8 @@ io::ScenarioData generate_single_harmonic(const Config& config, std::mt19937& rn
 
 io::ScenarioData generate_single_range(const Config& config, std::mt19937& rng) {
     io::PeriodDistribution period_dist{
-        .min = core::Duration{config.period_min_ms / 1000.0},
-        .max = core::Duration{config.period_max_ms / 1000.0},
+        .min = core::duration_from_seconds(config.period_min_ms / 1000.0),
+        .max = core::duration_from_seconds(config.period_max_ms / 1000.0),
         .log_uniform = config.log_uniform
     };
 
@@ -255,7 +255,7 @@ io::ScenarioData generate_single_range(const Config& config, std::mt19937& rng) 
             config.num_tasks,
             config.target_utilization,
             period_dist,
-            core::Duration{config.duration},
+            core::duration_from_seconds(config.duration),
             rng,
             config.exec_ratio
         );

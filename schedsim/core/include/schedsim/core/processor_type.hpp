@@ -14,7 +14,7 @@ namespace schedsim::core {
 class ProcessorType {
 public:
     ProcessorType(std::size_t id, std::string_view name, double performance,
-                  Duration context_switch_delay = Duration{0.0});
+                  Duration context_switch_delay = duration_from_seconds(0.0));
 
     [[nodiscard]] std::size_t id() const noexcept { return id_; }
     [[nodiscard]] std::string_view name() const noexcept { return name_; }

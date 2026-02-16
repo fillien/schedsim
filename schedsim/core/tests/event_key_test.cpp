@@ -10,7 +10,7 @@ using namespace schedsim::core;
 class EventKeyTest : public ::testing::Test {
 protected:
     TimePoint time(double seconds) {
-        return TimePoint{Duration{seconds}};
+        return time_from_seconds(seconds);
     }
 };
 

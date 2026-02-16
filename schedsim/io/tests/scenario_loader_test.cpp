@@ -32,15 +32,15 @@ TEST_F(ScenarioLoaderTest, LoadNewFormatBasic) {
     ASSERT_EQ(scenario.tasks.size(), 1u);
     const auto& task = scenario.tasks[0];
     EXPECT_EQ(task.id, 0u);
-    EXPECT_DOUBLE_EQ(task.period.count(), 10.0);
-    EXPECT_DOUBLE_EQ(task.relative_deadline.count(), 10.0);
-    EXPECT_DOUBLE_EQ(task.wcet.count(), 2.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(task.period), 10.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(task.relative_deadline), 10.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(task.wcet), 2.0);
 
     ASSERT_EQ(task.jobs.size(), 2u);
-    EXPECT_DOUBLE_EQ(task.jobs[0].arrival.time_since_epoch().count(), 0.0);
-    EXPECT_DOUBLE_EQ(task.jobs[0].duration.count(), 2.0);
-    EXPECT_DOUBLE_EQ(task.jobs[1].arrival.time_since_epoch().count(), 10.0);
-    EXPECT_DOUBLE_EQ(task.jobs[1].duration.count(), 1.8);
+    EXPECT_DOUBLE_EQ(time_to_seconds(task.jobs[0].arrival), 0.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(task.jobs[0].duration), 2.0);
+    EXPECT_DOUBLE_EQ(time_to_seconds(task.jobs[1].arrival), 10.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(task.jobs[1].duration), 1.8);
 }
 
 TEST_F(ScenarioLoaderTest, LoadNewFormatDefaultDeadline) {
@@ -56,7 +56,7 @@ TEST_F(ScenarioLoaderTest, LoadNewFormatDefaultDeadline) {
 
     ASSERT_EQ(scenario.tasks.size(), 1u);
     // Deadline should default to period
-    EXPECT_DOUBLE_EQ(scenario.tasks[0].relative_deadline.count(), 20.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(scenario.tasks[0].relative_deadline), 20.0);
 }
 
 TEST_F(ScenarioLoaderTest, LoadNewFormatMultipleTasks) {
@@ -92,7 +92,7 @@ TEST_F(ScenarioLoaderTest, LoadLegacyFormatWithUtilization) {
 
     ASSERT_EQ(scenario.tasks.size(), 1u);
     // WCET should be computed from utilization: period * utilization
-    EXPECT_DOUBLE_EQ(scenario.tasks[0].wcet.count(), 20.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(scenario.tasks[0].wcet), 20.0);
 }
 
 TEST_F(ScenarioLoaderTest, LoadLegacyFormatCoresIgnored) {
@@ -161,9 +161,9 @@ TEST_F(ScenarioLoaderTest, JobsSortedByArrival) {
     const auto& jobs = scenario.tasks[0].jobs;
 
     ASSERT_EQ(jobs.size(), 3u);
-    EXPECT_DOUBLE_EQ(jobs[0].arrival.time_since_epoch().count(), 0.0);
-    EXPECT_DOUBLE_EQ(jobs[1].arrival.time_since_epoch().count(), 10.0);
-    EXPECT_DOUBLE_EQ(jobs[2].arrival.time_since_epoch().count(), 20.0);
+    EXPECT_DOUBLE_EQ(time_to_seconds(jobs[0].arrival), 0.0);
+    EXPECT_DOUBLE_EQ(time_to_seconds(jobs[1].arrival), 10.0);
+    EXPECT_DOUBLE_EQ(time_to_seconds(jobs[2].arrival), 20.0);
 }
 
 // =============================================================================
@@ -230,9 +230,9 @@ TEST_F(ScenarioLoaderTest, WriteScenarioToStream) {
     ScenarioData scenario;
     TaskParams task;
     task.id = 1;
-    task.period = Duration{10.0};
-    task.relative_deadline = Duration{10.0};
-    task.wcet = Duration{2.0};
+    task.period = duration_from_seconds(10.0);
+    task.relative_deadline = duration_from_seconds(10.0);
+    task.wcet = duration_from_seconds(2.0);
     scenario.tasks.push_back(task);
 
     std::ostringstream out;
@@ -242,20 +242,20 @@ TEST_F(ScenarioLoaderTest, WriteScenarioToStream) {
     auto loaded = load_scenario_from_string(out.str());
     ASSERT_EQ(loaded.tasks.size(), 1u);
     EXPECT_EQ(loaded.tasks[0].id, 1u);
-    EXPECT_DOUBLE_EQ(loaded.tasks[0].period.count(), 10.0);
-    EXPECT_DOUBLE_EQ(loaded.tasks[0].relative_deadline.count(), 10.0);
-    EXPECT_DOUBLE_EQ(loaded.tasks[0].wcet.count(), 2.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(loaded.tasks[0].period), 10.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(loaded.tasks[0].relative_deadline), 10.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(loaded.tasks[0].wcet), 2.0);
 }
 
 TEST_F(ScenarioLoaderTest, WriteScenarioWithJobs) {
     ScenarioData scenario;
     TaskParams task;
     task.id = 0;
-    task.period = Duration{20.0};
-    task.relative_deadline = Duration{15.0};
-    task.wcet = Duration{5.0};
-    task.jobs.push_back(JobParams{TimePoint{Duration{0.0}}, Duration{5.0}});
-    task.jobs.push_back(JobParams{TimePoint{Duration{20.0}}, Duration{4.5}});
+    task.period = duration_from_seconds(20.0);
+    task.relative_deadline = duration_from_seconds(15.0);
+    task.wcet = duration_from_seconds(5.0);
+    task.jobs.push_back(JobParams{time_from_seconds(0.0), duration_from_seconds(5.0)});
+    task.jobs.push_back(JobParams{time_from_seconds(20.0), duration_from_seconds(4.5)});
     scenario.tasks.push_back(task);
 
     std::ostringstream out;
@@ -264,10 +264,10 @@ TEST_F(ScenarioLoaderTest, WriteScenarioWithJobs) {
     auto loaded = load_scenario_from_string(out.str());
     ASSERT_EQ(loaded.tasks.size(), 1u);
     ASSERT_EQ(loaded.tasks[0].jobs.size(), 2u);
-    EXPECT_DOUBLE_EQ(loaded.tasks[0].jobs[0].arrival.time_since_epoch().count(), 0.0);
-    EXPECT_DOUBLE_EQ(loaded.tasks[0].jobs[0].duration.count(), 5.0);
-    EXPECT_DOUBLE_EQ(loaded.tasks[0].jobs[1].arrival.time_since_epoch().count(), 20.0);
-    EXPECT_DOUBLE_EQ(loaded.tasks[0].jobs[1].duration.count(), 4.5);
+    EXPECT_DOUBLE_EQ(time_to_seconds(loaded.tasks[0].jobs[0].arrival), 0.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(loaded.tasks[0].jobs[0].duration), 5.0);
+    EXPECT_DOUBLE_EQ(time_to_seconds(loaded.tasks[0].jobs[1].arrival), 20.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(loaded.tasks[0].jobs[1].duration), 4.5);
 }
 
 TEST_F(ScenarioLoaderTest, WriteScenarioMultipleTasks) {
@@ -275,9 +275,9 @@ TEST_F(ScenarioLoaderTest, WriteScenarioMultipleTasks) {
     for (uint64_t i = 0; i < 3; ++i) {
         TaskParams task;
         task.id = i;
-        task.period = Duration{10.0 * static_cast<double>(i + 1)};
+        task.period = duration_from_seconds(10.0 * static_cast<double>(i + 1));
         task.relative_deadline = task.period;
-        task.wcet = Duration{1.0 * static_cast<double>(i + 1)};
+        task.wcet = duration_from_seconds(1.0 * static_cast<double>(i + 1));
         scenario.tasks.push_back(task);
     }
 
@@ -321,10 +321,10 @@ TEST_F(ScenarioLoaderTest, WriteScenarioRoundTrip) {
     ASSERT_EQ(reloaded.tasks.size(), original.tasks.size());
     for (size_t i = 0; i < original.tasks.size(); ++i) {
         EXPECT_EQ(reloaded.tasks[i].id, original.tasks[i].id);
-        EXPECT_DOUBLE_EQ(reloaded.tasks[i].period.count(), original.tasks[i].period.count());
-        EXPECT_DOUBLE_EQ(reloaded.tasks[i].relative_deadline.count(),
-                         original.tasks[i].relative_deadline.count());
-        EXPECT_DOUBLE_EQ(reloaded.tasks[i].wcet.count(), original.tasks[i].wcet.count());
+        EXPECT_DOUBLE_EQ(duration_to_seconds(reloaded.tasks[i].period), duration_to_seconds(original.tasks[i].period));
+        EXPECT_DOUBLE_EQ(duration_to_seconds(reloaded.tasks[i].relative_deadline),
+                         duration_to_seconds(original.tasks[i].relative_deadline));
+        EXPECT_DOUBLE_EQ(duration_to_seconds(reloaded.tasks[i].wcet), duration_to_seconds(original.tasks[i].wcet));
         ASSERT_EQ(reloaded.tasks[i].jobs.size(), original.tasks[i].jobs.size());
     }
 }

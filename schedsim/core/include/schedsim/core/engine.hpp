@@ -109,7 +109,7 @@ private:
     void fire_deferred_callbacks();
     void notify_frequency_change(ClockDomain& cd, Frequency old_freq, Frequency new_freq);
 
-    TimePoint current_time_{Duration{0.0}};
+    TimePoint current_time_{};
     uint64_t sequence_{0};
     bool finalized_{false};
     bool in_deferred_phase_{false};

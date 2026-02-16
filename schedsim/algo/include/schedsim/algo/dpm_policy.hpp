@@ -34,7 +34,7 @@ public:
     // target_cstate: the C-state level to enter when idle (1 = C1, 2 = C2, etc.)
     // idle_threshold: minimum idle time before entering sleep (0 = immediate)
     explicit BasicDpmPolicy(int target_cstate = 1,
-                            core::Duration idle_threshold = core::Duration{0.0});
+                            core::Duration idle_threshold = core::duration_from_seconds(0.0));
 
     void on_processor_idle(EdfScheduler& scheduler, core::Processor& proc) override;
     void on_processor_needed(EdfScheduler& scheduler) override;

@@ -42,7 +42,7 @@ struct BigLittlePlatform {
         auto& little_cd = engine.platform().add_clock_domain(Frequency{200.0}, Frequency{1000.0});
 
         auto& pd = engine.platform().add_power_domain({
-            {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+            {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
         });
 
         std::vector<Processor*> big_procs;
@@ -79,13 +79,13 @@ TEST(FFBigFirstAllocatorTest, PrefersBigCluster) {
     Engine engine;
     auto plat = BigLittlePlatform::create(engine);
     // Task: wcet=1, period=10 => util=0.1
-    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
     engine.platform().finalize();
 
     FFBigFirstAllocator alloc(engine, plat.clusters_big_first());
 
-    engine.schedule_job_arrival(task, TimePoint{Duration{0.0}}, Duration{1.0});
-    engine.run(TimePoint{Duration{0.5}});
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(0.5));
 
     // Task should be on big cluster (server created there)
     EXPECT_NE(plat.big_sched->find_server(task), nullptr);
@@ -100,20 +100,20 @@ TEST(FFBigFirstAllocatorTest, FallsBackToLittleWhenBigFull) {
     std::vector<Task*> filler_tasks;
     for (int i = 0; i < 4; ++i) {
         filler_tasks.push_back(
-            &engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{10.0}));
+            &engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(10.0)));
     }
     // Target task: small enough for little
-    auto& target = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
+    auto& target = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
     engine.platform().finalize();
 
     FFBigFirstAllocator alloc(engine, plat.clusters_big_first());
 
-    TimePoint t{Duration{0.0}};
+    TimePoint t = time_from_seconds(0.0);
     for (auto* ft : filler_tasks) {
         engine.schedule_job_arrival(*ft, t, ft->wcet());
     }
-    engine.schedule_job_arrival(target, t, Duration{1.0});
-    engine.run(TimePoint{Duration{0.5}});
+    engine.schedule_job_arrival(target, t, duration_from_seconds(1.0));
+    engine.run(time_from_seconds(0.5));
 
     // target should have fallen back to little
     EXPECT_EQ(plat.big_sched->find_server(target), nullptr);
@@ -128,19 +128,19 @@ TEST(FFBigFirstAllocatorTest, ReturnsNullWhenBothFull) {
     std::vector<Task*> filler_tasks;
     for (int i = 0; i < 8; ++i) {
         filler_tasks.push_back(
-            &engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{10.0}));
+            &engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(10.0)));
     }
-    auto& target = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
+    auto& target = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
     engine.platform().finalize();
 
     FFBigFirstAllocator alloc(engine, plat.clusters_big_first());
 
-    TimePoint t{Duration{0.0}};
+    TimePoint t = time_from_seconds(0.0);
     for (auto* ft : filler_tasks) {
         engine.schedule_job_arrival(*ft, t, ft->wcet());
     }
-    engine.schedule_job_arrival(target, t, Duration{1.0});
-    engine.run(TimePoint{Duration{0.5}});
+    engine.schedule_job_arrival(target, t, duration_from_seconds(1.0));
+    engine.run(time_from_seconds(0.5));
 
     // target should be rejected (no server anywhere)
     EXPECT_EQ(plat.big_sched->find_server(target), nullptr);
@@ -154,13 +154,13 @@ TEST(FFBigFirstAllocatorTest, ReturnsNullWhenBothFull) {
 TEST(FFLittleFirstAllocatorTest, PrefersLittleCluster) {
     Engine engine;
     auto plat = BigLittlePlatform::create(engine);
-    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
     engine.platform().finalize();
 
     FFLittleFirstAllocator alloc(engine, plat.clusters_big_first());
 
-    engine.schedule_job_arrival(task, TimePoint{Duration{0.0}}, Duration{1.0});
-    engine.run(TimePoint{Duration{0.5}});
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(0.5));
 
     EXPECT_EQ(plat.big_sched->find_server(task), nullptr);
     EXPECT_NE(plat.little_sched->find_server(task), nullptr);
@@ -174,19 +174,19 @@ TEST(FFLittleFirstAllocatorTest, FallsBackToBig) {
     std::vector<Task*> fillers;
     for (int i = 0; i < 4; ++i) {
         fillers.push_back(
-            &engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{10.0}));
+            &engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(10.0)));
     }
-    auto& target = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
+    auto& target = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
     engine.platform().finalize();
 
     FFLittleFirstAllocator alloc(engine, plat.clusters_big_first());
 
-    TimePoint t{Duration{0.0}};
+    TimePoint t = time_from_seconds(0.0);
     for (auto* ft : fillers) {
         engine.schedule_job_arrival(*ft, t, ft->wcet());
     }
-    engine.schedule_job_arrival(target, t, Duration{1.0});
-    engine.run(TimePoint{Duration{0.5}});
+    engine.schedule_job_arrival(target, t, duration_from_seconds(1.0));
+    engine.run(time_from_seconds(0.5));
 
     EXPECT_NE(plat.big_sched->find_server(target), nullptr);
 }
@@ -194,16 +194,16 @@ TEST(FFLittleFirstAllocatorTest, FallsBackToBig) {
 TEST(FFLittleFirstAllocatorTest, CounterIncrements) {
     Engine engine;
     auto plat = BigLittlePlatform::create(engine);
-    auto& t1 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
-    auto& t2 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
+    auto& t1 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
+    auto& t2 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
     engine.platform().finalize();
 
     FFLittleFirstAllocator alloc(engine, plat.clusters_big_first());
     EXPECT_EQ(alloc.allocation_count(), 0u);
 
-    engine.schedule_job_arrival(t1, TimePoint{Duration{0.0}}, Duration{1.0});
-    engine.schedule_job_arrival(t2, TimePoint{Duration{0.0}}, Duration{1.0});
-    engine.run(TimePoint{Duration{0.5}});
+    engine.schedule_job_arrival(t1, time_from_seconds(0.0), duration_from_seconds(1.0));
+    engine.schedule_job_arrival(t2, time_from_seconds(0.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(0.5));
 
     EXPECT_EQ(alloc.allocation_count(), 2u);
 }
@@ -215,14 +215,14 @@ TEST(FFLittleFirstAllocatorTest, CounterIncrements) {
 TEST(CountingAllocatorTest, NaturalOrderPlacement) {
     Engine engine;
     auto plat = BigLittlePlatform::create(engine);
-    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
     engine.platform().finalize();
 
     // Natural order: big first
     CountingAllocator alloc(engine, plat.clusters_big_first());
 
-    engine.schedule_job_arrival(task, TimePoint{Duration{0.0}}, Duration{1.0});
-    engine.run(TimePoint{Duration{0.5}});
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(0.5));
 
     // First cluster in natural order is big
     EXPECT_NE(plat.big_sched->find_server(task), nullptr);
@@ -231,16 +231,16 @@ TEST(CountingAllocatorTest, NaturalOrderPlacement) {
 TEST(CountingAllocatorTest, CounterIncrements) {
     Engine engine;
     auto plat = BigLittlePlatform::create(engine);
-    auto& t1 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
-    auto& t2 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
+    auto& t1 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
+    auto& t2 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
     engine.platform().finalize();
 
     CountingAllocator alloc(engine, plat.clusters_big_first());
     EXPECT_EQ(alloc.allocation_count(), 0u);
 
-    engine.schedule_job_arrival(t1, TimePoint{Duration{0.0}}, Duration{1.0});
-    engine.schedule_job_arrival(t2, TimePoint{Duration{0.0}}, Duration{1.0});
-    engine.run(TimePoint{Duration{0.5}});
+    engine.schedule_job_arrival(t1, time_from_seconds(0.0), duration_from_seconds(1.0));
+    engine.schedule_job_arrival(t2, time_from_seconds(0.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(0.5));
 
     EXPECT_EQ(alloc.allocation_count(), 2u);
 }
@@ -253,7 +253,7 @@ TEST(FFCapAllocatorTest, RespectsUTarget) {
     Engine engine;
     auto plat = BigLittlePlatform::create(engine);
     // Task: wcet=5, period=10 => util=0.5
-    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{5.0});
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(5.0));
     engine.platform().finalize();
 
     // Set little u_target very low so it rejects the task on capacity grounds
@@ -261,8 +261,8 @@ TEST(FFCapAllocatorTest, RespectsUTarget) {
 
     FFCapAllocator alloc(engine, plat.clusters_big_first());
 
-    engine.schedule_job_arrival(task, TimePoint{Duration{0.0}}, Duration{5.0});
-    engine.run(TimePoint{Duration{0.5}});
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(5.0));
+    engine.run(time_from_seconds(0.5));
 
     // Little should be skipped (scaled_util > u_target), big should accept
     EXPECT_NE(plat.big_sched->find_server(task), nullptr);
@@ -273,13 +273,13 @@ TEST(FFCapAllocatorTest, PrefersLittleWhenCapacityAllows) {
     Engine engine;
     auto plat = BigLittlePlatform::create(engine);
     // Small task: wcet=0.1, period=10 => util=0.01
-    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{0.1});
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(0.1));
     engine.platform().finalize();
 
     FFCapAllocator alloc(engine, plat.clusters_big_first());
 
-    engine.schedule_job_arrival(task, TimePoint{Duration{0.0}}, Duration{0.1});
-    engine.run(TimePoint{Duration{0.5}});
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(0.1));
+    engine.run(time_from_seconds(0.5));
 
     // FFCap sorts ascending by perf, so little is tried first
     EXPECT_EQ(plat.big_sched->find_server(task), nullptr);
@@ -294,14 +294,14 @@ TEST(FFCapAdaptiveLinearAllocatorTest, ModelSetsUTarget) {
     Engine engine;
     auto plat = BigLittlePlatform::create(engine);
     // Task: wcet=5, period=10 => util=0.5
-    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{5.0});
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(5.0));
     engine.platform().finalize();
 
     FFCapAdaptiveLinearAllocator alloc(engine, plat.clusters_big_first());
     alloc.set_expected_total_util(2.0);
 
-    engine.schedule_job_arrival(task, TimePoint{Duration{0.0}}, Duration{5.0});
-    engine.run(TimePoint{Duration{0.5}});
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(5.0));
+    engine.run(time_from_seconds(0.5));
 
     // Model: A*umax + B*U + C = 1.616*0.5 + 0.098*2.0 + (-0.373) = 0.808 + 0.196 - 0.373 = 0.631
     // This target is set on the little cluster (smallest perf, sorted first)
@@ -313,14 +313,14 @@ TEST(FFCapAdaptiveLinearAllocatorTest, KnownModelValues) {
     // umax=1.0, U=4.0 => 1.616*1.0 + 0.098*4.0 + (-0.373) = 1.616+0.392-0.373 = 1.635 => clamped to 1.0
     Engine engine;
     auto plat = BigLittlePlatform::create(engine);
-    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{10.0});
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(10.0));
     engine.platform().finalize();
 
     FFCapAdaptiveLinearAllocator alloc(engine, plat.clusters_big_first());
     alloc.set_expected_total_util(4.0);
 
-    engine.schedule_job_arrival(task, TimePoint{Duration{0.0}}, Duration{10.0});
-    engine.run(TimePoint{Duration{0.5}});
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(10.0));
+    engine.run(time_from_seconds(0.5));
 
     EXPECT_DOUBLE_EQ(plat.little_cluster->u_target(), 1.0);  // clamped
 }
@@ -332,14 +332,14 @@ TEST(FFCapAdaptiveLinearAllocatorTest, KnownModelValues) {
 TEST(FFCapAdaptivePolyAllocatorTest, ModelSetsUTarget) {
     Engine engine;
     auto plat = BigLittlePlatform::create(engine);
-    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{5.0});
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(5.0));
     engine.platform().finalize();
 
     FFCapAdaptivePolyAllocator alloc(engine, plat.clusters_big_first());
     alloc.set_expected_total_util(2.0);
 
-    engine.schedule_job_arrival(task, TimePoint{Duration{0.0}}, Duration{5.0});
-    engine.run(TimePoint{Duration{0.5}});
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(5.0));
+    engine.run(time_from_seconds(0.5));
 
     // umax=0.5, U=2.0
     // C0 + C1*0.5 + C2*2.0 + C3*0.25 + C4*1.0 + C5*4.0
@@ -353,14 +353,14 @@ TEST(FFCapAdaptivePolyAllocatorTest, KnownModelValues) {
     auto plat = BigLittlePlatform::create(engine);
     // umax=0.0 => all terms with umax vanish
     // target = C0 + C2*U + C5*U^2
-    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{0.001});
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(0.001));
     engine.platform().finalize();
 
     FFCapAdaptivePolyAllocator alloc(engine, plat.clusters_big_first());
     alloc.set_expected_total_util(0.0);
 
-    engine.schedule_job_arrival(task, TimePoint{Duration{0.0}}, Duration{0.001});
-    engine.run(TimePoint{Duration{0.5}});
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(0.001));
+    engine.run(time_from_seconds(0.5));
 
     // C0 ≈ -0.286 => clamped to 0.0
     EXPECT_DOUBLE_EQ(plat.little_cluster->u_target(), 0.0);
@@ -377,15 +377,15 @@ TEST(FFLbAllocatorTest, SetsLittleUTargetFromBigUtilization) {
     // filler: wcet=5, period=10 => util=0.5
     // On first call, big util=0 => avg_big=0 => little u_target=0, so filler goes to big.
     // On second call, big util=0.5 => avg_big=0.5/4=0.125 => little u_target=0.125*1.0=0.125.
-    auto& filler = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{5.0});
-    auto& target = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{0.1});
+    auto& filler = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(5.0));
+    auto& target = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(0.1));
     engine.platform().finalize();
 
     FFLbAllocator alloc(engine, plat.clusters_big_first());
 
-    engine.schedule_job_arrival(filler, TimePoint{Duration{0.0}}, Duration{5.0});
-    engine.schedule_job_arrival(target, TimePoint{Duration{0.0}}, Duration{0.1});
-    engine.run(TimePoint{Duration{0.5}});
+    engine.schedule_job_arrival(filler, time_from_seconds(0.0), duration_from_seconds(5.0));
+    engine.schedule_job_arrival(target, time_from_seconds(0.0), duration_from_seconds(0.1));
+    engine.run(time_from_seconds(0.5));
 
     // Both tasks should have been placed
     std::size_t total_servers =
@@ -400,13 +400,13 @@ TEST(FFLbAllocatorTest, ZeroBigUtil_SendsToBig) {
     Engine engine;
     auto plat = BigLittlePlatform::create(engine);
     // Very small task — but big has 0 utilization so avg_big=0, little u_target=0
-    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{0.1});
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(0.1));
     engine.platform().finalize();
 
     FFLbAllocator alloc(engine, plat.clusters_big_first());
 
-    engine.schedule_job_arrival(task, TimePoint{Duration{0.0}}, Duration{0.1});
-    engine.run(TimePoint{Duration{0.5}});
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(0.1));
+    engine.run(time_from_seconds(0.5));
 
     // Little u_target = 0 (no big load), so task goes to big (u_target=1.0 default)
     EXPECT_NE(plat.big_sched->find_server(task), nullptr);
@@ -419,16 +419,16 @@ TEST(FFLbAllocatorTest, ZeroBigUtil_SendsToBig) {
 TEST(MCTSAllocatorTest, FollowsPattern) {
     Engine engine;
     auto plat = BigLittlePlatform::create(engine);
-    auto& t1 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
-    auto& t2 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
+    auto& t1 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
+    auto& t2 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
     engine.platform().finalize();
 
     // Pattern: [1, 0] => first task to cluster[1] (little), second to cluster[0] (big)
     MCTSAllocator alloc(engine, plat.clusters_big_first(), {1, 0});
 
-    engine.schedule_job_arrival(t1, TimePoint{Duration{0.0}}, Duration{1.0});
-    engine.schedule_job_arrival(t2, TimePoint{Duration{0.0}}, Duration{1.0});
-    engine.run(TimePoint{Duration{0.5}});
+    engine.schedule_job_arrival(t1, time_from_seconds(0.0), duration_from_seconds(1.0));
+    engine.schedule_job_arrival(t2, time_from_seconds(0.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(0.5));
 
     EXPECT_NE(plat.little_sched->find_server(t1), nullptr);
     EXPECT_NE(plat.big_sched->find_server(t2), nullptr);
@@ -437,16 +437,16 @@ TEST(MCTSAllocatorTest, FollowsPattern) {
 TEST(MCTSAllocatorTest, RandomAfterPatternExhaustion) {
     Engine engine;
     auto plat = BigLittlePlatform::create(engine);
-    auto& t1 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
-    auto& t2 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
+    auto& t1 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
+    auto& t2 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
     engine.platform().finalize();
 
     // Pattern: [0] => only one entry, second task gets random
     MCTSAllocator alloc(engine, plat.clusters_big_first(), {0});
 
-    engine.schedule_job_arrival(t1, TimePoint{Duration{0.0}}, Duration{1.0});
-    engine.schedule_job_arrival(t2, TimePoint{Duration{0.0}}, Duration{1.0});
-    engine.run(TimePoint{Duration{0.5}});
+    engine.schedule_job_arrival(t1, time_from_seconds(0.0), duration_from_seconds(1.0));
+    engine.schedule_job_arrival(t2, time_from_seconds(0.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(0.5));
 
     // First task should definitely be on big (index 0)
     EXPECT_NE(plat.big_sched->find_server(t1), nullptr);
@@ -459,14 +459,14 @@ TEST(MCTSAllocatorTest, RandomAfterPatternExhaustion) {
 TEST(MCTSAllocatorTest, CounterIncrements) {
     Engine engine;
     auto plat = BigLittlePlatform::create(engine);
-    auto& t1 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
+    auto& t1 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
     engine.platform().finalize();
 
     MCTSAllocator alloc(engine, plat.clusters_big_first(), {0});
     EXPECT_EQ(alloc.allocation_count(), 0u);
 
-    engine.schedule_job_arrival(t1, TimePoint{Duration{0.0}}, Duration{1.0});
-    engine.run(TimePoint{Duration{0.5}});
+    engine.schedule_job_arrival(t1, time_from_seconds(0.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(0.5));
 
     EXPECT_EQ(alloc.allocation_count(), 1u);
 }
@@ -479,7 +479,7 @@ TEST(MCTSAllocatorTest, NoAdmissionRejection) {
     std::vector<Task*> tasks;
     for (int i = 0; i < 9; ++i) {
         tasks.push_back(
-            &engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{10.0}));
+            &engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(10.0)));
     }
     engine.platform().finalize();
 
@@ -490,13 +490,13 @@ TEST(MCTSAllocatorTest, NoAdmissionRejection) {
     }
     MCTSAllocator alloc(engine, plat.clusters_big_first(), pat);
 
-    TimePoint t{Duration{0.0}};
+    TimePoint t = time_from_seconds(0.0);
     for (auto* task : tasks) {
         engine.schedule_job_arrival(*task, t, task->wcet());
     }
 
     // Should not throw — AdmissionError is caught by MultiClusterAllocator
-    EXPECT_NO_THROW(engine.run(TimePoint{Duration{0.5}}));
+    EXPECT_NO_THROW(engine.run(time_from_seconds(0.5)));
 }
 
 // ============================================================
@@ -505,7 +505,7 @@ TEST(MCTSAllocatorTest, NoAdmissionRejection) {
 
 TEST(TaskUtilsTest, BasicComputation) {
     Engine engine;
-    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{3.0});
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(3.0));
     engine.platform().finalize();
     EXPECT_DOUBLE_EQ(task_utilization(task), 0.3);
 }

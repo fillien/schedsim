@@ -43,8 +43,8 @@ protected:
         clock_domain_->set_freq_eff(Frequency{1000.0});
 
         auto& pd = engine_.platform().add_power_domain({
-            {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}},
-            {1, CStateScope::PerProcessor, Duration{0.001}, Power{10.0}}
+            {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}},
+            {1, CStateScope::PerProcessor, duration_from_seconds(0.001), Power{10.0}}
         });
 
         for (int i = 0; i < 4; ++i) {
@@ -74,19 +74,19 @@ TEST_F(CsfPolicyTest, ZeroUtilization_MinActiveProcs) {
 }
 
 TEST_F(CsfPolicyTest, HighUtilization_AllCoresMaxFreq) {
-    auto& task1 = engine_.platform().add_task(Duration{1.0}, Duration{1.0}, Duration{1.0});
-    auto& task2 = engine_.platform().add_task(Duration{1.0}, Duration{1.0}, Duration{1.0});
-    auto& task3 = engine_.platform().add_task(Duration{1.0}, Duration{1.0}, Duration{1.0});
-    auto& task4 = engine_.platform().add_task(Duration{1.0}, Duration{1.0}, Duration{1.0});
+    auto& task1 = engine_.platform().add_task(duration_from_seconds(1.0), duration_from_seconds(1.0), duration_from_seconds(1.0));
+    auto& task2 = engine_.platform().add_task(duration_from_seconds(1.0), duration_from_seconds(1.0), duration_from_seconds(1.0));
+    auto& task3 = engine_.platform().add_task(duration_from_seconds(1.0), duration_from_seconds(1.0), duration_from_seconds(1.0));
+    auto& task4 = engine_.platform().add_task(duration_from_seconds(1.0), duration_from_seconds(1.0), duration_from_seconds(1.0));
     engine_.platform().finalize();
 
     std::vector<Processor*> proc_vec(procs_, procs_ + 4);
     EdfScheduler sched(engine_, proc_vec);
 
-    sched.add_server(task1, Duration{1.0}, Duration{1.0});
-    sched.add_server(task2, Duration{1.0}, Duration{1.0});
-    sched.add_server(task3, Duration{1.0}, Duration{1.0});
-    sched.add_server(task4, Duration{1.0}, Duration{1.0});
+    sched.add_server(task1, duration_from_seconds(1.0), duration_from_seconds(1.0));
+    sched.add_server(task2, duration_from_seconds(1.0), duration_from_seconds(1.0));
+    sched.add_server(task3, duration_from_seconds(1.0), duration_from_seconds(1.0));
+    sched.add_server(task4, duration_from_seconds(1.0), duration_from_seconds(1.0));
 
     CsfPolicy policy(engine_);
 
@@ -100,13 +100,13 @@ TEST_F(CsfPolicyTest, HighUtilization_AllCoresMaxFreq) {
 
 TEST_F(CsfPolicyTest, MaxUtilOne_NoZeroDivision) {
     // Test the max_util >= 1.0 guard
-    auto& task = engine_.platform().add_task(Duration{1.0}, Duration{1.0}, Duration{1.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(1.0), duration_from_seconds(1.0), duration_from_seconds(1.0));
     engine_.platform().finalize();
 
     std::vector<Processor*> proc_vec(procs_, procs_ + 4);
     EdfScheduler sched(engine_, proc_vec);
 
-    sched.add_server(task, Duration{1.0}, Duration{1.0});
+    sched.add_server(task, duration_from_seconds(1.0), duration_from_seconds(1.0));
 
     CsfPolicy policy(engine_);
 
@@ -117,15 +117,15 @@ TEST_F(CsfPolicyTest, MaxUtilOne_NoZeroDivision) {
 
 TEST_F(CsfPolicyTest, MediumUtilization_ReducesCores) {
     // 2 tasks, each util=0.3, total=0.6, max=0.3
-    auto& task1 = engine_.platform().add_task(Duration{10.0}, Duration{3.0}, Duration{3.0});
-    auto& task2 = engine_.platform().add_task(Duration{10.0}, Duration{3.0}, Duration{3.0});
+    auto& task1 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(3.0), duration_from_seconds(3.0));
+    auto& task2 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(3.0), duration_from_seconds(3.0));
     engine_.platform().finalize();
 
     std::vector<Processor*> proc_vec(procs_, procs_ + 4);
     EdfScheduler sched(engine_, proc_vec);
 
-    sched.add_server(task1, Duration{3.0}, Duration{10.0});
-    sched.add_server(task2, Duration{3.0}, Duration{10.0});
+    sched.add_server(task1, duration_from_seconds(3.0), duration_from_seconds(10.0));
+    sched.add_server(task2, duration_from_seconds(3.0), duration_from_seconds(10.0));
 
     CsfPolicy policy(engine_);
 
@@ -139,13 +139,13 @@ TEST_F(CsfPolicyTest, MediumUtilization_ReducesCores) {
 
 TEST_F(CsfPolicyTest, LowUtilization_ReducesCoresAndFrequency) {
     // 1 task, util=0.1
-    auto& task = engine_.platform().add_task(Duration{10.0}, Duration{1.0}, Duration{1.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(1.0), duration_from_seconds(1.0));
     engine_.platform().finalize();
 
     std::vector<Processor*> proc_vec(procs_, procs_ + 4);
     EdfScheduler sched(engine_, proc_vec);
 
-    sched.add_server(task, Duration{1.0}, Duration{10.0});
+    sched.add_server(task, duration_from_seconds(1.0), duration_from_seconds(10.0));
 
     CsfPolicy policy(engine_);
 
@@ -171,7 +171,7 @@ TEST_F(CsfPolicyTest, CooldownPreventsFrequencyThrashing) {
     EdfScheduler sched(engine_, proc_vec);
     sched.enable_grub();
 
-    CsfPolicy policy(engine_, Duration{1.0});
+    CsfPolicy policy(engine_, duration_from_seconds(1.0));
 
     policy.on_utilization_changed(sched, *clock_domain_);
     Frequency first_freq = clock_domain_->frequency();
@@ -181,7 +181,7 @@ TEST_F(CsfPolicyTest, CooldownPreventsFrequencyThrashing) {
     policy.on_utilization_changed(sched, *clock_domain_);
     EXPECT_DOUBLE_EQ(clock_domain_->frequency().mhz, 2000.0);
 
-    engine_.run(TimePoint{Duration{1.5}});
+    engine_.run(time_from_seconds(1.5));
 
     policy.on_utilization_changed(sched, *clock_domain_);
     EXPECT_DOUBLE_EQ(clock_domain_->frequency().mhz, first_freq.mhz);
@@ -207,7 +207,7 @@ TEST_F(CsfPolicyTest, EnableCsfConvenience) {
     std::vector<Processor*> proc_vec(procs_, procs_ + 4);
     EdfScheduler sched(engine_, proc_vec);
 
-    sched.enable_csf(Duration{0.5}, 1);
+    sched.enable_csf(duration_from_seconds(0.5), 1);
 
     SUCCEED();
 }
@@ -255,14 +255,14 @@ TEST_F(CsfPolicyTest, FrequencyCallbackInvoked) {
 TEST_F(CsfPolicyTest, NoFreqEff_UsesAllCores) {
     clock_domain_->set_freq_eff(Frequency{0.0});
 
-    auto& task = engine_.platform().add_task(Duration{10.0}, Duration{1.0}, Duration{1.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(1.0), duration_from_seconds(1.0));
     engine_.platform().finalize();
 
     std::vector<Processor*> proc_vec(procs_, procs_ + 4);
     EdfScheduler sched(engine_, proc_vec);
     sched.enable_grub();
 
-    sched.add_server(task, Duration{1.0}, Duration{10.0});
+    sched.add_server(task, duration_from_seconds(1.0), duration_from_seconds(10.0));
 
     CsfPolicy policy(engine_);
 
@@ -360,8 +360,8 @@ TEST_F(CsfPolicyTest, ComputeTarget_SingleCore) {
     });
     cd.set_freq_eff(Frequency{1000.0});
     auto& pd = engine1.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}},
-        {1, CStateScope::PerProcessor, Duration{0.001}, Power{10.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}},
+        {1, CStateScope::PerProcessor, duration_from_seconds(0.001), Power{10.0}}
     });
     engine1.platform().add_processor(pt, cd, pd);
     engine1.platform().finalize();

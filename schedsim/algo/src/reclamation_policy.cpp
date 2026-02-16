@@ -7,8 +7,8 @@ namespace schedsim::algo {
 core::TimePoint ReclamationPolicy::compute_virtual_time(
     const CbsServer& server, core::TimePoint current_vt, core::Duration exec_time) const {
     // Default CBS formula: vt += exec_time / U_server
-    core::Duration vt_increment{exec_time.count() / server.utilization()};
-    return core::TimePoint{current_vt.time_since_epoch() + vt_increment};
+    core::Duration vt_increment = core::divide_duration(exec_time, server.utilization());
+    return current_vt + vt_increment;
 }
 
 core::Duration ReclamationPolicy::compute_server_budget(const CbsServer& server) const {

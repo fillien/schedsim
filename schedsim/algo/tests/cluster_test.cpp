@@ -18,8 +18,8 @@ protected:
         auto& pt = engine_.platform().add_processor_type("cpu", 1.5);
         cd_ = &engine_.platform().add_clock_domain(Frequency{200.0}, Frequency{2000.0});
         auto& pd = engine_.platform().add_power_domain({
-            {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}},
-            {1, CStateScope::PerProcessor, Duration{0.001}, Power{10.0}}
+            {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}},
+            {1, CStateScope::PerProcessor, duration_from_seconds(0.001), Power{10.0}}
         });
         for (int i = 0; i < 4; ++i) {
             procs_[i] = &engine_.platform().add_processor(pt, *cd_, pd);
@@ -55,7 +55,7 @@ TEST_F(ClusterTest, ScaleSpeed_CrossClusterNormalization) {
     auto& pt2 = engine2.platform().add_processor_type("little", 0.5);
     auto& cd2 = engine2.platform().add_clock_domain(Frequency{100.0}, Frequency{1000.0});
     auto& pd2 = engine2.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{50.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{50.0}}
     });
     auto& proc2 = engine2.platform().add_processor(pt2, cd2, pd2);
     engine2.platform().finalize();
@@ -98,7 +98,7 @@ TEST_F(ClusterTest, Utilization_DelegatesToScheduler) {
 TEST_F(ClusterTest, CanAdmit_DelegatesToScheduler) {
     Cluster cluster(*cd_, *sched_, 1.0, 2000.0);
     // 4 processors, can admit utilization 0.5 easily
-    EXPECT_TRUE(cluster.can_admit(Duration{1.0}, Duration{2.0}));
+    EXPECT_TRUE(cluster.can_admit(duration_from_seconds(1.0), duration_from_seconds(2.0)));
 }
 
 TEST_F(ClusterTest, ClockDomain_Accessors) {

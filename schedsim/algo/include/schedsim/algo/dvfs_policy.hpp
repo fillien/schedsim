@@ -32,7 +32,7 @@ public:
     virtual void on_processor_active(EdfScheduler& scheduler, core::Processor& proc) = 0;
 
     // Cooldown period between frequency changes (0 = no cooldown)
-    [[nodiscard]] virtual core::Duration cooldown_period() const { return core::Duration{0.0}; }
+    [[nodiscard]] virtual core::Duration cooldown_period() const { return core::duration_from_seconds(0.0); }
 
     // Callback registration for frequency changes
     // EdfScheduler sets this callback to be notified when frequency changes
@@ -62,14 +62,14 @@ public:
 private:
     core::Engine& engine_;
     core::Duration cooldown_period_;
-    core::TimePoint cooldown_until_{core::Duration{0.0}};
+    core::TimePoint cooldown_until_{};
 };
 
 // Power-aware DVFS policy: f_min = f_max * ((m-1)*U_max + U_total) / m
 class PowerAwareDvfsPolicy : public DvfsPolicy {
 public:
     explicit PowerAwareDvfsPolicy(core::Engine& engine,
-                                   core::Duration cooldown = core::Duration{0.0});
+                                   core::Duration cooldown = core::duration_from_seconds(0.0));
 
     void on_utilization_changed(EdfScheduler& scheduler, core::ClockDomain& domain) override;
     void on_processor_idle(EdfScheduler& scheduler, core::Processor& proc) override;

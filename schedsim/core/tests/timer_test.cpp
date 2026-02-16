@@ -10,7 +10,7 @@ using namespace schedsim::core;
 class TimerTest : public ::testing::Test {
 protected:
     TimePoint time(double seconds) {
-        return TimePoint{Duration{seconds}};
+        return time_from_seconds(seconds);
     }
 };
 
@@ -171,13 +171,13 @@ TEST_F(TimerTest, MultipleTimersAtDifferentTimes) {
     std::vector<double> fire_times;
 
     engine.add_timer(time(3.0), [&fire_times, &engine]() {
-        fire_times.push_back(engine.time().time_since_epoch().count());
+        fire_times.push_back(time_to_seconds(engine.time()));
     });
     engine.add_timer(time(1.0), [&fire_times, &engine]() {
-        fire_times.push_back(engine.time().time_since_epoch().count());
+        fire_times.push_back(time_to_seconds(engine.time()));
     });
     engine.add_timer(time(2.0), [&fire_times, &engine]() {
-        fire_times.push_back(engine.time().time_since_epoch().count());
+        fire_times.push_back(time_to_seconds(engine.time()));
     });
 
     engine.run();

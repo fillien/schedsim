@@ -123,9 +123,9 @@ private:
     OverrunPolicy overrun_policy_;
 
     State state_{State::Inactive};
-    core::TimePoint deadline_{core::Duration{0.0}};
-    core::TimePoint virtual_time_{core::Duration{0.0}};
-    core::Duration remaining_budget_{core::Duration{0.0}};
+    core::TimePoint deadline_{};
+    core::TimePoint virtual_time_{};
+    core::Duration remaining_budget_{};
     uint64_t job_counter_{0};
     uint64_t last_enqueued_job_id_{0};
 

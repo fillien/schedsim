@@ -22,14 +22,14 @@ protected:
         clock_domain_ = &engine_.platform().add_clock_domain(
             Frequency{500.0}, Frequency{2000.0});
         auto& pd = engine_.platform().add_power_domain({
-            {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}},
-            {1, CStateScope::PerProcessor, Duration{0.001}, Power{50.0}}
+            {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}},
+            {1, CStateScope::PerProcessor, duration_from_seconds(0.001), Power{50.0}}
         });
         proc_ = &engine_.platform().add_processor(pt, *clock_domain_, pd);
     }
 
     TimePoint time(double seconds) {
-        return TimePoint{Duration{seconds}};
+        return time_from_seconds(seconds);
     }
 
     Engine engine_;
@@ -61,7 +61,7 @@ TEST_F(PolicyIntegrationTest, EnablePowerAwareDvfs) {
     EdfScheduler sched(engine_, {proc_});
 
     // Enable with cooldown
-    sched.enable_power_aware_dvfs(Duration{0.5});
+    sched.enable_power_aware_dvfs(duration_from_seconds(0.5));
 
     // Verify it doesn't crash
     SUCCEED();
@@ -79,7 +79,7 @@ TEST_F(PolicyIntegrationTest, EnableBasicDpm) {
 
 TEST_F(PolicyIntegrationTest, GrubWithDvfs_Composition) {
     // Add task before finalize
-    auto& task = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc_});
@@ -97,19 +97,19 @@ TEST_F(PolicyIntegrationTest, GrubWithDvfs_Composition) {
     });
 
     // Schedule a job
-    engine_.schedule_job_arrival(task, time(0.0), Duration{1.0});
+    engine_.schedule_job_arrival(task, time(0.0), duration_from_seconds(1.0));
 
     // Run simulation
     engine_.run(time(5.0));
 
     // DVFS should have adjusted frequency based on utilization
     // Just verify simulation ran without errors
-    EXPECT_GE(engine_.time().time_since_epoch().count(), 1.0);
+    EXPECT_GE(time_to_seconds(engine_.time()), 1.0);
 }
 
 TEST_F(PolicyIntegrationTest, ActiveUtilizationWithGrub) {
-    auto& task1 = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
-    auto& task2 = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{3.0});
+    auto& task1 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
+    auto& task2 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(3.0));
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc_});
@@ -127,8 +127,8 @@ TEST_F(PolicyIntegrationTest, ActiveUtilizationWithGrub) {
     EXPECT_DOUBLE_EQ(sched.active_utilization(), 0.0);
 
     // Schedule jobs to activate servers
-    engine_.schedule_job_arrival(task1, time(0.0), Duration{1.0});
-    engine_.schedule_job_arrival(task2, time(0.0), Duration{1.0});
+    engine_.schedule_job_arrival(task1, time(0.0), duration_from_seconds(1.0));
+    engine_.schedule_job_arrival(task2, time(0.0), duration_from_seconds(1.0));
 
     // Process arrivals
     engine_.run(time(0.001));
@@ -142,7 +142,7 @@ TEST_F(PolicyIntegrationTest, BudgetTimerReschedulingOnDvfs) {
     // This test verifies that budget timers are correctly rescheduled
     // when DVFS changes frequency mid-execution
 
-    auto& task = engine_.platform().add_task(Duration{100.0}, Duration{100.0}, Duration{10.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(100.0), duration_from_seconds(100.0), duration_from_seconds(10.0));
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc_});
@@ -156,13 +156,13 @@ TEST_F(PolicyIntegrationTest, BudgetTimerReschedulingOnDvfs) {
     });
 
     // Schedule a job
-    engine_.schedule_job_arrival(task, time(0.0), Duration{5.0});
+    engine_.schedule_job_arrival(task, time(0.0), duration_from_seconds(5.0));
 
     // Run simulation
     engine_.run(time(20.0));
 
     // Job should have completed
-    EXPECT_GE(engine_.time().time_since_epoch().count(), 5.0);
+    EXPECT_GE(time_to_seconds(engine_.time()), 5.0);
 }
 
 TEST_F(PolicyIntegrationTest, PolicySettersAcceptNullptr) {

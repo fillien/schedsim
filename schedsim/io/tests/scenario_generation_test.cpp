@@ -82,8 +82,8 @@ TEST_F(ScenarioGenerationTest, UUniFastDifferentSeeds) {
 
 TEST_F(ScenarioGenerationTest, GenerateTaskSetBasic) {
     PeriodDistribution period_dist{
-        .min = Duration{10.0},
-        .max = Duration{100.0},
+        .min = duration_from_seconds(10.0),
+        .max = duration_from_seconds(100.0),
         .log_uniform = true
     };
 
@@ -93,45 +93,45 @@ TEST_F(ScenarioGenerationTest, GenerateTaskSetBasic) {
 
     // Check that all periods are in range
     for (const auto& task : tasks) {
-        EXPECT_GE(task.period.count(), 10.0);
-        EXPECT_LE(task.period.count(), 100.0);
-        EXPECT_GT(task.wcet.count(), 0.0);
-        EXPECT_LE(task.wcet.count(), task.period.count());
+        EXPECT_GE(duration_to_seconds(task.period), 10.0);
+        EXPECT_LE(duration_to_seconds(task.period), 100.0);
+        EXPECT_GT(duration_to_seconds(task.wcet), 0.0);
+        EXPECT_LE(duration_to_seconds(task.wcet), duration_to_seconds(task.period));
         // Deadline should equal period (implicit deadline)
-        EXPECT_DOUBLE_EQ(task.relative_deadline.count(), task.period.count());
+        EXPECT_DOUBLE_EQ(duration_to_seconds(task.relative_deadline), duration_to_seconds(task.period));
     }
 }
 
 TEST_F(ScenarioGenerationTest, GenerateTaskSetUniformPeriods) {
     PeriodDistribution period_dist{
-        .min = Duration{50.0},
-        .max = Duration{50.0},  // Same min and max
+        .min = duration_from_seconds(50.0),
+        .max = duration_from_seconds(50.0),  // Same min and max
         .log_uniform = false
     };
 
     auto tasks = generate_task_set(3, 0.5, period_dist, rng);
 
     for (const auto& task : tasks) {
-        EXPECT_DOUBLE_EQ(task.period.count(), 50.0);
+        EXPECT_DOUBLE_EQ(duration_to_seconds(task.period), 50.0);
     }
 }
 
 TEST_F(ScenarioGenerationTest, GenerateTaskSetEmptyOnZero) {
-    PeriodDistribution period_dist{Duration{10.0}, Duration{100.0}, true};
+    PeriodDistribution period_dist{duration_from_seconds(10.0), duration_from_seconds(100.0), true};
 
     auto tasks = generate_task_set(0, 0.5, period_dist, rng);
     EXPECT_TRUE(tasks.empty());
 }
 
 TEST_F(ScenarioGenerationTest, GenerateTaskSetUtilizationSums) {
-    PeriodDistribution period_dist{Duration{10.0}, Duration{100.0}, true};
+    PeriodDistribution period_dist{duration_from_seconds(10.0), duration_from_seconds(100.0), true};
     double target = 0.7;
 
     auto tasks = generate_task_set(8, target, period_dist, rng);
 
     double total_util = 0.0;
     for (const auto& task : tasks) {
-        total_util += task.wcet.count() / task.period.count();
+        total_util += duration_ratio(task.wcet, task.period);
     }
     EXPECT_NEAR(total_util, target, 1e-10);
 }
@@ -144,37 +144,37 @@ TEST_F(ScenarioGenerationTest, GenerateArrivalsBasic) {
     std::vector<TaskParams> tasks;
     tasks.push_back(TaskParams{
         .id = 0,
-        .period = Duration{10.0},
-        .relative_deadline = Duration{10.0},
-        .wcet = Duration{2.0},
+        .period = duration_from_seconds(10.0),
+        .relative_deadline = duration_from_seconds(10.0),
+        .wcet = duration_from_seconds(2.0),
         .jobs = {}
     });
 
-    generate_arrivals(tasks, Duration{50.0}, rng, 1.0);
+    generate_arrivals(tasks, duration_from_seconds(50.0), rng, 1.0);
 
     // Should have arrivals at t=0, 10, 20, 30, 40
     ASSERT_EQ(tasks[0].jobs.size(), 5u);
-    EXPECT_DOUBLE_EQ(tasks[0].jobs[0].arrival.time_since_epoch().count(), 0.0);
-    EXPECT_DOUBLE_EQ(tasks[0].jobs[1].arrival.time_since_epoch().count(), 10.0);
-    EXPECT_DOUBLE_EQ(tasks[0].jobs[2].arrival.time_since_epoch().count(), 20.0);
-    EXPECT_DOUBLE_EQ(tasks[0].jobs[3].arrival.time_since_epoch().count(), 30.0);
-    EXPECT_DOUBLE_EQ(tasks[0].jobs[4].arrival.time_since_epoch().count(), 40.0);
+    EXPECT_DOUBLE_EQ(time_to_seconds(tasks[0].jobs[0].arrival), 0.0);
+    EXPECT_DOUBLE_EQ(time_to_seconds(tasks[0].jobs[1].arrival), 10.0);
+    EXPECT_DOUBLE_EQ(time_to_seconds(tasks[0].jobs[2].arrival), 20.0);
+    EXPECT_DOUBLE_EQ(time_to_seconds(tasks[0].jobs[3].arrival), 30.0);
+    EXPECT_DOUBLE_EQ(time_to_seconds(tasks[0].jobs[4].arrival), 40.0);
 }
 
 TEST_F(ScenarioGenerationTest, GenerateArrivalsWorstCase) {
     std::vector<TaskParams> tasks;
     tasks.push_back(TaskParams{
         .id = 0,
-        .period = Duration{10.0},
-        .relative_deadline = Duration{10.0},
-        .wcet = Duration{3.0},
+        .period = duration_from_seconds(10.0),
+        .relative_deadline = duration_from_seconds(10.0),
+        .wcet = duration_from_seconds(3.0),
         .jobs = {}
     });
 
-    generate_arrivals(tasks, Duration{20.0}, rng, 1.0);  // exec_ratio = 1.0
+    generate_arrivals(tasks, duration_from_seconds(20.0), rng, 1.0);  // exec_ratio = 1.0
 
     for (const auto& job : tasks[0].jobs) {
-        EXPECT_DOUBLE_EQ(job.duration.count(), 3.0);  // All at WCET
+        EXPECT_DOUBLE_EQ(duration_to_seconds(job.duration), 3.0);  // All at WCET
     }
 }
 
@@ -182,27 +182,27 @@ TEST_F(ScenarioGenerationTest, GenerateArrivalsPartialExec) {
     std::vector<TaskParams> tasks;
     tasks.push_back(TaskParams{
         .id = 0,
-        .period = Duration{10.0},
-        .relative_deadline = Duration{10.0},
-        .wcet = Duration{4.0},
+        .period = duration_from_seconds(10.0),
+        .relative_deadline = duration_from_seconds(10.0),
+        .wcet = duration_from_seconds(4.0),
         .jobs = {}
     });
 
-    generate_arrivals(tasks, Duration{100.0}, rng, 0.5);  // exec_ratio = 0.5
+    generate_arrivals(tasks, duration_from_seconds(100.0), rng, 0.5);  // exec_ratio = 0.5
 
     // All durations should be <= 0.5 * wcet = 2.0
     for (const auto& job : tasks[0].jobs) {
-        EXPECT_LE(job.duration.count(), 2.0 + 1e-10);
-        EXPECT_GT(job.duration.count(), 0.0);
+        EXPECT_LE(duration_to_seconds(job.duration), 2.0 + 1e-10);
+        EXPECT_GT(duration_to_seconds(job.duration), 0.0);
     }
 }
 
 TEST_F(ScenarioGenerationTest, GenerateArrivalsMultipleTasks) {
     std::vector<TaskParams> tasks;
-    tasks.push_back(TaskParams{0, Duration{10.0}, Duration{10.0}, Duration{2.0}, {}});
-    tasks.push_back(TaskParams{1, Duration{20.0}, Duration{20.0}, Duration{4.0}, {}});
+    tasks.push_back(TaskParams{0, duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0), {}});
+    tasks.push_back(TaskParams{1, duration_from_seconds(20.0), duration_from_seconds(20.0), duration_from_seconds(4.0), {}});
 
-    generate_arrivals(tasks, Duration{40.0}, rng);
+    generate_arrivals(tasks, duration_from_seconds(40.0), rng);
 
     // Task 0: arrivals at 0, 10, 20, 30 (4 jobs)
     EXPECT_EQ(tasks[0].jobs.size(), 4u);
@@ -215,23 +215,23 @@ TEST_F(ScenarioGenerationTest, GenerateArrivalsMultipleTasks) {
 // =============================================================================
 
 TEST_F(ScenarioGenerationTest, GenerateScenarioComplete) {
-    PeriodDistribution period_dist{Duration{10.0}, Duration{50.0}, true};
+    PeriodDistribution period_dist{duration_from_seconds(10.0), duration_from_seconds(50.0), true};
 
-    auto scenario = generate_scenario(4, 0.6, period_dist, Duration{100.0}, rng);
+    auto scenario = generate_scenario(4, 0.6, period_dist, duration_from_seconds(100.0), rng);
 
     EXPECT_EQ(scenario.tasks.size(), 4u);
 
     for (const auto& task : scenario.tasks) {
         EXPECT_FALSE(task.jobs.empty());
-        EXPECT_GE(task.period.count(), 10.0);
-        EXPECT_LE(task.period.count(), 50.0);
+        EXPECT_GE(duration_to_seconds(task.period), 10.0);
+        EXPECT_LE(duration_to_seconds(task.period), 50.0);
     }
 }
 
 TEST_F(ScenarioGenerationTest, GenerateScenarioZeroTasks) {
-    PeriodDistribution period_dist{Duration{10.0}, Duration{100.0}, true};
+    PeriodDistribution period_dist{duration_from_seconds(10.0), duration_from_seconds(100.0), true};
 
-    auto scenario = generate_scenario(0, 0.5, period_dist, Duration{100.0}, rng);
+    auto scenario = generate_scenario(0, 0.5, period_dist, duration_from_seconds(100.0), rng);
 
     EXPECT_TRUE(scenario.tasks.empty());
 }
@@ -295,7 +295,7 @@ TEST_F(ScenarioGenerationTest, HarmonicPeriodsAreUsed) {
     // Generate many periods and verify they're all from the harmonic set
     for (int i = 0; i < 100; ++i) {
         Duration period = pick_harmonic_period(rng);
-        int period_us = static_cast<int>(period.count() * 1'000'000.0);
+        int period_us = static_cast<int>(duration_to_seconds(period) * 1'000'000.0);
 
         // Check that the period divides the hyperperiod
         EXPECT_EQ(HYPERPERIOD_US % period_us, 0)
@@ -318,62 +318,62 @@ TEST_F(ScenarioGenerationTest, HarmonicPeriodsAreUsed) {
 // =============================================================================
 
 TEST_F(ScenarioGenerationTest, WeibullJobsDontExceedWcet) {
-    Duration period{0.01};  // 10ms
-    Duration wcet{0.002};   // 2ms
+    Duration period = duration_from_seconds(0.01);  // 10ms
+    Duration wcet = duration_from_seconds(0.002);   // 2ms
     WeibullJobConfig config{.success_rate = 0.5, .compression_rate = 0.5};
 
     auto jobs = generate_weibull_jobs(period, wcet, 10, config, rng);
 
     EXPECT_EQ(jobs.size(), 10u);
     for (const auto& job : jobs) {
-        EXPECT_LE(job.duration.count(), wcet.count() + 1e-10);
+        EXPECT_LE(duration_to_seconds(job.duration), duration_to_seconds(wcet) + 1e-10);
     }
 }
 
 TEST_F(ScenarioGenerationTest, WeibullJobsRespectCompression) {
-    Duration period{0.01};
-    Duration wcet{0.002};
+    Duration period = duration_from_seconds(0.01);
+    Duration wcet = duration_from_seconds(0.002);
     double compression = 0.4;
     WeibullJobConfig config{.success_rate = 1.0, .compression_rate = compression};
 
     auto jobs = generate_weibull_jobs(period, wcet, 20, config, rng);
 
-    double min_expected = compression * wcet.count();
+    double min_expected = compression * duration_to_seconds(wcet);
     for (const auto& job : jobs) {
-        EXPECT_GE(job.duration.count(), min_expected - 1e-10);
-        EXPECT_LE(job.duration.count(), wcet.count() + 1e-10);
+        EXPECT_GE(duration_to_seconds(job.duration), min_expected - 1e-10);
+        EXPECT_LE(duration_to_seconds(job.duration), duration_to_seconds(wcet) + 1e-10);
     }
 }
 
 TEST_F(ScenarioGenerationTest, WeibullJobsNoCompressionExactWcet) {
-    Duration period{0.01};
-    Duration wcet{0.002};
+    Duration period = duration_from_seconds(0.01);
+    Duration wcet = duration_from_seconds(0.002);
     WeibullJobConfig config{.success_rate = 1.0, .compression_rate = 1.0};
 
     auto jobs = generate_weibull_jobs(period, wcet, 10, config, rng);
 
     for (const auto& job : jobs) {
-        EXPECT_DOUBLE_EQ(job.duration.count(), wcet.count());
+        EXPECT_DOUBLE_EQ(duration_to_seconds(job.duration), duration_to_seconds(wcet));
     }
 }
 
 TEST_F(ScenarioGenerationTest, WeibullJobsSequentialArrivals) {
-    Duration period{0.005};  // 5ms
-    Duration wcet{0.001};
+    Duration period = duration_from_seconds(0.005);  // 5ms
+    Duration wcet = duration_from_seconds(0.001);
     WeibullJobConfig config{.success_rate = 1.0, .compression_rate = 1.0};
 
     auto jobs = generate_weibull_jobs(period, wcet, 5, config, rng);
 
     ASSERT_EQ(jobs.size(), 5u);
     for (std::size_t i = 0; i < jobs.size(); ++i) {
-        double expected_arrival = static_cast<double>(i) * period.count();
-        EXPECT_DOUBLE_EQ(jobs[i].arrival.time_since_epoch().count(), expected_arrival);
+        double expected_arrival = static_cast<double>(i) * duration_to_seconds(period);
+        EXPECT_DOUBLE_EQ(time_to_seconds(jobs[i].arrival), expected_arrival);
     }
 }
 
 TEST_F(ScenarioGenerationTest, WeibullJobsZeroJobs) {
-    Duration period{0.01};
-    Duration wcet{0.002};
+    Duration period = duration_from_seconds(0.01);
+    Duration wcet = duration_from_seconds(0.002);
     WeibullJobConfig config{};
 
     auto jobs = generate_weibull_jobs(period, wcet, 0, config, rng);
@@ -393,17 +393,17 @@ TEST_F(ScenarioGenerationTest, UUniFastDiscardWeibullBasic) {
 
     double total_util = 0.0;
     for (const auto& task : scenario.tasks) {
-        total_util += task.wcet.count() / task.period.count();
+        total_util += duration_ratio(task.wcet, task.period);
 
         // Verify task has jobs
         EXPECT_FALSE(task.jobs.empty());
 
         // Verify deadline equals period
-        EXPECT_DOUBLE_EQ(task.relative_deadline.count(), task.period.count());
+        EXPECT_DOUBLE_EQ(duration_to_seconds(task.relative_deadline), duration_to_seconds(task.period));
 
         // Verify jobs don't exceed WCET
         for (const auto& job : task.jobs) {
-            EXPECT_LE(job.duration.count(), task.wcet.count() + 1e-10);
+            EXPECT_LE(duration_to_seconds(job.duration), duration_to_seconds(task.wcet) + 1e-10);
         }
     }
 
@@ -471,25 +471,25 @@ TEST_F(ScenarioGenerationTest, MergeScenariosReassignsIds) {
     ScenarioData scenario_a;
     scenario_a.tasks.push_back(TaskParams{
         .id = 100,  // Arbitrary ID
-        .period = Duration{0.01},
-        .relative_deadline = Duration{0.01},
-        .wcet = Duration{0.001},
+        .period = duration_from_seconds(0.01),
+        .relative_deadline = duration_from_seconds(0.01),
+        .wcet = duration_from_seconds(0.001),
         .jobs = {}
     });
     scenario_a.tasks.push_back(TaskParams{
         .id = 200,
-        .period = Duration{0.02},
-        .relative_deadline = Duration{0.02},
-        .wcet = Duration{0.002},
+        .period = duration_from_seconds(0.02),
+        .relative_deadline = duration_from_seconds(0.02),
+        .wcet = duration_from_seconds(0.002),
         .jobs = {}
     });
 
     ScenarioData scenario_b;
     scenario_b.tasks.push_back(TaskParams{
         .id = 300,
-        .period = Duration{0.03},
-        .relative_deadline = Duration{0.03},
-        .wcet = Duration{0.003},
+        .period = duration_from_seconds(0.03),
+        .relative_deadline = duration_from_seconds(0.03),
+        .wcet = duration_from_seconds(0.003),
         .jobs = {}
     });
 
@@ -501,9 +501,9 @@ TEST_F(ScenarioGenerationTest, MergeScenariosReassignsIds) {
     EXPECT_EQ(merged.tasks[2].id, 3u);
 
     // Verify task properties preserved
-    EXPECT_DOUBLE_EQ(merged.tasks[0].period.count(), 0.01);
-    EXPECT_DOUBLE_EQ(merged.tasks[1].period.count(), 0.02);
-    EXPECT_DOUBLE_EQ(merged.tasks[2].period.count(), 0.03);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(merged.tasks[0].period), 0.01);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(merged.tasks[1].period), 0.02);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(merged.tasks[2].period), 0.03);
 }
 
 TEST_F(ScenarioGenerationTest, MergeScenariosEmptyFirst) {
@@ -511,9 +511,9 @@ TEST_F(ScenarioGenerationTest, MergeScenariosEmptyFirst) {
     ScenarioData scenario_b;
     scenario_b.tasks.push_back(TaskParams{
         .id = 99,
-        .period = Duration{0.01},
-        .relative_deadline = Duration{0.01},
-        .wcet = Duration{0.001},
+        .period = duration_from_seconds(0.01),
+        .relative_deadline = duration_from_seconds(0.01),
+        .wcet = duration_from_seconds(0.001),
         .jobs = {}
     });
 
@@ -549,7 +549,7 @@ TEST_F(ScenarioGenerationTest, FromUtilizationsBuildsCorrectTasks) {
         EXPECT_EQ(tasks[i].id, i + 1);
 
         // WCET/period should match requested utilization
-        double actual_util = tasks[i].wcet.count() / tasks[i].period.count();
+        double actual_util = duration_ratio(tasks[i].wcet, tasks[i].period);
         EXPECT_NEAR(actual_util, utilizations[i], 1e-10);
 
         // Should have jobs
@@ -598,9 +598,9 @@ TEST_F(ScenarioGenerationTest, GeneratedScenarioLoadsCorrectly) {
         const auto& loaded_task = loaded.tasks[i];
 
         EXPECT_EQ(loaded_task.id, orig_task.id);
-        EXPECT_NEAR(loaded_task.period.count(), orig_task.period.count(), 1e-9);
-        EXPECT_NEAR(loaded_task.relative_deadline.count(), orig_task.relative_deadline.count(), 1e-9);
-        EXPECT_NEAR(loaded_task.wcet.count(), orig_task.wcet.count(), 1e-9);
+        EXPECT_NEAR(duration_to_seconds(loaded_task.period), duration_to_seconds(orig_task.period), 1e-9);
+        EXPECT_NEAR(duration_to_seconds(loaded_task.relative_deadline), duration_to_seconds(orig_task.relative_deadline), 1e-9);
+        EXPECT_NEAR(duration_to_seconds(loaded_task.wcet), duration_to_seconds(orig_task.wcet), 1e-9);
         EXPECT_EQ(loaded_task.jobs.size(), orig_task.jobs.size());
     }
 }

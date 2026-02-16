@@ -5,7 +5,7 @@
 namespace schedsim::algo {
 
 inline double task_utilization(const core::Task& t) {
-    return t.wcet().count() / t.period().count();
+    return core::duration_ratio(t.wcet(), t.period());
 }
 
 } // namespace schedsim::algo

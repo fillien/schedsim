@@ -16,15 +16,15 @@ protected:
         auto& pt = engine_.platform().add_processor_type("big", 1.0);
         auto& cd = engine_.platform().add_clock_domain(Frequency{1000.0}, Frequency{2000.0});
         pd_ = &engine_.platform().add_power_domain({
-            {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}},    // C0 - active
-            {1, CStateScope::PerProcessor, Duration{0.01}, Power{50.0}},   // C1 - light sleep
-            {2, CStateScope::PerProcessor, Duration{0.05}, Power{10.0}},   // C2 - deep sleep
-            {3, CStateScope::DomainWide, Duration{0.1}, Power{1.0}}        // C3 - package sleep
+            {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}},    // C0 - active
+            {1, CStateScope::PerProcessor, duration_from_seconds(0.01), Power{50.0}},   // C1 - light sleep
+            {2, CStateScope::PerProcessor, duration_from_seconds(0.05), Power{10.0}},   // C2 - deep sleep
+            {3, CStateScope::DomainWide, duration_from_seconds(0.1), Power{1.0}}        // C3 - package sleep
         });
         proc_ = &engine_.platform().add_processor(pt, cd, *pd_);
         engine_.platform().finalize();
 
-        task_ = std::make_unique<Task>(0, Duration{10.0}, Duration{10.0}, Duration{2.0});
+        task_ = std::make_unique<Task>(0, duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     }
 
     Engine engine_;
@@ -35,24 +35,24 @@ protected:
 
 TEST_F(CStateWakeupTest, WakeLatencyC0) {
     // C0 (active) has no wake latency
-    EXPECT_DOUBLE_EQ(pd_->wake_latency(0).count(), 0.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(pd_->wake_latency(0)), 0.0);
 }
 
 TEST_F(CStateWakeupTest, WakeLatencyC1) {
-    EXPECT_DOUBLE_EQ(pd_->wake_latency(1).count(), 0.01);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(pd_->wake_latency(1)), 0.01);
 }
 
 TEST_F(CStateWakeupTest, WakeLatencyC2) {
-    EXPECT_DOUBLE_EQ(pd_->wake_latency(2).count(), 0.05);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(pd_->wake_latency(2)), 0.05);
 }
 
 TEST_F(CStateWakeupTest, WakeLatencyC3) {
-    EXPECT_DOUBLE_EQ(pd_->wake_latency(3).count(), 0.1);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(pd_->wake_latency(3)), 0.1);
 }
 
 TEST_F(CStateWakeupTest, WakeLatencyUnknown) {
     // Unknown level returns 0
-    EXPECT_DOUBLE_EQ(pd_->wake_latency(99).count(), 0.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(pd_->wake_latency(99)), 0.0);
 }
 
 TEST_F(CStateWakeupTest, CStatePower) {
@@ -76,8 +76,8 @@ TEST_F(CStateWakeupTest, AssignOnSleepingTriggersWakeup) {
     proc_->request_cstate(1);
     EXPECT_EQ(proc_->state(), ProcessorState::Sleep);
 
-    TimePoint deadline{Duration{10.0}};
-    Job job(*task_, Duration{2.0}, deadline);
+    TimePoint deadline = time_from_seconds(10.0);
+    Job job(*task_, duration_from_seconds(2.0), deadline);
 
     proc_->assign(job);
 
@@ -88,13 +88,13 @@ TEST_F(CStateWakeupTest, AssignOnSleepingTriggersWakeup) {
 TEST_F(CStateWakeupTest, WakeupCompletesAfterLatency) {
     proc_->request_cstate(1);  // C1 has 0.01s wake latency
 
-    TimePoint deadline{Duration{10.0}};
-    Job job(*task_, Duration{2.0}, deadline);
+    TimePoint deadline = time_from_seconds(10.0);
+    Job job(*task_, duration_from_seconds(2.0), deadline);
 
     proc_->assign(job);
 
     // Run past wake-up latency
-    engine_.run(TimePoint{Duration{0.02}});
+    engine_.run(time_from_seconds(0.02));
 
     // Should be Running (went through Idle and possibly CS)
     EXPECT_EQ(proc_->state(), ProcessorState::Running);
@@ -110,11 +110,11 @@ TEST_F(CStateWakeupTest, ProcessorAvailableISRFiredAfterWakeup) {
         EXPECT_EQ(&p, proc_);
     });
 
-    TimePoint deadline{Duration{10.0}};
-    Job job(*task_, Duration{2.0}, deadline);
+    TimePoint deadline = time_from_seconds(10.0);
+    Job job(*task_, duration_from_seconds(2.0), deadline);
 
     proc_->assign(job);
-    engine_.run(TimePoint{Duration{0.02}});
+    engine_.run(time_from_seconds(0.02));
 
     EXPECT_TRUE(isr_fired);
 }
@@ -122,11 +122,11 @@ TEST_F(CStateWakeupTest, ProcessorAvailableISRFiredAfterWakeup) {
 TEST_F(CStateWakeupTest, WakeupThenCSEnabled) {
     // Enable context switch (processor type has 0 delay, so need new setup)
     Engine engine2;
-    auto& pt = engine2.platform().add_processor_type("big", 1.0, Duration{0.02});
+    auto& pt = engine2.platform().add_processor_type("big", 1.0, duration_from_seconds(0.02));
     auto& cd = engine2.platform().add_clock_domain(Frequency{1000.0}, Frequency{2000.0});
     auto& pd = engine2.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}},
-        {1, CStateScope::PerProcessor, Duration{0.01}, Power{50.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}},
+        {1, CStateScope::PerProcessor, duration_from_seconds(0.01), Power{50.0}}
     });
     auto& proc = engine2.platform().add_processor(pt, cd, pd);
     engine2.platform().finalize();
@@ -134,18 +134,18 @@ TEST_F(CStateWakeupTest, WakeupThenCSEnabled) {
 
     proc.request_cstate(1);  // C1: 0.01s wake latency
 
-    Task task(0, Duration{10.0}, Duration{10.0}, Duration{2.0});
-    TimePoint deadline{Duration{10.0}};
-    Job job(task, Duration{2.0}, deadline);
+    Task task(0, duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
+    TimePoint deadline = time_from_seconds(10.0);
+    Job job(task, duration_from_seconds(2.0), deadline);
 
     proc.assign(job);
 
     // After wake-up (0.01s), should be in ContextSwitching
-    engine2.run(TimePoint{Duration{0.015}});
+    engine2.run(time_from_seconds(0.015));
     EXPECT_EQ(proc.state(), ProcessorState::ContextSwitching);
 
     // After CS (0.01 + 0.02 = 0.03s), should be Running
-    engine2.run(TimePoint{Duration{0.04}});
+    engine2.run(time_from_seconds(0.04));
     EXPECT_EQ(proc.state(), ProcessorState::Running);
 }
 
@@ -160,18 +160,18 @@ TEST_F(CStateWakeupTest, DeepSleepTakesLonger) {
         completion_time = engine_.time();
     });
 
-    TimePoint deadline{Duration{10.0}};
-    Job job(*task_, Duration{2.0}, deadline);
+    TimePoint deadline = time_from_seconds(10.0);
+    Job job(*task_, duration_from_seconds(2.0), deadline);
 
     proc_->assign(job);
 
     // Run until completion
     // Wake-up: 0.05s, Job: 2.0s at speed 1.0 = 2.0s
     // Total: 2.05s
-    engine_.run(TimePoint{Duration{3.0}});
+    engine_.run(time_from_seconds(3.0));
 
     EXPECT_TRUE(completion_called);
-    EXPECT_NEAR(completion_time.time_since_epoch().count(), 2.05, 0.001);
+    EXPECT_NEAR(time_to_seconds(completion_time), 2.05, 0.001);
 }
 
 TEST_F(CStateWakeupTest, AchievedCStatePerProcessor) {
@@ -188,8 +188,8 @@ TEST_F(CStateWakeupTest, ZeroLatencyWakeUp) {
     auto& pt = engine2.platform().add_processor_type("big", 1.0);
     auto& cd = engine2.platform().add_clock_domain(Frequency{1000.0}, Frequency{2000.0});
     auto& pd = engine2.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}},
-        {1, CStateScope::PerProcessor, Duration{0.0}, Power{50.0}}  // C1 with zero wake latency
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}},
+        {1, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{50.0}}  // C1 with zero wake latency
     });
     auto& proc = engine2.platform().add_processor(pt, cd, pd);
     engine2.platform().finalize();
@@ -197,9 +197,9 @@ TEST_F(CStateWakeupTest, ZeroLatencyWakeUp) {
     proc.request_cstate(1);
     EXPECT_EQ(proc.state(), ProcessorState::Sleep);
 
-    Task task(0, Duration{10.0}, Duration{10.0}, Duration{2.0});
-    TimePoint deadline{Duration{10.0}};
-    Job job(task, Duration{2.0}, deadline);
+    Task task(0, duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
+    TimePoint deadline = time_from_seconds(10.0);
+    Job job(task, duration_from_seconds(2.0), deadline);
 
     proc.assign(job);
 
@@ -215,9 +215,9 @@ TEST_F(CStateWakeupTest, AchievedCStateDomainWide) {
     auto& pt = engine2.platform().add_processor_type("big", 1.0);
     auto& cd = engine2.platform().add_clock_domain(Frequency{1000.0}, Frequency{2000.0});
     auto& pd = engine2.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}},
-        {1, CStateScope::PerProcessor, Duration{0.01}, Power{50.0}},
-        {3, CStateScope::DomainWide, Duration{0.1}, Power{1.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}},
+        {1, CStateScope::PerProcessor, duration_from_seconds(0.01), Power{50.0}},
+        {3, CStateScope::DomainWide, duration_from_seconds(0.1), Power{1.0}}
     });
     auto& proc1 = engine2.platform().add_processor(pt, cd, pd);
     auto& proc2 = engine2.platform().add_processor(pt, cd, pd);

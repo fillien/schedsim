@@ -39,7 +39,7 @@ void JsonTraceWriter::begin(core::TimePoint time) {
     in_record_ = true;
     first_field_ = true;
 
-    output_ << "  {\"time\": " << std::setprecision(15) << time.time_since_epoch().count();
+    output_ << "  {\"time\": " << std::setprecision(15) << core::time_to_seconds(time);
 }
 
 void JsonTraceWriter::type(std::string_view name) {
@@ -111,7 +111,7 @@ void JsonTraceWriter::finalize() {
 
 void MemoryTraceWriter::begin(core::TimePoint time) {
     current_ = TraceRecord{};
-    current_.time = time.time_since_epoch().count();
+    current_.time = core::time_to_seconds(time);
 }
 
 void MemoryTraceWriter::type(std::string_view name) {
@@ -144,7 +144,7 @@ TextualTraceWriter::TextualTraceWriter(std::ostream& output, bool color_enabled)
     , color_enabled_(color_enabled) {}
 
 void TextualTraceWriter::begin(core::TimePoint time) {
-    current_time_ = time.time_since_epoch().count();
+    current_time_ = core::time_to_seconds(time);
     current_type_.clear();
     current_fields_.clear();
 }

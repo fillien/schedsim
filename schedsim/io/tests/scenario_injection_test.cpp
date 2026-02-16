@@ -16,7 +16,7 @@ protected:
         auto& platform = engine.platform();
         auto& proc_type = platform.add_processor_type("cpu", 1.0);
         auto& cd = platform.add_clock_domain(Frequency{1000.0}, Frequency{1000.0});
-        auto& pd = platform.add_power_domain({{0, CStateScope::PerProcessor, Duration{0.0}, Power{0.0}}});
+        auto& pd = platform.add_power_domain({{0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{0.0}}});
         platform.add_processor(proc_type, cd, pd);
     }
 
@@ -27,16 +27,16 @@ TEST_F(ScenarioInjectionTest, InjectScenarioCreatesTasks) {
     ScenarioData scenario;
     scenario.tasks.push_back(TaskParams{
         .id = 0,
-        .period = Duration{10.0},
-        .relative_deadline = Duration{10.0},
-        .wcet = Duration{2.0},
+        .period = duration_from_seconds(10.0),
+        .relative_deadline = duration_from_seconds(10.0),
+        .wcet = duration_from_seconds(2.0),
         .jobs = {}
     });
     scenario.tasks.push_back(TaskParams{
         .id = 1,
-        .period = Duration{20.0},
-        .relative_deadline = Duration{15.0},
-        .wcet = Duration{4.0},
+        .period = duration_from_seconds(20.0),
+        .relative_deadline = duration_from_seconds(15.0),
+        .wcet = duration_from_seconds(4.0),
         .jobs = {}
     });
 
@@ -45,23 +45,23 @@ TEST_F(ScenarioInjectionTest, InjectScenarioCreatesTasks) {
     auto& platform = engine.platform();
     ASSERT_EQ(platform.task_count(), 2u);
 
-    EXPECT_DOUBLE_EQ(platform.task(0).period().count(), 10.0);
-    EXPECT_DOUBLE_EQ(platform.task(0).wcet().count(), 2.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(platform.task(0).period()), 10.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(platform.task(0).wcet()), 2.0);
 
-    EXPECT_DOUBLE_EQ(platform.task(1).period().count(), 20.0);
-    EXPECT_DOUBLE_EQ(platform.task(1).relative_deadline().count(), 15.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(platform.task(1).period()), 20.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(platform.task(1).relative_deadline()), 15.0);
 }
 
 TEST_F(ScenarioInjectionTest, ScheduleArrivalsSchedulesJobs) {
     // First, add a task manually
     auto& platform = engine.platform();
-    auto& task = platform.add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task = platform.add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
 
     // Schedule arrivals BEFORE finalize (Engine doesn't allow scheduling after finalize)
     std::vector<JobParams> jobs = {
-        {TimePoint{Duration{0.0}}, Duration{1.5}},
-        {TimePoint{Duration{10.0}}, Duration{2.0}},
-        {TimePoint{Duration{20.0}}, Duration{1.0}}
+        {time_from_seconds(0.0), duration_from_seconds(1.5)},
+        {time_from_seconds(10.0), duration_from_seconds(2.0)},
+        {time_from_seconds(20.0), duration_from_seconds(1.0)}
     };
     schedule_arrivals(engine, task, jobs);
 
@@ -80,10 +80,10 @@ TEST_F(ScenarioInjectionTest, ScheduleArrivalsSchedulesJobs) {
     engine.run();
 
     ASSERT_EQ(arrivals.size(), 3u);
-    EXPECT_DOUBLE_EQ(arrivals[0].first.time_since_epoch().count(), 0.0);
-    EXPECT_DOUBLE_EQ(arrivals[0].second.count(), 1.5);
-    EXPECT_DOUBLE_EQ(arrivals[1].first.time_since_epoch().count(), 10.0);
-    EXPECT_DOUBLE_EQ(arrivals[2].first.time_since_epoch().count(), 20.0);
+    EXPECT_DOUBLE_EQ(time_to_seconds(arrivals[0].first), 0.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(arrivals[0].second), 1.5);
+    EXPECT_DOUBLE_EQ(time_to_seconds(arrivals[1].first), 10.0);
+    EXPECT_DOUBLE_EQ(time_to_seconds(arrivals[2].first), 20.0);
 }
 
 TEST_F(ScenarioInjectionTest, EmptyScenario) {
@@ -106,16 +106,16 @@ TEST_F(ScenarioInjectionTest, MultipleTasksWithOverlappingArrivals) {
     ScenarioData scenario;
     scenario.tasks.push_back(TaskParams{
         .id = 0,
-        .period = Duration{10.0},
-        .relative_deadline = Duration{10.0},
-        .wcet = Duration{3.0},
+        .period = duration_from_seconds(10.0),
+        .relative_deadline = duration_from_seconds(10.0),
+        .wcet = duration_from_seconds(3.0),
         .jobs = {}
     });
     scenario.tasks.push_back(TaskParams{
         .id = 1,
-        .period = Duration{15.0},
-        .relative_deadline = Duration{15.0},
-        .wcet = Duration{2.0},
+        .period = duration_from_seconds(15.0),
+        .relative_deadline = duration_from_seconds(15.0),
+        .wcet = duration_from_seconds(2.0),
         .jobs = {}
     });
 
@@ -126,12 +126,12 @@ TEST_F(ScenarioInjectionTest, MultipleTasksWithOverlappingArrivals) {
 
     // Schedule arrivals BEFORE finalize (Engine doesn't allow scheduling after finalize)
     std::vector<JobParams> jobs0 = {
-        {TimePoint{Duration{0.0}}, Duration{3.0}},
-        {TimePoint{Duration{10.0}}, Duration{2.5}}
+        {time_from_seconds(0.0), duration_from_seconds(3.0)},
+        {time_from_seconds(10.0), duration_from_seconds(2.5)}
     };
     std::vector<JobParams> jobs1 = {
-        {TimePoint{Duration{0.0}}, Duration{2.0}},
-        {TimePoint{Duration{15.0}}, Duration{1.5}}
+        {time_from_seconds(0.0), duration_from_seconds(2.0)},
+        {time_from_seconds(15.0), duration_from_seconds(1.5)}
     };
 
     schedule_arrivals(engine, platform.task(0), jobs0);

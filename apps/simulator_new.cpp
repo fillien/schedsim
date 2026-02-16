@@ -169,13 +169,13 @@ int main(int argc, char** argv) {
 
         if (config.dvfs == "power-aware") {
             scheduler.enable_power_aware_dvfs(
-                core::Duration{config.dvfs_cooldown_ms / 1000.0});
+                core::duration_from_seconds(config.dvfs_cooldown_ms / 1000.0));
         } else if (config.dvfs == "ffa") {
             scheduler.enable_ffa(
-                core::Duration{config.dvfs_cooldown_ms / 1000.0}, config.dpm_cstate);
+                core::duration_from_seconds(config.dvfs_cooldown_ms / 1000.0), config.dpm_cstate);
         } else if (config.dvfs == "csf") {
             scheduler.enable_csf(
-                core::Duration{config.dvfs_cooldown_ms / 1000.0}, config.dpm_cstate);
+                core::duration_from_seconds(config.dvfs_cooldown_ms / 1000.0), config.dpm_cstate);
         }
 
         // FFA/CSF manage DPM internally, so only enable separate DPM if not using them
@@ -212,7 +212,7 @@ int main(int argc, char** argv) {
 
         // 12. Run simulation
         if (config.duration > 0) {
-            engine.run(core::TimePoint{core::Duration{config.duration}});
+            engine.run(core::time_from_seconds(config.duration));
         } else {
             engine.run();
         }
@@ -224,7 +224,7 @@ int main(int argc, char** argv) {
 
         if (config.verbose) {
             std::cerr << "Simulation complete at time: "
-                      << engine.time().time_since_epoch().count() << "s" << std::endl;
+                      << core::time_to_seconds(engine.time()) << "s" << std::endl;
         }
 
         return 0;

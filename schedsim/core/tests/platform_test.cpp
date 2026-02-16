@@ -39,15 +39,15 @@ TEST_F(PlatformTest, AddClockDomain) {
 
 TEST_F(PlatformTest, AddClockDomainWithDelay) {
     auto& cd = engine_.platform().add_clock_domain(
-        Frequency{500.0}, Frequency{2000.0}, Duration{0.001});
+        Frequency{500.0}, Frequency{2000.0}, duration_from_seconds(0.001));
 
-    EXPECT_EQ(cd.transition_delay().count(), 0.001);
+    EXPECT_EQ(duration_to_seconds(cd.transition_delay()), 0.001);
 }
 
 TEST_F(PlatformTest, AddPowerDomain) {
     std::vector<CStateLevel> c_states = {
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}},
-        {1, CStateScope::PerProcessor, Duration{0.001}, Power{50.0}},
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}},
+        {1, CStateScope::PerProcessor, duration_from_seconds(0.001), Power{50.0}},
     };
 
     auto& pd = engine_.platform().add_power_domain(c_states);
@@ -60,7 +60,7 @@ TEST_F(PlatformTest, AddProcessor) {
     auto& pt = engine_.platform().add_processor_type("big", 1.0);
     auto& cd = engine_.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine_.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
 
     auto& proc = engine_.platform().add_processor(pt, cd, pd);
@@ -75,7 +75,7 @@ TEST_F(PlatformTest, ProcessorWiredToClockDomain) {
     auto& pt = engine_.platform().add_processor_type("big", 1.0);
     auto& cd = engine_.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine_.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
 
     auto& proc = engine_.platform().add_processor(pt, cd, pd);
@@ -88,7 +88,7 @@ TEST_F(PlatformTest, ProcessorWiredToPowerDomain) {
     auto& pt = engine_.platform().add_processor_type("big", 1.0);
     auto& cd = engine_.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine_.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
 
     auto& proc = engine_.platform().add_processor(pt, cd, pd);
@@ -98,12 +98,12 @@ TEST_F(PlatformTest, ProcessorWiredToPowerDomain) {
 }
 
 TEST_F(PlatformTest, AddTask) {
-    auto& task = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
 
     EXPECT_EQ(task.id(), 0U);
-    EXPECT_EQ(task.period().count(), 10.0);
-    EXPECT_EQ(task.relative_deadline().count(), 10.0);
-    EXPECT_EQ(task.wcet().count(), 2.0);
+    EXPECT_EQ(duration_to_seconds(task.period()), 10.0);
+    EXPECT_EQ(duration_to_seconds(task.relative_deadline()), 10.0);
+    EXPECT_EQ(duration_to_seconds(task.wcet()), 2.0);
 }
 
 TEST_F(PlatformTest, Finalize) {
@@ -139,7 +139,7 @@ TEST_F(PlatformTest, AddAfterFinalizeThrows) {
         AlreadyFinalizedError);
 
     EXPECT_THROW(
-        engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0}),
+        engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0)),
         AlreadyFinalizedError);
 }
 
@@ -170,7 +170,7 @@ TEST_F(PlatformTest, ProcessorSpeedUsesReferencePerformance) {
     auto& pt = engine_.platform().add_processor_type("big", 2.0);
     auto& cd = engine_.platform().add_clock_domain(Frequency{1000.0}, Frequency{2000.0});
     auto& pd = engine_.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
 
     auto& proc = engine_.platform().add_processor(pt, cd, pd);
@@ -185,7 +185,7 @@ TEST_F(PlatformTest, MultipleProcessorsSameClockDomain) {
     auto& pt = engine_.platform().add_processor_type("big", 1.0);
     auto& cd = engine_.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine_.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
 
     auto& proc1 = engine_.platform().add_processor(pt, cd, pd);
@@ -201,9 +201,9 @@ TEST_F(PlatformTest, SpanAccessors) {
     engine_.platform().add_processor_type("LITTLE", 0.5);
     engine_.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     engine_.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
-    engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
 
     EXPECT_EQ(engine_.platform().processor_type_count(), 2U);
     EXPECT_EQ(engine_.platform().clock_domain_count(), 1U);
@@ -213,7 +213,7 @@ TEST_F(PlatformTest, SpanAccessors) {
 
 // Job arrival integration test
 TEST_F(PlatformTest, JobArrivalScheduling) {
-    auto& task = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     engine_.platform().finalize();
 
     bool handler_called = false;
@@ -222,11 +222,11 @@ TEST_F(PlatformTest, JobArrivalScheduling) {
     engine_.set_job_arrival_handler([&](Task& t, Job job) {
         handler_called = true;
         arrived_task = &t;
-        EXPECT_EQ(job.total_work().count(), 2.0);
-        EXPECT_EQ(job.absolute_deadline().time_since_epoch().count(), 15.0);  // 5 + 10
+        EXPECT_DOUBLE_EQ(duration_to_seconds(job.total_work()), 2.0);
+        EXPECT_DOUBLE_EQ(time_to_seconds(job.absolute_deadline()), 15.0);  // 5 + 10
     });
 
-    engine_.schedule_job_arrival(task, TimePoint{Duration{5.0}}, Duration{2.0});
+    engine_.schedule_job_arrival(task, time_from_seconds(5.0), duration_from_seconds(2.0));
     engine_.run();
 
     EXPECT_TRUE(handler_called);
@@ -246,16 +246,16 @@ TEST_F(PlatformTest, HandlerAlreadySetThrows) {
 // =============================================================================
 
 TEST_F(PlatformTest, AddTaskWithExplicitId) {
-    auto& task = engine_.platform().add_task(42, Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task = engine_.platform().add_task(42, duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     EXPECT_EQ(task.id(), 42U);
-    EXPECT_EQ(task.period().count(), 10.0);
-    EXPECT_EQ(task.wcet().count(), 2.0);
+    EXPECT_EQ(duration_to_seconds(task.period()), 10.0);
+    EXPECT_EQ(duration_to_seconds(task.wcet()), 2.0);
 }
 
 TEST_F(PlatformTest, AddTaskWithExplicitId_NonSequential) {
-    auto& t1 = engine_.platform().add_task(5, Duration{10.0}, Duration{10.0}, Duration{2.0});
-    auto& t2 = engine_.platform().add_task(10, Duration{20.0}, Duration{20.0}, Duration{3.0});
-    auto& t3 = engine_.platform().add_task(1, Duration{5.0}, Duration{5.0}, Duration{1.0});
+    auto& t1 = engine_.platform().add_task(5, duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
+    auto& t2 = engine_.platform().add_task(10, duration_from_seconds(20.0), duration_from_seconds(20.0), duration_from_seconds(3.0));
+    auto& t3 = engine_.platform().add_task(1, duration_from_seconds(5.0), duration_from_seconds(5.0), duration_from_seconds(1.0));
 
     EXPECT_EQ(t1.id(), 5U);
     EXPECT_EQ(t2.id(), 10U);

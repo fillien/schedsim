@@ -19,9 +19,9 @@ protected:
         auto& cd = engine_.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
         // Add multiple C-states for DPM testing
         auto& pd = engine_.platform().add_power_domain({
-            {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}},  // C0 (active)
-            {1, CStateScope::PerProcessor, Duration{0.001}, Power{50.0}}, // C1
-            {2, CStateScope::PerProcessor, Duration{0.01}, Power{10.0}}   // C2
+            {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}},  // C0 (active)
+            {1, CStateScope::PerProcessor, duration_from_seconds(0.001), Power{50.0}}, // C1
+            {2, CStateScope::PerProcessor, duration_from_seconds(0.01), Power{10.0}}   // C2
         });
         proc_ = &engine_.platform().add_processor(pt, cd, pd);
         // Don't finalize here - tests will finalize after adding tasks if needed
@@ -35,15 +35,15 @@ TEST_F(DpmPolicyTest, DefaultParameters) {
     BasicDpmPolicy policy;
 
     EXPECT_EQ(policy.target_cstate(), 1);
-    EXPECT_DOUBLE_EQ(policy.idle_threshold().count(), 0.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(policy.idle_threshold()), 0.0);
     EXPECT_EQ(policy.sleeping_processor_count(), 0U);
 }
 
 TEST_F(DpmPolicyTest, CustomParameters) {
-    BasicDpmPolicy policy(2, Duration{0.5});
+    BasicDpmPolicy policy(2, duration_from_seconds(0.5));
 
     EXPECT_EQ(policy.target_cstate(), 2);
-    EXPECT_DOUBLE_EQ(policy.idle_threshold().count(), 0.5);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(policy.idle_threshold()), 0.5);
 }
 
 TEST_F(DpmPolicyTest, OnProcessorIdle_PutsToSleep) {
@@ -78,7 +78,7 @@ TEST_F(DpmPolicyTest, OnProcessorIdle_AlreadySleeping) {
 }
 
 TEST_F(DpmPolicyTest, OnProcessorNeeded_CleansUpWokenProcessors) {
-    auto& task = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc_});
@@ -89,9 +89,9 @@ TEST_F(DpmPolicyTest, OnProcessorNeeded_CleansUpWokenProcessors) {
     EXPECT_EQ(policy.sleeping_processor_count(), 1U);
 
     // Manually wake the processor (simulating job assignment)
-    Job job(task, Duration{2.0}, TimePoint{Duration{10.0}});
+    Job job(task, duration_from_seconds(2.0), time_from_seconds(10.0));
     proc_->assign(job);
-    engine_.run(TimePoint{Duration{0.001}});  // Let wake-up complete
+    engine_.run(time_from_seconds(0.001));  // Let wake-up complete
 
     // Now notify policy - should clean up
     policy.on_processor_needed(sched);

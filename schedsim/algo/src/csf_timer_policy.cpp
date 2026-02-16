@@ -20,7 +20,7 @@ void CsfTimerPolicy::on_utilization_changed(EdfScheduler& scheduler, core::Clock
     }
 
     // Zero cooldown: immediate mode (delegate to parent)
-    if (dvfs_cooldown_.count() <= 0.0) {
+    if (dvfs_cooldown_ <= core::Duration::zero()) {
         CsfPolicy::on_utilization_changed(scheduler, domain);
         return;
     }

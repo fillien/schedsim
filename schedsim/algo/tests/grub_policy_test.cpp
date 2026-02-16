@@ -19,14 +19,14 @@ protected:
         auto& pt = engine_.platform().add_processor_type("cpu", 1.0);
         auto& cd = engine_.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
         auto& pd = engine_.platform().add_power_domain({
-            {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+            {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
         });
         proc_ = &engine_.platform().add_processor(pt, cd, pd);
         // Don't finalize here - tests will finalize after adding tasks
     }
 
     TimePoint time(double seconds) {
-        return TimePoint{Duration{seconds}};
+        return time_from_seconds(seconds);
     }
 
     Engine engine_;
@@ -43,7 +43,7 @@ TEST_F(GrubPolicyTest, InitialActiveUtilization) {
 }
 
 TEST_F(GrubPolicyTest, ActiveUtilizationTracking) {
-    auto& task = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc_});
@@ -65,7 +65,7 @@ TEST_F(GrubPolicyTest, ActiveUtilizationTracking) {
 }
 
 TEST_F(GrubPolicyTest, NonContendingRemovesUtilization) {
-    auto& task = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc_});
@@ -82,8 +82,8 @@ TEST_F(GrubPolicyTest, NonContendingRemovesUtilization) {
 }
 
 TEST_F(GrubPolicyTest, ComputeVirtualTime_GrubFormula) {
-    auto& task = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
-    auto& task2 = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{3.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
+    auto& task2 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(3.0));
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc_});
@@ -104,12 +104,12 @@ TEST_F(GrubPolicyTest, ComputeVirtualTime_GrubFormula) {
     // inactive_bw = 1 - 0*0.3 - 0.5 = 0.5
     // bandwidth = max(1 - 0.5/1, 0.01) = 0.5
     // vt = 0 + (0.5 / 0.2) * 1.0 = 2.5
-    TimePoint new_vt = policy.compute_virtual_time(server, time(0.0), Duration{1.0});
-    EXPECT_DOUBLE_EQ(new_vt.time_since_epoch().count(), 2.5);
+    TimePoint new_vt = policy.compute_virtual_time(server, time(0.0), duration_from_seconds(1.0));
+    EXPECT_DOUBLE_EQ(time_to_seconds(new_vt), 2.5);
 }
 
 TEST_F(GrubPolicyTest, ComputeVirtualTime_NoServersInScheduler) {
-    auto& task = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc_});
@@ -121,12 +121,12 @@ TEST_F(GrubPolicyTest, ComputeVirtualTime_NoServersInScheduler) {
     EXPECT_DOUBLE_EQ(policy.active_utilization(), 0.0);
 
     // M-GRUB: vt += (bandwidth / U_i) * exec_time = (1.0 / 0.2) * 1.0 = 5.0
-    TimePoint new_vt = policy.compute_virtual_time(server, time(0.0), Duration{1.0});
-    EXPECT_DOUBLE_EQ(new_vt.time_since_epoch().count(), 5.0);
+    TimePoint new_vt = policy.compute_virtual_time(server, time(0.0), duration_from_seconds(1.0));
+    EXPECT_DOUBLE_EQ(time_to_seconds(new_vt), 5.0);
 }
 
 TEST_F(GrubPolicyTest, EarlyCompletionReturnsTrueWhenVtBetweenNowAndDeadline) {
-    auto& task = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc_});
@@ -135,19 +135,19 @@ TEST_F(GrubPolicyTest, EarlyCompletionReturnsTrueWhenVtBetweenNowAndDeadline) {
     GrubPolicy policy(sched);
 
     // Activate server so it has a valid deadline (now + period = 10.0)
-    server.enqueue_job(Job{task, Duration{1.0}, time(10.0)});
+    server.enqueue_job(Job{task, duration_from_seconds(1.0), time(10.0)});
     server.activate(time(0.0));
     server.dispatch();
     // Set VT to 5.0 (between now=0.0 and deadline=10.0)
     server.set_virtual_time(time(5.0));
 
     // M-GRUB: NonContending when vt > now && vt < deadline
-    bool enter_nc = policy.on_early_completion(server, Duration{1.0});
+    bool enter_nc = policy.on_early_completion(server, duration_from_seconds(1.0));
     EXPECT_TRUE(enter_nc);
 }
 
 TEST_F(GrubPolicyTest, BudgetExhaustedReturnsZero) {
-    auto& task = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc_});
@@ -157,13 +157,13 @@ TEST_F(GrubPolicyTest, BudgetExhaustedReturnsZero) {
 
     // GRUB doesn't grant extra budget
     Duration extra = policy.on_budget_exhausted(server);
-    EXPECT_DOUBLE_EQ(extra.count(), 0.0);
+    EXPECT_DOUBLE_EQ(duration_to_seconds(extra), 0.0);
 }
 
 TEST_F(GrubPolicyTest, MultipleServersUtilization) {
-    auto& task1 = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
-    auto& task2 = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
-    auto& task3 = engine_.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{3.0});
+    auto& task1 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
+    auto& task2 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
+    auto& task3 = engine_.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(3.0));
     engine_.platform().finalize();
 
     EdfScheduler sched(engine_, {proc_});

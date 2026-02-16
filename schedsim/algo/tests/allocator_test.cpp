@@ -13,7 +13,7 @@ using namespace schedsim::core;
 class AllocatorTestBase : public ::testing::Test {
 protected:
     TimePoint time(double seconds) {
-        return TimePoint{Duration{seconds}};
+        return time_from_seconds(seconds);
     }
 };
 
@@ -22,7 +22,7 @@ TEST_F(AllocatorTestBase, SingleSchedulerAllocator_Construction) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     auto* proc = &engine.platform().add_processor(pt, cd, pd);
     engine.platform().finalize();
@@ -39,10 +39,10 @@ TEST_F(AllocatorTestBase, SingleSchedulerAllocator_RoutesToScheduler) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     auto* proc = &engine.platform().add_processor(pt, cd, pd);
-    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{2.0});
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     engine.platform().finalize();
 
     EdfScheduler sched(engine, {proc});
@@ -50,7 +50,7 @@ TEST_F(AllocatorTestBase, SingleSchedulerAllocator_RoutesToScheduler) {
     SingleSchedulerAllocator alloc(engine, sched);
 
     // Schedule a job arrival
-    engine.schedule_job_arrival(task, time(0.0), Duration{2.0});
+    engine.schedule_job_arrival(task, time(0.0), duration_from_seconds(2.0));
 
     // Before running, no job is active
     EXPECT_EQ(proc->current_job(), nullptr);
@@ -68,7 +68,7 @@ TEST_F(AllocatorTestBase, HandlerAlreadySetError) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     auto* proc = &engine.platform().add_processor(pt, cd, pd);
     engine.platform().finalize();
@@ -89,10 +89,10 @@ TEST_F(AllocatorTestBase, MultipleJobArrivals_AllRouted) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     auto* proc = &engine.platform().add_processor(pt, cd, pd);
-    auto& task = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
     engine.platform().finalize();
 
     EdfScheduler sched(engine, {proc});
@@ -100,9 +100,9 @@ TEST_F(AllocatorTestBase, MultipleJobArrivals_AllRouted) {
     SingleSchedulerAllocator alloc(engine, sched);
 
     // Schedule multiple job arrivals
-    engine.schedule_job_arrival(task, time(0.0), Duration{1.0});
-    engine.schedule_job_arrival(task, time(5.0), Duration{1.0});
-    engine.schedule_job_arrival(task, time(10.0), Duration{1.0});
+    engine.schedule_job_arrival(task, time(0.0), duration_from_seconds(1.0));
+    engine.schedule_job_arrival(task, time(5.0), duration_from_seconds(1.0));
+    engine.schedule_job_arrival(task, time(10.0), duration_from_seconds(1.0));
 
     engine.run(time(15.0));
 
@@ -115,11 +115,11 @@ TEST_F(AllocatorTestBase, DifferentTasks_BothRouted) {
     auto& pt = engine.platform().add_processor_type("cpu", 1.0);
     auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
     auto& pd = engine.platform().add_power_domain({
-        {0, CStateScope::PerProcessor, Duration{0.0}, Power{100.0}}
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
     });
     auto* proc = &engine.platform().add_processor(pt, cd, pd);
-    auto& task1 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
-    auto& task2 = engine.platform().add_task(Duration{10.0}, Duration{10.0}, Duration{1.0});
+    auto& task1 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
+    auto& task2 = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
     engine.platform().finalize();
 
     EdfScheduler sched(engine, {proc});
@@ -127,8 +127,8 @@ TEST_F(AllocatorTestBase, DifferentTasks_BothRouted) {
     sched.add_server(task2);
     SingleSchedulerAllocator alloc(engine, sched);
 
-    engine.schedule_job_arrival(task1, time(0.0), Duration{1.0});
-    engine.schedule_job_arrival(task2, time(0.0), Duration{1.0});
+    engine.schedule_job_arrival(task1, time(0.0), duration_from_seconds(1.0));
+    engine.schedule_job_arrival(task2, time(0.0), duration_from_seconds(1.0));
 
     engine.run(time(10.0));
 

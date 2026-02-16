@@ -103,7 +103,7 @@ void load_new_format(Engine& engine, const rapidjson::Document& doc) {
             double cs_delay = get_double_or(type_obj, "context_switch_delay_us", 0.0);
 
             auto& proc_type = platform.add_processor_type(
-                name, performance, Duration{cs_delay / 1e6});  // Convert us to seconds
+                name, performance, duration_from_seconds(cs_delay / 1e6));  // Convert us to seconds
             processor_types[name] = &proc_type;
         }
     }
@@ -132,7 +132,7 @@ void load_new_format(Engine& engine, const rapidjson::Document& doc) {
             auto& cd = platform.add_clock_domain(
                 Frequency{freq_min},
                 Frequency{freq_max},
-                Duration{transition_delay / 1e6});  // Convert us to seconds
+                duration_from_seconds(transition_delay / 1e6));  // Convert us to seconds
 
             // Set discrete frequency modes if multiple frequencies
             if (freqs.Size() > 1) {
@@ -205,7 +205,7 @@ void load_new_format(Engine& engine, const rapidjson::Document& doc) {
                         c_states.push_back(CStateLevel{
                             level,
                             scope,
-                            Duration{latency / 1e6},  // Convert us to seconds
+                            duration_from_seconds(latency / 1e6),  // Convert us to seconds
                             Power{power}
                         });
                     }
@@ -217,7 +217,7 @@ void load_new_format(Engine& engine, const rapidjson::Document& doc) {
                 c_states.push_back(CStateLevel{
                     0,
                     CStateScope::PerProcessor,
-                    Duration{0.0},
+                    Duration::zero(),
                     Power{0.0}
                 });
             }
@@ -328,7 +328,7 @@ void load_legacy_format(Engine& engine, const rapidjson::Document& doc) {
         c_states.push_back(CStateLevel{
             0,
             CStateScope::PerProcessor,
-            Duration{0.0},
+            Duration::zero(),
             Power{0.0}
         });
         auto& pd = platform.add_power_domain(std::move(c_states));

@@ -10,7 +10,7 @@ using namespace schedsim::core;
 class DeferredTest : public ::testing::Test {
 protected:
     TimePoint time(double seconds) {
-        return TimePoint{Duration{seconds}};
+        return time_from_seconds(seconds);
     }
 };
 
@@ -164,7 +164,7 @@ TEST_F(DeferredTest, DeferredAcrossMultipleTimesteps) {
     std::vector<double> fire_times;
 
     DeferredId deferred = engine.register_deferred([&fire_times, &engine]() {
-        fire_times.push_back(engine.time().time_since_epoch().count());
+        fire_times.push_back(time_to_seconds(engine.time()));
     });
 
     engine.add_timer(time(1.0), [&engine, deferred]() {
