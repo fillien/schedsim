@@ -25,6 +25,12 @@ private:
     double available_;
 };
 
+// Admission test for CBS server admission
+enum class AdmissionTest {
+    CapacityBound,  // U <= m  (necessary condition, default)
+    GFB             // U <= m - (m-1)*u_max  (sufficient, Goossens-Funk-Baruah 2003)
+};
+
 // Policy for handling deadline misses
 enum class DeadlineMissPolicy {
     Continue,       // Log and continue (default)

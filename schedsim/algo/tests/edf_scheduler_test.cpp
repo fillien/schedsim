@@ -428,3 +428,244 @@ TEST_F(EdfSchedulerTestBase, SetExpectedArrivals_NoDetachWhenMoreExpected) {
     // Server NOT detached: arrival_counts_[task]=1 < expected_arrivals_[task]=2
     EXPECT_DOUBLE_EQ(sched.scheduler_utilization(), 0.2);
 }
+
+// =============================================================================
+// CBS Admission Epsilon Tolerance Tests
+// =============================================================================
+
+TEST_F(EdfSchedulerTestBase, AdmissionTest_BoundaryEpsilon_Admits) {
+    // 100 servers of U=1/100 on 1 core: total = 1.0 mathematically.
+    // 100 accumulated additions of (1.0/100.0) overshoots 1.0 by ~6.66e-16
+    // in IEEE 754, which would cause spurious rejection without the epsilon.
+    Engine engine;
+    auto& pt = engine.platform().add_processor_type("cpu", 1.0);
+    auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
+    auto& pd = engine.platform().add_power_domain({
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
+    });
+    auto* proc = &engine.platform().add_processor(pt, cd, pd);
+
+    std::vector<std::reference_wrapper<Task>> tasks;
+    for (int i = 0; i < 100; ++i) {
+        tasks.push_back(engine.platform().add_task(
+            duration_from_seconds(100.0), duration_from_seconds(100.0),
+            duration_from_seconds(1.0)));
+    }
+    engine.platform().finalize();
+
+    EdfScheduler sched(engine, {proc});
+
+    // All 100 add_server() calls must succeed (total U = 100 * 1/100 = 1.0)
+    for (auto& task_ref : tasks) {
+        EXPECT_NO_THROW(sched.add_server(task_ref.get()));
+    }
+
+    // Utilization should be very close to 1.0 (overshoots by ~6.66e-16)
+    EXPECT_NEAR(sched.utilization(), 1.0, 1e-9);
+
+    // No room for even one more server with the same U
+    EXPECT_FALSE(sched.can_admit(duration_from_seconds(1.0), duration_from_seconds(100.0)));
+}
+
+TEST_F(EdfSchedulerTestBase, AdmissionTest_BoundaryEpsilon_StillRejects) {
+    // 4 servers of U=1.0 on 4 cores (total = 4.0 exact),
+    // then a server with U=1e-6 must be rejected (well above epsilon).
+    Engine engine;
+    auto& pt = engine.platform().add_processor_type("cpu", 1.0);
+    auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
+    auto& pd = engine.platform().add_power_domain({
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
+    });
+
+    std::vector<Processor*> procs;
+    for (int i = 0; i < 4; ++i) {
+        procs.push_back(&engine.platform().add_processor(pt, cd, pd));
+    }
+
+    std::vector<std::reference_wrapper<Task>> tasks;
+    for (int i = 0; i < 4; ++i) {
+        tasks.push_back(engine.platform().add_task(
+            duration_from_seconds(10.0), duration_from_seconds(10.0),
+            duration_from_seconds(10.0)));
+    }
+    auto& tiny_task = engine.platform().add_task(
+        duration_from_seconds(1.0), duration_from_seconds(1.0),
+        duration_from_seconds(1e-6));
+    engine.platform().finalize();
+
+    EdfScheduler sched(engine, procs);
+
+    for (auto& task_ref : tasks) {
+        sched.add_server(task_ref.get());
+    }
+    EXPECT_DOUBLE_EQ(sched.utilization(), 4.0);
+
+    // U=1e-6 is well above the epsilon (1e-9), so this must be rejected
+    EXPECT_FALSE(sched.can_admit(tiny_task.wcet(), tiny_task.period()));
+    EXPECT_THROW(
+        sched.add_server(tiny_task),
+        AdmissionError
+    );
+}
+
+// =============================================================================
+// GFB Admission Test
+// =============================================================================
+
+TEST_F(EdfSchedulerTestBase, AdmissionTest_GFB_RejectsDhallEffect) {
+    // 4 processors, GFB enabled. One heavy task U=0.9.
+    // GFB bound = 4 - 3*0.9 = 1.3. Adding U=0.5 (total 1.4 > 1.3) must fail.
+    Engine engine;
+    auto& pt = engine.platform().add_processor_type("cpu", 1.0);
+    auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
+    auto& pd = engine.platform().add_power_domain({
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
+    });
+
+    std::vector<Processor*> procs;
+    for (int i = 0; i < 4; ++i) {
+        procs.push_back(&engine.platform().add_processor(pt, cd, pd));
+    }
+    auto& heavy = engine.platform().add_task(
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(9.0));
+    auto& medium = engine.platform().add_task(
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(5.0));
+    engine.platform().finalize();
+
+    EdfScheduler sched(engine, procs);
+    sched.set_admission_test(AdmissionTest::GFB);
+    sched.add_server(heavy);  // U=0.9
+
+    // can_admit should reject U=0.5 (total 1.4 > GFB bound 1.3)
+    EXPECT_FALSE(sched.can_admit(duration_from_seconds(5.0), duration_from_seconds(10.0)));
+    EXPECT_THROW(sched.add_server(medium), AdmissionError);
+}
+
+TEST_F(EdfSchedulerTestBase, AdmissionTest_GFB_AcceptsWithinBound) {
+    // 4 processors, GFB enabled. 4 tasks each U=0.25.
+    // u_max=0.25, GFB bound = 4 - 3*0.25 = 3.25. Total = 1.0, well within.
+    Engine engine;
+    auto& pt = engine.platform().add_processor_type("cpu", 1.0);
+    auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
+    auto& pd = engine.platform().add_power_domain({
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
+    });
+
+    std::vector<Processor*> procs;
+    for (int i = 0; i < 4; ++i) {
+        procs.push_back(&engine.platform().add_processor(pt, cd, pd));
+    }
+
+    std::vector<std::reference_wrapper<Task>> tasks;
+    for (int i = 0; i < 4; ++i) {
+        tasks.push_back(engine.platform().add_task(
+            duration_from_seconds(40.0), duration_from_seconds(40.0),
+            duration_from_seconds(10.0)));  // U=0.25
+    }
+    engine.platform().finalize();
+
+    EdfScheduler sched(engine, procs);
+    sched.set_admission_test(AdmissionTest::GFB);
+
+    for (auto& task_ref : tasks) {
+        EXPECT_NO_THROW(sched.add_server(task_ref.get()));
+    }
+    EXPECT_NEAR(sched.utilization(), 1.0, 1e-9);
+}
+
+TEST_F(EdfSchedulerTestBase, AdmissionTest_GFB_UniprocessorUnchanged) {
+    // 1 processor, GFB enabled. GFB on 1 core = 1 - 0*u_max = 1.0 (same as capacity).
+    Engine engine;
+    auto& pt = engine.platform().add_processor_type("cpu", 1.0);
+    auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
+    auto& pd = engine.platform().add_power_domain({
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
+    });
+    auto* proc = &engine.platform().add_processor(pt, cd, pd);
+    auto& task1 = engine.platform().add_task(
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(5.0));
+    auto& task2 = engine.platform().add_task(
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(5.0));
+    engine.platform().finalize();
+
+    EdfScheduler sched(engine, {proc});
+    sched.set_admission_test(AdmissionTest::GFB);
+
+    EXPECT_NO_THROW(sched.add_server(task1));  // U=0.5
+    EXPECT_NO_THROW(sched.add_server(task2));  // U=0.5, total=1.0
+    EXPECT_NEAR(sched.utilization(), 1.0, 1e-9);
+}
+
+TEST_F(EdfSchedulerTestBase, AdmissionTest_Default_AllowsAboveGFB) {
+    // 4 processors, default CapacityBound. U=0.9 + U=0.5 = 1.4.
+    // This passes under capacity bound (1.4 <= 4) but would fail under GFB (1.4 > 1.3).
+    Engine engine;
+    auto& pt = engine.platform().add_processor_type("cpu", 1.0);
+    auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
+    auto& pd = engine.platform().add_power_domain({
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
+    });
+
+    std::vector<Processor*> procs;
+    for (int i = 0; i < 4; ++i) {
+        procs.push_back(&engine.platform().add_processor(pt, cd, pd));
+    }
+    auto& heavy = engine.platform().add_task(
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(9.0));
+    auto& medium = engine.platform().add_task(
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(5.0));
+    engine.platform().finalize();
+
+    EdfScheduler sched(engine, procs);
+    // Default is CapacityBound — no set_admission_test() call
+
+    EXPECT_NO_THROW(sched.add_server(heavy));   // U=0.9
+    EXPECT_NO_THROW(sched.add_server(medium));  // U=0.5, total=1.4 <= 4.0
+    EXPECT_NEAR(sched.utilization(), 1.4, 1e-9);
+}
+
+TEST_F(EdfSchedulerTestBase, AdmissionTest_GFB_HeavyNewServerDeterminesUmax) {
+    // 4 processors, GFB. 3 light tasks U=0.1 each. Then add heavy U=0.8.
+    // u_max = max(0.1, 0.8) = 0.8, GFB = 4 - 3*0.8 = 1.6. Total = 0.3+0.8 = 1.1 <= 1.6: OK.
+    // Then a second U=0.8: u_max still 0.8, total = 1.9 > 1.6: rejected.
+    Engine engine;
+    auto& pt = engine.platform().add_processor_type("cpu", 1.0);
+    auto& cd = engine.platform().add_clock_domain(Frequency{500.0}, Frequency{2000.0});
+    auto& pd = engine.platform().add_power_domain({
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
+    });
+
+    std::vector<Processor*> procs;
+    for (int i = 0; i < 4; ++i) {
+        procs.push_back(&engine.platform().add_processor(pt, cd, pd));
+    }
+
+    std::vector<std::reference_wrapper<Task>> light_tasks;
+    for (int i = 0; i < 3; ++i) {
+        light_tasks.push_back(engine.platform().add_task(
+            duration_from_seconds(10.0), duration_from_seconds(10.0),
+            duration_from_seconds(1.0)));  // U=0.1
+    }
+    auto& heavy1 = engine.platform().add_task(
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(8.0));  // U=0.8
+    auto& heavy2 = engine.platform().add_task(
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(8.0));  // U=0.8
+    engine.platform().finalize();
+
+    EdfScheduler sched(engine, procs);
+    sched.set_admission_test(AdmissionTest::GFB);
+
+    for (auto& task_ref : light_tasks) {
+        EXPECT_NO_THROW(sched.add_server(task_ref.get()));
+    }
+    EXPECT_NEAR(sched.utilization(), 0.3, 1e-9);
+
+    // Heavy task: u_max becomes 0.8, GFB = 4 - 3*0.8 = 1.6, total = 1.1 <= 1.6
+    EXPECT_TRUE(sched.can_admit(duration_from_seconds(8.0), duration_from_seconds(10.0)));
+    EXPECT_NO_THROW(sched.add_server(heavy1));
+    EXPECT_NEAR(sched.utilization(), 1.1, 1e-9);
+
+    // Second heavy: u_max=0.8, GFB=1.6, total would be 1.9 > 1.6
+    EXPECT_FALSE(sched.can_admit(duration_from_seconds(8.0), duration_from_seconds(10.0)));
+    EXPECT_THROW(sched.add_server(heavy2), AdmissionError);
+}

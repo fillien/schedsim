@@ -17,6 +17,8 @@
 
 namespace schedsim::algo {
 
+constexpr double ADMISSION_EPSILON = 1e-9;
+
 EdfScheduler::EdfScheduler(core::Engine& engine, std::vector<core::Processor*> processors)
     : engine_(engine)
     , processors_(std::move(processors))
@@ -110,13 +112,23 @@ void EdfScheduler::set_expected_arrivals(const core::Task& task, std::size_t cou
     expected_arrivals_[&task] = count;
 }
 
+void EdfScheduler::set_admission_test(AdmissionTest test) {
+    admission_test_ = test;
+}
+
+double EdfScheduler::admission_capacity(double new_util) const {
+    auto m = static_cast<double>(processors_.size());
+    if (admission_test_ == AdmissionTest::GFB && m > 1.0) {
+        double u_max = std::max(max_server_utilization(), new_util);
+        return m - (m - 1.0) * u_max;
+    }
+    return m;
+}
+
 bool EdfScheduler::can_admit(core::Duration budget, core::Duration period) const {
     double new_util = core::duration_ratio(budget, period);
-    double capacity = static_cast<double>(processors_.size());
-
-    // For uniprocessor: sum(U_i) + new_U <= 1.0
-    // For multiprocessor: sum(U_i) + new_U <= m (basic bound)
-    return (total_utilization_ + new_util) <= capacity;
+    double capacity = admission_capacity(new_util);
+    return (total_utilization_ + new_util) <= capacity + ADMISSION_EPSILON;
 }
 
 double EdfScheduler::utilization() const {
@@ -130,9 +142,9 @@ std::span<core::Processor* const> EdfScheduler::processors() const {
 CbsServer& EdfScheduler::add_server(core::Task& task, core::Duration budget, core::Duration period,
                                      CbsServer::OverrunPolicy policy) {
     double new_util = core::duration_ratio(budget, period);
-    double capacity = static_cast<double>(processors_.size());
+    double capacity = admission_capacity(new_util);
 
-    if ((total_utilization_ + new_util) > capacity) {
+    if ((total_utilization_ + new_util) > capacity + ADMISSION_EPSILON) {
         throw AdmissionError(new_util, capacity - total_utilization_);
     }
 

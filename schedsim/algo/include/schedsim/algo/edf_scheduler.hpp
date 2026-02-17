@@ -73,6 +73,7 @@ public:
     [[nodiscard]] std::size_t server_count() const noexcept { return servers_.size(); }
 
     // Configuration
+    void set_admission_test(AdmissionTest test);
     void set_deadline_miss_policy(DeadlineMissPolicy policy);
     void set_deadline_miss_handler(std::function<void(core::Processor&, core::Job&)> handler);
 
@@ -142,6 +143,9 @@ private:
     void on_dvfs_frequency_changed(core::ClockDomain& domain);
     void reschedule_budget_timers_for_domain(core::ClockDomain& domain);
 
+    // Admission test helper
+    [[nodiscard]] double admission_capacity(double new_util) const;
+
     core::Engine& engine_;
     std::vector<core::Processor*> processors_;
     std::deque<CbsServer> servers_;  // deque to prevent pointer invalidation on growth
@@ -155,6 +159,7 @@ private:
     double total_utilization_{0.0};
     double reference_performance_;
 
+    AdmissionTest admission_test_{AdmissionTest::CapacityBound};
     DeadlineMissPolicy deadline_miss_policy_{DeadlineMissPolicy::Continue};
     std::function<void(core::Processor&, core::Job&)> deadline_miss_handler_;
 
