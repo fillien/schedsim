@@ -21,6 +21,7 @@ static void BM_EventQueue(benchmark::State& state) {
     const int64_t n = state.range(0);
 
     for (auto _ : state) {
+        state.PauseTiming();
         Engine engine;
         engine.platform().add_processor_type("cpu", 1.0);
         auto& cd = engine.platform().add_clock_domain(Frequency{1000.0}, Frequency{1000.0});
@@ -36,6 +37,7 @@ static void BM_EventQueue(benchmark::State& state) {
             double t = static_cast<double>(i + 1) * 0.001;
             engine.add_timer(time_from_seconds(t), [&fired]() { ++fired; });
         }
+        state.ResumeTiming();
 
         engine.run();
         benchmark::DoNotOptimize(fired);
@@ -212,4 +214,4 @@ static void BM_BatchSim(benchmark::State& state) {
         benchmark::DoNotOptimize(completed);
     }
 }
-BENCHMARK(BM_BatchSim)->Arg(100);
+BENCHMARK(BM_BatchSim)->Arg(100)->Arg(1000);
