@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Type conversion tests for pyschedsim - validates Duration, TimePoint, Frequency, etc."""
 
+import math
 import sys
 
 try:
@@ -12,15 +13,15 @@ except Exception as e:
 def test_duration_conversion():
     """Test that Python floats convert properly to Duration (seconds)."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     # Add a task with float durations
     task = platform.add_task(10.5, 8.25, 2.125)
 
     # Verify durations come back as floats
-    assert task.period() == 10.5, f"Expected period=10.5, got {task.period()}"
-    assert task.relative_deadline() == 8.25, f"Expected deadline=8.25, got {task.relative_deadline()}"
-    assert task.wcet() == 2.125, f"Expected wcet=2.125, got {task.wcet()}"
+    assert task.period == 10.5, f"Expected period=10.5, got {task.period}"
+    assert task.relative_deadline == 8.25, f"Expected deadline=8.25, got {task.relative_deadline}"
+    assert task.wcet == 2.125, f"Expected wcet=2.125, got {task.wcet}"
 
     print("  Duration conversion: OK")
 
@@ -28,7 +29,7 @@ def test_duration_conversion():
 def test_timepoint_conversion():
     """Test that TimePoint (simulation time) converts to Python float."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     # Build minimal platform for running
     pt = platform.add_processor_type("cpu", 1.0)
@@ -41,9 +42,9 @@ def test_timepoint_conversion():
     engine.run(7.5)
 
     # TimePoint should convert to float
-    time = engine.time()
+    time = engine.time
     assert isinstance(time, float), f"Expected float, got {type(time)}"
-    assert time == 7.5, f"Expected time=7.5, got {time}"
+    assert math.isclose(time, 7.5, rel_tol=1e-9), f"Expected time~=7.5, got {time}"
 
     print("  TimePoint conversion: OK")
 
@@ -51,15 +52,15 @@ def test_timepoint_conversion():
 def test_frequency_mhz():
     """Test that Frequency values are in MHz."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     # Add clock domain with specific frequencies
     cd = platform.add_clock_domain(500.0, 2000.0)
 
     # Frequency should be in MHz
-    assert cd.freq_min() == 500.0, f"Expected freq_min=500 MHz, got {cd.freq_min()}"
-    assert cd.freq_max() == 2000.0, f"Expected freq_max=2000 MHz, got {cd.freq_max()}"
-    assert cd.frequency() == 2000.0, f"Expected frequency=2000 MHz (initial=max), got {cd.frequency()}"
+    assert cd.freq_min == 500.0, f"Expected freq_min=500 MHz, got {cd.freq_min}"
+    assert cd.freq_max == 2000.0, f"Expected freq_max=2000 MHz, got {cd.freq_max}"
+    assert cd.frequency == 2000.0, f"Expected frequency=2000 MHz (initial=max), got {cd.frequency}"
 
     print("  Frequency MHz: OK")
 
@@ -67,7 +68,7 @@ def test_frequency_mhz():
 def test_power_mw():
     """Test that Power values in C-states are in mW."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     # Add power domain with C-states
     # (level, scope, wake_latency_s, power_mW)
@@ -79,7 +80,7 @@ def test_power_mw():
     pd = platform.add_power_domain(c_states)
 
     # If we got here without error, the power values were accepted
-    assert pd.id() == 0, f"Expected power domain id=0, got {pd.id()}"
+    assert pd.id == 0, f"Expected power domain id=0, got {pd.id}"
 
     print("  Power mW: OK")
 
@@ -87,7 +88,7 @@ def test_power_mw():
 def test_energy_mj():
     """Test that Energy output values are in mJ."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     # Build platform with power model
     pt = platform.add_processor_type("cpu", 1.0)
@@ -115,14 +116,14 @@ def test_energy_mj():
 def test_int_accepted_as_duration():
     """Test that Python ints are accepted where Duration is expected."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     # Use integers for all duration parameters
     task = platform.add_task(10, 10, 2)  # int instead of float
 
     # Should work and convert properly
-    assert task.period() == 10.0, f"Expected period=10.0, got {task.period()}"
-    assert task.wcet() == 2.0, f"Expected wcet=2.0, got {task.wcet()}"
+    assert task.period == 10.0, f"Expected period=10.0, got {task.period}"
+    assert task.wcet == 2.0, f"Expected wcet=2.0, got {task.wcet}"
 
     # Also test with engine.run()
     pt = platform.add_processor_type("cpu", 1.0)
@@ -132,7 +133,7 @@ def test_int_accepted_as_duration():
     platform.finalize()
 
     engine.run(5)  # int time
-    assert engine.time() == 5.0
+    assert math.isclose(engine.time, 5.0, rel_tol=1e-9)
 
     print("  Int accepted as Duration: OK")
 
@@ -144,7 +145,7 @@ def test_negative_duration_allowed():
     conversion should handle negative values gracefully.
     """
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     # Negative values should at least not crash during conversion
     # Whether they're valid semantically is a separate concern
@@ -162,7 +163,7 @@ def test_negative_duration_allowed():
 def test_cstate_tuple_conversion():
     """Test that 4-tuple converts to CStateLevel correctly."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     # Test various C-state configurations
     c_states = [
@@ -172,11 +173,11 @@ def test_cstate_tuple_conversion():
     ]
 
     pd = platform.add_power_domain(c_states)
-    assert pd.id() == 0
+    assert pd.id == 0
 
     # Test with integer scope values (0 = PerProcessor, 1 = DomainWide)
     c_states2 = [
-        (0, sim.CStateScope_PerProcessor, 0.0, 100.0),  # Using enum constant
+        (0, sim.CStateScope.PerProcessor, 0.0, 100.0),  # Using enum constant
     ]
     # Note: Currently only int is supported in the tuple, not the enum
     # pd2 = platform.add_power_domain(c_states2)  # Would fail

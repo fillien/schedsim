@@ -14,7 +14,7 @@ except Exception as e:
 def make_simple_engine():
     """Create a simple engine with 1 processor and 1 task."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
     pt = platform.add_processor_type("cpu", 1.0)
     cd = platform.add_clock_domain(1000.0, 2000.0)
     pd = platform.add_power_domain([(0, 0, 0.0, 100.0)])
@@ -46,10 +46,8 @@ def test_new_exports():
     assert hasattr(sim, "CoreCountInterval"), "CoreCountInterval not exported"
     assert hasattr(sim, "ConfigInterval"), "ConfigInterval not exported"
 
-    # DeadlineMissPolicy convenience constants
-    assert hasattr(sim, "DM_CONTINUE"), "DM_CONTINUE not exported"
-    assert hasattr(sim, "DM_ABORT_JOB"), "DM_ABORT_JOB not exported"
-    assert hasattr(sim, "DM_STOP_SIMULATION"), "DM_STOP_SIMULATION not exported"
+    # DeadlineMissPolicy enum
+    assert hasattr(sim, "DeadlineMissPolicy"), "DeadlineMissPolicy not exported"
 
     print("  New exports: OK")
 
@@ -57,16 +55,16 @@ def test_new_exports():
 def test_add_task_with_id():
     """Test Platform.add_task with explicit ID."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     # Add task with explicit ID
     task = platform.add_task(42, 10.0, 10.0, 2.0)
-    assert task.id() == 42, f"Expected task id=42, got {task.id()}"
+    assert task.id == 42, f"Expected task id=42, got {task.id}"
 
     # Add another task without explicit ID (auto-assigned)
     task2 = platform.add_task(5.0, 5.0, 1.0)
     # Auto-assigned IDs start from 0 but skip used ones
-    assert task2.period() == 5.0
+    assert task2.period == 5.0
 
     print("  add_task with explicit ID: OK")
 
@@ -105,7 +103,7 @@ def test_memory_trace_writer():
     engine.run(5.0)
 
     # Should have recorded some trace events
-    count = writer.record_count()
+    count = writer.record_count
     assert count > 0, f"Expected some trace records, got {count}"
 
     # Check first record
@@ -131,7 +129,7 @@ def test_memory_trace_writer():
 
     # Test clear
     writer.clear()
-    assert writer.record_count() == 0, "After clear, record count should be 0"
+    assert writer.record_count == 0, "After clear, record count should be 0"
 
     print("  MemoryTraceWriter: OK")
 
@@ -239,7 +237,7 @@ def test_enable_cash():
 def test_enable_dvfs_policies():
     """Test enabling DVFS policies."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
     pt = platform.add_processor_type("cpu", 1.0)
     cd = platform.add_clock_domain(500.0, 2000.0, 0.001)  # With transition delay
     pd = platform.add_power_domain([(0, 0, 0.0, 100.0), (1, 0, 0.001, 10.0)])
@@ -266,7 +264,7 @@ def test_enable_dvfs_policies():
 def test_enable_dpm():
     """Test enabling DPM policy."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
     pt = platform.add_processor_type("cpu", 1.0)
     cd = platform.add_clock_domain(1000.0, 2000.0)
     pd = platform.add_power_domain([(0, 0, 0.0, 100.0), (1, 0, 0.001, 10.0)])
@@ -289,7 +287,7 @@ def test_set_deadline_miss_policy():
     engine, proc, task = make_simple_engine()
 
     scheduler = sim.EdfScheduler(engine, [proc])
-    scheduler.set_deadline_miss_policy(sim.DeadlineMissPolicy_StopSimulation)
+    scheduler.set_deadline_miss_policy(sim.DeadlineMissPolicy.StopSimulation)
     scheduler.add_server(task)
 
     print("  set_deadline_miss_policy: OK")
@@ -328,17 +326,17 @@ def test_utilization_queries():
     engine.run(1.0)  # Run partway through
 
     # Query utilization
-    u = scheduler.utilization()
+    u = scheduler.utilization
     assert isinstance(u, float), f"Expected float, got {type(u)}"
     assert u >= 0.0, f"Utilization should be >= 0, got {u}"
 
-    au = scheduler.active_utilization()
+    au = scheduler.active_utilization
     assert isinstance(au, float), f"Expected float, got {type(au)}"
 
-    su = scheduler.scheduler_utilization()
+    su = scheduler.scheduler_utilization
     assert isinstance(su, float), f"Expected float, got {type(su)}"
 
-    msu = scheduler.max_scheduler_utilization()
+    msu = scheduler.max_scheduler_utilization
     assert isinstance(msu, float), f"Expected float, got {type(msu)}"
 
     print("  Utilization queries: OK")
@@ -347,7 +345,7 @@ def test_utilization_queries():
 def test_cluster_class():
     """Test Cluster class."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     pt = platform.add_processor_type("big", 2.0)
     cd = platform.add_clock_domain(500.0, 2000.0)
@@ -361,13 +359,13 @@ def test_cluster_class():
     # Create a cluster
     cluster = sim.Cluster(cd, scheduler, 2.0, 2000.0)
 
-    assert cluster.perf() == 2.0, f"Expected perf=2.0, got {cluster.perf()}"
-    assert cluster.processor_count() == 1, f"Expected 1 proc, got {cluster.processor_count()}"
-    assert cluster.u_target() == 1.0, f"Expected default u_target=1.0, got {cluster.u_target()}"
+    assert cluster.perf == 2.0, f"Expected perf=2.0, got {cluster.perf}"
+    assert cluster.processor_count == 1, f"Expected 1 proc, got {cluster.processor_count}"
+    assert cluster.u_target == 1.0, f"Expected default u_target=1.0, got {cluster.u_target}"
 
     # Test setters
     cluster.set_u_target(0.8)
-    assert cluster.u_target() == 0.8, f"Expected u_target=0.8, got {cluster.u_target()}"
+    assert cluster.u_target == 0.8, f"Expected u_target=0.8, got {cluster.u_target}"
 
     # Test scaled_utilization
     su = cluster.scaled_utilization(0.5)
@@ -450,13 +448,13 @@ def test_memory_writer_time_series():
 
     # Call time-series functions (may return empty vectors for simple scenarios)
     freq_intervals = writer.track_frequency_changes()
-    assert isinstance(freq_intervals, sim.FrequencyIntervalVector)
+    assert isinstance(freq_intervals, list)
 
     core_intervals = writer.track_core_changes()
-    assert isinstance(core_intervals, sim.CoreCountIntervalVector)
+    assert isinstance(core_intervals, list)
 
     config_intervals = writer.track_config_changes()
-    assert isinstance(config_intervals, sim.ConfigIntervalVector)
+    assert isinstance(config_intervals, list)
 
     print("  MemoryTraceWriter time-series: OK")
 

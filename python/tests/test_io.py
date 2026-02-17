@@ -24,19 +24,19 @@ def test_load_platform_from_file():
     engine = sim.Engine()
     sim.load_platform(engine, platform_path)
 
-    platform = engine.get_platform()
+    platform = engine.platform
 
     # orion6.json has 3 clusters with 4 procs each = 12 total processors
-    assert platform.processor_count() == 12, \
-        f"Expected 12 processors, got {platform.processor_count()}"
+    assert platform.processor_count == 12, \
+        f"Expected 12 processors, got {platform.processor_count}"
 
     # Should have 3 processor types (one per cluster)
-    assert platform.processor_type_count() == 3, \
-        f"Expected 3 processor types, got {platform.processor_type_count()}"
+    assert platform.processor_type_count == 3, \
+        f"Expected 3 processor types, got {platform.processor_type_count}"
 
     # Should have 3 clock domains (one per cluster)
-    assert platform.clock_domain_count() == 3, \
-        f"Expected 3 clock domains, got {platform.clock_domain_count()}"
+    assert platform.clock_domain_count == 3, \
+        f"Expected 3 clock domains, got {platform.clock_domain_count}"
 
     print("  Load platform from file: OK")
 
@@ -58,17 +58,17 @@ def test_load_platform_from_string():
     engine = sim.Engine()
     sim.load_platform_from_string(engine, json_str)
 
-    platform = engine.get_platform()
+    platform = engine.platform
 
-    assert platform.processor_count() == 2, \
-        f"Expected 2 processors, got {platform.processor_count()}"
-    assert platform.processor_type_count() == 1, \
-        f"Expected 1 processor type, got {platform.processor_type_count()}"
+    assert platform.processor_count == 2, \
+        f"Expected 2 processors, got {platform.processor_count}"
+    assert platform.processor_type_count == 1, \
+        f"Expected 1 processor type, got {platform.processor_type_count}"
 
     # Check clock domain frequencies
     cd = platform.clock_domain(0)
-    assert cd.freq_min() == 500.0, f"Expected freq_min=500, got {cd.freq_min()}"
-    assert cd.freq_max() == 1500.0, f"Expected freq_max=1500, got {cd.freq_max()}"
+    assert cd.freq_min == 500.0, f"Expected freq_min=500, got {cd.freq_min}"
+    assert cd.freq_max == 1500.0, f"Expected freq_max=1500, got {cd.freq_max}"
 
     print("  Load platform from string: OK")
 
@@ -184,13 +184,13 @@ def test_inject_scenario():
 
     assert len(tasks) == 2, f"Expected 2 tasks returned, got {len(tasks)}"
 
-    platform = engine.get_platform()
-    assert platform.task_count() == 2, f"Expected 2 tasks in platform, got {platform.task_count()}"
+    platform = engine.platform
+    assert platform.task_count == 2, f"Expected 2 tasks in platform, got {platform.task_count}"
 
     # Verify task properties match
     task0 = platform.task(0)
-    assert task0.period() == 10.0, f"Expected period=10.0, got {task0.period()}"
-    assert task0.wcet() == 2.0, f"Expected wcet=2.0, got {task0.wcet()}"
+    assert task0.period == 10.0, f"Expected period=10.0, got {task0.period}"
+    assert task0.wcet == 2.0, f"Expected wcet=2.0, got {task0.wcet}"
 
     print("  Inject scenario: OK")
 
@@ -231,13 +231,11 @@ def test_schedule_arrivals():
 
     # Finalize BEFORE scheduling arrivals (per scenario_injection.hpp comment)
     # Actually, looking at the header, schedule_arrivals must be called AFTER finalize
-    engine.get_platform().finalize()
+    engine.platform.finalize()
 
-    # Schedule arrivals using the scenario's jobs
-    # Convert jobs to list of (arrival, duration) tuples
+    # Schedule arrivals using the scenario's jobs (pass JobParams directly)
     for i, tp in enumerate(scenario.tasks):
-        jobs = [(j.arrival, j.duration) for j in tp.jobs]
-        sim.schedule_arrivals(engine, tasks[i], jobs)
+        sim.schedule_arrivals(engine, tasks[i], tp.jobs)
 
     print("  Schedule arrivals: OK")
 
@@ -279,12 +277,11 @@ def test_full_workflow():
     tasks = sim.inject_scenario(engine, scenario)
 
     # 3. Finalize
-    engine.get_platform().finalize()
+    engine.platform.finalize()
 
     # 4. Schedule arrivals (after finalize)
     for i, tp in enumerate(scenario.tasks):
-        jobs = [(j.arrival, j.duration) for j in tp.jobs]
-        sim.schedule_arrivals(engine, tasks[i], jobs)
+        sim.schedule_arrivals(engine, tasks[i], tp.jobs)
 
     # 5. Create scheduler
     procs = sim.get_all_processors(engine)
@@ -300,7 +297,7 @@ def test_full_workflow():
     # 8. Run simulation
     engine.run(25.0)
 
-    assert engine.time() >= 25.0, f"Expected time >= 25.0, got {engine.time()}"
+    assert engine.time >= 25.0, f"Expected time >= 25.0, got {engine.time}"
 
     print("  Full workflow: OK")
 
@@ -372,25 +369,25 @@ def test_load_real_platform_file():
     engine = sim.Engine()
     sim.load_platform(engine, platform_path)
 
-    platform = engine.get_platform()
+    platform = engine.platform
 
     # orion6.json has 3 clusters with 4 procs each = 12 total processors
-    assert platform.processor_count() == 12
+    assert platform.processor_count == 12
 
     # Verify we can access all processors
     procs = sim.get_all_processors(engine)
     assert len(procs) == 12
 
     # Verify processor types exist and have sensible performance values
-    for i in range(platform.processor_type_count()):
+    for i in range(platform.processor_type_count):
         pt = platform.processor_type(i)
-        assert pt.performance() > 0.0, f"Processor type {i} has invalid performance"
+        assert pt.performance > 0.0, f"Processor type {i} has invalid performance"
 
     # Verify clock domains have valid frequency ranges
-    for i in range(platform.clock_domain_count()):
+    for i in range(platform.clock_domain_count):
         cd = platform.clock_domain(i)
-        assert cd.freq_min() > 0.0, f"Clock domain {i} has invalid freq_min"
-        assert cd.freq_max() >= cd.freq_min(), f"Clock domain {i}: freq_max < freq_min"
+        assert cd.freq_min > 0.0, f"Clock domain {i} has invalid freq_min"
+        assert cd.freq_max >= cd.freq_min, f"Clock domain {i}: freq_max < freq_min"
 
     # Note: Platform is NOT auto-finalized by loader (allows adding tasks)
     # Users must call platform.finalize() when ready to run simulation
@@ -422,25 +419,25 @@ def test_platform_with_multiple_clusters():
     engine = sim.Engine()
     sim.load_platform_from_string(engine, json_str)
 
-    platform = engine.get_platform()
+    platform = engine.platform
 
     # Total processors: 4 + 4 = 8
-    assert platform.processor_count() == 8, \
-        f"Expected 8 processors, got {platform.processor_count()}"
+    assert platform.processor_count == 8, \
+        f"Expected 8 processors, got {platform.processor_count}"
 
     # 2 processor types (one per cluster)
-    assert platform.processor_type_count() == 2, \
-        f"Expected 2 processor types, got {platform.processor_type_count()}"
+    assert platform.processor_type_count == 2, \
+        f"Expected 2 processor types, got {platform.processor_type_count}"
 
     # 2 clock domains (one per cluster)
-    assert platform.clock_domain_count() == 2, \
-        f"Expected 2 clock domains, got {platform.clock_domain_count()}"
+    assert platform.clock_domain_count == 2, \
+        f"Expected 2 clock domains, got {platform.clock_domain_count}"
 
     # Verify different performance scores
     pt0 = platform.processor_type(0)
     pt1 = platform.processor_type(1)
-    assert pt0.performance() == 2.0, f"Expected big core perf=2.0, got {pt0.performance()}"
-    assert pt1.performance() == 1.0, f"Expected little core perf=1.0, got {pt1.performance()}"
+    assert pt0.performance == 2.0, f"Expected big core perf=2.0, got {pt0.performance}"
+    assert pt1.performance == 1.0, f"Expected little core perf=1.0, got {pt1.performance}"
 
     print("  Platform with multiple clusters: OK")
 
@@ -539,8 +536,8 @@ def test_inject_empty_scenario():
     assert len(tasks) == 0
 
     # Platform should still have 0 tasks
-    platform = engine.get_platform()
-    assert platform.task_count() == 0
+    platform = engine.platform
+    assert platform.task_count == 0
 
     print("  Inject empty scenario: OK")
 

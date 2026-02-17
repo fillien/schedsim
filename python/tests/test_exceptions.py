@@ -15,7 +15,7 @@ except Exception as e:
 def test_already_finalized_error():
     """Test that AlreadyFinalizedError is raised when modifying after finalize."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     # Build minimal platform
     pt = platform.add_processor_type("cpu", 1.0)
@@ -25,7 +25,7 @@ def test_already_finalized_error():
 
     # Finalize
     platform.finalize()
-    assert platform.is_finalized()
+    assert platform.is_finalized
 
     # Try to add after finalize - should raise RuntimeError
     try:
@@ -42,7 +42,7 @@ def test_already_finalized_error():
 def test_admission_error():
     """Test that AdmissionError is raised for over-utilization."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     # Build platform with 1 processor
     pt = platform.add_processor_type("cpu", 1.0)
@@ -141,7 +141,7 @@ def test_loader_error_missing_field():
 def test_invalid_cstate_tuple():
     """Test that invalid C-state tuples raise ValueError."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     # Wrong tuple size (3 elements instead of 4)
     try:

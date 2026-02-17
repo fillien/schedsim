@@ -38,14 +38,14 @@ def build_platform_with_power(engine, enable_energy=True):
     if enable_energy:
         engine.enable_energy_tracking(True)
 
-    return engine.get_platform()
+    return engine.platform
 
 
 def test_energy_tracking_disabled_by_default():
     """Test that energy tracking is disabled by default."""
     engine = sim.Engine()
 
-    assert not engine.energy_tracking_enabled(), \
+    assert not engine.energy_tracking_enabled, \
         "Energy tracking should be disabled by default"
 
     print("  Energy tracking disabled by default: OK")
@@ -57,15 +57,15 @@ def test_enable_energy_tracking():
 
     # Enable
     engine.enable_energy_tracking(True)
-    assert engine.energy_tracking_enabled(), "Energy tracking should be enabled"
+    assert engine.energy_tracking_enabled, "Energy tracking should be enabled"
 
     # Disable
     engine.enable_energy_tracking(False)
-    assert not engine.energy_tracking_enabled(), "Energy tracking should be disabled"
+    assert not engine.energy_tracking_enabled, "Energy tracking should be disabled"
 
     # Re-enable
     engine.enable_energy_tracking(True)
-    assert engine.energy_tracking_enabled(), "Energy tracking should be re-enabled"
+    assert engine.energy_tracking_enabled, "Energy tracking should be re-enabled"
 
     print("  Enable energy tracking: OK")
 
@@ -154,7 +154,7 @@ def test_energy_tracking_requires_enabled():
     # Do NOT enable energy tracking
 
     # Build simple platform without JSON (to avoid loading which might finalize)
-    platform = engine.get_platform()
+    platform = engine.platform
     pt = platform.add_processor_type("cpu", 1.0)
     cd = platform.add_clock_domain(1000.0, 2000.0)
     pd = platform.add_power_domain([(0, 0, 0.0, 100.0)])

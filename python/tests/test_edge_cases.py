@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Edge case tests for pyschedsim - validates boundary conditions and unusual scenarios."""
 
+import math
 import sys
 
 try:
@@ -12,7 +13,7 @@ except Exception as e:
 def test_empty_platform_no_processors():
     """Test that a platform with no processors can be finalized."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     # Don't add any processors - just processor type, clock domain, power domain
     pt = platform.add_processor_type("cpu", 1.0)
@@ -22,12 +23,12 @@ def test_empty_platform_no_processors():
     # Finalize with no processors
     platform.finalize()
 
-    assert platform.processor_count() == 0
-    assert platform.is_finalized()
+    assert platform.processor_count == 0
+    assert platform.is_finalized
 
     # Running should still work (nothing to do)
     engine.run(10.0)
-    assert engine.time() == 10.0
+    assert math.isclose(engine.time, 10.0, rel_tol=1e-9)
 
     print("  Empty platform (no processors): OK")
 
@@ -35,7 +36,7 @@ def test_empty_platform_no_processors():
 def test_platform_no_tasks():
     """Test running a simulation with no tasks."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     # Build platform with processor but no tasks
     pt = platform.add_processor_type("cpu", 1.0)
@@ -44,7 +45,7 @@ def test_platform_no_tasks():
     proc = platform.add_processor(pt, cd, pd)
     platform.finalize()
 
-    assert platform.task_count() == 0
+    assert platform.task_count == 0
 
     # Create scheduler with no tasks
     scheduler = sim.EdfScheduler(engine, [proc])
@@ -52,7 +53,7 @@ def test_platform_no_tasks():
 
     # Run - should complete without error
     engine.run(10.0)
-    assert engine.time() == 10.0
+    assert math.isclose(engine.time, 10.0, rel_tol=1e-9)
 
     print("  Platform with no tasks: OK")
 
@@ -60,7 +61,7 @@ def test_platform_no_tasks():
 def test_many_processors():
     """Test platform with many processors (20+)."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     pt = platform.add_processor_type("cpu", 1.0)
     cd = platform.add_clock_domain(1000.0, 2000.0)
@@ -72,15 +73,15 @@ def test_many_processors():
 
     platform.finalize()
 
-    assert platform.processor_count() == num_procs, \
-        f"Expected {num_procs} processors, got {platform.processor_count()}"
+    assert platform.processor_count == num_procs, \
+        f"Expected {num_procs} processors, got {platform.processor_count}"
 
     # Verify all processors are accessible
     procs = sim.get_all_processors(engine)
     assert len(procs) == num_procs
 
     for i, proc in enumerate(procs):
-        assert proc.id() == i, f"Expected processor id={i}, got {proc.id()}"
+        assert proc.id == i, f"Expected processor id={i}, got {proc.id}"
 
     print("  Many processors (24): OK")
 
@@ -88,7 +89,7 @@ def test_many_processors():
 def test_wcet_equals_deadline():
     """Test task where WCET equals relative deadline (tight constraint)."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     pt = platform.add_processor_type("cpu", 1.0)
     cd = platform.add_clock_domain(1000.0, 2000.0)
@@ -99,7 +100,7 @@ def test_wcet_equals_deadline():
     task = platform.add_task(10.0, 2.0, 2.0)  # period=10, deadline=2, wcet=2
     platform.finalize()
 
-    assert task.wcet() == task.relative_deadline()
+    assert task.wcet == task.relative_deadline
 
     # Should be schedulable (u = 2/10 = 0.2)
     scheduler = sim.EdfScheduler(engine, [proc])
@@ -112,7 +113,7 @@ def test_wcet_equals_deadline():
 def test_wcet_equals_period():
     """Test task where WCET equals period (utilization = 1.0)."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     pt = platform.add_processor_type("cpu", 1.0)
     cd = platform.add_clock_domain(1000.0, 2000.0)
@@ -123,15 +124,15 @@ def test_wcet_equals_period():
     task = platform.add_task(10.0, 10.0, 10.0)  # period=10, deadline=10, wcet=10
     platform.finalize()
 
-    assert task.wcet() == task.period()
+    assert task.wcet == task.period
 
     # Single task with u=1.0 should be admissible on single processor
     scheduler = sim.EdfScheduler(engine, [proc])
     assert scheduler.can_admit(10.0, 10.0)
     scheduler.add_server(task)
 
-    assert scheduler.utilization() == 1.0, \
-        f"Expected utilization=1.0, got {scheduler.utilization()}"
+    assert scheduler.utilization == 1.0, \
+        f"Expected utilization=1.0, got {scheduler.utilization}"
 
     print("  WCET equals period: OK")
 
@@ -139,7 +140,7 @@ def test_wcet_equals_period():
 def test_run_with_no_jobs():
     """Test running with tasks but no scheduled jobs."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     pt = platform.add_processor_type("cpu", 1.0)
     cd = platform.add_clock_domain(1000.0, 2000.0)
@@ -158,8 +159,8 @@ def test_run_with_no_jobs():
     # Run should complete with processor idle the whole time
     engine.run(50.0)
 
-    assert engine.time() == 50.0
-    assert proc.state() == sim.ProcessorState_Idle
+    assert math.isclose(engine.time, 50.0, rel_tol=1e-9)
+    assert proc.state == sim.ProcessorState.Idle
 
     print("  Run with no jobs: OK")
 
@@ -167,7 +168,7 @@ def test_run_with_no_jobs():
 def test_run_empty_queue():
     """Test run() without time limit when event queue is empty."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     pt = platform.add_processor_type("cpu", 1.0)
     cd = platform.add_clock_domain(1000.0, 2000.0)
@@ -179,7 +180,7 @@ def test_run_empty_queue():
     engine.run()
 
     # Time should still be 0 since nothing happened
-    assert engine.time() == 0.0, f"Expected time=0.0, got {engine.time()}"
+    assert engine.time == 0.0, f"Expected time=0.0, got {engine.time}"
 
     print("  Run empty queue: OK")
 
@@ -187,7 +188,7 @@ def test_run_empty_queue():
 def test_multiple_runs():
     """Test calling run() multiple times with increasing time limits."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     pt = platform.add_processor_type("cpu", 1.0)
     cd = platform.add_clock_domain(1000.0, 2000.0)
@@ -208,13 +209,13 @@ def test_multiple_runs():
 
     # Run in increments
     engine.run(5.0)
-    assert engine.time() == 5.0, f"After run(5): expected 5.0, got {engine.time()}"
+    assert math.isclose(engine.time, 5.0, rel_tol=1e-9), f"After run(5): expected ~5.0, got {engine.time}"
 
     engine.run(15.0)
-    assert engine.time() == 15.0, f"After run(15): expected 15.0, got {engine.time()}"
+    assert math.isclose(engine.time, 15.0, rel_tol=1e-9), f"After run(15): expected ~15.0, got {engine.time}"
 
     engine.run(25.0)
-    assert engine.time() == 25.0, f"After run(25): expected 25.0, got {engine.time()}"
+    assert math.isclose(engine.time, 25.0, rel_tol=1e-9), f"After run(25): expected ~25.0, got {engine.time}"
 
     print("  Multiple runs: OK")
 
@@ -222,7 +223,7 @@ def test_multiple_runs():
 def test_run_past_completion():
     """Test running far past when all jobs complete."""
     engine = sim.Engine()
-    platform = engine.get_platform()
+    platform = engine.platform
 
     pt = platform.add_processor_type("cpu", 1.0)
     cd = platform.add_clock_domain(1000.0, 2000.0)
@@ -243,10 +244,10 @@ def test_run_past_completion():
     engine.run(1000.0)
 
     # Should reach the target time
-    assert engine.time() == 1000.0, f"Expected time=1000.0, got {engine.time()}"
+    assert math.isclose(engine.time, 1000.0, rel_tol=1e-9), f"Expected time~=1000.0, got {engine.time}"
 
     # Processor should be idle (no more work)
-    assert proc.state() == sim.ProcessorState_Idle
+    assert proc.state == sim.ProcessorState.Idle
 
     print("  Run past completion: OK")
 

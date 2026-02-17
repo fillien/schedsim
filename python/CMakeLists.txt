@@ -1,78 +1,35 @@
-cmake_minimum_required(VERSION 3.20...3.25)
-project(pyschedlib)
+cmake_minimum_required(VERSION 3.20...3.30)
+project(pyschedsim_bindings)
 
-find_package(SWIG REQUIRED)
-include(UseSWIG)
+find_package(Python REQUIRED COMPONENTS Interpreter Development.Module Development.SABIModule)
 
-# Align dev headers with the interpreter actually found
-find_package(Python3 REQUIRED COMPONENTS Interpreter)
-find_package(Python3 REQUIRED COMPONENTS Development)
-
-# ============================================================================
-# pyschedlib - Legacy bindings for schedlib
-# ============================================================================
-
-set_source_files_properties(src/pyschedlib.i PROPERTIES CPLUSPLUS ON)
-
-swig_add_library(pyschedlib
-  TYPE MODULE
-  LANGUAGE python
-  SOURCES src/pyschedlib.i
-)
-
-# Ensure target include dirs are used by SWIG and the wrapper
-set_property(TARGET pyschedlib PROPERTY SWIG_USE_TARGET_INCLUDE_DIRECTORIES ON)
-
-target_link_libraries(pyschedlib
-  PRIVATE
-  Python3::Module
-  schedlib
-)
-
-set_target_properties(pyschedlib PROPERTIES
-  CXX_VISIBILITY_PRESET default
-  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-)
-
-# Headers from the C++ library
-target_include_directories(pyschedlib
-  PRIVATE
-  ${CMAKE_SOURCE_DIR}/schedlib/include
-)
+# Try to find nanobind via CMake config first, then FetchContent fallback
+find_package(nanobind CONFIG QUIET)
+if(NOT nanobind_FOUND)
+  message(STATUS "nanobind not found via find_package, using FetchContent")
+  include(FetchContent)
+  FetchContent_Declare(
+    nanobind
+    GIT_REPOSITORY https://github.com/wjakob/nanobind.git
+    GIT_TAG        v2.4.0
+    GIT_SHALLOW    TRUE
+  )
+  FetchContent_MakeAvailable(nanobind)
+endif()
 
 # ============================================================================
-# pyschedsim - New bindings for schedsim three-library architecture
+# pyschedsim - nanobind module
 # ============================================================================
 
-set_source_files_properties(src/pyschedsim.i PROPERTIES CPLUSPLUS ON)
-
-# Set include directories for SWIG to find the .i files
-set(CMAKE_SWIG_FLAGS "-I${CMAKE_CURRENT_SOURCE_DIR}/src")
-
-swig_add_library(pyschedsim
-  TYPE MODULE
-  LANGUAGE python
-  SOURCES src/pyschedsim.i
-)
-
-set_property(TARGET pyschedsim PROPERTY SWIG_USE_TARGET_INCLUDE_DIRECTORIES ON)
+nanobind_add_module(pyschedsim STABLE_ABI src/bindings.cpp)
 
 target_link_libraries(pyschedsim
   PRIVATE
-  Python3::Module
   schedsim-core
   schedsim-algo
   schedsim-io
 )
 
-set_target_properties(pyschedsim PROPERTIES
-  CXX_VISIBILITY_PRESET default
-  LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-  RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-)
-
-# Headers from the schedsim libraries
 target_include_directories(pyschedsim
   PRIVATE
   ${CMAKE_SOURCE_DIR}/schedsim/core/include
@@ -85,112 +42,30 @@ target_include_directories(pyschedsim
 # ============================================================================
 
 if(BUILD_TESTING)
-  # Legacy pyschedlib tests
-  add_test(
-    NAME pyschedlib_smoke
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/pyschedlib_smoke.py
-  )
-  # Ensure the test can import the freshly built module
-  set_tests_properties(pyschedlib_smoke PROPERTIES
-    ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}"
-  )
-
-  add_test(
-    NAME pyschedlib_json
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/pyschedlib_json.py
-  )
-  set_tests_properties(pyschedlib_json PROPERTIES
-    ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}"
+  set(PYSCHEDSIM_TESTS
+    test_core
+    test_io
+    test_types
+    test_exceptions
+    test_energy
+    test_edge_cases
+    test_new_api
   )
 
-  add_test(
-    NAME pyschedlib_exceptions
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/pyschedlib_exceptions.py
-  )
-  set_tests_properties(pyschedlib_exceptions PROPERTIES
-    ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}"
-  )
-
-  add_test(
-    NAME pyschedlib_hardening
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/pyschedlib_hardening.py
-  )
-  set_tests_properties(pyschedlib_hardening PROPERTIES
-    ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}"
-  )
-
-  # New pyschedsim tests
-  add_test(
-    NAME pyschedsim_core
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_core.py
-  )
-  set_tests_properties(pyschedsim_core PROPERTIES
-    ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  )
-
-  add_test(
-    NAME pyschedsim_io
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_io.py
-  )
-  set_tests_properties(pyschedsim_io PROPERTIES
-    ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  )
-
-  add_test(
-    NAME pyschedsim_types
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_types.py
-  )
-  set_tests_properties(pyschedsim_types PROPERTIES
-    ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  )
-
-  add_test(
-    NAME pyschedsim_exceptions
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_exceptions.py
-  )
-  set_tests_properties(pyschedsim_exceptions PROPERTIES
-    ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  )
-
-  add_test(
-    NAME pyschedsim_energy
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_energy.py
-  )
-  set_tests_properties(pyschedsim_energy PROPERTIES
-    ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  )
-
-  add_test(
-    NAME pyschedsim_edge_cases
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_edge_cases.py
-  )
-  set_tests_properties(pyschedsim_edge_cases PROPERTIES
-    ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  )
-
-  add_test(
-    NAME pyschedsim_new_api
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_new_api.py
-  )
-  set_tests_properties(pyschedsim_new_api PROPERTIES
-    ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}"
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  )
+  foreach(test_name IN LISTS PYSCHEDSIM_TESTS)
+    add_test(
+      NAME pyschedsim_${test_name}
+      COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/${test_name}.py
+    )
+    set_tests_properties(pyschedsim_${test_name} PROPERTIES
+      ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR}"
+      WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+  endforeach()
 endif()
 
 # ============================================================================
 # Install
 # ============================================================================
 
-# Install the generated Python file and the module
-install(TARGETS pyschedlib DESTINATION .)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/pyschedlib.py DESTINATION .)
-
 install(TARGETS pyschedsim DESTINATION .)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/pyschedsim.py DESTINATION .)
