@@ -118,6 +118,10 @@ void Processor::request_cstate(int level) {
     current_cstate_level_ = level;
     state_ = ProcessorState::Sleep;
 
+    // Only Sleep<->Active transitions notify the EnergyTracker because
+    // compute_processor_power() treats all active states (Idle, Running,
+    // ContextSwitching, Changing) identically — they all use frequency-based
+    // power P(f). Only Sleep uses distinct C-state power.
     if (engine_) {
         engine_->notify_processor_state_change(*this, old_state, ProcessorState::Sleep);
     }

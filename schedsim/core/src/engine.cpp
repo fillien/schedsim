@@ -249,10 +249,11 @@ Energy Engine::total_energy() const {
 }
 
 void Engine::emit_sim_finished() {
+    double energy_mj = energy_tracker_ ? total_energy().mj : 0.0;
     trace([&](TraceWriter& w) {
         w.type("sim_finished");
         if (energy_tracker_) {
-            w.field("total_energy_mj", total_energy().mj);
+            w.field("total_energy_mj", energy_mj);
         }
     });
 }

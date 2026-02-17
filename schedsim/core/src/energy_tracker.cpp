@@ -155,8 +155,10 @@ Power EnergyTracker::compute_processor_power(const Processor& proc,
         return proc.power_domain().cstate_power(cstate_level);
     }
 
-    // Active states (Idle, Running, ContextSwitching, Changing) use frequency-based power
-    // P(f) = a0 + a1*f + a2*f^2 + a3*f^3
+    // All active states (Idle, Running, ContextSwitching, Changing) use the
+    // same frequency-based power: P(f) = a0 + a1*f + a2*f^2 + a3*f^3.
+    // This is why only Sleep<->Active transitions need to notify the
+    // EnergyTracker — transitions between active states don't change power.
     const ClockDomain& cd = proc.clock_domain();
     return cd.power_at_frequency(cd.frequency());
 }
