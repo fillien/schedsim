@@ -24,6 +24,7 @@ struct DvfsTestPlatform {
     Engine engine;
     Processor* procs[4]{};
     ClockDomain* clock_domain{nullptr};
+    int deadline_misses{0};
 
     void build() {
         auto& pt = engine.platform().add_processor_type("cpu", 1.0);
@@ -45,6 +46,8 @@ struct DvfsTestPlatform {
 
         for (int i = 0; i < 4; ++i) {
             procs[i] = &engine.platform().add_processor(pt, *clock_domain, pd);
+            procs[i]->set_deadline_miss_handler(
+                [this](Processor&, Job&) { ++deadline_misses; });
         }
 
         engine.enable_energy_tracking(true);
@@ -58,6 +61,39 @@ struct DvfsTestPlatform {
         return {procs[0], procs[1], procs[2], procs[3]};
     }
 };
+
+// ---------------------------------------------------------------------------
+// Shared helper: run GRUB-only baseline (no DVFS) and return total energy
+// ---------------------------------------------------------------------------
+
+static Energy run_grub_baseline() {
+    DvfsTestPlatform plat;
+    plat.build();
+
+    auto& task1 = plat.engine.platform().add_task(
+        duration_from_seconds(5.0), duration_from_seconds(5.0),
+        duration_from_seconds(1.5));
+    auto& task2 = plat.engine.platform().add_task(
+        duration_from_seconds(5.0), duration_from_seconds(5.0),
+        duration_from_seconds(1.5));
+    plat.engine.platform().finalize();
+
+    EdfScheduler sched(plat.engine, plat.proc_vec());
+    sched.enable_grub();
+
+    sched.add_server(task1, duration_from_seconds(1.5), duration_from_seconds(5.0));
+    sched.add_server(task2, duration_from_seconds(1.5), duration_from_seconds(5.0));
+
+    plat.engine.set_job_arrival_handler([&](Task& t, Job job) {
+        sched.on_job_arrival(t, std::move(job));
+    });
+
+    plat.engine.schedule_job_arrival(task1, plat.time(0.0), duration_from_seconds(1.0));
+    plat.engine.schedule_job_arrival(task2, plat.time(0.0), duration_from_seconds(1.0));
+    plat.engine.run(plat.time(5.0));
+
+    return plat.engine.total_energy();
+}
 
 // ---------------------------------------------------------------------------
 // PA integration tests
@@ -92,6 +128,7 @@ TEST_F(DvfsPaIntegrationTest, LowUtil_EnergySaving) {
     plat_.engine.run(plat_.time(10.0));
 
     // No deadline misses
+    EXPECT_EQ(plat_.deadline_misses, 0);
     EXPECT_TRUE(sched.find_server(task)->state() == CbsServer::State::Inactive
              || sched.find_server(task)->state() == CbsServer::State::Ready);
 
@@ -135,62 +172,33 @@ TEST_F(DvfsPaIntegrationTest, HighUtil_NearMaxFreq) {
 }
 
 TEST_F(DvfsPaIntegrationTest, EnergyMonotonicity) {
-    // Engine A: GRUB only (no DVFS, runs at f_max)
-    DvfsTestPlatform plat_a;
-    plat_a.build();
+    Energy energy_baseline = run_grub_baseline();
 
-    auto& task_a1 = plat_a.engine.platform().add_task(
+    // GRUB + PA DVFS (should save energy vs baseline)
+    auto& task1 = plat_.engine.platform().add_task(
         duration_from_seconds(5.0), duration_from_seconds(5.0),
         duration_from_seconds(1.5));
-    auto& task_a2 = plat_a.engine.platform().add_task(
-        duration_from_seconds(5.0), duration_from_seconds(5.0),
-        duration_from_seconds(1.5));
-    plat_a.engine.platform().finalize();
-
-    EdfScheduler sched_a(plat_a.engine, plat_a.proc_vec());
-    sched_a.enable_grub();
-
-    sched_a.add_server(task_a1, duration_from_seconds(1.5), duration_from_seconds(5.0));
-    sched_a.add_server(task_a2, duration_from_seconds(1.5), duration_from_seconds(5.0));
-
-    plat_a.engine.set_job_arrival_handler([&](Task& t, Job job) {
-        sched_a.on_job_arrival(t, std::move(job));
-    });
-
-    plat_a.engine.schedule_job_arrival(task_a1, plat_a.time(0.0), duration_from_seconds(1.0));
-    plat_a.engine.schedule_job_arrival(task_a2, plat_a.time(0.0), duration_from_seconds(1.0));
-    plat_a.engine.run(plat_a.time(5.0));
-
-    Energy energy_a = plat_a.engine.total_energy();
-
-    // Engine B: GRUB + PA DVFS (should save energy)
-    auto& task_b1 = plat_.engine.platform().add_task(
-        duration_from_seconds(5.0), duration_from_seconds(5.0),
-        duration_from_seconds(1.5));
-    auto& task_b2 = plat_.engine.platform().add_task(
+    auto& task2 = plat_.engine.platform().add_task(
         duration_from_seconds(5.0), duration_from_seconds(5.0),
         duration_from_seconds(1.5));
     plat_.engine.platform().finalize();
 
-    EdfScheduler sched_b(plat_.engine, plat_.proc_vec());
-    sched_b.enable_grub();
-    sched_b.enable_power_aware_dvfs();
+    EdfScheduler sched(plat_.engine, plat_.proc_vec());
+    sched.enable_grub();
+    sched.enable_power_aware_dvfs();
 
-    sched_b.add_server(task_b1, duration_from_seconds(1.5), duration_from_seconds(5.0));
-    sched_b.add_server(task_b2, duration_from_seconds(1.5), duration_from_seconds(5.0));
+    sched.add_server(task1, duration_from_seconds(1.5), duration_from_seconds(5.0));
+    sched.add_server(task2, duration_from_seconds(1.5), duration_from_seconds(5.0));
 
     plat_.engine.set_job_arrival_handler([&](Task& t, Job job) {
-        sched_b.on_job_arrival(t, std::move(job));
+        sched.on_job_arrival(t, std::move(job));
     });
 
-    plat_.engine.schedule_job_arrival(task_b1, plat_.time(0.0), duration_from_seconds(1.0));
-    plat_.engine.schedule_job_arrival(task_b2, plat_.time(0.0), duration_from_seconds(1.0));
+    plat_.engine.schedule_job_arrival(task1, plat_.time(0.0), duration_from_seconds(1.0));
+    plat_.engine.schedule_job_arrival(task2, plat_.time(0.0), duration_from_seconds(1.0));
     plat_.engine.run(plat_.time(5.0));
 
-    Energy energy_b = plat_.engine.total_energy();
-
-    // DVFS should save energy
-    EXPECT_LT(energy_b.mj, energy_a.mj);
+    EXPECT_LT(plat_.engine.total_energy().mj, energy_baseline.mj);
 }
 
 // ---------------------------------------------------------------------------
@@ -224,6 +232,7 @@ TEST_F(DvfsFfaIntegrationTest, LowUtil_EnergySaving) {
     plat_.engine.schedule_job_arrival(task, plat_.time(0.0), duration_from_seconds(0.5));
     plat_.engine.run(plat_.time(10.0));
 
+    EXPECT_EQ(plat_.deadline_misses, 0);
     EXPECT_TRUE(sched.find_server(task)->state() == CbsServer::State::Inactive
              || sched.find_server(task)->state() == CbsServer::State::Ready);
 
@@ -266,59 +275,33 @@ TEST_F(DvfsFfaIntegrationTest, HighUtil_NearMaxFreq) {
 }
 
 TEST_F(DvfsFfaIntegrationTest, EnergyMonotonicity) {
-    DvfsTestPlatform plat_a;
-    plat_a.build();
+    Energy energy_baseline = run_grub_baseline();
 
-    auto& task_a1 = plat_a.engine.platform().add_task(
+    // GRUB + FFA (should save energy vs baseline)
+    auto& task1 = plat_.engine.platform().add_task(
         duration_from_seconds(5.0), duration_from_seconds(5.0),
         duration_from_seconds(1.5));
-    auto& task_a2 = plat_a.engine.platform().add_task(
-        duration_from_seconds(5.0), duration_from_seconds(5.0),
-        duration_from_seconds(1.5));
-    plat_a.engine.platform().finalize();
-
-    EdfScheduler sched_a(plat_a.engine, plat_a.proc_vec());
-    sched_a.enable_grub();
-
-    sched_a.add_server(task_a1, duration_from_seconds(1.5), duration_from_seconds(5.0));
-    sched_a.add_server(task_a2, duration_from_seconds(1.5), duration_from_seconds(5.0));
-
-    plat_a.engine.set_job_arrival_handler([&](Task& t, Job job) {
-        sched_a.on_job_arrival(t, std::move(job));
-    });
-
-    plat_a.engine.schedule_job_arrival(task_a1, plat_a.time(0.0), duration_from_seconds(1.0));
-    plat_a.engine.schedule_job_arrival(task_a2, plat_a.time(0.0), duration_from_seconds(1.0));
-    plat_a.engine.run(plat_a.time(5.0));
-
-    Energy energy_a = plat_a.engine.total_energy();
-
-    auto& task_b1 = plat_.engine.platform().add_task(
-        duration_from_seconds(5.0), duration_from_seconds(5.0),
-        duration_from_seconds(1.5));
-    auto& task_b2 = plat_.engine.platform().add_task(
+    auto& task2 = plat_.engine.platform().add_task(
         duration_from_seconds(5.0), duration_from_seconds(5.0),
         duration_from_seconds(1.5));
     plat_.engine.platform().finalize();
 
-    EdfScheduler sched_b(plat_.engine, plat_.proc_vec());
-    sched_b.enable_grub();
-    sched_b.enable_ffa();
+    EdfScheduler sched(plat_.engine, plat_.proc_vec());
+    sched.enable_grub();
+    sched.enable_ffa();
 
-    sched_b.add_server(task_b1, duration_from_seconds(1.5), duration_from_seconds(5.0));
-    sched_b.add_server(task_b2, duration_from_seconds(1.5), duration_from_seconds(5.0));
+    sched.add_server(task1, duration_from_seconds(1.5), duration_from_seconds(5.0));
+    sched.add_server(task2, duration_from_seconds(1.5), duration_from_seconds(5.0));
 
     plat_.engine.set_job_arrival_handler([&](Task& t, Job job) {
-        sched_b.on_job_arrival(t, std::move(job));
+        sched.on_job_arrival(t, std::move(job));
     });
 
-    plat_.engine.schedule_job_arrival(task_b1, plat_.time(0.0), duration_from_seconds(1.0));
-    plat_.engine.schedule_job_arrival(task_b2, plat_.time(0.0), duration_from_seconds(1.0));
+    plat_.engine.schedule_job_arrival(task1, plat_.time(0.0), duration_from_seconds(1.0));
+    plat_.engine.schedule_job_arrival(task2, plat_.time(0.0), duration_from_seconds(1.0));
     plat_.engine.run(plat_.time(5.0));
 
-    Energy energy_b = plat_.engine.total_energy();
-
-    EXPECT_LT(energy_b.mj, energy_a.mj);
+    EXPECT_LT(plat_.engine.total_energy().mj, energy_baseline.mj);
 }
 
 // ---------------------------------------------------------------------------
@@ -352,6 +335,7 @@ TEST_F(DvfsCsfIntegrationTest, LowUtil_EnergySaving) {
     plat_.engine.schedule_job_arrival(task, plat_.time(0.0), duration_from_seconds(0.5));
     plat_.engine.run(plat_.time(10.0));
 
+    EXPECT_EQ(plat_.deadline_misses, 0);
     EXPECT_TRUE(sched.find_server(task)->state() == CbsServer::State::Inactive
              || sched.find_server(task)->state() == CbsServer::State::Ready);
 
@@ -394,57 +378,60 @@ TEST_F(DvfsCsfIntegrationTest, HighUtil_NearMaxFreq) {
 }
 
 TEST_F(DvfsCsfIntegrationTest, EnergyMonotonicity) {
-    DvfsTestPlatform plat_a;
-    plat_a.build();
+    Energy energy_baseline = run_grub_baseline();
 
-    auto& task_a1 = plat_a.engine.platform().add_task(
+    // GRUB + CSF (should save energy vs baseline)
+    auto& task1 = plat_.engine.platform().add_task(
         duration_from_seconds(5.0), duration_from_seconds(5.0),
         duration_from_seconds(1.5));
-    auto& task_a2 = plat_a.engine.platform().add_task(
-        duration_from_seconds(5.0), duration_from_seconds(5.0),
-        duration_from_seconds(1.5));
-    plat_a.engine.platform().finalize();
-
-    EdfScheduler sched_a(plat_a.engine, plat_a.proc_vec());
-    sched_a.enable_grub();
-
-    sched_a.add_server(task_a1, duration_from_seconds(1.5), duration_from_seconds(5.0));
-    sched_a.add_server(task_a2, duration_from_seconds(1.5), duration_from_seconds(5.0));
-
-    plat_a.engine.set_job_arrival_handler([&](Task& t, Job job) {
-        sched_a.on_job_arrival(t, std::move(job));
-    });
-
-    plat_a.engine.schedule_job_arrival(task_a1, plat_a.time(0.0), duration_from_seconds(1.0));
-    plat_a.engine.schedule_job_arrival(task_a2, plat_a.time(0.0), duration_from_seconds(1.0));
-    plat_a.engine.run(plat_a.time(5.0));
-
-    Energy energy_a = plat_a.engine.total_energy();
-
-    auto& task_b1 = plat_.engine.platform().add_task(
-        duration_from_seconds(5.0), duration_from_seconds(5.0),
-        duration_from_seconds(1.5));
-    auto& task_b2 = plat_.engine.platform().add_task(
+    auto& task2 = plat_.engine.platform().add_task(
         duration_from_seconds(5.0), duration_from_seconds(5.0),
         duration_from_seconds(1.5));
     plat_.engine.platform().finalize();
 
-    EdfScheduler sched_b(plat_.engine, plat_.proc_vec());
-    sched_b.enable_grub();
-    sched_b.enable_csf();
+    EdfScheduler sched(plat_.engine, plat_.proc_vec());
+    sched.enable_grub();
+    sched.enable_csf();
 
-    sched_b.add_server(task_b1, duration_from_seconds(1.5), duration_from_seconds(5.0));
-    sched_b.add_server(task_b2, duration_from_seconds(1.5), duration_from_seconds(5.0));
+    sched.add_server(task1, duration_from_seconds(1.5), duration_from_seconds(5.0));
+    sched.add_server(task2, duration_from_seconds(1.5), duration_from_seconds(5.0));
 
     plat_.engine.set_job_arrival_handler([&](Task& t, Job job) {
-        sched_b.on_job_arrival(t, std::move(job));
+        sched.on_job_arrival(t, std::move(job));
     });
 
-    plat_.engine.schedule_job_arrival(task_b1, plat_.time(0.0), duration_from_seconds(1.0));
-    plat_.engine.schedule_job_arrival(task_b2, plat_.time(0.0), duration_from_seconds(1.0));
+    plat_.engine.schedule_job_arrival(task1, plat_.time(0.0), duration_from_seconds(1.0));
+    plat_.engine.schedule_job_arrival(task2, plat_.time(0.0), duration_from_seconds(1.0));
     plat_.engine.run(plat_.time(5.0));
 
-    Energy energy_b = plat_.engine.total_energy();
+    EXPECT_LT(plat_.engine.total_energy().mj, energy_baseline.mj);
+}
 
-    EXPECT_LT(energy_b.mj, energy_a.mj);
+// ---------------------------------------------------------------------------
+// Absolute energy value test
+// ---------------------------------------------------------------------------
+
+TEST(DvfsEnergyTest, AbsoluteEnergyValue) {
+    // 1 core, frequency locked at 1000 MHz, idle for 1.0s
+    // P(f) = 50 + 100*f mW (f in GHz) → P(1 GHz) = 150 mW
+    // E = 150 mW * 1.0s = 150 mJ
+    Engine engine;
+    auto& pt = engine.platform().add_processor_type("cpu", 1.0);
+    auto& cd = engine.platform().add_clock_domain(
+        Frequency{1000.0}, Frequency{1000.0});
+    cd.set_power_coefficients({50.0, 100.0, 0.0, 0.0});
+    auto& pd = engine.platform().add_power_domain({
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{0.0}}
+    });
+    engine.platform().add_processor(pt, cd, pd);
+    engine.platform().finalize();
+
+    engine.enable_energy_tracking(true);
+
+    // Add a dummy timer to advance time to 1.0s (no tasks needed)
+    engine.add_timer(time_from_seconds(1.0), []() {});
+    engine.run();
+
+    Energy total = engine.total_energy();
+    EXPECT_NEAR(total.mj, 150.0, 0.01);
 }
