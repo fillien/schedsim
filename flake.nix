@@ -41,7 +41,7 @@
         schedsim-python = schedsim.overrideAttrs (old: {
           name = "schedsim-python";
 
-          nativeBuildInputs = old.nativeBuildInputs ++ [ pkgs.swig ];
+          nativeBuildInputs = old.nativeBuildInputs ++ [ pkgs.python312Packages.nanobind ];
 
           buildInputs = old.buildInputs ++ [ pkgs.python312 ];
 
@@ -86,8 +86,8 @@
             llvmPackages.openmp
             rapidjson
 
-            # Python bindings (SWIG)
-            swig
+            # Python bindings (nanobind)
+            python312Packages.nanobind
 
             # Profiling
             tracy

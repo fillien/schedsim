@@ -415,7 +415,7 @@ NB_MODULE(pyschedsim, m) {
         .def("power_domain_energy", &Engine::power_domain_energy, "pd_id"_a)
         .def("total_energy", &Engine::total_energy)
         .def("set_trace_writer", &Engine::set_trace_writer, "writer"_a.none(),
-             nb::rv_policy::none)
+             nb::keep_alive<1, 2>())
         .def_prop_ro("platform", [](Engine& self) -> Platform& { return self.platform(); },
                      nb::rv_policy::reference);
 
