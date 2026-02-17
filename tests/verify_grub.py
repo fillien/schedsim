@@ -903,6 +903,10 @@ class EnergyReconstructor:
     Tracks per-processor active/sleeping state and per-cluster frequency to
     compute energy as: sum over intervals of P(freq) * active_cores * duration.
     Sleeping cores contribute 0 mW (matching exynos5422LITTLE C-state power).
+
+    Note: only Sleep<->Active transitions are tracked because the power model
+    treats all active states (Idle, Running, ContextSwitching, Changing)
+    identically — they all consume P(f). Only Sleep uses C-state power.
     """
 
     def __init__(self, clusters: list):
@@ -952,7 +956,9 @@ class EnergyReconstructor:
 
         elif etype == "proc_sleep":
             cpu = event["cpu"]
-            cluster_id = event["cluster_id"]
+            cluster_id = event.get("cluster_id")
+            if cluster_id is None:
+                return
             # Only decrement if this core was actually active
             if self.proc_active.get(cpu, True):
                 self._close_interval(cluster_id, time)
@@ -962,7 +968,9 @@ class EnergyReconstructor:
 
         elif etype == "proc_activated":
             cpu = event["cpu"]
-            cluster_id = event["cluster_id"]
+            cluster_id = event.get("cluster_id")
+            if cluster_id is None:
+                return
             # Only increment if this core was actually sleeping
             if not self.proc_active.get(cpu, True):
                 self._close_interval(cluster_id, time)
