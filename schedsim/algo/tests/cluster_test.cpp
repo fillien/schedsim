@@ -84,7 +84,7 @@ TEST_F(ClusterTest, UTarget_Mutable) {
     EXPECT_DOUBLE_EQ(cluster.u_target(), 0.75);
 }
 
-TEST_F(ClusterTest, ProcessorCount_DelegatesToClockDomain) {
+TEST_F(ClusterTest, ProcessorCount_DelegatesToScheduler) {
     Cluster cluster(*cd_, *sched_, 1.0, 2000.0);
     EXPECT_EQ(cluster.processor_count(), 4u);
 }
@@ -109,4 +109,44 @@ TEST_F(ClusterTest, ClockDomain_Accessors) {
     const Cluster& cref = cluster;
     EXPECT_EQ(&cref.clock_domain(), cd_);
     EXPECT_EQ(&cref.scheduler(), sched_.get());
+}
+
+TEST_F(ClusterTest, RemainingCapacity_EmptyCluster) {
+    Cluster cluster(*cd_, *sched_, 1.0, 2000.0);
+    EXPECT_DOUBLE_EQ(cluster.remaining_capacity(), 4.0);
+}
+
+TEST_F(ClusterTest, RemainingCapacity_WithLoad) {
+    // Note: SetUp() already calls finalize(), but add_server doesn't add a task,
+    // so we need a separate engine where we add the task before finalize.
+    Engine engine2;
+    auto& pt2 = engine2.platform().add_processor_type("cpu", 1.0);
+    auto& cd2 = engine2.platform().add_clock_domain(Frequency{200.0}, Frequency{2000.0});
+    auto& pd2 = engine2.platform().add_power_domain({
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
+    });
+    std::vector<Processor*> procs2;
+    for (int i = 0; i < 4; ++i) {
+        procs2.push_back(&engine2.platform().add_processor(pt2, cd2, pd2));
+    }
+    auto& task = engine2.platform().add_task(
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(5.0));
+    engine2.platform().finalize();
+
+    EdfScheduler sched2(engine2, procs2);
+    Cluster cluster(cd2, sched2, 1.0, 2000.0);
+    sched2.add_server(task);
+    EXPECT_DOUBLE_EQ(cluster.remaining_capacity(), 3.5);
+}
+
+TEST_F(ClusterTest, ProcessorId_DefaultEmpty) {
+    Cluster cluster(*cd_, *sched_, 1.0, 2000.0);
+    EXPECT_FALSE(cluster.processor_id().has_value());
+}
+
+TEST_F(ClusterTest, ProcessorId_SetAndGet) {
+    Cluster cluster(*cd_, *sched_, 1.0, 2000.0);
+    cluster.set_processor_id(3);
+    ASSERT_TRUE(cluster.processor_id().has_value());
+    EXPECT_EQ(*cluster.processor_id(), 3u);
 }

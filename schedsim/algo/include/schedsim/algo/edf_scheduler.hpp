@@ -50,7 +50,7 @@ public:
 
     // EdfScheduler-specific (not in abstract interface)
     [[nodiscard]] std::span<core::Processor* const> processors() const;
-    [[nodiscard]] std::size_t processor_count() const noexcept { return processors_.size(); }
+    [[nodiscard]] std::size_t processor_count() const noexcept override { return processors_.size(); }
 
     // Server detach check (M-GRUB: remove server from scheduler when Inactive + no future jobs)
     void try_detach_server(CbsServer& server);

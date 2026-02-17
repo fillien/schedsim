@@ -3,6 +3,7 @@
 #include <schedsim/core/types.hpp>
 
 #include <cstddef>
+#include <optional>
 
 namespace schedsim::core {
 class ClockDomain;
@@ -39,6 +40,16 @@ public:
     // Scale a task's utilization to this cluster = task_util * scale_speed() / perf()
     [[nodiscard]] double scaled_utilization(double task_util) const noexcept;
 
+    // Optional: set when this cluster wraps a single processor (per-core mode)
+    void set_processor_id(std::size_t id) noexcept;
+    [[nodiscard]] std::optional<std::size_t> processor_id() const noexcept;
+
+    // Remaining scheduling capacity: processor_count - raw utilization.
+    // Uses raw (reference) utilization, not scaled. WF/BF allocators rank by this
+    // value within the scaled_utilization-admissible set; any placement in that set
+    // is correct, so raw capacity is a sufficient load-balancing heuristic.
+    [[nodiscard]] double remaining_capacity() const noexcept;
+
     // Delegated queries
     [[nodiscard]] std::size_t processor_count() const noexcept;
     [[nodiscard]] double utilization() const noexcept;
@@ -50,6 +61,7 @@ private:
     double perf_score_;
     double reference_freq_max_;  // cluster[0].freq_max for cross-cluster normalization
     double u_target_{1.0};
+    std::optional<std::size_t> processor_id_;
 };
 
 } // namespace schedsim::algo

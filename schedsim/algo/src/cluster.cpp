@@ -4,6 +4,8 @@
 
 #include <schedsim/core/clock_domain.hpp>
 
+#include <optional>
+
 namespace schedsim::algo {
 
 Cluster::Cluster(core::ClockDomain& clock_domain, Scheduler& scheduler,
@@ -28,8 +30,20 @@ double Cluster::scaled_utilization(double task_util) const noexcept {
     return task_util * scale_speed() / perf_score_;
 }
 
+void Cluster::set_processor_id(std::size_t id) noexcept {
+    processor_id_ = id;
+}
+
+std::optional<std::size_t> Cluster::processor_id() const noexcept {
+    return processor_id_;
+}
+
+double Cluster::remaining_capacity() const noexcept {
+    return static_cast<double>(processor_count()) - utilization();
+}
+
 std::size_t Cluster::processor_count() const noexcept {
-    return clock_domain_.processors().size();
+    return scheduler_.processor_count();
 }
 
 double Cluster::utilization() const noexcept {

@@ -29,6 +29,9 @@ target_sources(schedsim-algo PRIVATE
     src/ff_cap_adaptive_poly_allocator.cpp
     src/ff_lb_allocator.cpp
     src/mcts_allocator.cpp
+    src/first_fit_allocator.cpp
+    src/worst_fit_allocator.cpp
+    src/best_fit_allocator.cpp
 )
 
 target_include_directories(schedsim-algo PUBLIC

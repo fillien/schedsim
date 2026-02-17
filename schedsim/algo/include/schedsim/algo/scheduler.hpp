@@ -4,6 +4,8 @@
 #include <schedsim/core/task.hpp>
 #include <schedsim/core/types.hpp>
 
+#include <cstddef>
+
 namespace schedsim::algo {
 
 // Abstract interface for scheduling algorithms
@@ -20,6 +22,9 @@ public:
 
     // Get the total server utilization of this scheduler
     virtual double utilization() const = 0;
+
+    // Get the number of processors managed by this scheduler
+    virtual std::size_t processor_count() const noexcept = 0;
 
     // Set expected number of job arrivals for a task (for server detach tracking)
     virtual void set_expected_arrivals(const core::Task& /*task*/, std::size_t /*count*/) {}

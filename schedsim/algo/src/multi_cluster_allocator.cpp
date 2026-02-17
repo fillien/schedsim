@@ -43,6 +43,9 @@ void MultiClusterAllocator::on_job_arrival(core::Task& task, core::Job job) {
             w.type("task_placed");
             w.field("tid", static_cast<uint64_t>(task.id()));
             w.field("cluster_id", static_cast<uint64_t>(cluster->clock_domain().id()));
+            if (auto pid = cluster->processor_id()) {
+                w.field("cpu", static_cast<uint64_t>(*pid));
+            }
         });
         cluster->scheduler().on_job_arrival(task, std::move(job));
     } catch (const AdmissionError&) {

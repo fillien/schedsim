@@ -36,10 +36,12 @@ add_executable(schedsim_algo_tests
     csf_timer_policy_test.cpp
     allocators_test.cpp
     dvfs_dpm_utils_test.cpp
+    partitioned_edf_test.cpp
 )
 
 target_link_libraries(schedsim_algo_tests PRIVATE
     schedsim-algo
+    schedsim-io
     GTest::gtest_main
 )
 
