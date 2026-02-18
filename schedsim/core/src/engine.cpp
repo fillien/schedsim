@@ -15,15 +15,25 @@ Engine::Engine()
 
 Engine::~Engine() = default;
 
+void Engine::request_stop() noexcept {
+    stop_requested_ = true;
+}
+
+bool Engine::stop_requested() const noexcept {
+    return stop_requested_;
+}
+
 void Engine::run() {
-    while (!event_queue_.empty()) {
+    stop_requested_ = false;
+    while (!event_queue_.empty() && !stop_requested_) {
         process_timestep();
     }
     emit_sim_finished();
 }
 
 void Engine::run(TimePoint until) {
-    while (!event_queue_.empty()) {
+    stop_requested_ = false;
+    while (!event_queue_.empty() && !stop_requested_) {
         // Check if next event is beyond our stop time
         auto it = event_queue_.begin();
         if (it->first.time > until) {
@@ -33,14 +43,16 @@ void Engine::run(TimePoint until) {
         process_timestep();
     }
     // If queue becomes empty before reaching 'until', advance time
-    if (current_time_ < until) {
+    // (but not if we stopped early via request_stop)
+    if (!stop_requested_ && current_time_ < until) {
         current_time_ = until;
     }
     emit_sim_finished();
 }
 
 void Engine::run(std::function<bool()> stop_condition) {
-    while (!event_queue_.empty() && !stop_condition()) {
+    stop_requested_ = false;
+    while (!event_queue_.empty() && !stop_condition() && !stop_requested_) {
         process_timestep();
     }
     emit_sim_finished();

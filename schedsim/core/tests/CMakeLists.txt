@@ -28,6 +28,7 @@ add_executable(schedsim-core-tests
     dvfs_transition_test.cpp
     cstate_wakeup_test.cpp
     energy_tracker_test.cpp
+    engine_stop_test.cpp
 )
 
 target_link_libraries(schedsim-core-tests PRIVATE

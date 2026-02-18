@@ -42,6 +42,12 @@ public:
     void run(TimePoint until);                       // Stop at given time
     void run(std::function<bool()> stop_condition); // Stop when callback returns true
 
+    // Stop mechanism: request the engine to stop between timesteps
+    // The current timestep completes atomically; the flag is checked afterwards.
+    // Auto-resets at the start of each run() call.
+    void request_stop() noexcept;
+    [[nodiscard]] bool stop_requested() const noexcept;
+
     // Timer API (Decisions 5, 7, 52)
     // Throws InvalidStateError if when <= time() (Decision 7)
     // Throws AlreadyFinalizedError if finalized
@@ -120,6 +126,7 @@ private:
     bool finalized_{false};
     bool in_deferred_phase_{false};
     bool context_switch_enabled_{false};
+    bool stop_requested_{false};
 
     std::map<EventKey, Event> event_queue_;
     std::vector<DeferredCallback> deferred_callbacks_;
