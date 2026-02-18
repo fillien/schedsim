@@ -46,6 +46,10 @@ EdfScheduler::~EdfScheduler() {
     for (auto& [server, timer] : budget_timers_) {
         engine_.cancel_timer(timer);
     }
+    // Cancel all queued deadline timers
+    for (auto& [server, timer] : queued_deadline_timers_) {
+        engine_.cancel_timer(timer);
+    }
 }
 
 void EdfScheduler::on_job_arrival(core::Task& task, core::Job job) {
@@ -188,6 +192,10 @@ void EdfScheduler::set_deadline_miss_handler(
     deadline_miss_handler_ = std::move(handler);
 }
 
+void EdfScheduler::set_queued_deadline_miss_handler(std::function<void(core::Job&)> handler) {
+    queued_deadline_miss_handler_ = std::move(handler);
+}
+
 // Policy management
 
 void EdfScheduler::set_reclamation_policy(std::unique_ptr<ReclamationPolicy> policy) {
@@ -289,8 +297,9 @@ void EdfScheduler::on_job_completion(core::Processor& proc, core::Job& job) {
     // Capture job ID before any state changes
     uint64_t completed_job_id = server->last_enqueued_job_id();
 
-    // Cancel budget timer
+    // Cancel budget timer and any queued deadline timer
     cancel_budget_timer(*server);
+    cancel_queued_deadline_timer(*server);
 
     // Compute execution time since dispatch
     core::Duration remaining_budget = server->remaining_budget();
@@ -391,6 +400,11 @@ void EdfScheduler::on_deadline_miss(core::Processor& proc, core::Job& job) {
     // Look up server before any state changes (needed for trace and switch branches)
     CbsServer* server = find_server(job.task());
 
+    // Cancel any queued deadline timer (processor-based miss supersedes)
+    if (server) {
+        cancel_queued_deadline_timer(*server);
+    }
+
     // Emit trace event for deadline miss
     engine_.trace([&](core::TraceWriter& w) {
         w.type("deadline_miss");
@@ -485,16 +499,39 @@ void EdfScheduler::on_deadline_miss(core::Processor& proc, core::Job& job) {
             break;
         }
 
-        case DeadlineMissPolicy::StopSimulation:
-            // This would require engine support for stopping
-            // For now, just abort the job
+        case DeadlineMissPolicy::StopSimulation: {
+            // Capture task ID before dequeuing (dequeue invalidates the job reference)
+            auto task_id = static_cast<uint64_t>(job.task().id());
+
+            // Abort the job (same cleanup as AbortJob) then stop the engine
+            if (server) {
+                cancel_budget_timer(*server);
+                if (server->has_pending_jobs()) {
+                    server->dequeue_job();
+                }
+                server->complete_job(engine_.time());
+                if (server->state() == CbsServer::State::Inactive) {
+                    notify_server_state_change(*server,
+                        ReclamationPolicy::ServerStateChange::Completed);
+                    engine_.trace([&](core::TraceWriter& w) {
+                        w.type("serv_inactive");
+                        w.field("tid", task_id);
+                    });
+                }
+                server_to_processor_.erase(server);
+                processor_to_server_.erase(&proc);
+                last_dispatch_time_.erase(server);
+            }
             proc.clear();
             engine_.trace([&](core::TraceWriter& w) {
-                w.type("proc_idled");
+                w.type("sim_stopped");
+                w.field("reason", "deadline_miss");
+                w.field("tid", task_id);
                 w.field("cpu", static_cast<uint64_t>(proc.id()));
-                w.field("cluster_id", static_cast<uint64_t>(proc.clock_domain().id()));
             });
+            engine_.request_stop();
             break;
+        }
     }
 }
 
@@ -584,6 +621,15 @@ void EdfScheduler::dispatch_edf() {
     if (reclamation_policy_ && reclamation_policy_->needs_global_budget_recalculation()) {
         recalculate_all_budget_timers();
     }
+
+    // Set queued deadline timers for servers still in Ready state (not dispatched)
+    for (auto& server : servers_) {
+        if (server.state() == CbsServer::State::Ready
+            && server_to_processor_.count(&server) == 0
+            && server.current_job()) {
+            schedule_queued_deadline_timer(server);
+        }
+    }
 }
 
 void EdfScheduler::assign_server_to_processor(CbsServer& server, core::Processor& proc) {
@@ -595,6 +641,9 @@ void EdfScheduler::assign_server_to_processor(CbsServer& server, core::Processor
     // Get current job
     core::Job* job = server.current_job();
     assert(job != nullptr);
+
+    // Cancel queued deadline timer — processor takes over monitoring
+    cancel_queued_deadline_timer(server);
 
     // Assign job to processor
     proc.assign(*job);
@@ -706,6 +755,11 @@ void EdfScheduler::preempt_processor(core::Processor& proc) {
     // Remove mappings
     server_to_processor_.erase(server);
     processor_to_server_.erase(&proc);
+
+    // Set queued deadline timer for the preempted server (now in Ready state)
+    if (server->current_job()) {
+        schedule_queued_deadline_timer(*server);
+    }
 }
 
 // Budget timers
@@ -981,6 +1035,147 @@ void EdfScheduler::recalculate_all_budget_timers() {
                     core::EventPriority::TIMER_DEFAULT,
                     [this, server]() { on_budget_exhausted(*server); });
             }
+        }
+    }
+}
+
+// Queued deadline timers
+
+void EdfScheduler::schedule_queued_deadline_timer(CbsServer& server) {
+    // Only set timer for servers with a current job that are NOT on a processor
+    if (!server.current_job()) {
+        return;
+    }
+    if (server_to_processor_.count(&server) > 0) {
+        return;  // Server is dispatched — processor handles deadline monitoring
+    }
+
+    // Cancel any existing queued timer for this server
+    cancel_queued_deadline_timer(server);
+
+    core::Job* job = server.current_job();
+    core::TimePoint deadline = job->absolute_deadline();
+
+    // Clamp to now if deadline is in the past (fires at current timestep since
+    // add_timer allows when >= time())
+    core::TimePoint fire_time = std::max(deadline, engine_.time());
+
+    queued_deadline_timers_[&server] = engine_.add_timer(
+        fire_time,
+        core::EventPriority::TIMER_DEFAULT,
+        [this, &server]() { on_queued_deadline_miss(server); });
+}
+
+void EdfScheduler::cancel_queued_deadline_timer(CbsServer& server) {
+    auto it = queued_deadline_timers_.find(&server);
+    if (it != queued_deadline_timers_.end()) {
+        engine_.cancel_timer(it->second);
+        queued_deadline_timers_.erase(it);
+    }
+}
+
+void EdfScheduler::on_queued_deadline_miss(CbsServer& server) {
+    // Timer has fired — remove from map
+    queued_deadline_timers_.erase(&server);
+
+    core::Job* job = server.current_job();
+    if (!job) {
+        return;  // No job (server was drained concurrently)
+    }
+
+    // Capture IDs before any abort/dequeue that invalidates the job pointer
+    auto task_id = static_cast<uint64_t>(job->task().id());
+    auto job_id = static_cast<uint64_t>(server.last_enqueued_job_id());
+
+    // Emit trace event for queued deadline miss (no cpu field — not on a processor)
+    engine_.trace([&](core::TraceWriter& w) {
+        w.type("queued_deadline_miss");
+        w.field("tid", task_id);
+        w.field("job_id", job_id);
+    });
+
+    // Call custom handler if set
+    if (queued_deadline_miss_handler_) {
+        queued_deadline_miss_handler_(*job);
+    }
+
+    // Apply policy
+    switch (deadline_miss_policy_) {
+        case DeadlineMissPolicy::Continue:
+            // Just log and continue — job stays queued
+            break;
+
+        case DeadlineMissPolicy::AbortJob: {
+            cancel_budget_timer(server);
+            server.abort_queued_job();
+
+            if (server.state() == CbsServer::State::Inactive) {
+                notify_server_state_change(server,
+                    ReclamationPolicy::ServerStateChange::Completed);
+                engine_.trace([&](core::TraceWriter& w) {
+                    w.type("serv_inactive");
+                    w.field("tid", task_id);
+                });
+            } else if (server.current_job()) {
+                // More jobs remain — set new queued timer for next head job
+                schedule_queued_deadline_timer(server);
+            }
+            notify_utilization_changed();
+            request_resched();
+            break;
+        }
+
+        case DeadlineMissPolicy::AbortTask: {
+            cancel_budget_timer(server);
+
+            // Drain all queued jobs
+            while (server.has_pending_jobs()) {
+                if (server.state() == CbsServer::State::Ready) {
+                    server.abort_queued_job();
+                } else {
+                    break;
+                }
+            }
+
+            // Update total utilization
+            total_utilization_ -= server.utilization();
+
+            if (server.state() == CbsServer::State::Inactive) {
+                notify_server_state_change(server,
+                    ReclamationPolicy::ServerStateChange::Completed);
+                engine_.trace([&](core::TraceWriter& w) {
+                    w.type("serv_inactive");
+                    w.field("tid", task_id);
+                });
+            }
+
+            // Remove from task mapping
+            task_to_server_.erase(server.task());
+            notify_utilization_changed();
+            request_resched();
+            break;
+        }
+
+        case DeadlineMissPolicy::StopSimulation: {
+            cancel_budget_timer(server);
+            server.abort_queued_job();
+
+            if (server.state() == CbsServer::State::Inactive) {
+                notify_server_state_change(server,
+                    ReclamationPolicy::ServerStateChange::Completed);
+                engine_.trace([&](core::TraceWriter& w) {
+                    w.type("serv_inactive");
+                    w.field("tid", task_id);
+                });
+            }
+
+            engine_.trace([&](core::TraceWriter& w) {
+                w.type("sim_stopped");
+                w.field("reason", "queued_deadline_miss");
+                w.field("tid", task_id);
+            });
+            engine_.request_stop();
+            break;
         }
     }
 }

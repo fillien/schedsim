@@ -76,6 +76,7 @@ public:
     void set_admission_test(AdmissionTest test);
     void set_deadline_miss_policy(DeadlineMissPolicy policy);
     void set_deadline_miss_handler(std::function<void(core::Processor&, core::Job&)> handler);
+    void set_queued_deadline_miss_handler(std::function<void(core::Job&)> handler);
 
     // Policy management (Phase 6)
     void set_reclamation_policy(std::unique_ptr<ReclamationPolicy> policy);
@@ -130,6 +131,11 @@ private:
     void recalculate_all_budget_timers();
     void flush_running_server_times();
 
+    // Queued deadline timers (for jobs waiting in CBS server queue, not on a processor)
+    void schedule_queued_deadline_timer(CbsServer& server);
+    void cancel_queued_deadline_timer(CbsServer& server);
+    void on_queued_deadline_miss(CbsServer& server);
+
     // Helper to find server for a processor
     CbsServer* find_server_on_processor(core::Processor& proc);
 
@@ -154,6 +160,7 @@ private:
     std::unordered_map<CbsServer*, core::Processor*> server_to_processor_;
     std::unordered_map<core::Processor*, CbsServer*> processor_to_server_;
     std::unordered_map<CbsServer*, core::TimerId> budget_timers_;
+    std::unordered_map<CbsServer*, core::TimerId> queued_deadline_timers_;
 
     core::DeferredId resched_deferred_;
     double total_utilization_{0.0};
@@ -162,6 +169,7 @@ private:
     AdmissionTest admission_test_{AdmissionTest::CapacityBound};
     DeadlineMissPolicy deadline_miss_policy_{DeadlineMissPolicy::Continue};
     std::function<void(core::Processor&, core::Job&)> deadline_miss_handler_;
+    std::function<void(core::Job&)> queued_deadline_miss_handler_;
 
     // Track last dispatch time per server for budget consumption calculation
     std::unordered_map<CbsServer*, core::TimePoint> last_dispatch_time_;

@@ -82,6 +82,10 @@ public:
     // Running -> Ready (has jobs) or Inactive (no jobs): job completes
     void complete_job(core::TimePoint current_time);
 
+    // Ready: remove head job from queue (for queued deadline miss handling)
+    // Transitions to Inactive if queue becomes empty
+    void abort_queued_job();
+
     // Running -> Ready: budget exhausted, postpone deadline
     void exhaust_budget(core::TimePoint current_time);
 

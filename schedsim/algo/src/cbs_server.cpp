@@ -90,6 +90,18 @@ void CbsServer::complete_job(core::TimePoint /*current_time*/) {
     }
 }
 
+void CbsServer::abort_queued_job() {
+    assert(state_ == State::Ready && "Can only abort queued job from Ready state");
+    assert(!job_queue_.empty() && "Must have pending jobs to abort");
+
+    job_queue_.pop_front();
+
+    if (job_queue_.empty()) {
+        state_ = State::Inactive;
+    }
+    // Otherwise stay Ready with next job
+}
+
 void CbsServer::exhaust_budget(core::TimePoint /*current_time*/) {
     assert(state_ == State::Running && "Can only exhaust budget from Running state");
 

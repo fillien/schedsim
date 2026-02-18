@@ -37,6 +37,7 @@ add_executable(schedsim_algo_tests
     allocators_test.cpp
     dvfs_dpm_utils_test.cpp
     partitioned_edf_test.cpp
+    edf_deadline_miss_test.cpp
 )
 
 target_link_libraries(schedsim_algo_tests PRIVATE
