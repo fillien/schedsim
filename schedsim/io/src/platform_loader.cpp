@@ -291,7 +291,7 @@ void load_legacy_format(Engine& engine, const rapidjson::Document& doc) {
 
         // Create clock domain for this cluster
         auto& cd = platform.add_clock_domain(Frequency{freq_min}, Frequency{freq_max});
-        cd.set_frequency(Frequency{effective_freq});
+        cd.set_frequency(Frequency{freq_max});
 
         // Set discrete frequency modes from frequencies array
         if (cluster.HasMember("frequencies")) {

@@ -192,6 +192,29 @@ TEST_F(PlatformLoaderTest, LoadLegacyFormatWithPowerModel) {
     EXPECT_NEAR(power.mw, 0.1, 0.001);  // a0 term only
 }
 
+TEST_F(PlatformLoaderTest, LegacyInitialFrequencyIsFreqMax) {
+    // When effective_freq != freq_max, initial frequency should be freq_max
+    // (matching old simulator behavior). DVFS policies set the correct
+    // operating frequency at runtime.
+    const char* json = R"({
+        "clusters": [
+            {
+                "procs": 4,
+                "perf_score": 0.43,
+                "effective_freq": 600.0,
+                "frequencies": [200.0, 400.0, 600.0, 800.0, 1000.0, 1200.0, 1400.0]
+            }
+        ]
+    })";
+
+    load_platform_from_string(engine, json);
+
+    auto& cd = engine.platform().clock_domain(0);
+    EXPECT_DOUBLE_EQ(cd.frequency().mhz, 1400.0);      // initial = freq_max
+    EXPECT_DOUBLE_EQ(cd.freq_max().mhz, 1400.0);
+    EXPECT_DOUBLE_EQ(cd.freq_eff().mhz, 600.0);         // effective stored separately
+}
+
 // =============================================================================
 // Error Handling Tests
 // =============================================================================
