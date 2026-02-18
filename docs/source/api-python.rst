@@ -1,6 +1,6 @@
 API Python
 ==========
 
-.. automodule:: pyschedlib
+.. automodule:: pyschedsim
    :members:
    :undoc-members:

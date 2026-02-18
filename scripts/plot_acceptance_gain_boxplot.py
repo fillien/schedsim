@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# TODO: Rewrite to use Python API (pyschedsim)
 """
 Generate a box plot showing acceptance rate gain per utilization level.
 Gain = acceptance_rate(optimal_cap) - acceptance_rate(cap=1.0)

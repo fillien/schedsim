@@ -28,10 +28,10 @@ from typing import Optional
 # Configuration & constants
 # ---------------------------------------------------------------------------
 
-SKIP_FILES = {"ci-output.json", "ci-input.json", "ex1.json", "ex2.json"}
+SKIP_FILES = {"ci-input.json", "ex1.json", "ex2.json"}
 SCHEDULERS = ["grub", "pa", "ffa", "csf"]
 
-# Mapping from scheduler name to schedsim-new CLI flags
+# Mapping from scheduler name to schedsim CLI flags
 SCHED_FLAGS = {
     "grub": ["--reclaim", "grub"],
     "pa":   ["--reclaim", "grub", "--dvfs", "power-aware"],
@@ -868,7 +868,7 @@ class StateTracker:
 
 def run_simulation(schedsim: str, scenario: str, platform: str,
                    scheduler: str, extra_flags: list = None) -> Optional[list]:
-    """Run schedsim-new and return parsed trace, or None on failure."""
+    """Run schedsim and return parsed trace, or None on failure."""
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
         tmp_path = tmp.name
 
@@ -1371,7 +1371,7 @@ def main():
         help="Directory with generated scenarios (default: tests/scenarios/generated/)")
     parser.add_argument(
         "--schedsim", default=None,
-        help="Path to schedsim-new binary (default: build/apps/schedsim-new)")
+        help="Path to schedsim binary (default: build/apps/schedsim)")
     parser.add_argument(
         "-j", "--jobs", type=int, default=os.cpu_count(),
         help="Parallel workers (default: os.cpu_count())")
@@ -1399,7 +1399,7 @@ def main():
     platform_path = args.platform or str(repo_root / "platforms" / "exynos5422LITTLE.json")
     scenarios_dir = args.scenarios_dir or str(repo_root / "tests" / "scenarios")
     generated_dir = args.generated_dir or str(repo_root / "tests" / "scenarios" / "generated")
-    schedsim_path = args.schedsim or str(repo_root / "build" / "apps" / "schedsim-new")
+    schedsim_path = args.schedsim or str(repo_root / "build" / "apps" / "schedsim")
 
     # Validate paths
     if not os.path.isfile(platform_path):

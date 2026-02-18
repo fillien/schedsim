@@ -1,209 +1,370 @@
-#include <analyzers/stats.hpp>
-#include <protocols/hardware.hpp>
-#include <protocols/scenario.hpp>
-#include <protocols/traces.hpp>
-#include <simulator/allocator.hpp>
-#include <simulator/allocators/counting.hpp>
-#include <simulator/allocators/ff_cap_adaptive_linear.hpp>
-#include <simulator/allocators/ff_cap_adaptive_poly.hpp>
-#include <simulator/engine.hpp>
-#include <simulator/event.hpp>
-#include <simulator/factory.hpp>
-#include <simulator/platform.hpp>
-#include <simulator/task.hpp>
+#include <schedsim/core/engine.hpp>
+#include <schedsim/core/platform.hpp>
+#include <schedsim/core/types.hpp>
 
-#include <cstddef>
-#include <cstdlib>
+#include <schedsim/algo/cluster.hpp>
+#include <schedsim/algo/counting_allocator.hpp>
+#include <schedsim/algo/edf_scheduler.hpp>
+#include <schedsim/algo/error.hpp>
+#include <schedsim/algo/best_fit_allocator.hpp>
+#include <schedsim/algo/ff_big_first_allocator.hpp>
+#include <schedsim/algo/ff_cap_adaptive_linear_allocator.hpp>
+#include <schedsim/algo/ff_cap_adaptive_poly_allocator.hpp>
+#include <schedsim/algo/ff_cap_allocator.hpp>
+#include <schedsim/algo/ff_lb_allocator.hpp>
+#include <schedsim/algo/ff_little_first_allocator.hpp>
+#include <schedsim/algo/first_fit_allocator.hpp>
+#include <schedsim/algo/mcts_allocator.hpp>
+#include <schedsim/algo/multi_cluster_allocator.hpp>
+#include <schedsim/algo/worst_fit_allocator.hpp>
+
+#include <schedsim/io/error.hpp>
+#include <schedsim/io/metrics.hpp>
+#include <schedsim/io/platform_loader.hpp>
+#include <schedsim/io/scenario_injection.hpp>
+#include <schedsim/io/scenario_loader.hpp>
+#include <schedsim/io/trace_writers.hpp>
+
 #include <cxxopts.hpp>
-#include <exception>
-#include <filesystem>
-#include <fstream>
-#include <ios>
+
+#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <optional>
-#include <ostream>
-#include <print>
-#include <stdexcept>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-namespace fs = std::filesystem;
+namespace {
 
-struct AppConfig {
-        fs::path output_file{"logs.json"};
-        fs::path scenario_file{"scenario.json"};
-        fs::path platform_file{"platform.json"};
-        std::string sched;
-        std::string alloc;
-        bool active_delay{false};
-        std::optional<double> u_target;
-        std::unordered_map<std::string, std::string> alloc_args;
+namespace core = schedsim::core;
+namespace algo = schedsim::algo;
+namespace io = schedsim::io;
+
+struct Config {
+    std::string scenario_file;
+    std::string platform_file;
+    std::string alloc;
+    std::unordered_map<std::string, std::string> alloc_args;
+    std::optional<double> u_target;
+    std::string granularity{"per-cluster"};
+    std::string reclaim{"none"};
+    std::string dvfs{"none"};
+    double dvfs_cooldown_ms{0.0};
+    bool verbose{false};
 };
 
-auto parse_args(const int argc, const char** argv) -> AppConfig
-{
-        AppConfig config;
+Config parse_args(int argc, char** argv) {
+    cxxopts::Options options("alloc", "Multi-cluster allocator testing tool");
 
-        // clang-format off
-	cxxopts::Options options("schedsim", "GRUB Scheduler Simulation for a Given Task Set and Platform");
-	options.add_options()
-	    ("h,help", "Show this help message.")
-	    ("i,input", "Specify the scenario file.", cxxopts::value<std::string>())
-	    ("p,platform", "Specify the platform configuration file.", cxxopts::value<std::string>())
-	    ("a,alloc", "Specify the cluster allocator", cxxopts::value<std::string>())
-	    ("A,alloc-arg", "Allocator argument in key=value form (repeatable).",
-	        cxxopts::value<std::vector<std::string>>())
-	    ("s,sched", "Specify the scheduling policy to be used.", cxxopts::value<std::string>())
-	    ("o,output", "Specify the output file to write the simulation results.", cxxopts::value<std::string>())
-	    ("target", "Specify u_target for the LITTLE cluster", cxxopts::value<double>()->default_value("1"));
-        // clang-format on
+    // clang-format off
+    options.add_options()
+        ("i,input", "Scenario file (JSON)", cxxopts::value<std::string>())
+        ("p,platform", "Platform configuration (JSON)", cxxopts::value<std::string>())
+        ("a,alloc", "Allocator: ff_big_first, ff_little_first, ff_cap, "
+            "ff_cap_adaptive_linear, ff_cap_adaptive_poly, ff_lb, counting, mcts, "
+            "first_fit, worst_fit, best_fit",
+            cxxopts::value<std::string>())
+        ("g,granularity", "Granularity: per-cluster|per-core (default: per-cluster)",
+            cxxopts::value<std::string>()->default_value("per-cluster"))
+        ("A,alloc-arg", "Allocator argument key=value (repeatable)",
+            cxxopts::value<std::vector<std::string>>())
+        ("target", "u_target for LITTLE clusters (default: not set)",
+            cxxopts::value<double>())
+        ("reclaim", "Reclamation: none|grub|cash (default: none)",
+            cxxopts::value<std::string>()->default_value("none"))
+        ("dvfs", "DVFS: none|power-aware|ffa|csf|ffa-timer|csf-timer (default: none)",
+            cxxopts::value<std::string>()->default_value("none"))
+        ("dvfs-cooldown", "DVFS cooldown in ms (default: 0)",
+            cxxopts::value<double>()->default_value("0"))
+        ("v,verbose", "Verbose stderr output")
+        ("h,help", "Show help");
+    // clang-format on
 
-        const auto cli = options.parse(argc, argv);
+    auto result = options.parse(argc, argv);
 
-        if (cli.count("help") || cli.arguments().empty()) {
-                std::cout << options.help() << std::endl;
-                exit(cli.arguments().empty() ? EXIT_FAILURE : EXIT_SUCCESS);
+    if (result.count("help") != 0U) {
+        std::cout << options.help() << std::endl;
+        std::exit(0);
+    }
+
+    if (result.count("input") == 0U) {
+        std::cerr << "Error: --input is required" << std::endl;
+        std::exit(64);
+    }
+    if (result.count("platform") == 0U) {
+        std::cerr << "Error: --platform is required" << std::endl;
+        std::exit(64);
+    }
+    if (result.count("alloc") == 0U) {
+        std::cerr << "Error: --alloc is required" << std::endl;
+        std::exit(64);
+    }
+
+    Config config;
+    config.scenario_file = result["input"].as<std::string>();
+    config.platform_file = result["platform"].as<std::string>();
+    config.alloc = result["alloc"].as<std::string>();
+    config.granularity = result["granularity"].as<std::string>();
+    if (config.granularity != "per-cluster" && config.granularity != "per-core") {
+        std::cerr << "Error: --granularity must be 'per-cluster' or 'per-core'" << std::endl;
+        std::exit(64);
+    }
+    config.reclaim = result["reclaim"].as<std::string>();
+    config.dvfs = result["dvfs"].as<std::string>();
+    config.dvfs_cooldown_ms = result["dvfs-cooldown"].as<double>();
+    config.verbose = result.count("verbose") != 0U;
+
+    if (result.count("target") != 0U) {
+        config.u_target = result["target"].as<double>();
+    }
+
+    if (result.count("alloc-arg") != 0U) {
+        for (const auto& arg : result["alloc-arg"].as<std::vector<std::string>>()) {
+            auto eq = arg.find('=');
+            if (eq == std::string::npos) {
+                std::cerr << "Error: --alloc-arg must be key=value, got: " << arg << std::endl;
+                std::exit(64);
+            }
+            config.alloc_args[arg.substr(0, eq)] = arg.substr(eq + 1);
         }
+    }
 
-        if (cli.count("input")) { config.scenario_file = cli["input"].as<std::string>(); }
-        if (cli.count("platform")) { config.platform_file = cli["platform"].as<std::string>(); }
-        if (cli.count("sched")) { config.sched = cli["sched"].as<std::string>(); }
-        if (cli.count("alloc")) { config.alloc = cli["alloc"].as<std::string>(); }
-        if (cli.count("alloc-arg")) {
-                config.alloc_args =
-                    parse_allocator_args(cli["alloc-arg"].as<std::vector<std::string>>());
-        }
-        if (cli.count("output")) { config.output_file = cli["output"].as<std::string>(); }
-        if (cli.count("target")) { config.u_target = cli["target"].as<double>(); }
-
-        return config;
+    return config;
 }
 
-auto main(const int argc, const char** argv) -> int
-{
-        using namespace std;
-
-        const bool FREESCALING_ALLOWED{false};
-
-        try {
-                const auto config = parse_args(argc, argv);
-                const auto taskset = protocols::scenario::read_file(config.scenario_file);
-                const auto plat_config = protocols::hardware::read_file(config.platform_file);
-
-                Engine sim(config.active_delay);
-                auto plat = make_unique<Platform>(sim, FREESCALING_ALLOWED);
-                auto* plat_ptr = plat.get();
-                sim.platform(std::move(plat));
-                auto alloc = select_alloc(config.alloc, sim, config.alloc_args);
-
-                std::size_t cluster_id_cpt{1};
-                for (const protocols::hardware::Cluster& clu : plat_config.clusters) {
-                        auto newclu = std::make_unique<Cluster>(
-                            sim,
-                            cluster_id_cpt,
-                            clu.frequencies,
-                            clu.effective_freq,
-                            clu.perf_score,
-                            (clu.perf_score < 1 && config.u_target.has_value()
-                                 ? config.u_target.value()
-                                 : clu.perf_score));
-                        auto* clu_ptr = newclu.get();
-                        clu_ptr->create_procs(clu.nb_procs);
-                        auto sched = select_sched(config.sched, sim);
-                        alloc->add_child_sched(clu_ptr, std::move(sched));
-                        plat_ptr->add_cluster(std::move(newclu));
-                        cluster_id_cpt++;
-                }
-
-                // Keep raw pointer before moving ownership into engine
-                auto* alloc_raw = alloc.get();
-                sim.scheduler(std::move(alloc));
-
-                // Compute total utilization from taskset for adaptive allocators
-                double total_util = 0.0;
-                for (const auto& input_task : taskset.tasks) {
-                        total_util += input_task.utilization;
-                }
-
-                // Set expected total utilization for adaptive allocators
-                if (auto* adaptive_linear =
-                        dynamic_cast<allocators::FFCapAdaptiveLinear*>(alloc_raw)) {
-                        adaptive_linear->set_expected_total_util(total_util);
-                }
-                else if (auto* adaptive_poly =
-                             dynamic_cast<allocators::FFCapAdaptivePoly*>(alloc_raw)) {
-                        adaptive_poly->set_expected_total_util(total_util);
-                }
-
-                std::vector<std::unique_ptr<Task>> tasks;
-                tasks.reserve(taskset.tasks.size());
-                for (const auto& input_task : taskset.tasks) {
-                        auto new_task = make_unique<Task>(
-                            sim, input_task.id, input_task.period, input_task.utilization);
-                        auto* task_ptr = new_task.get();
-
-                        for (const auto& job : input_task.jobs) {
-                                sim.add_event(
-                                    events::JobArrival{
-                                        .task_of_job = task_ptr, .job_duration = job.duration},
-                                    job.arrival);
-                        }
-                        tasks.push_back(std::move(new_task));
-                }
-
-                std::print("simulate {} {}...", config.scenario_file.c_str(), config.alloc);
-                sim.simulation();
-                std::println("OK");
-
-                std::size_t result = 0;
-                if (config.alloc == "counting") {
-                        if (const auto* counting_alloc =
-                                dynamic_cast<const allocators::Counting*>(alloc_raw)) {
-                                result = counting_alloc->get_nb_alloc();
-                        }
-                        else {
-                                throw std::logic_error(
-                                    "counting allocator selection did not produce Counting instance");
-                        }
-                }
-                else {
-                        result = outputs::stats::count_rejected(sim.traces());
-                }
-
-                std::ofstream datafile("min_taskset_result.csv", std::ios::app);
-                if (!datafile) {
-                        std::cerr << "failed to open alloc-result.csv file" << std::endl;
-                        return EXIT_FAILURE;
-                }
-                if (config.alloc == "ff_cap") {
-                        std::string algo = config.alloc;
-                        if (config.u_target.has_value()) {
-                                algo += "_" + std::to_string(config.u_target.value());
-                        }
-                        datafile << config.scenario_file << ";" << algo << ";" << result
-                                 << std::endl;
-                }
-                else {
-                        datafile << config.scenario_file << ";" << config.alloc << ";" << result
-                                 << std::endl;
-                }
-                datafile.close();
-
-                return EXIT_SUCCESS;
+std::unique_ptr<algo::MultiClusterAllocator> make_allocator(
+    const Config& config, core::Engine& engine, std::vector<algo::Cluster*>& cluster_ptrs) {
+    if (config.alloc == "ff_big_first") {
+        return std::make_unique<algo::FFBigFirstAllocator>(engine, cluster_ptrs);
+    }
+    if (config.alloc == "ff_little_first") {
+        return std::make_unique<algo::FFLittleFirstAllocator>(engine, cluster_ptrs);
+    }
+    if (config.alloc == "ff_cap") {
+        return std::make_unique<algo::FFCapAllocator>(engine, cluster_ptrs);
+    }
+    if (config.alloc == "ff_cap_adaptive_linear") {
+        return std::make_unique<algo::FFCapAdaptiveLinearAllocator>(engine, cluster_ptrs);
+    }
+    if (config.alloc == "ff_cap_adaptive_poly") {
+        return std::make_unique<algo::FFCapAdaptivePolyAllocator>(engine, cluster_ptrs);
+    }
+    if (config.alloc == "ff_lb") {
+        return std::make_unique<algo::FFLbAllocator>(engine, cluster_ptrs);
+    }
+    if (config.alloc == "counting") {
+        return std::make_unique<algo::CountingAllocator>(engine, cluster_ptrs);
+    }
+    if (config.alloc == "first_fit") {
+        return std::make_unique<algo::FirstFitAllocator>(engine, cluster_ptrs);
+    }
+    if (config.alloc == "worst_fit") {
+        return std::make_unique<algo::WorstFitAllocator>(engine, cluster_ptrs);
+    }
+    if (config.alloc == "best_fit") {
+        return std::make_unique<algo::BestFitAllocator>(engine, cluster_ptrs);
+    }
+    if (config.alloc == "mcts") {
+        // Parse pattern from --alloc-arg pattern=0,1,0,...
+        std::vector<unsigned> pattern;
+        auto it = config.alloc_args.find("pattern");
+        if (it != config.alloc_args.end()) {
+            std::istringstream ss(it->second);
+            std::string token;
+            while (std::getline(ss, token, ',')) {
+                pattern.push_back(static_cast<unsigned>(std::stoul(token)));
+            }
         }
-        catch (const cxxopts::exceptions::parsing& e) {
-                std::cerr << "Error parsing options: " << e.what() << std::endl;
+        return std::make_unique<algo::MCTSAllocator>(engine, cluster_ptrs, std::move(pattern));
+    }
+
+    std::cerr << "Error: unknown allocator: " << config.alloc << std::endl;
+    std::exit(64);
+}
+
+} // anonymous namespace
+
+int main(int argc, char** argv) {
+    try {
+        auto config = parse_args(argc, argv);
+
+        if (config.verbose) {
+            std::cerr << "Loading platform from: " << config.platform_file << std::endl;
+            std::cerr << "Loading scenario from: " << config.scenario_file << std::endl;
         }
-        catch (const std::bad_cast& e) {
-                std::cerr << "Error parsing casting option: " << e.what() << std::endl;
+
+        // 1. Create engine and load platform
+        core::Engine engine;
+        io::load_platform(engine, config.platform_file);
+
+        // 2. Load scenario and inject tasks
+        auto scenario = io::load_scenario(config.scenario_file);
+        auto scenario_tasks = io::inject_scenario(engine, scenario);
+
+        // 3. Schedule job arrivals
+        for (std::size_t i = 0; i < scenario.tasks.size(); ++i) {
+            io::schedule_arrivals(engine, *scenario_tasks[i], scenario.tasks[i].jobs);
         }
-        catch (const std::invalid_argument& e) {
-                std::cerr << "Invalid argument: " << e.what() << std::endl;
+
+        // 4. Finalize platform
+        engine.platform().finalize();
+
+        // 5. Build clusters (deterministic order)
+        auto& platform = engine.platform();
+        double ref_freq_max = 0.0;
+        for (std::size_t i = 0; i < platform.clock_domain_count(); ++i) {
+            ref_freq_max = std::max(ref_freq_max, platform.clock_domain(i).freq_max().mhz);
         }
-        catch (const std::exception& e) {
-                std::cerr << "Error: " << e.what() << std::endl;
+
+        std::vector<std::unique_ptr<algo::EdfScheduler>> schedulers;
+        std::vector<std::unique_ptr<algo::Cluster>> clusters;
+        std::vector<algo::Cluster*> cluster_ptrs;
+
+        if (config.granularity == "per-core") {
+            // Per-core: one EdfScheduler + Cluster per processor
+            for (std::size_t i = 0; i < platform.processor_count(); ++i) {
+                auto& proc = platform.processor(i);
+                auto sched = std::make_unique<algo::EdfScheduler>(engine,
+                    std::vector<core::Processor*>{&proc});
+                double perf = proc.type().performance();
+                auto cluster = std::make_unique<algo::Cluster>(
+                    proc.clock_domain(), *sched, perf, ref_freq_max);
+                cluster->set_processor_id(proc.id());
+                cluster_ptrs.push_back(cluster.get());
+                schedulers.push_back(std::move(sched));
+                clusters.push_back(std::move(cluster));
+            }
+        } else {
+            // Per-cluster: one EdfScheduler + Cluster per ClockDomain
+            for (std::size_t i = 0; i < platform.clock_domain_count(); ++i) {
+                auto& cd = platform.clock_domain(i);
+                auto proc_span = cd.processors();
+                std::vector<core::Processor*> procs(proc_span.begin(), proc_span.end());
+                if (procs.empty()) continue;
+
+                auto sched = std::make_unique<algo::EdfScheduler>(engine, procs);
+                double perf = procs[0]->type().performance();
+                auto cluster =
+                    std::make_unique<algo::Cluster>(cd, *sched, perf, ref_freq_max);
+                cluster_ptrs.push_back(cluster.get());
+                schedulers.push_back(std::move(sched));
+                clusters.push_back(std::move(cluster));
+            }
         }
-        return EXIT_FAILURE;
+
+        if (config.verbose) {
+            std::cerr << "Built " << clusters.size() << " clusters ("
+                      << config.granularity << ")" << std::endl;
+        }
+
+        // 6. Apply u_target to LITTLE clusters
+        if (config.u_target.has_value()) {
+            for (auto* c : cluster_ptrs) {
+                if (c->perf() < 1.0) {
+                    c->set_u_target(*config.u_target);
+                }
+            }
+        }
+
+        // 7. Configure scheduler policies (skip DVFS/reclamation in per-core mode)
+        if (config.granularity == "per-core") {
+            if (config.reclaim != "none") {
+                std::cerr << "Warning: --reclaim " << config.reclaim
+                          << " ignored in per-core mode" << std::endl;
+            }
+            if (config.dvfs != "none") {
+                std::cerr << "Warning: --dvfs " << config.dvfs
+                          << " ignored in per-core mode" << std::endl;
+            }
+        } else {
+            for (auto& sched : schedulers) {
+                if (config.reclaim == "grub") {
+                    sched->enable_grub();
+                } else if (config.reclaim == "cash") {
+                    sched->enable_cash();
+                }
+
+                if (config.dvfs == "power-aware") {
+                    sched->enable_power_aware_dvfs(
+                        core::duration_from_seconds(config.dvfs_cooldown_ms / 1000.0));
+                } else if (config.dvfs == "ffa") {
+                    sched->enable_ffa(
+                        core::duration_from_seconds(config.dvfs_cooldown_ms / 1000.0));
+                } else if (config.dvfs == "csf") {
+                    sched->enable_csf(
+                        core::duration_from_seconds(config.dvfs_cooldown_ms / 1000.0));
+                } else if (config.dvfs == "ffa-timer") {
+                    sched->enable_ffa_timer(
+                        core::duration_from_seconds(config.dvfs_cooldown_ms / 1000.0));
+                } else if (config.dvfs == "csf-timer") {
+                    sched->enable_csf_timer(
+                        core::duration_from_seconds(config.dvfs_cooldown_ms / 1000.0));
+                }
+            }
+        }
+
+        // 8. Create allocator
+        auto allocator = make_allocator(config, engine, cluster_ptrs);
+
+        // 9. Set expected_total_util on adaptive allocators
+        double total_util = 0.0;
+        for (const auto& tp : scenario.tasks) {
+            total_util += core::duration_ratio(tp.wcet, tp.period);
+        }
+
+        if (auto* adaptive =
+                dynamic_cast<algo::FFCapAdaptiveLinearAllocator*>(allocator.get())) {
+            adaptive->set_expected_total_util(total_util);
+        } else if (auto* adaptive =
+                       dynamic_cast<algo::FFCapAdaptivePolyAllocator*>(allocator.get())) {
+            adaptive->set_expected_total_util(total_util);
+        }
+
+        // 10. Set up trace writer (in-memory for metrics)
+        io::MemoryTraceWriter trace_writer;
+        engine.set_trace_writer(&trace_writer);
+
+        if (config.verbose) {
+            std::cerr << "Running simulation with allocator: " << config.alloc << std::endl;
+        }
+
+        // 11. Run simulation
+        engine.run();
+
+        // 12. Compute result
+        std::size_t result = 0;
+        if (config.alloc == "counting") {
+            result = dynamic_cast<algo::CountingAllocator&>(*allocator).allocation_count();
+        } else {
+            auto metrics = io::compute_metrics(trace_writer.records());
+            result = metrics.rejected_tasks;
+        }
+
+        // 13. Print CSV line
+        std::string label = config.alloc;
+        if (config.alloc == "ff_cap" && config.u_target.has_value()) {
+            label += "_" + std::to_string(*config.u_target);
+        }
+        std::cout << config.scenario_file << ";" << label << ";" << result << std::endl;
+
+        return 0;
+    }
+    catch (const io::LoaderError& e) {
+        std::cerr << "Config error: " << e.what() << std::endl;
+        return 1;
+    }
+    catch (const algo::AdmissionError& e) {
+        std::cerr << "Admission failed: " << e.what() << std::endl;
+        return 2;
+    }
+    catch (const cxxopts::exceptions::parsing& e) {
+        std::cerr << "Invalid args: " << e.what() << std::endl;
+        return 64;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
+    }
 }

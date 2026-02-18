@@ -23,7 +23,6 @@
 
           buildInputs = with pkgs; [
             gtest
-            llvmPackages.openmp
             rapidjson  # Header-only JSON library
           ];
 
@@ -83,7 +82,6 @@
 
             # Libraries
             gtest
-            llvmPackages.openmp
             rapidjson
 
             # Python bindings (nanobind)

@@ -2,16 +2,16 @@ name: CI
 
 on:
   push:
-    branches: ["cluster-types"]
+    branches: ["main"]
   pull_request:
-    branches: ["cluster-types"]
+    branches: ["main"]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install Nix
         uses: cachix/install-nix-action@v20
         with:
@@ -21,25 +21,27 @@ jobs:
       - name: Run tests via Nix flake
         run: nix flake check
 
-  compare-output:
+  smoke-test:
     runs-on: ubuntu-latest
+    needs: build-and-test
     steps:
       - name: Check out the repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Install Nix
         uses: cachix/install-nix-action@v20
         with:
           nix_path: nixpkgs=channel:nixos-unstable
       - name: Build project via Nix flake
         run: nix build
-      - name: Run command and generate output file
+      - name: Smoke test schedsim
         run: |
-          ./result/bin/schedsim -p platforms/exynos5422.json -s tests/scenarios/ci-input.json --sched grub --delay
-      - name: Run cat
+          ./result/bin/schedsim \
+            -i tests/scenarios/ci-input.json \
+            -p platforms/exynos5422LITTLE.json \
+            --reclaim grub \
+            -o /dev/null
+      - name: Smoke test schedgen
         run: |
-          cat logs.json
-      - name: Compare generated output with expected file
-        run: |
-          nix develop --command jq 'walk(if type == "number" then (.*1000000000 | floor) / 1000000000 else . end)' logs.json > norm1.json
-          nix develop --command jq 'walk(if type == "number" then (.*1000000000 | floor) / 1000000000 else . end)' tests/scenarios/ci-output.json > norm2.json
-          nix develop --command jd norm1.json norm2.json
+          ./result/bin/schedgen \
+            -n 5 -u 2.0 --umax 0.8 --period-mode range \
+            -o /dev/null

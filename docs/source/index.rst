@@ -13,7 +13,7 @@
 
 Schedsim
 ========
-A suite of three tools for simulating the execution of multicore schedulers.
+A suite of tools for simulating the execution of multicore real-time schedulers.
 
 Installation
 ============
@@ -31,151 +31,127 @@ Then run the programs:
     $ result/bin/schedgen
     $ result/bin/schedsim
     $ result/bin/schedview
+    $ result/bin/alloc
 
 To compile the software using ``cmake``:
 
 .. code-block:: bash
 
     cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-
-.. code-block:: bash
-
     cmake --build build
 
 Then run the programs:
 
 .. code-block:: bash
 
-    $ build/schedgen/schedgen
-    $ build/schedsim/schedsim
-    $ build/schedview/schedview
+    $ build/apps/schedgen
+    $ build/apps/schedsim
+    $ build/apps/schedview
+    $ build/apps/alloc
 
 Usage
 =====
 
-.. raw:: html
-
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="doc/background-dark.svg">
-      <source media="(prefers-color-scheme: light)" srcset="doc/background.svg">
-      <img alt="Show a workflow diagram in order to chose the right program to use in the current step of simulation" src="doc/background.svg">
-    </picture>
-
 1. Use ``schedgen`` to generate new task sets with your parameters. Here, we
-   generate a scenario of 10 tasks with a total utilization of 3.9, a success
-   rate of 10%, a 10% compression ratio for the WCET, and tasks with a maximum
-   utilization of 1.
+   generate a scenario of 10 tasks with a total utilization of 3.9, maximum
+   per-task utilization of 1, and a simulation duration of 100 seconds.
 
    .. code-block:: bash
 
-       ./build/schedgen/schedgen taskset -t 10 -u 3.9 -s 0.1 -c 0.1 --umax 1 -o scenario.json
+       ./build/apps/schedgen -n 10 -u 3.9 --umax 1 --period-mode range -d 100 -o scenario.json
 
 2. Then, use ``schedsim`` to simulate the execution of your task set and specify a platform for it to run on.
 
    .. note::
        You can use the platforms provided in the ``platforms/`` folder.
 
-   In the following example, we use the LITTLE cluster of the exynos5422 (composed of four cores) to run the previously generated task set, and we schedule it with GRUB.
+   In the following example, we use the LITTLE cluster of the exynos5422 (composed of four cores) to run the previously generated task set, and we schedule it with GRUB reclamation.
 
    .. code-block:: bash
 
-       ./build/schedsim/schedsim -p platforms/exynos5422LITTLE.json --sched grub -s scenario.json
+       ./build/apps/schedsim -i scenario.json -p platforms/exynos5422LITTLE.json --reclaim grub -o trace.json
 
-3. Finally, use ``schedview`` to analyze the execution traces (in JSON) or generate graphs.
-   Here you can display all the events of the simulation performed in the previous state.
+3. Finally, use ``schedview`` to analyze the execution traces (in JSON) and compute metrics.
 
    .. code-block:: bash
 
-       ./build/schedview/schedview logs.json -p platforms/exynos5422LITTLE.json
-
-   .. code-block:: text
-
-       [135.92326] (         )                 resched:
-       [135.92326] (         )     virtual_time_update: tid = 1, virtual_time = 1028.9
-       [135.92326] (         )     virtual_time_update: tid = 8, virtual_time = 2549.3
-       [135.92326] (         )     virtual_time_update: tid = 2, virtual_time = 2565.2
-       [135.92326] (         ) serv_budget_replenished: tid = 1, budget = 529.88
-       [135.92326] (         ) serv_budget_replenished: tid = 8, budget = 88.013
-       [135.92326] (         )              proc_idled: cpu = 3
-       [135.92326] (         ) serv_budget_replenished: tid = 2, budget = 12.443
-       [148.36663] (+12.44337)   serv_budget_exhausted: tid = 2
-       [148.36663] (         )     virtual_time_update: tid = 2, virtual_time = 2800
-       [148.36663] (         )           serv_postpone: tid = 2, deadline = 5600
-       [148.36663] (         )                 resched:
-       [148.36663] (         )     virtual_time_update: tid = 1, virtual_time = 1123.1
-       [148.36663] (         )     virtual_time_update: tid = 8, virtual_time = 2782.7
-       [148.36663] (         )     virtual_time_update: tid = 2, virtual_time = 2800
-       [148.36663] (         )            serv_running: tid = 6
-       [148.36663] (         )          task_scheduled: tid = 6, cpu = 3
+       ./build/apps/schedview trace.json --energy --response-times
 
 In the following sections you'll find the options available for each command.
 
 Schedgen
 --------
 
-Task set generator for mono-core and multi-core systems.
+Task set generator (UUniFast-Discard with configurable period distributions).
 
-Usage: ``schedgen taskset [OPTION...]``
+Usage: ``schedgen [OPTION...]``
 
-- ``-h, --help``             Show this help message.
-- ``-t, --tasks arg``        Specify the number of tasks to generate.
-- ``-u, --totalu arg``       Set the total utilization of the task set.
-- ``-m, --umax arg``         Define the maximum utilization for a task (range: 0 to 1).
-- ``-s, --success arg``      Specify the success rate of deadlines met (range: 0 to 1).
-- ``-c, --compression arg``  Set the compression ratio for the tasks (range: 0 to 1).
-- ``-o, --output arg``       Output file to write the generated scenario.
-
-Platform configuration file generator.
-
-Usage: ``schedgen platform [OPTION...]``
-
-- ``-h, --help``        Show this help message.
-- ``-c, --cores arg``   Specify the number of processor cores.
-- ``-f, --freq arg``    Define the allowed operating frequencies.
-- ``-e, --eff arg``     Add an effective frequency (actual frequency that minimize the total energy consumption).
-- ``-p, --power arg``   Set the power model for the platform.
-- ``-o, --output arg``  Specify the output file to write the configuration.
+- ``-n, --tasks arg``        Number of tasks (required).
+- ``-u, --utilization arg``  Target total utilization (required, can exceed 1.0 for multicore).
+- ``--umin arg``             Min per-task utilization [0,1] (default: 0).
+- ``--umax arg``             Max per-task utilization [0,1] (default: 1).
+- ``-s, --success arg``      Success rate for deadline budget [0,1] (default: 1).
+- ``-c, --compression arg``  Compression ratio (min duration/WCET) [0,1] (default: 1).
+- ``--period-mode arg``      Period selection: 'harmonic' or 'range' (default: range).
+- ``--period-min arg``       Min period in ms (default: 10, range mode only).
+- ``--period-max arg``       Max period in ms (default: 1000, range mode only).
+- ``-d, --duration arg``     Simulation duration in seconds (range mode only).
+- ``--seed arg``             Random seed.
+- ``--batch arg``            Generate multiple scenarios.
+- ``--dir arg``              Output directory for batch mode.
+- ``-o, --output arg``       Output file (default: stdout).
+- ``-h, --help``             Show help.
 
 Schedsim
 --------
 
-GRUB scheduler simulation for a given task set and platform.
+Real-time scheduler simulator.
 
 Usage: ``schedsim [OPTION...]``
 
-- ``-h, --help``          Show this help message.
-- ``-s, --scenario arg``  Specify the scenario file.
-- ``-p, --platform arg``  Specify the platform configuration file.
-- ``    --sched arg``     Specify the scheduling policy to be used.
-- ``    --scheds``        List the available schedulers.
-- ``-o, --output arg``    Specify the output file to write the simulation results.
+- ``-i, --input arg``       Scenario file, JSON (required).
+- ``-p, --platform arg``    Platform configuration, JSON (required).
+- ``--reclaim arg``          Reclamation: none, grub, cash (default: none).
+- ``--dvfs arg``             DVFS: none, power-aware, ffa, csf (default: none).
+- ``--dvfs-cooldown arg``    DVFS cooldown in ms (default: 0).
+- ``--dpm arg``              DPM: none, basic (default: none).
+- ``--dpm-cstate arg``       Target C-state (default: 1).
+- ``-d, --duration arg``     Simulation duration in seconds (default: auto).
+- ``--energy``               Enable energy tracking.
+- ``--context-switch``       Enable context switch overhead.
+- ``--format arg``           Output format: json, null (default: json).
+- ``--metrics``              Print metrics to stderr.
+- ``-o, --output arg``       Trace output file (default: stdout).
+- ``-h, --help``             Show help.
 
 Schedview
 ---------
 
-Simulation trace analysis and plot generation tool (for post-simulation analysis of schedsim).
+Trace analyzer for post-simulation analysis.
 
-Usage: ``schedview [OPTION...] infile``
+Usage: ``schedview [OPTION...] <trace-file>``
 
-- ``-h, --help``              Show this help message.
-- ``-p, --print``             Print the trace logs.
-- ``-d, --directory arg``     Analyze all simulation traces within a directory.
-- ``-i, --index``             Add column names to table data.
-- ``-f, --frequency``         Print frequency change events.
-- ``-m, --cores``             Print active core count changes.
-- ``-r, --rtsched``           Generate an RTSched LaTeX file.
-- ``    --procmode``          Generate RTSched LaTeX file with processor mode.
-- ``-s, --svg``               Generate a GANTT chart in SVG format.
-- ``    --html``              Generate a GANTT chart in HTML format.
-- ``    --au``                Print active utilization metrics.
-- ``-e, --energy``            Print the energy used by the platform during the simulation.
-- ``    --duration``          Print task set execution duration.
-- ``    --preemptions``       Print the number of preemptions.
-- ``    --contextswitch``     Print the number of context switches.
-- ``    --rejected``          Print the number of tasks rejected by the admission test.
-- ``    --dpm-request``       Print the number of requests to change core C-state.
-- ``    --freq-request``      Print the number of requests to change frequency.
-- ``    --deadlines-rates``   Print the rate of missed deadlines.
-- ``    --deadlines-counts``  Print the count of missed deadlines.
-- ``    --platform arg``      Specify the hardware description file (default: platform.json).
-```
+- ``trace-file``             JSON trace file (positional).
+- ``-d, --directory arg``    Process all *.json traces in directory.
+- ``--deadline-misses``      Show deadline miss details.
+- ``--response-times``       Show response time statistics.
+- ``--energy``               Show energy breakdown.
+- ``--format arg``           Output format: text, csv, json (default: text).
+- ``-h, --help``             Show help.
+
+Alloc
+-----
+
+Multi-cluster allocator testing tool.
+
+Usage: ``alloc [OPTION...]``
+
+- ``-i, --input arg``       Scenario file (required).
+- ``-p, --platform arg``    Platform configuration (required).
+- ``-a, --alloc arg``       Allocator name (required).
+- ``-g, --granularity arg`` Granularity: per-cluster or per-core (default: per-cluster).
+- ``-A, --alloc-arg arg``   Allocator argument key=value (repeatable).
+- ``--target arg``           u_target for LITTLE clusters.
+- ``--reclaim arg``          Reclamation: none, grub, cash (default: none).
+- ``--dvfs arg``             DVFS: none, power-aware, ffa, csf, ffa-timer, csf-timer (default: none).
+- ``-h, --help``             Show help.

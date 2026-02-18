@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# TODO: Rewrite to use Python API (pyschedsim)
 
 SCEFILE=scenario.json
 MallocNanoZone=0

@@ -1370,10 +1370,9 @@ parameter sweeps, in-memory processing without disk I/O is critical.
     over-engineering. IDs are assigned sequentially during `add_*()`
     calls, starting from 0.
 
-71. **New code in same repository.** The new `schedsim/` directory lives
-    alongside the existing `schedlib/` directory. The old code stays
-    untouched during development. Directory hierarchy can be reorganized
-    later.
+71. **Code lives in `schedsim/` directory.** The three-library architecture
+    is implemented in `schedsim/{core,algo,io}/`. The legacy `schedlib/`
+    has been removed.
 
 72. **`proc.assign(Job&)` not `proc.assign(Task&)`.** Since Library 2
     manages the job queue (decision 59), Library 2 picks the specific

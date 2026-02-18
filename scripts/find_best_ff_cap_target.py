@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# TODO: Rewrite to use Python API (pyschedsim)
 from __future__ import annotations
 
 import argparse

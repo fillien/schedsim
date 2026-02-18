@@ -46,7 +46,6 @@ add_subdirectory(external/cxxopts)
 add_subdirectory(external/json)
 add_subdirectory(external/rang)
 add_subdirectory(external/tracy)
-add_subdirectory(schedlib)
 add_subdirectory(schedsim)
 add_subdirectory(apps)
 option(BUILD_PYTHON "Build Python bindings" ON)
@@ -56,7 +55,7 @@ endif()
 add_subdirectory(docs)
 
 install(
-  TARGETS schedsim schedview schedgen optimal
+  TARGETS schedsim schedview schedgen alloc
   EXPORT ${PROJECT_NAME}_Targets
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUEDIR}
 )

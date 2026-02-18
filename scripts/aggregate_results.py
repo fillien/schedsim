@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# TODO: Rewrite to use Python API (pyschedsim)
 
 """Aggregate scheduler simulation results and emit commands for missing runs."""
 from __future__ import annotations

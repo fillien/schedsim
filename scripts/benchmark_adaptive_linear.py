@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# TODO: Rewrite to use Python API (pyschedsim)
 """Benchmark ff_cap_adaptive_linear allocator against baseline.
 
 Generates a CSV with per-taskset absolute gains for statistical analysis.
