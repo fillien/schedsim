@@ -90,10 +90,10 @@ TEST_F(DVFSTransitionTest, InstantChangeNoDelay_WhileRunning) {
     EXPECT_TRUE(completion_called);
     EXPECT_TRUE(job.is_complete());
     EXPECT_EQ(proc2.state(), ProcessorState::Idle);
-    // Zero-delay path: frequency changes before update_consumed_work runs,
-    // so elapsed 1.0s is accounted at new speed 0.5 → 0.5 work done.
-    // Remaining 1.5 at speed 0.5 → 3.0s more. Completion at t=4.0.
-    EXPECT_NEAR(time_to_seconds(completion_time), 4.0, 0.001);
+    // Zero-delay path: consumed work is flushed at OLD speed before
+    // frequency change. Elapsed 1.0s at speed 1.0 → 1.0 work done.
+    // Remaining 1.0 at new speed 0.5 → 2.0s more. Completion at t=3.0.
+    EXPECT_NEAR(time_to_seconds(completion_time), 3.0, 0.001);
 }
 
 TEST_F(DVFSTransitionTest, DelayedChangeStartsTransition) {

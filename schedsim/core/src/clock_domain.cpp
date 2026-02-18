@@ -34,15 +34,23 @@ void ClockDomain::set_frequency(Frequency freq) {
 
     // If no delay or no engine, apply immediately
     if (transition_delay_ <= Duration::zero() || !engine_) {
+        // Flush consumed work at OLD speed before changing frequency.
+        // (Mirrors the async path where begin_dvfs() flushes before the change.)
+        for (Processor* proc : processors_) {
+            proc->update_consumed_work();
+        }
+
         Frequency old_freq = current_freq_;
         current_freq_ = freq;
+
         // Notify energy tracker of immediate frequency change
         if (engine_) {
             engine_->notify_frequency_change(*this, old_freq, freq);
         }
-        // Update consumed work and reschedule completion timers at new speed
+
+        // Reschedule completion timers at NEW speed
         for (Processor* proc : processors_) {
-            proc->notify_immediate_freq_change();
+            proc->reschedule_completion();
         }
         return;
     }
