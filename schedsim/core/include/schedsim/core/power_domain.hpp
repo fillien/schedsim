@@ -100,8 +100,10 @@ public:
     // Non-copyable, movable (Decision 61)
     PowerDomain(const PowerDomain&) = delete;
     PowerDomain& operator=(const PowerDomain&) = delete;
+    /// @cond INTERNAL
     PowerDomain(PowerDomain&&) = default;
     PowerDomain& operator=(PowerDomain&&) = default;
+    /// @endcond
 
 private:
     friend class Platform;

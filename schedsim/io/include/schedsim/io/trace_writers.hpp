@@ -3,7 +3,7 @@
 /// @file trace_writers.hpp
 /// @brief Concrete TraceWriter implementations for simulation output.
 ///
-/// Provides several writers that implement the @ref core::TraceWriter
+/// Provides several writers that implement the @ref schedsim::core::TraceWriter
 /// interface: a no-op writer for benchmarking, a JSON streaming writer,
 /// an in-memory buffer for post-processing, and a human-readable textual
 /// writer with optional ANSI colour output.

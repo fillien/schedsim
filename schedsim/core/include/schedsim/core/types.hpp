@@ -107,11 +107,10 @@ public:
         return Duration{-ns_};
     }
 
-    /// @brief Three-way comparison (defaulted).
+    /// @cond INTERNAL
     constexpr auto operator<=>(const Duration& rhs) const noexcept = default;
-
-    /// @brief Equality comparison (defaulted).
     constexpr bool operator==(const Duration& rhs) const noexcept = default;
+    /// @endcond
 };
 
 /// @brief Absolute simulation time as a Duration offset from epoch (time zero).
@@ -185,11 +184,10 @@ public:
         return since_epoch_ - rhs.since_epoch_;
     }
 
-    /// @brief Three-way comparison (defaulted).
+    /// @cond INTERNAL
     constexpr auto operator<=>(const TimePoint& rhs) const noexcept = default;
-
-    /// @brief Equality comparison (defaulted).
     constexpr bool operator==(const TimePoint& rhs) const noexcept = default;
+    /// @endcond
 };
 
 /// @brief Strong type for processor clock frequency in MHz.
@@ -197,8 +195,10 @@ public:
 struct Frequency {
     double mhz; ///< Frequency value in megahertz.
 
+    /// @cond INTERNAL
     constexpr bool operator==(const Frequency&) const = default;
     constexpr auto operator<=>(const Frequency&) const = default;
+    /// @endcond
 };
 
 /// @brief Strong type for power consumption in milliwatts.
@@ -206,8 +206,10 @@ struct Frequency {
 struct Power {
     double mw; ///< Power value in milliwatts.
 
+    /// @cond INTERNAL
     constexpr bool operator==(const Power&) const = default;
     constexpr auto operator<=>(const Power&) const = default;
+    /// @endcond
 };
 
 /// @brief Strong type for energy consumption in millijoules.
@@ -215,8 +217,10 @@ struct Power {
 struct Energy {
     double mj; ///< Energy value in millijoules.
 
+    /// @cond INTERNAL
     constexpr bool operator==(const Energy&) const = default;
     constexpr auto operator<=>(const Energy&) const = default;
+    /// @endcond
 
     /// @brief Accumulate energy.
     /// @param other Energy to add.

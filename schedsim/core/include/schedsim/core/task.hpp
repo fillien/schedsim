@@ -61,8 +61,10 @@ public:
     // Non-copyable, movable (Decision 61)
     Task(const Task&) = delete;
     Task& operator=(const Task&) = delete;
+    /// @cond INTERNAL
     Task(Task&&) = default;
     Task& operator=(Task&&) = default;
+    /// @endcond
 
 private:
     std::size_t id_;

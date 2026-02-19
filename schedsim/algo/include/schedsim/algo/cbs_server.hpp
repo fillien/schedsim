@@ -52,15 +52,12 @@ public:
     /// @return Server ID used for deterministic EDF tie-breaking.
     [[nodiscard]] std::size_t id() const noexcept { return id_; }
 
-    /// Non-copyable (has internal state, pointers).
+    /// @cond INTERNAL
     CbsServer(const CbsServer&) = delete;
-    /// Non-copyable.
     CbsServer& operator=(const CbsServer&) = delete;
-
-    /// Movable (for vector/container storage).
     CbsServer(CbsServer&&) = default;
-    /// Movable.
     CbsServer& operator=(CbsServer&&) = default;
+    /// @endcond
 
     ~CbsServer() = default;
 

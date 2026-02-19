@@ -27,8 +27,9 @@ struct EventKey {
     int priority;        ///< Secondary: lower values fire first within a timestep.
     uint64_t sequence;   ///< Tertiary: insertion order for determinism.
 
-    /// @brief Three-way comparison (defaulted, uses member order).
+    /// @cond INTERNAL
     auto operator<=>(const EventKey&) const = default;
+    /// @endcond
 };
 
 /// @brief Named constants for event dispatch priority.

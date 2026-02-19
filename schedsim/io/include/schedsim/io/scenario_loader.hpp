@@ -40,7 +40,7 @@ struct TaskParams {
 
 /// @brief Complete scenario definition: a collection of tasks and their jobs.
 ///
-/// Loaded from JSON via @ref load_scenario or built programmatically with
+/// Loaded from JSON via load_scenario or built programmatically with
 /// the generation utilities in scenario_generation.hpp.
 ///
 /// @ingroup io_loaders
@@ -51,7 +51,7 @@ struct ScenarioData {
 
 /// @brief Load a scenario from a JSON file.
 ///
-/// Auto-detects the JSON format and returns a @ref ScenarioData with all
+/// Auto-detects the JSON format and returns a ScenarioData with all
 /// tasks and their pre-computed job arrivals.
 ///
 /// @param path  Filesystem path to the JSON scenario file.
@@ -64,7 +64,7 @@ ScenarioData load_scenario(const std::filesystem::path& path);
 
 /// @brief Load a scenario from a JSON string.
 ///
-/// Parses @p json directly and returns the resulting @ref ScenarioData.
+/// Parses @p json directly and returns the resulting ScenarioData.
 ///
 /// @param json  JSON content describing the scenario.
 /// @return Parsed scenario data.

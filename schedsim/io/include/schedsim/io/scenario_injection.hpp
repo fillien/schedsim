@@ -32,7 +32,7 @@ std::vector<core::Task*> inject_scenario(core::Engine& engine, const ScenarioDat
 ///
 /// Registers timed arrival events for every job in @p jobs on the given
 /// @p task. Useful when tasks are created manually rather than through
-/// @ref inject_scenario.
+/// inject_scenario.
 ///
 /// @note Must be called **after** `Platform::finalize()`.
 ///

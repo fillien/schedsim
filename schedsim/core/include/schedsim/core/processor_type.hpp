@@ -50,8 +50,10 @@ public:
     // Non-copyable, movable (Decision 61)
     ProcessorType(const ProcessorType&) = delete;
     ProcessorType& operator=(const ProcessorType&) = delete;
+    /// @cond INTERNAL
     ProcessorType(ProcessorType&&) = default;
     ProcessorType& operator=(ProcessorType&&) = default;
+    /// @endcond
 
 private:
     std::size_t id_;

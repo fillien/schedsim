@@ -173,8 +173,10 @@ public:
     // Non-copyable, movable (Decision 61)
     Processor(const Processor&) = delete;
     Processor& operator=(const Processor&) = delete;
+    /// @cond INTERNAL
     Processor(Processor&&) = default;
     Processor& operator=(Processor&&) = default;
+    /// @endcond
 
 private:
     friend class ClockDomain;

@@ -62,7 +62,7 @@ public:
     ///
     /// @param task  The task whose expected arrival count is being set.
     /// @param count The total number of jobs expected from this task.
-    virtual void set_expected_arrivals(const core::Task& /*task*/, std::size_t /*count*/) {}
+    virtual void set_expected_arrivals(const core::Task& task, std::size_t count) {}
 
     virtual ~Scheduler() = default;
 };

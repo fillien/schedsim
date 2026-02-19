@@ -82,10 +82,10 @@ protected:
         double active_util, double max_util,
         std::size_t total_procs, const core::ClockDomain& domain) const;
 
-    core::Engine& engine_;
-    core::Duration dvfs_cooldown_;
-    int sleep_cstate_;
-    std::unordered_map<std::size_t, CooldownTimer> domain_cooldowns_;
+    core::Engine& engine_;                                            ///< Reference to the simulation engine.
+    core::Duration dvfs_cooldown_;                                     ///< Minimum interval between DVFS changes.
+    int sleep_cstate_;                                                 ///< C-state level for idle processors.
+    std::unordered_map<std::size_t, CooldownTimer> domain_cooldowns_;  ///< Per-domain cooldown timers.
 };
 
 } // namespace schedsim::algo

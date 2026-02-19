@@ -5,7 +5,7 @@
 ///
 /// Provides UUniFast-based utilization splitting, harmonic period selection,
 /// Weibull-distributed execution times, and convenience wrappers that produce
-/// complete @ref ScenarioData instances ready for simulation.
+/// complete ScenarioData instances ready for simulation.
 ///
 /// @ingroup io_generation
 
@@ -20,14 +20,14 @@ namespace schedsim::io {
 
 /// @brief Harmonic period set (microseconds).
 ///
-/// All ten periods divide the common hyperperiod @ref HYPERPERIOD_US = 25200,
+/// All ten periods divide the common hyperperiod HYPERPERIOD_US = 25200,
 /// ensuring that the generated task sets have a bounded hyperperiod.
 ///
 /// @ingroup io_generation
 inline constexpr std::array<int, 10> HARMONIC_PERIODS_US{
     25200, 12600, 8400, 6300, 5040, 4200, 3600, 3150, 2800, 2520};
 
-/// @brief Hyperperiod shared by all entries in @ref HARMONIC_PERIODS_US (microseconds).
+/// @brief Hyperperiod shared by all entries in HARMONIC_PERIODS_US (microseconds).
 /// @ingroup io_generation
 inline constexpr int HYPERPERIOD_US = 25200;
 
@@ -69,7 +69,7 @@ std::vector<double> uunifast_discard(
     double umax,
     std::mt19937& rng);
 
-/// @brief Configuration for the period distribution used by @ref generate_task_set.
+/// @brief Configuration for the period distribution used by generate_task_set.
 ///
 /// @ingroup io_generation
 struct PeriodDistribution {
@@ -82,7 +82,7 @@ struct PeriodDistribution {
 ///
 /// Splits @p target_utilization across @p num_tasks tasks using UUniFast,
 /// samples periods from @p period_dist, and derives WCETs accordingly.
-/// Does **not** generate job arrivals; call @ref generate_arrivals afterwards.
+/// Does **not** generate job arrivals; call generate_arrivals afterwards.
 ///
 /// @param num_tasks           Number of tasks to generate.
 /// @param target_utilization  Desired total utilization.
@@ -118,8 +118,8 @@ void generate_arrivals(
 
 /// @brief Generate a complete scenario (tasks + job arrivals) in one call.
 ///
-/// Convenience wrapper that calls @ref generate_task_set followed by
-/// @ref generate_arrivals and returns the result as a @ref ScenarioData.
+/// Convenience wrapper that calls generate_task_set followed by
+/// generate_arrivals and returns the result as a ScenarioData.
 ///
 /// @param num_tasks            Number of tasks to generate.
 /// @param target_utilization   Desired total utilization.
@@ -173,7 +173,7 @@ std::vector<JobParams> generate_weibull_jobs(
 
 /// @brief Pick a random period from the harmonic fixed set.
 ///
-/// Uniformly selects one of the ten entries in @ref HARMONIC_PERIODS_US and
+/// Uniformly selects one of the ten entries in HARMONIC_PERIODS_US and
 /// returns it as a @c core::Duration.
 ///
 /// @param rng  Mersenne Twister PRNG instance.
@@ -184,8 +184,8 @@ core::Duration pick_harmonic_period(std::mt19937& rng);
 
 /// @brief Full UUniFast-Discard + Weibull scenario generation.
 ///
-/// Combines @ref uunifast_discard for utilization splitting, harmonic period
-/// selection, and @ref generate_weibull_jobs for job generation into a single
+/// Combines uunifast_discard for utilization splitting, harmonic period
+/// selection, and generate_weibull_jobs for job generation into a single
 /// call. Task IDs start at 1 (legacy convention).
 ///
 /// @param num_tasks           Number of tasks.

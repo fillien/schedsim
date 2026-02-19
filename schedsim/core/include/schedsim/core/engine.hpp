@@ -53,6 +53,7 @@ public:
     Engine& operator=(Engine&&) = delete;
 
     /// @brief Returns the current simulation time.
+    /// @return Current simulation time.
     [[nodiscard]] TimePoint time() const noexcept { return current_time_; }
 
     /// @brief Run simulation until the event queue is empty.
@@ -73,6 +74,7 @@ public:
     void request_stop() noexcept;
 
     /// @brief Returns true if a stop has been requested.
+    /// @return True if request_stop() has been called.
     [[nodiscard]] bool stop_requested() const noexcept;
 
     /// @brief Schedule a one-shot timer.
@@ -131,6 +133,7 @@ public:
     void finalize();
 
     /// @brief Returns true if the engine has been finalized.
+    /// @return True after finalize() has been called.
     [[nodiscard]] bool is_finalized() const noexcept { return finalized_; }
 
     /// @brief Insert a raw event into the event queue.
@@ -140,8 +143,10 @@ public:
     void schedule_event(TimePoint when, int priority, Event event);
 
     /// @brief Access the simulation platform.
+    /// @return Reference to the platform.
     [[nodiscard]] Platform& platform() noexcept;
     /// @brief Access the simulation platform (const).
+    /// @return Const reference to the platform.
     [[nodiscard]] const Platform& platform() const noexcept;
 
     /// @brief Schedule a job arrival event for a task.
@@ -167,6 +172,7 @@ public:
     void enable_context_switch(bool enabled) noexcept { context_switch_enabled_ = enabled; }
 
     /// @brief Returns true if context switch overhead is enabled.
+    /// @return True if context switching is modelled.
     [[nodiscard]] bool context_switch_enabled() const noexcept { return context_switch_enabled_; }
 
     /// @brief Enable or disable energy tracking.
@@ -179,24 +185,29 @@ public:
     void enable_energy_tracking(bool enabled);
 
     /// @brief Returns true if energy tracking is enabled.
+    /// @return True if energy tracking was enabled before finalization.
     [[nodiscard]] bool energy_tracking_enabled() const noexcept;
 
     /// @brief Returns cumulative energy consumed by a processor.
     /// @param proc_id Processor index (0-based).
+    /// @return Cumulative energy for the processor.
     /// @throws InvalidStateError if energy tracking is disabled.
     [[nodiscard]] Energy processor_energy(std::size_t proc_id) const;
 
     /// @brief Returns cumulative energy consumed by a clock domain.
     /// @param cd_id Clock domain index (0-based).
+    /// @return Cumulative energy for the clock domain.
     /// @throws InvalidStateError if energy tracking is disabled.
     [[nodiscard]] Energy clock_domain_energy(std::size_t cd_id) const;
 
     /// @brief Returns cumulative energy consumed by a power domain.
     /// @param pd_id Power domain index (0-based).
+    /// @return Cumulative energy for the power domain.
     /// @throws InvalidStateError if energy tracking is disabled.
     [[nodiscard]] Energy power_domain_energy(std::size_t pd_id) const;
 
     /// @brief Returns total energy consumed across all domains.
+    /// @return Sum of all domain energies.
     /// @throws InvalidStateError if energy tracking is disabled.
     [[nodiscard]] Energy total_energy() const;
 

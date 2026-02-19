@@ -28,8 +28,9 @@ namespace schedsim::algo {
 /// @see FfaPolicy, CsfTimerPolicy, dvfs_dpm::apply_platform_target
 class FfaTimerPolicy : public FfaPolicy {
 public:
-    /// @brief Inherit FfaPolicy constructors.
+    /// @cond INTERNAL
     using FfaPolicy::FfaPolicy;
+    /// @endcond
 
     /// @brief Destructor cancels any pending timers.
     ~FfaTimerPolicy() override;

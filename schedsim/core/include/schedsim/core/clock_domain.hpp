@@ -158,8 +158,10 @@ public:
     // Non-copyable, movable (Decision 61)
     ClockDomain(const ClockDomain&) = delete;
     ClockDomain& operator=(const ClockDomain&) = delete;
+    /// @cond INTERNAL
     ClockDomain(ClockDomain&&) = default;
     ClockDomain& operator=(ClockDomain&&) = default;
+    /// @endcond
 
 private:
     friend class Platform;

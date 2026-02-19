@@ -31,6 +31,7 @@ class Engine;
 class Platform {
 public:
     /// @brief Construct a Platform owned by the given engine.
+    /// @param engine The simulation engine that owns this platform.
     explicit Platform(Engine& engine);
 
     /// @name Factory Methods
@@ -59,6 +60,9 @@ public:
     PowerDomain& add_power_domain(std::vector<CStateLevel> c_states);
 
     /// @brief Add a processor assigned to a type, clock domain, and power domain.
+    /// @param type Processor type describing the micro-architecture.
+    /// @param clock_domain Clock domain for frequency scaling.
+    /// @param power_domain Power domain for C-state management.
     /// @return Reference to the created Processor.
     Processor& add_processor(ProcessorType& type, ClockDomain& clock_domain,
                              PowerDomain& power_domain);
@@ -82,35 +86,81 @@ public:
 
     /// @name Collection Sizes
     /// @{
+
+    /// @brief Return the number of processor types.
+    /// @return Processor type count.
     [[nodiscard]] std::size_t processor_type_count() const noexcept { return processor_types_.size(); }
+    /// @brief Return the number of processors.
+    /// @return Processor count.
     [[nodiscard]] std::size_t processor_count() const noexcept { return processors_.size(); }
+    /// @brief Return the number of clock domains.
+    /// @return Clock domain count.
     [[nodiscard]] std::size_t clock_domain_count() const noexcept { return clock_domains_.size(); }
+    /// @brief Return the number of power domains.
+    /// @return Power domain count.
     [[nodiscard]] std::size_t power_domain_count() const noexcept { return power_domains_.size(); }
+    /// @brief Return the number of tasks.
+    /// @return Task count.
     [[nodiscard]] std::size_t task_count() const noexcept { return tasks_.size(); }
+
     /// @}
 
     /// @name Indexed Access
     /// @{
+
+    /// @brief Access a processor type by index.
+    /// @param idx Zero-based index.
+    /// @return Reference to the ProcessorType.
     [[nodiscard]] ProcessorType& processor_type(std::size_t idx) { return *processor_types_[idx]; }
+    /// @brief Access a processor by index.
+    /// @param idx Zero-based index.
+    /// @return Reference to the Processor.
     [[nodiscard]] Processor& processor(std::size_t idx) { return *processors_[idx]; }
+    /// @brief Access a clock domain by index.
+    /// @param idx Zero-based index.
+    /// @return Reference to the ClockDomain.
     [[nodiscard]] ClockDomain& clock_domain(std::size_t idx) { return *clock_domains_[idx]; }
+    /// @brief Access a power domain by index.
+    /// @param idx Zero-based index.
+    /// @return Reference to the PowerDomain.
     [[nodiscard]] PowerDomain& power_domain(std::size_t idx) { return *power_domains_[idx]; }
+    /// @brief Access a task by index.
+    /// @param idx Zero-based index.
+    /// @return Reference to the Task.
     [[nodiscard]] Task& task(std::size_t idx) { return *tasks_[idx]; }
 
+    /// @brief Access a processor type by index (const).
+    /// @param idx Zero-based index.
+    /// @return Const reference to the ProcessorType.
     [[nodiscard]] const ProcessorType& processor_type(std::size_t idx) const { return *processor_types_[idx]; }
+    /// @brief Access a processor by index (const).
+    /// @param idx Zero-based index.
+    /// @return Const reference to the Processor.
     [[nodiscard]] const Processor& processor(std::size_t idx) const { return *processors_[idx]; }
+    /// @brief Access a clock domain by index (const).
+    /// @param idx Zero-based index.
+    /// @return Const reference to the ClockDomain.
     [[nodiscard]] const ClockDomain& clock_domain(std::size_t idx) const { return *clock_domains_[idx]; }
+    /// @brief Access a power domain by index (const).
+    /// @param idx Zero-based index.
+    /// @return Const reference to the PowerDomain.
     [[nodiscard]] const PowerDomain& power_domain(std::size_t idx) const { return *power_domains_[idx]; }
+    /// @brief Access a task by index (const).
+    /// @param idx Zero-based index.
+    /// @return Const reference to the Task.
     [[nodiscard]] const Task& task(std::size_t idx) const { return *tasks_[idx]; }
+
     /// @}
 
     /// @brief Returns the reference performance used for heterogeneous scaling.
+    /// @return Reference performance factor.
     [[nodiscard]] double reference_performance() const noexcept { return reference_performance_; }
 
     /// @brief Finalize the platform, locking all collections.
     void finalize();
 
     /// @brief Returns true if the platform has been finalized.
+    /// @return True after finalize() has been called.
     [[nodiscard]] bool is_finalized() const noexcept { return finalized_; }
 
     Platform(const Platform&) = delete;

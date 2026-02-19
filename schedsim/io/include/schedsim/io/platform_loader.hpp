@@ -31,7 +31,7 @@ void load_platform(core::Engine& engine, const std::filesystem::path& path);
 /// @brief Load a platform definition from a JSON string.
 ///
 /// Parses @p json directly and populates the engine's platform. Behaves
-/// identically to @ref load_platform except the input comes from a string
+/// identically to load_platform except the input comes from a string
 /// rather than a file.
 ///
 /// @param engine  The simulation engine whose platform will be populated.

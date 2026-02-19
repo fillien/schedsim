@@ -101,14 +101,17 @@ public:
     [[nodiscard]] bool can_admit(core::Duration budget, core::Duration period) const override;
 
     /// @brief Returns the total utilization of all servers.
+    /// @return Total utilization as a dimensionless ratio.
     [[nodiscard]] double utilization() const override;
 
     /// @}
 
     /// @brief Returns a view of the managed processors.
+    /// @return Read-only span of processor pointers.
     [[nodiscard]] std::span<core::Processor* const> processors() const;
 
     /// @brief Returns the number of managed processors.
+    /// @return Processor count.
     [[nodiscard]] std::size_t processor_count() const noexcept override { return processors_.size(); }
 
     /// @brief Attempt to detach a server from the scheduler (M-GRUB).
@@ -155,11 +158,16 @@ public:
                                      CbsServer::OverrunPolicy policy = CbsServer::OverrunPolicy::Queue);
 
     /// @brief Find the CBS server for a task, or nullptr if none.
+    /// @param task The task to look up.
+    /// @return Pointer to the CBS server, or nullptr.
     [[nodiscard]] CbsServer* find_server(core::Task& task);
     /// @brief Find the CBS server for a task (const), or nullptr if none.
+    /// @param task The task to look up.
+    /// @return Const pointer to the CBS server, or nullptr.
     [[nodiscard]] const CbsServer* find_server(const core::Task& task) const;
 
     /// @brief Returns the number of CBS servers.
+    /// @return Server count.
     [[nodiscard]] std::size_t server_count() const noexcept { return servers_.size(); }
 
     /// @}
@@ -168,15 +176,19 @@ public:
     /// @{
 
     /// @brief Set the admission test mode.
+    /// @param test The admission test to use.
     void set_admission_test(AdmissionTest test);
 
     /// @brief Set the policy for handling deadline misses on processors.
+    /// @param policy The deadline miss policy to apply.
     void set_deadline_miss_policy(DeadlineMissPolicy policy);
 
     /// @brief Set a callback invoked when a running job misses its deadline.
+    /// @param handler Callback receiving the processor and job.
     void set_deadline_miss_handler(std::function<void(core::Processor&, core::Job&)> handler);
 
     /// @brief Set a callback invoked when a queued job misses its deadline.
+    /// @param handler Callback receiving the job.
     void set_queued_deadline_miss_handler(std::function<void(core::Job&)> handler);
 
     /// @}
@@ -185,12 +197,15 @@ public:
     /// @{
 
     /// @brief Set the bandwidth reclamation policy (GRUB or CASH).
+    /// @param policy Reclamation policy (ownership transferred).
     void set_reclamation_policy(std::unique_ptr<ReclamationPolicy> policy);
 
     /// @brief Set the DVFS frequency scaling policy.
+    /// @param policy DVFS policy (ownership transferred).
     void set_dvfs_policy(std::unique_ptr<DvfsPolicy> policy);
 
     /// @brief Set the DPM power management policy.
+    /// @param policy DPM policy (ownership transferred).
     void set_dpm_policy(std::unique_ptr<DpmPolicy> policy);
 
     /// @}
@@ -239,22 +254,28 @@ public:
     /// @{
 
     /// @brief Returns the sum of utilization for currently active servers.
+    /// @return Active utilization as a dimensionless ratio.
     [[nodiscard]] double active_utilization() const;
 
     /// @brief Returns the sum of utilization for servers in the scheduler (activated, not detached).
+    /// @return Scheduler utilization as a dimensionless ratio.
     [[nodiscard]] double scheduler_utilization() const;
 
     /// @brief Returns the maximum utilization among in-scheduler servers.
+    /// @return Maximum single-server utilization in the scheduler.
     [[nodiscard]] double max_scheduler_utilization() const;
 
     /// @brief Returns the maximum utilization among all servers.
+    /// @return Maximum single-server utilization.
     [[nodiscard]] double max_server_utilization() const;
 
     /// @}
 
     /// @brief Access the simulation engine.
+    /// @return Reference to the engine.
     [[nodiscard]] core::Engine& engine() noexcept { return engine_; }
     /// @brief Access the simulation engine (const).
+    /// @return Const reference to the engine.
     [[nodiscard]] const core::Engine& engine() const noexcept { return engine_; }
 
 private:

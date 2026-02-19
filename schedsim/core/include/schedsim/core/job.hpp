@@ -58,8 +58,10 @@ public:
     // Movable, not copyable (Decision 73)
     Job(const Job&) = delete;
     Job& operator=(const Job&) = delete;
+    /// @cond INTERNAL
     Job(Job&&) = default;
     Job& operator=(Job&&) = default;
+    /// @endcond
 
 private:
     Task* task_;

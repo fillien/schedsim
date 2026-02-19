@@ -94,8 +94,8 @@ struct SimulationMetrics {
 /// Iterates over @p traces and accumulates scheduling, energy, utilization,
 /// response-time, and migration statistics.
 ///
-/// @param traces  Vector of trace records (typically from @ref MemoryTraceWriter).
-/// @return Populated @ref SimulationMetrics.
+/// @param traces  Vector of trace records (typically from MemoryTraceWriter).
+/// @return Populated SimulationMetrics.
 ///
 /// @see compute_metrics_from_file, MemoryTraceWriter
 SimulationMetrics compute_metrics(const std::vector<TraceRecord>& traces);
@@ -103,10 +103,10 @@ SimulationMetrics compute_metrics(const std::vector<TraceRecord>& traces);
 /// @brief Compute aggregated metrics from a JSON trace file on disk.
 ///
 /// Opens the file at @p path, parses its trace records, and returns the
-/// same metrics as @ref compute_metrics.
+/// same metrics as compute_metrics.
 ///
 /// @param path  Filesystem path to a JSON trace file.
-/// @return Populated @ref SimulationMetrics.
+/// @return Populated SimulationMetrics.
 ///
 /// @throws LoaderError  If the file cannot be read or parsed.
 ///
@@ -131,7 +131,7 @@ struct ResponseTimeStats {
 ///
 /// @param response_times  Response times in seconds (must not be empty for
 ///                        meaningful results).
-/// @return A @ref ResponseTimeStats populated with min/max/mean/median/stddev
+/// @return A ResponseTimeStats populated with min/max/mean/median/stddev
 ///         and tail percentiles.
 ///
 ResponseTimeStats compute_response_time_stats(const std::vector<double>& response_times);
@@ -180,7 +180,7 @@ struct ConfigInterval {
 /// of intervals, one per cluster per constant-frequency span.
 ///
 /// @param traces  In-memory trace records.
-/// @return Sorted vector of @ref FrequencyInterval entries.
+/// @return Sorted vector of FrequencyInterval entries.
 ///
 /// @see FrequencyInterval, track_core_changes, track_config_changes
 std::vector<FrequencyInterval> track_frequency_changes(
@@ -192,7 +192,7 @@ std::vector<FrequencyInterval> track_frequency_changes(
 /// vector of intervals.
 ///
 /// @param traces  In-memory trace records.
-/// @return Sorted vector of @ref CoreCountInterval entries.
+/// @return Sorted vector of CoreCountInterval entries.
 ///
 /// @see CoreCountInterval, track_frequency_changes, track_config_changes
 std::vector<CoreCountInterval> track_core_changes(
@@ -204,7 +204,7 @@ std::vector<CoreCountInterval> track_core_changes(
 /// changed, giving a unified view of the system configuration over time.
 ///
 /// @param traces  In-memory trace records.
-/// @return Sorted vector of @ref ConfigInterval entries.
+/// @return Sorted vector of ConfigInterval entries.
 ///
 /// @see ConfigInterval, track_frequency_changes, track_core_changes
 std::vector<ConfigInterval> track_config_changes(

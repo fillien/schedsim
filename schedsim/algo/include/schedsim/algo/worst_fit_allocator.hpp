@@ -18,8 +18,9 @@ namespace schedsim::algo {
 /// @see MultiClusterAllocator, Cluster, Allocator, EdfScheduler
 class WorstFitAllocator : public MultiClusterAllocator {
 public:
-    /// @brief Inherit MultiClusterAllocator constructors.
+    /// @cond INTERNAL
     using MultiClusterAllocator::MultiClusterAllocator;
+    /// @endcond
 
 protected:
     /// @brief Select the admissible cluster with the most remaining capacity.
