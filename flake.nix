@@ -48,6 +48,41 @@
             ++ [ "-DBUILD_PYTHON=ON" ];
         });
 
+        schedsim-docs = pkgs.llvmPackages.stdenv.mkDerivation {
+          name = "schedsim-docs";
+          src = ./.;
+
+          nativeBuildInputs = with pkgs; [
+            cmake
+            ninja
+            doxygen
+            (python312.withPackages (ps: with ps; [
+              sphinx
+              breathe
+              furo
+              sphinx-copybutton
+            ]))
+          ];
+
+          buildInputs = with pkgs; [
+            gtest
+            rapidjson
+          ];
+
+          cmakeFlags = [
+            "-GNinja"
+            "-DCMAKE_BUILD_TYPE=Release"
+            "-DCMAKE_C_COMPILER=clang"
+            "-DCMAKE_CXX_COMPILER=clang++"
+            "-DBUILD_PYTHON=OFF"
+            "-DSCHEDSIM_BUILD_DOCS=ON"
+            "-DSCHEDSIM_BUILD_TESTS=OFF"
+          ];
+
+          buildPhase = "cmake --build . --target docs";
+          installPhase = "cp -r docs/html $out";
+        };
+
         schedsimTest = schedsim.overrideAttrs (old: {
           name = "schedsim-test";
 
@@ -64,6 +99,7 @@
       {
         packages.default = schedsim;
         packages.schedsim-python = schedsim-python;
+        packages.docs = schedsim-docs;
 
         checks.default = schedsimTest;
 
@@ -94,7 +130,7 @@
             nodejs_22
             nodePackages.npm
 
-            # Python environment
+            # Python environment (includes doc tools for sphinx-build)
             (python312.withPackages (ps: with ps; [
               pip
               jupytext
@@ -106,8 +142,16 @@
               jupyter
               jupyterlab
               scipy
+              # Documentation
+              sphinx
+              breathe
+              furo
+              sphinx-copybutton
             ]))
             black
+
+            # Documentation (non-Python)
+            doxygen
 
             # Utilities
             gnuplot

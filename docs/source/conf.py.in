@@ -1,0 +1,35 @@
+# conf.py.in — configured by CMake (@ONLY substitution)
+
+project = 'Schedsim'
+copyright = '2025-2026, François ILLIEN'
+author = 'François ILLIEN'
+release = '@PROJECT_VERSION@'
+
+extensions = [
+    'breathe',
+    'sphinx.ext.todo',
+    'sphinx_copybutton',
+]
+
+exclude_patterns = []
+
+# --- Breathe (Doxygen XML -> Sphinx) ---
+breathe_projects = {"schedsim": "@DOXYGEN_XML_OUTPUT@"}
+breathe_default_project = "schedsim"
+breathe_show_include = False
+breathe_default_members = ('members', 'undoc-members')
+
+# --- HTML output ---
+html_theme = 'furo'
+html_title = 'Schedsim Documentation'
+pygments_style = 'default'
+html_static_path = []
+html_extra_path = ['@SPHINX_SOURCE_DIR@/_extra']
+
+html_theme_options = {
+    "sidebar_hide_name": False,
+    "navigation_with_keys": True,
+}
+
+# --- Todo ---
+todo_include_todos = True

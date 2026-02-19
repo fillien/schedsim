@@ -1,38 +1,51 @@
-# Configure documentation generator
-# find_package(Doxygen REQUIRED dot)
-# find_package(Sphinx REQUIRED)
+if(NOT SCHEDSIM_BUILD_DOCS)
+  return()
+endif()
 
-# if(DOXYGEN_FOUND)
-#     set(DOXYGEN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-#     set(DOXYGEN_EXCLUDE_PATTERNS build */external/*)
-#     set(DOXYGEN_BUILTIN_STL_SUPPORT YES)
-#     set(DOXYGEN_CPP_CLI_SUPPORT YES)
-#     set(DOXYGEN_EXTRACT_ALL YES)
-#     set(DOXYGEN_EXTRACT_PRIVATE YES)
-#     set(DOXYGEN_HAVE_DOT YES)
-#     set(DOXYGEN_TRANSPARENT YES)
-#     set(DOXYGEN_TAB_SIZE 8)
-#     set(DOXYGEN_GENERATE_TODOLIST YES)
-#     set(DOXYGEN_GENERATE_XML YES)
+find_package(Doxygen REQUIRED)
+find_package(Sphinx REQUIRED)
 
-#     doxygen_add_docs(
-#             doxygen
-#             ${PROJECT_SOURCE_DIR}
-#             COMMENT "Generate XML documentation"
-#         )
+# --- Doxygen: generate XML from annotated headers ---
+set(DOXYGEN_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/doxygen")
+set(DOXYGEN_XML_OUTPUT "${DOXYGEN_OUTPUT_DIR}/xml")
 
-#     if (Sphinx_FOUND)
-#         set(SPHINX_SOURCE_DIR "${CMAKE_SOURCE_DIR}/docs/source")  # Path to your Sphinx source (e.g., where conf.py is)
-#         set(SPHINX_OUTPUT_DIR "${CMAKE_BINARY_DIR}/docs")  # Where to output the built docs
+configure_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile"
+  @ONLY
+)
 
-#         add_custom_target(docs
-#             COMMAND ${Sphinx_BUILD_EXECUTABLE} -b html
-#                     ${SPHINX_SOURCE_DIR} ${SPHINX_OUTPUT_DIR}
-#             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-#             COMMENT "Generating documentation with Sphinx"
-#             VERBATIM
-#         )
-#     endif()
-# else(DOXYGEN_FOUND)
-#     message("Doxygen need to be installed to generate the doxygen documentation")
-# endif(DOXYGEN_FOUND)
+add_custom_target(doxygen
+  COMMAND "${DOXYGEN_EXECUTABLE}" "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile"
+  WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+  COMMENT "Generating Doxygen XML"
+  VERBATIM
+)
+
+# --- Sphinx: generate HTML from RST + Doxygen XML via Breathe ---
+set(SPHINX_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/source")
+set(SPHINX_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/html")
+
+configure_file(
+  "${SPHINX_SOURCE_DIR}/conf.py.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/conf.py"
+  @ONLY
+)
+
+add_custom_target(docs
+  COMMAND "${Sphinx_BUILD_EXECUTABLE}" -b html
+    -c "${CMAKE_CURRENT_BINARY_DIR}"
+    "${SPHINX_SOURCE_DIR}"
+    "${SPHINX_OUTPUT_DIR}"
+  WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+  COMMENT "Building Sphinx HTML documentation"
+  DEPENDS doxygen
+  VERBATIM
+)
+
+# --- Install rule ---
+install(
+  DIRECTORY "${SPHINX_OUTPUT_DIR}/"
+  DESTINATION "share/doc/schedsim"
+  OPTIONAL
+)

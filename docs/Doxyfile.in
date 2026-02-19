@@ -1,0 +1,50 @@
+# Doxyfile.in — configured by CMake (paths substituted via @ONLY)
+
+PROJECT_NAME           = "Schedsim"
+PROJECT_BRIEF          = "Event-driven discrete simulator for multicore real-time scheduling"
+PROJECT_NUMBER         = @PROJECT_VERSION@
+
+# Input directories (all public headers)
+INPUT                  = @PROJECT_SOURCE_DIR@/schedsim/core/include \
+                         @PROJECT_SOURCE_DIR@/schedsim/algo/include \
+                         @PROJECT_SOURCE_DIR@/schedsim/io/include
+RECURSIVE              = YES
+FILE_PATTERNS          = *.hpp
+STRIP_FROM_PATH        = @PROJECT_SOURCE_DIR@
+STRIP_FROM_INC_PATH    = @PROJECT_SOURCE_DIR@/schedsim/core/include \
+                         @PROJECT_SOURCE_DIR@/schedsim/algo/include \
+                         @PROJECT_SOURCE_DIR@/schedsim/io/include
+
+# Only document items with Doxygen comments (forces proper annotation)
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+
+# C++ parsing
+BUILTIN_STL_SUPPORT    = YES
+CPP_CLI_SUPPORT        = NO
+
+# Output: XML only (Breathe consumes XML, Sphinx generates HTML)
+GENERATE_XML           = YES
+GENERATE_HTML          = NO
+GENERATE_LATEX         = NO
+GENERATE_MAN           = NO
+OUTPUT_DIRECTORY       = @DOXYGEN_OUTPUT_DIR@
+XML_OUTPUT             = xml
+
+# No Graphviz dependency
+HAVE_DOT               = NO
+
+# Documentation quality settings
+WARN_IF_UNDOCUMENTED   = YES
+WARN_NO_PARAMDOC       = YES
+WARN_AS_ERROR          = NO
+
+# Macro handling for attribute macros
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+PREDEFINED             = __attribute__(x)=
+
+# Misc
+TAB_SIZE               = 4
+QUIET                  = YES
