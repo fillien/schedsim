@@ -28,85 +28,233 @@ class DpmPolicy;
 class DvfsPolicy;
 class ReclamationPolicy;
 
-// EDF (Earliest Deadline First) scheduler with CBS servers
-// Manages a set of processors and dispatches jobs using EDF ordering
+/// @brief Earliest Deadline First scheduler with CBS bandwidth servers.
+///
+/// Manages a set of processors and dispatches jobs to CBS servers
+/// ordered by absolute deadline. Supports GRUB/CASH reclamation,
+/// DVFS frequency scaling policies (PA, FFA, CSF), and DPM power
+/// management.
+///
+/// Each task is assigned a CBS server via add_server(). When a job
+/// arrives, the scheduler replenishes the server budget (if needed),
+/// inserts the server into the EDF ready queue, and dispatches the
+/// highest-priority server to an available processor.
+///
+/// @par Example
+/// @code
+/// core::Engine engine;
+/// auto& plat = engine.platform();
+/// auto& pt = plat.add_processor_type("cpu", 1.0);
+/// auto& cd = plat.add_clock_domain(Frequency{500.0}, Frequency{2000.0});
+/// auto& pd = plat.add_power_domain(
+///     {{0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}});
+/// auto& proc = plat.add_processor(pt, cd, pd);
+/// auto& task = plat.add_task(
+///     duration_from_seconds(0.01),   // period: 10 ms
+///     duration_from_seconds(0.01),   // deadline: 10 ms
+///     duration_from_seconds(0.005)); // WCET: 5 ms
+/// engine.finalize();
+///
+/// algo::EdfScheduler sched(engine, {&proc});
+/// sched.add_server(task);
+/// sched.enable_grub();
+/// engine.run();
+/// @endcode
+///
+/// @see CbsServer, Scheduler, GrubPolicy, CashPolicy
+/// @ingroup algo_schedulers
 class EdfScheduler : public Scheduler {
 public:
-    // Construct with engine and processors to manage
+    /// @brief Construct an EDF scheduler managing the given processors.
+    /// @param engine Reference to the simulation engine.
+    /// @param processors Processors that this scheduler dispatches to.
     EdfScheduler(core::Engine& engine, std::vector<core::Processor*> processors);
     ~EdfScheduler() override;
 
-    // Non-copyable, non-movable (has callbacks registered with engine)
     EdfScheduler(const EdfScheduler&) = delete;
     EdfScheduler& operator=(const EdfScheduler&) = delete;
     EdfScheduler(EdfScheduler&&) = delete;
     EdfScheduler& operator=(EdfScheduler&&) = delete;
 
-    // Scheduler interface
+    /// @name Scheduler Interface
+    /// @{
+
+    /// @brief Handle a new job arrival for a task.
+    /// @param task The task that owns the arriving job.
+    /// @param job The new job instance.
     void on_job_arrival(core::Task& task, core::Job job) override;
+
+    /// @brief Set the expected number of job arrivals for a task.
+    ///
+    /// Used by M-GRUB for server detach: when all expected arrivals
+    /// have been received and the server becomes Inactive, the server
+    /// is detached from the scheduler to reduce active utilization.
+    ///
+    /// @param task The task to track.
+    /// @param count Total number of expected job arrivals.
     void set_expected_arrivals(const core::Task& task, std::size_t count) override;
+
+    /// @brief Test whether a new server with the given utilization can be admitted.
+    /// @param budget Requested server budget.
+    /// @param period Requested server period.
+    /// @return True if admitting the server would not exceed capacity.
     [[nodiscard]] bool can_admit(core::Duration budget, core::Duration period) const override;
+
+    /// @brief Returns the total utilization of all servers.
     [[nodiscard]] double utilization() const override;
 
-    // EdfScheduler-specific (not in abstract interface)
+    /// @}
+
+    /// @brief Returns a view of the managed processors.
     [[nodiscard]] std::span<core::Processor* const> processors() const;
+
+    /// @brief Returns the number of managed processors.
     [[nodiscard]] std::size_t processor_count() const noexcept override { return processors_.size(); }
 
-    // Server detach check (M-GRUB: remove server from scheduler when Inactive + no future jobs)
+    /// @brief Attempt to detach a server from the scheduler (M-GRUB).
+    ///
+    /// A server is detached when it is Inactive and all expected job
+    /// arrivals have been received. Detached servers no longer
+    /// contribute to active utilization.
+    ///
+    /// @param server The CBS server to try detaching.
     void try_detach_server(CbsServer& server);
 
-    // Server management
-    // Add a server with explicit budget and period (throws AdmissionError if over capacity)
+    /// @name Server Management
+    /// @{
+
+    /// @brief Add a CBS server for a task with explicit budget and period.
+    ///
+    /// The server utilization (budget/period) is checked against the
+    /// admission test. Throws AdmissionError if over capacity.
+    ///
+    /// @param task Task to associate with the server.
+    /// @param budget Server budget per period.
+    /// @param period Server replenishment period.
+    /// @param policy What to do when the budget is exhausted mid-job.
+    /// @return Reference to the created CbsServer.
+    /// @throws AdmissionError if admission test fails.
     CbsServer& add_server(core::Task& task, core::Duration budget, core::Duration period,
                           CbsServer::OverrunPolicy policy = CbsServer::OverrunPolicy::Queue);
 
-    // Add a server with task's WCET as budget and period
+    /// @brief Add a CBS server using the task's WCET as budget and the task's period.
+    /// @param task Task to associate with the server.
+    /// @return Reference to the created CbsServer.
     CbsServer& add_server(core::Task& task);
 
-    // Add a server without admission test (for testing or advanced use)
+    /// @brief Add a CBS server without running the admission test.
+    ///
+    /// Use for testing or advanced scenarios where the caller manages capacity.
+    ///
+    /// @param task Task to associate with the server.
+    /// @param budget Server budget per period.
+    /// @param period Server replenishment period.
+    /// @param policy What to do when the budget is exhausted mid-job.
+    /// @return Reference to the created CbsServer.
     CbsServer& add_server_unchecked(core::Task& task, core::Duration budget, core::Duration period,
                                      CbsServer::OverrunPolicy policy = CbsServer::OverrunPolicy::Queue);
 
-    // Server lookup
+    /// @brief Find the CBS server for a task, or nullptr if none.
     [[nodiscard]] CbsServer* find_server(core::Task& task);
+    /// @brief Find the CBS server for a task (const), or nullptr if none.
     [[nodiscard]] const CbsServer* find_server(const core::Task& task) const;
+
+    /// @brief Returns the number of CBS servers.
     [[nodiscard]] std::size_t server_count() const noexcept { return servers_.size(); }
 
-    // Configuration
+    /// @}
+
+    /// @name Configuration
+    /// @{
+
+    /// @brief Set the admission test mode.
     void set_admission_test(AdmissionTest test);
+
+    /// @brief Set the policy for handling deadline misses on processors.
     void set_deadline_miss_policy(DeadlineMissPolicy policy);
+
+    /// @brief Set a callback invoked when a running job misses its deadline.
     void set_deadline_miss_handler(std::function<void(core::Processor&, core::Job&)> handler);
+
+    /// @brief Set a callback invoked when a queued job misses its deadline.
     void set_queued_deadline_miss_handler(std::function<void(core::Job&)> handler);
 
-    // Policy management (Phase 6)
+    /// @}
+
+    /// @name Policy Management
+    /// @{
+
+    /// @brief Set the bandwidth reclamation policy (GRUB or CASH).
     void set_reclamation_policy(std::unique_ptr<ReclamationPolicy> policy);
+
+    /// @brief Set the DVFS frequency scaling policy.
     void set_dvfs_policy(std::unique_ptr<DvfsPolicy> policy);
+
+    /// @brief Set the DPM power management policy.
     void set_dpm_policy(std::unique_ptr<DpmPolicy> policy);
 
-    // Convenience methods for enabling policies
+    /// @}
+
+    /// @name Convenience Policy Methods
+    /// @brief Shorthand for creating and setting standard policies.
+    /// @{
+
+    /// @brief Enable GRUB bandwidth reclamation.
     void enable_grub();
+
+    /// @brief Enable CASH bandwidth reclamation.
     void enable_cash();
+
+    /// @brief Enable Power-Aware DVFS.
+    /// @param cooldown Minimum time between frequency changes.
     void enable_power_aware_dvfs(core::Duration cooldown = core::duration_from_seconds(0.0));
+
+    /// @brief Enable basic DPM (put idle cores to sleep).
+    /// @param target_cstate Target C-state for idle cores.
     void enable_basic_dpm(int target_cstate = 1);
+
+    /// @brief Enable FFA (Feedback-based Frequency Adaptation) with integrated DPM.
+    /// @param cooldown Minimum time between frequency changes.
+    /// @param sleep_cstate Target C-state for idle cores.
     void enable_ffa(core::Duration cooldown = core::duration_from_seconds(0.0), int sleep_cstate = 1);
+
+    /// @brief Enable CSF (Cluster-level Sleep Frequency) with integrated DPM.
+    /// @param cooldown Minimum time between frequency changes.
+    /// @param sleep_cstate Target C-state for idle cores.
     void enable_csf(core::Duration cooldown = core::duration_from_seconds(0.0), int sleep_cstate = 1);
+
+    /// @brief Enable timer-based FFA variant.
+    /// @param cooldown Minimum time between frequency changes.
+    /// @param sleep_cstate Target C-state for idle cores.
     void enable_ffa_timer(core::Duration cooldown = core::duration_from_seconds(0.0), int sleep_cstate = 1);
+
+    /// @brief Enable timer-based CSF variant.
+    /// @param cooldown Minimum time between frequency changes.
+    /// @param sleep_cstate Target C-state for idle cores.
     void enable_csf_timer(core::Duration cooldown = core::duration_from_seconds(0.0), int sleep_cstate = 1);
 
-    // Active utilization query (for DVFS integration)
+    /// @}
+
+    /// @name Utilization Queries
+    /// @{
+
+    /// @brief Returns the sum of utilization for currently active servers.
     [[nodiscard]] double active_utilization() const;
 
-    // "In-scheduler" utilization: sum of U_i for activated, non-detached servers (for PA DVFS)
+    /// @brief Returns the sum of utilization for servers in the scheduler (activated, not detached).
     [[nodiscard]] double scheduler_utilization() const;
 
-    // Max utilization among in-scheduler servers (for PA DVFS u_max)
+    /// @brief Returns the maximum utilization among in-scheduler servers.
     [[nodiscard]] double max_scheduler_utilization() const;
 
-    // Maximum individual server utilization (for FFA/CSF u_max)
+    /// @brief Returns the maximum utilization among all servers.
     [[nodiscard]] double max_server_utilization() const;
 
-    // Access to engine (for tests)
+    /// @}
+
+    /// @brief Access the simulation engine.
     [[nodiscard]] core::Engine& engine() noexcept { return engine_; }
+    /// @brief Access the simulation engine (const).
     [[nodiscard]] const core::Engine& engine() const noexcept { return engine_; }
 
 private:
