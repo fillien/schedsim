@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <random>
 #include <string>
 #include <variant>
 #include <vector>
@@ -41,6 +42,7 @@
 #include <schedsim/io/error.hpp>
 #include <schedsim/io/metrics.hpp>
 #include <schedsim/io/platform_loader.hpp>
+#include <schedsim/io/scenario_generation.hpp>
 #include <schedsim/io/scenario_injection.hpp>
 #include <schedsim/io/scenario_loader.hpp>
 #include <schedsim/io/trace_writers.hpp>
@@ -695,4 +697,25 @@ NB_MODULE(pyschedsim, m) {
             tasks.push_back(&platform.task(i));
         return tasks;
     }, "engine"_a, nb::rv_policy::reference);
+
+    // ========================================================================
+    // 12. Scenario generation
+    // ========================================================================
+
+    nb::class_<WeibullJobConfig>(m, "WeibullJobConfig")
+        .def(nb::init<>())
+        .def_rw("success_rate", &WeibullJobConfig::success_rate)
+        .def_rw("compression_rate", &WeibullJobConfig::compression_rate);
+
+    m.def("from_utilizations", [](const std::vector<double>& utils,
+                                   double success_rate,
+                                   double compression_rate,
+                                   unsigned seed) {
+        WeibullJobConfig config{success_rate, compression_rate};
+        std::mt19937 rng(seed);
+        auto tasks = from_utilizations(utils, config, rng);
+        ScenarioData scenario;
+        scenario.tasks = std::move(tasks);
+        return scenario;
+    }, "utilizations"_a, "success_rate"_a = 1.0, "compression_rate"_a = 1.0, "seed"_a = 42);
 }
