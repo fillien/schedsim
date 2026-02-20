@@ -261,6 +261,18 @@ Energy Engine::total_energy() const {
 }
 
 void Engine::emit_sim_finished() {
+    if (energy_tracker_) {
+        // Emit per-processor energy events before sim_finished
+        for (std::size_t i = 0; i < platform_->processor_count(); ++i) {
+            auto proc_energy = processor_energy(i);
+            trace([&](TraceWriter& w) {
+                w.type("energy");
+                w.field("proc", static_cast<uint64_t>(i));
+                w.field("energy_mj", proc_energy.mj);
+            });
+        }
+    }
+
     double energy_mj = energy_tracker_ ? total_energy().mj : 0.0;
     trace([&](TraceWriter& w) {
         w.type("sim_finished");
