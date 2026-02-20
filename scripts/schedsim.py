@@ -8,26 +8,22 @@ import concurrent.futures
 AllocatorArgValue = Union[str, int, float]
 
 class SchedSimRunner:
-    def __init__(self, executable_path: str = "schedsim"):
+    def __init__(self, executable_path: str = "./build/apps/alloc"):
         self.executable = executable_path
 
     def run_simulation(self,
                       input_file: Optional[str] = None,
                       platform_file: Optional[str] = None,
                       allocator: Optional[str] = None,
-                      scheduler: Optional[str] = None,
+                      reclaim: Optional[str] = None,
                       output_file: Optional[str] = None,
-                      delay: bool = False,
                       target: Optional[int] = 1,
                       show_help: bool = False,
-                      show_version: bool = False,
                       allocator_args: Optional[Mapping[str, AllocatorArgValue]] = None) -> tuple[int, str, str]:
         cmd = [self.executable]
 
         if show_help:
             cmd.append("--help")
-        elif show_version:
-            cmd.append("--version")
         else:
             if input_file:
                 cmd.extend(["--input", input_file])
@@ -38,25 +34,24 @@ class SchedSimRunner:
             if allocator_args:
                 for key, value in allocator_args.items():
                     cmd.extend(["--alloc-arg", f"{key}={value}"])
-            if scheduler:
-                cmd.extend(["--sched", scheduler])
+            if reclaim:
+                cmd.extend(["--reclaim", reclaim])
             if output_file:
                 cmd.extend(["--output", output_file])
             if target is not None:
                 cmd.extend(["--target", str(target)])
-            if delay:
-                cmd.append("--delay")
 
         try:
             process = subprocess.run(
                 cmd,
                 text=True,
+                capture_output=True,
                 check=True
             )
             return process.returncode, process.stdout, process.stderr
 
         except subprocess.CalledProcessError as e:
-            print(f"CalledProcessError: {str.join(" ", e.cmd)} | {e.stdout}")
+            print(f"CalledProcessError: {' '.join(e.cmd)} | {e.stdout}")
             return -1, "", "Error: CalledProcessError"
         except FileNotFoundError:
             print(f"Error: Executable '{self.executable}' not found")
@@ -69,7 +64,7 @@ class SchedSimRunner:
         self,
         sce_dir,
         alloc,
-        sched,
+        reclaim,
         platform,
         target,
         logs,
@@ -95,9 +90,8 @@ class SchedSimRunner:
                             os.path.join(current_dir, scenario),
                             platform,
                             alloc,
-                            sched,
+                            reclaim,
                             os.path.join(logs_dir, scenario),
-                            False,
                             target,
                             allocator_args=allocator_args
                         )
