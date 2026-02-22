@@ -33,8 +33,11 @@
 // Algo library
 #include <schedsim/algo/cbs_server.hpp>
 #include <schedsim/algo/cluster.hpp>
+#include <schedsim/algo/counting_allocator.hpp>
 #include <schedsim/algo/edf_scheduler.hpp>
 #include <schedsim/algo/error.hpp>
+#include <schedsim/algo/ff_cap_allocator.hpp>
+#include <schedsim/algo/multi_cluster_allocator.hpp>
 #include <schedsim/algo/scheduler.hpp>
 #include <schedsim/algo/single_scheduler_allocator.hpp>
 
@@ -279,6 +282,10 @@ NB_MODULE(pyschedsim, m) {
         .def_prop_ro("is_transitioning", &ClockDomain::is_transitioning)
         .def_prop_ro("freq_eff", &ClockDomain::freq_eff)
         .def("set_freq_eff", &ClockDomain::set_freq_eff, "freq"_a)
+        .def("get_processors", [](ClockDomain& self) {
+            auto span = self.processors();
+            return std::vector<Processor*>(span.begin(), span.end());
+        }, nb::rv_policy::reference)
         .def("set_power_coefficients", [](ClockDomain& self, nb::list coeffs_list) {
             if (nb::len(coeffs_list) != 4) {
                 throw std::invalid_argument("Expected a list of 4 floats [a0, a1, a2, a3]");
@@ -488,6 +495,20 @@ NB_MODULE(pyschedsim, m) {
         .def_prop_ro("processor_count", &Cluster::processor_count)
         .def_prop_ro("utilization", &Cluster::utilization)
         .def("can_admit", &Cluster::can_admit, "budget"_a, "period"_a);
+
+    nb::class_<Allocator>(m, "Allocator");
+    nb::class_<MultiClusterAllocator, Allocator>(m, "MultiClusterAllocator");
+
+    nb::class_<FFCapAllocator, MultiClusterAllocator>(m, "FFCapAllocator")
+        .def(nb::init<Engine&, std::vector<Cluster*>>(),
+             "engine"_a, "clusters"_a,
+             nb::keep_alive<1, 2>(), nb::keep_alive<1, 3>());
+
+    nb::class_<CountingAllocator, MultiClusterAllocator>(m, "CountingAllocator")
+        .def(nb::init<Engine&, std::vector<Cluster*>>(),
+             "engine"_a, "clusters"_a,
+             nb::keep_alive<1, 2>(), nb::keep_alive<1, 3>())
+        .def("allocation_count", &CountingAllocator::allocation_count);
 
     // ========================================================================
     // 6. IO structs
