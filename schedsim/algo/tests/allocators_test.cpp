@@ -332,27 +332,26 @@ TEST(FFCapAdaptiveLinearAllocatorTest, KnownModelValues) {
 TEST(FFCapAdaptivePolyAllocatorTest, ModelSetsUTarget) {
     Engine engine;
     auto plat = BigLittlePlatform::create(engine);
-    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(5.0));
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
     engine.platform().finalize();
 
     FFCapAdaptivePolyAllocator alloc(engine, plat.clusters_big_first());
-    alloc.set_expected_total_util(2.0);
+    alloc.set_expected_total_util(5.0);
 
-    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(5.0));
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(2.0));
     engine.run(time_from_seconds(0.5));
 
-    // umax=0.5, U=2.0
-    // C0 + C1*0.5 + C2*2.0 + C3*0.25 + C4*1.0 + C5*4.0
-    // = -0.285854319 + 1.169853995 + 0.063796954 + (-0.344100337) + (-0.037369647) + 0.030530928
-    // ≈ 0.596857574
-    EXPECT_NEAR(plat.little_cluster->u_target(), 0.597, 0.01);
+    // umax=0.2, U=5.0
+    // C0 + C1*0.2 + C2*5.0 + C3*0.04 + C4*1.0 + C5*25.0
+    // = -3.556483715 + 0.093087092 + 6.365803875 + (-0.112208653) + 0.651635123 + (-2.819627425)
+    // ≈ 0.622206298
+    EXPECT_NEAR(plat.little_cluster->u_target(), 0.622, 0.01);
 }
 
 TEST(FFCapAdaptivePolyAllocatorTest, KnownModelValues) {
     Engine engine;
     auto plat = BigLittlePlatform::create(engine);
-    // umax=0.0 => all terms with umax vanish
-    // target = C0 + C2*U + C5*U^2
+    // umax≈0 and U=0 => raw result is C0 ≈ -3.556, clamped to 0.0
     auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(0.001));
     engine.platform().finalize();
 
@@ -362,7 +361,7 @@ TEST(FFCapAdaptivePolyAllocatorTest, KnownModelValues) {
     engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(0.001));
     engine.run(time_from_seconds(0.5));
 
-    // C0 ≈ -0.286 => clamped to 0.0
+    // C0 ≈ -3.556 => clamped to 0.0
     EXPECT_DOUBLE_EQ(plat.little_cluster->u_target(), 0.0);
 }
 
