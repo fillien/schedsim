@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-# TODO: Rewrite to use Python API (pyschedsim)
+"""Sweep ff_cap u_target values and report the best one for a taskset bag.
+
+Uses pyschedsim for in-process simulation (no subprocess overhead).
+"""
 from __future__ import annotations
 
 import argparse
 import csv
-import subprocess
 import sys
 from pathlib import Path
-from tempfile import TemporaryDirectory
 from typing import Dict, Optional, Sequence
+
+import pyschedsim
 
 
 def parse_args() -> argparse.Namespace:
@@ -36,13 +39,13 @@ def parse_args() -> argparse.Namespace:
         "--initial-step",
         type=float,
         default=0.005,
-        help="Step size for the coarse sweep. Default: 0.02",
+        help="Step size for the coarse sweep. Default: 0.005",
     )
     parser.add_argument(
         "--min-step",
         type=float,
         default=0.00025,
-        help="Stop refining once the step falls below this value. Default: 0.0025",
+        help="Stop refining once the step falls below this value. Default: 0.00025",
     )
     parser.add_argument(
         "--refine-factor",
@@ -59,17 +62,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--platform",
         default="platforms/exynos5422.json",
-        help="Platform description passed to apps/alloc. Default: platforms/exynos5422.json",
+        help="Platform description JSON file. Default: platforms/exynos5422.json",
     )
     parser.add_argument(
         "--scheduler",
         default="grub",
-        help="Scheduler name passed to apps/alloc. Default: grub",
-    )
-    parser.add_argument(
-        "--alloc-binary",
-        default="build/apps/alloc",
-        help="Path to the apps/alloc executable. Default: build/apps/alloc",
+        help="Scheduler name: grub or cash. Default: grub",
     )
     parser.add_argument(
         "--min-tasksets",
@@ -79,7 +77,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--verbose",
         action="store_true",
-        help="Print per-run output from apps/alloc.",
+        help="Print per-run details.",
     )
     return parser.parse_args()
 
@@ -123,112 +121,68 @@ def locate_taskset_folder(base: Path, util_arg: str) -> Path:
     )
 
 
-def read_rejects_from_csv(csv_path: Path) -> int:
-    with csv_path.open(newline="") as handle:
-        reader = csv.reader(handle, delimiter=";")
-        rows = list(reader)
-    if not rows:  # pragma: no cover - defensive
-        raise RuntimeError(f"No rows written to {csv_path} by apps/alloc.")
-    try:
-        result_value = int(rows[-1][2])
-    except (IndexError, ValueError) as exc:  # pragma: no cover - defensive
-        raise RuntimeError(f"Unexpected CSV format in {csv_path}.") from exc
-    return result_value
-
-
-def run_alloc(
-    binary: Path,
-    platform: Path,
+def run_simulation(
+    platform_json: str,
+    scenario_data: pyschedsim.ScenarioData,
     scheduler: str,
-    allocator: str,
-    scenario: Path,
-    repo_root: Path,
-    verbose: bool,
     target: Optional[float] = None,
-) -> int:
-    target_str: Optional[str] = None
-    if target is not None:
-        target_formatted = float(f"{target:.6f}")
-        target_str = f"{target_formatted:.6f}"
-    with TemporaryDirectory(dir=repo_root) as temp_dir:
-        temp_path = Path(temp_dir)
-        cmd = [
-            str(binary),
-            "--platform",
-            str(platform),
-            "--sched",
-            scheduler,
-        ]
-        cmd.extend(["--alloc", allocator])
-        if target_str is not None:
-            cmd.extend(["--target", target_str])
-        cmd.extend(["--input", str(scenario)])
-        completed = subprocess.run(
-            cmd,
-            cwd=temp_path,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if verbose:
-            if completed.stdout:
-                sys.stdout.write(completed.stdout)
-            if completed.stderr:
-                sys.stdout.write(completed.stderr)
-            if completed.stdout or completed.stderr:
-                sys.stdout.flush()
-        if completed.returncode != 0:
-            raise RuntimeError(
-                "apps/alloc failed for allocator "
-                f"{allocator}"
-                + (f" target {target_str}" if target_str is not None else "")
-                + f" on {scenario}:\n"
-                f"STDOUT: {completed.stdout}\nSTDERR: {completed.stderr}"
-            )
-        csv_path = temp_path / "min_taskset_result.csv"
-        if not csv_path.exists():
-            raise RuntimeError(
-                "apps/alloc did not produce "
-                f"{csv_path}"
-                + (f" for target {target_str}" if target_str is not None else "")
-                + "."
-            )
-        rejects = read_rejects_from_csv(csv_path)
-    return rejects
+) -> tuple[int, int]:
+    """Run a single ff_cap simulation and return (rejected_arrivals, total_arrivals).
 
+    Total arrivals = total_jobs (placed) + rejected_arrivals.
+    """
+    engine = pyschedsim.Engine()
+    pyschedsim.load_platform_from_string(engine, platform_json)
+    tasks = pyschedsim.inject_scenario(engine, scenario_data)
+    for i, task in enumerate(tasks):
+        pyschedsim.schedule_arrivals(engine, task, scenario_data.tasks[i].jobs)
+    engine.platform.finalize()
 
-def collect_total_arrivals(
-    scenarios: Sequence[Path],
-    binary: Path,
-    platform: Path,
-    scheduler: str,
-    repo_root: Path,
-    verbose: bool,
-) -> Dict[Path, int]:
-    totals: Dict[Path, int] = {}
-    for scenario in scenarios:
-        total = run_alloc(
-            binary,
-            platform,
-            scheduler,
-            "counting",
-            scenario,
-            repo_root,
-            verbose,
-        )
-        totals[scenario] = total
-    return totals
+    # Build per-cluster schedulers and clusters
+    platform = engine.platform
+    ref_freq_max = max(
+        platform.clock_domain(i).freq_max
+        for i in range(platform.clock_domain_count)
+    )
+
+    schedulers = []
+    clusters = []
+    for i in range(platform.clock_domain_count):
+        cd = platform.clock_domain(i)
+        procs = cd.get_processors()
+        if not procs:
+            continue
+        sched = pyschedsim.EdfScheduler(engine, procs)
+        if scheduler == "grub":
+            sched.enable_grub()
+        elif scheduler == "cash":
+            sched.enable_cash()
+        perf = procs[0].type().performance
+        cluster = pyschedsim.Cluster(cd, sched, perf, ref_freq_max)
+        if target is not None and perf < 1.0:
+            cluster.set_u_target(target)
+        schedulers.append(sched)
+        clusters.append(cluster)
+
+    alloc = pyschedsim.FFCapAllocator(engine, clusters)
+
+    trace_writer = pyschedsim.MemoryTraceWriter()
+    engine.set_trace_writer(trace_writer)
+    engine.run()
+
+    metrics = trace_writer.compute_metrics()
+    rejected = metrics.rejected_arrivals
+    total = metrics.total_jobs + rejected
+    return rejected, total
 
 
 def evaluate_target(
     target: float,
-    scenarios: Sequence[Path],
-    scenario_totals: Dict[Path, int],
+    scenarios: Sequence[pyschedsim.ScenarioData],
     scenario_count: int,
-    binary: Path,
-    platform: Path,
+    scenario_files: Sequence[Path],
+    platform_json: str,
     scheduler: str,
-    repo_root: Path,
     verbose: bool,
 ) -> dict:
     cache: Dict[str, dict] = evaluate_target.cache  # type: ignore[attr-defined]
@@ -242,20 +196,12 @@ def evaluate_target(
     total_rejects = 0
     total_arrivals = 0
     sum_share = 0.0
-    for scenario in scenarios:
-        rejects = run_alloc(
-            binary,
-            platform,
-            scheduler,
-            "ff_cap",
-            scenario,
-            repo_root,
-            verbose,
-            target=target_formatted,
+    for i, scenario in enumerate(scenarios):
+        rejects, arrivals = run_simulation(
+            platform_json, scenario, scheduler, target=target_formatted,
         )
-        arrivals = scenario_totals[scenario]
         share = rejects / arrivals if arrivals else 0.0
-        per_scenario.append((scenario, rejects, arrivals, share))
+        per_scenario.append((scenario_files[i], rejects, arrivals, share))
         total_rejects += rejects
         total_arrivals += arrivals
         sum_share += share
@@ -285,10 +231,6 @@ def format_scenario(path: Path, repo_root: Path) -> str:
 def main() -> int:
     args = parse_args()
     repo_root = resolve_repo_root()
-
-    binary_path = (repo_root / args.alloc_binary).resolve()
-    if not binary_path.exists():
-        raise SystemExit(f"apps/alloc binary not found at {binary_path}.")
 
     platform_path = (repo_root / args.platform).resolve()
     if not platform_path.exists():
@@ -321,14 +263,12 @@ def main() -> int:
     if args.max_iters <= 0:
         raise SystemExit("Maximum iterations must be positive.")
 
-    scenario_totals = collect_total_arrivals(
-        scenario_files,
-        binary_path,
-        platform_path,
-        args.scheduler,
-        repo_root,
-        args.verbose,
-    )
+    # Load platform JSON once (reused for every simulation)
+    platform_json = platform_path.read_text()
+
+    # Load all scenarios once (ScenarioData objects are reused)
+    scenarios = [pyschedsim.load_scenario(str(f)) for f in scenario_files]
+
     evaluate_target.cache = {}  # type: ignore[attr-defined]
 
     print(
@@ -377,13 +317,11 @@ def main() -> int:
         for target in targets:
             entry = evaluate_target(
                 target,
-                scenario_files,
-                scenario_totals,
+                scenarios,
                 scenario_count,
-                binary_path,
-                platform_path,
+                scenario_files,
+                platform_json,
                 args.scheduler,
-                repo_root,
                 args.verbose,
             )
             if best_entry is None or entry["mean_share"] < best_entry["mean_share"] or (
