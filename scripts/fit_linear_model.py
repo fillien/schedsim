@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
 """
-Fit a linear model for adaptive allocator threshold prediction.
+Fit a linear or polynomial model for adaptive allocator threshold prediction.
 
-Reads optimal target search results and fits: target = A*umax + B*U + C
+Reads optimal target search results and fits:
+  Linear:     target = A*umax + B*U + C
+  Polynomial: target = C0 + C1*umax + C2*U + C3*umax² + C4*umax*U + C5*U²
 
 Usage:
+    # Linear fit for one directory:
     python scripts/fit_linear_model.py \
         --taskset-dir min_tasksets_umax_0133_umin_0025_tasks_55 \
         --cpp-format
+
+    # Polynomial fit across all directories:
+    python scripts/fit_linear_model.py \
+        --multi-dir min_tasksets_umax_* \
+        --poly --cpp-format
 """
 
 from __future__ import annotations
@@ -22,21 +30,27 @@ import numpy as np
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Fit linear model for adaptive allocator threshold.",
+        description="Fit linear/polynomial model for adaptive allocator threshold.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
         "--taskset-dir",
         type=Path,
-        required=True,
-        help="Directory containing utilization folders with taskset JSONs and search CSVs.",
+        help="Single directory containing utilization folders with taskset JSONs and search CSVs.",
+    )
+    group.add_argument(
+        "--multi-dir",
+        nargs="+",
+        type=Path,
+        help="Multiple directories (e.g. min_tasksets_umax_*). Each must contain util subfolders and search CSVs.",
     )
     parser.add_argument(
         "--search-dir",
         type=Path,
         default=None,
-        help="Directory containing ff_cap_search_*.csv files. Defaults to taskset-dir.",
+        help="Directory containing ff_cap_search_*.csv files. Defaults to taskset-dir. Only valid with --taskset-dir.",
     )
     parser.add_argument(
         "--output",
@@ -49,6 +63,11 @@ def parse_args() -> argparse.Namespace:
         "--cpp-format",
         action="store_true",
         help="Output coefficients in C++ constexpr format.",
+    )
+    parser.add_argument(
+        "--poly",
+        action="store_true",
+        help="Fit degree-2 polynomial: C0 + C1*umax + C2*U + C3*umax² + C4*umax*U + C5*U².",
     )
     parser.add_argument(
         "--verbose",
@@ -65,12 +84,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--no-umax",
         action="store_true",
-        help="Fit simpler model target = B*U + C (ignoring umax feature).",
+        help="Fit simpler model target = B*U + C (ignoring umax feature). Linear mode only.",
     )
     parser.add_argument(
         "--compare",
         action="store_true",
-        help="Compare both models (with and without umax) and show results.",
+        help="Compare both models (with and without umax) and show results. Linear mode only.",
     )
     return parser.parse_args()
 
@@ -162,15 +181,46 @@ def collect_training_data(
             "umax": umax,
             "optimal_target": optimal_target,
             "reject_share": reject_share,
+            "source": str(taskset_dir.name),
         })
 
         if verbose:
-            print(f"U={total_util:.1f}: umax={umax:.4f}, target={optimal_target:.6f}, reject={reject_share:.4f}")
+            print(f"  [{taskset_dir.name}] U={total_util:.1f}: umax={umax:.4f}, target={optimal_target:.6f}, reject={reject_share:.4f}")
 
     if skipped_count > 0:
         print(f"Skipped {skipped_count} degenerate data points (optimal target <= {min_target})")
 
     return np.array(features), np.array(targets), metadata
+
+
+def collect_multi_dir_training_data(
+    dirs: list[Path], verbose: bool = False, min_target: float = 0.0,
+) -> tuple[np.ndarray, np.ndarray, list[dict]]:
+    """Collect training data from multiple directories."""
+    all_features = []
+    all_targets = []
+    all_metadata = []
+    for d in sorted(dirs):
+        d = d.resolve()
+        if not d.is_dir():
+            print(f"Warning: skipping {d} - not a directory")
+            continue
+        if verbose:
+            print(f"Collecting from {d.name}...")
+        try:
+            X, y, meta = collect_training_data(d, d, verbose, min_target)
+        except FileNotFoundError as e:
+            print(f"Warning: skipping {d.name} - {e}")
+            continue
+        if len(y) > 0:
+            all_features.append(X)
+            all_targets.append(y)
+            all_metadata.extend(meta)
+
+    if not all_features:
+        raise FileNotFoundError("No training data found in any directory")
+
+    return np.vstack(all_features), np.concatenate(all_targets), all_metadata
 
 
 def fit_model(X: np.ndarray, y: np.ndarray, use_umax: bool = True) -> dict:
@@ -216,6 +266,46 @@ def fit_model(X: np.ndarray, y: np.ndarray, use_umax: bool = True) -> dict:
     return metrics
 
 
+def fit_poly_model(X: np.ndarray, y: np.ndarray) -> dict:
+    """Fit degree-2 polynomial: target = C0 + C1*umax + C2*U + C3*umax² + C4*umax*U + C5*U².
+
+    Returns dict with C0-C5 and fit metrics.
+    """
+    umax = X[:, 0]
+    U = X[:, 1]
+
+    # Design matrix: [1, umax, U, umax², umax*U, U²]
+    design = np.column_stack([
+        np.ones(len(X)),
+        umax,
+        U,
+        umax ** 2,
+        umax * U,
+        U ** 2,
+    ])
+
+    coeffs, residuals, rank, s = np.linalg.lstsq(design, y, rcond=None)
+    C0, C1, C2, C3, C4, C5 = coeffs
+
+    y_pred = design @ coeffs
+
+    ss_res = np.sum((y - y_pred) ** 2)
+    ss_tot = np.sum((y - np.mean(y)) ** 2)
+    r2 = 1 - (ss_res / ss_tot) if ss_tot > 0 else 0.0
+    mae = np.mean(np.abs(y - y_pred))
+
+    return {
+        "C0": C0,
+        "C1": C1,
+        "C2": C2,
+        "C3": C3,
+        "C4": C4,
+        "C5": C5,
+        "r2": r2,
+        "mae": mae,
+    }
+
+
 def format_cpp_output(metrics: dict) -> str:
     """Format coefficients as C++ constexpr declarations."""
     return f"""// Linear model coefficients: target = A*umax + B*U + C
@@ -225,29 +315,52 @@ constexpr double B_U = {metrics['coef_U']:.9f};
 constexpr double C_INTERCEPT = {metrics['intercept']:.9f};"""
 
 
+def format_cpp_poly_output(metrics: dict) -> str:
+    """Format polynomial coefficients as C++ constexpr declarations."""
+    return f"""// Polynomial model: target = C0 + C1*umax + C2*U + C3*umax² + C4*umax*U + C5*U²
+// R² = {metrics['r2']:.4f}, MAE = {metrics['mae']:.6f}
+constexpr double C0 = {metrics['C0']:> .9f};
+constexpr double C1 = {metrics['C1']:> .9f};
+constexpr double C2 = {metrics['C2']:> .9f};
+constexpr double C3 = {metrics['C3']:> .9f};
+constexpr double C4 = {metrics['C4']:> .9f};
+constexpr double C5 = {metrics['C5']:> .9f};"""
+
+
 def main() -> int:
     args = parse_args()
 
-    taskset_dir = args.taskset_dir.resolve()
-    if not taskset_dir.is_dir():
-        print(f"Error: taskset directory not found: {taskset_dir}")
-        return 1
+    if args.multi_dir:
+        dirs = [d.resolve() for d in args.multi_dir]
+        print(f"Multi-directory mode: {len(dirs)} directories")
+        print()
+        print("Collecting training data...")
+        try:
+            X, y, metadata = collect_multi_dir_training_data(dirs, args.verbose, args.min_target)
+        except FileNotFoundError as e:
+            print(f"Error: {e}")
+            return 1
+    else:
+        taskset_dir = args.taskset_dir.resolve()
+        if not taskset_dir.is_dir():
+            print(f"Error: taskset directory not found: {taskset_dir}")
+            return 1
 
-    search_dir = (args.search_dir or args.taskset_dir).resolve()
-    if not search_dir.is_dir():
-        print(f"Error: search directory not found: {search_dir}")
-        return 1
+        search_dir = (args.search_dir or args.taskset_dir).resolve()
+        if not search_dir.is_dir():
+            print(f"Error: search directory not found: {search_dir}")
+            return 1
 
-    print(f"Taskset directory: {taskset_dir}")
-    print(f"Search directory: {search_dir}")
-    print()
+        print(f"Taskset directory: {taskset_dir}")
+        print(f"Search directory: {search_dir}")
+        print()
 
-    print("Collecting training data...")
-    try:
-        X, y, metadata = collect_training_data(taskset_dir, search_dir, args.verbose, args.min_target)
-    except FileNotFoundError as e:
-        print(f"Error: {e}")
-        return 1
+        print("Collecting training data...")
+        try:
+            X, y, metadata = collect_training_data(taskset_dir, search_dir, args.verbose, args.min_target)
+        except FileNotFoundError as e:
+            print(f"Error: {e}")
+            return 1
 
     if len(y) < 3:
         print(f"Error: need at least 3 data points, got {len(y)}")
@@ -258,49 +371,71 @@ def main() -> int:
     print(f"  umax range: [{min(m['umax'] for m in metadata):.4f}, {max(m['umax'] for m in metadata):.4f}]")
     print(f"  target range: [{min(y):.4f}, {max(y):.4f}]")
 
-    use_umax = not args.no_umax
-
-    if args.compare:
-        # Compare both models
-        metrics_with_umax = fit_model(X, y, use_umax=True)
-        metrics_without_umax = fit_model(X, y, use_umax=False)
-
+    if args.poly:
+        metrics = fit_poly_model(X, y)
         print()
         print("=" * 60)
-        print("Model Comparison:")
-        print()
-        print("With umax (target = A*umax + B*U + C):")
-        print(f"  target = {metrics_with_umax['coef_umax']:.6f}*umax + {metrics_with_umax['coef_U']:.6f}*U + ({metrics_with_umax['intercept']:.6f})")
-        print(f"  R² = {metrics_with_umax['r2']:.4f}, MAE = {metrics_with_umax['mae']:.4f}")
-        print()
-        print("Without umax (target = B*U + C):")
-        print(f"  target = {metrics_without_umax['coef_U']:.6f}*U + ({metrics_without_umax['intercept']:.6f})")
-        print(f"  R² = {metrics_without_umax['r2']:.4f}, MAE = {metrics_without_umax['mae']:.4f}")
-        print("=" * 60)
-
-        # Use the model with umax for output
-        metrics = metrics_with_umax if use_umax else metrics_without_umax
-    else:
-        metrics = fit_model(X, y, use_umax=use_umax)
-
-        print()
-        print("=" * 60)
-        print("Model Results:")
-        if use_umax:
-            print(f"  target = {metrics['coef_umax']:.6f}*umax + {metrics['coef_U']:.6f}*U + ({metrics['intercept']:.6f})")
-        else:
-            print(f"  target = {metrics['coef_U']:.6f}*U + ({metrics['intercept']:.6f})")
+        print("Polynomial Model Results:")
+        print(f"  target = {metrics['C0']:.9f}")
+        print(f"         + {metrics['C1']:.9f} * umax")
+        print(f"         + {metrics['C2']:.9f} * U")
+        print(f"         + {metrics['C3']:.9f} * umax²")
+        print(f"         + {metrics['C4']:.9f} * umax·U")
+        print(f"         + {metrics['C5']:.9f} * U²")
         print(f"  R² = {metrics['r2']:.4f}")
-        print(f"  MAE = {metrics['mae']:.4f}")
+        print(f"  MAE = {metrics['mae']:.6f}")
         print("=" * 60)
 
-    if args.cpp_format:
-        cpp_output = format_cpp_output(metrics)
-        if args.output:
-            args.output.write_text(cpp_output + "\n")
-            print(f"\nC++ coefficients written to {args.output}")
+        if args.cpp_format:
+            cpp_output = format_cpp_poly_output(metrics)
+            if args.output:
+                args.output.write_text(cpp_output + "\n")
+                print(f"\nC++ coefficients written to {args.output}")
+            else:
+                print(f"\nC++ format:\n{cpp_output}")
+
+    else:
+        use_umax = not args.no_umax
+
+        if args.compare:
+            metrics_with_umax = fit_model(X, y, use_umax=True)
+            metrics_without_umax = fit_model(X, y, use_umax=False)
+
+            print()
+            print("=" * 60)
+            print("Model Comparison:")
+            print()
+            print("With umax (target = A*umax + B*U + C):")
+            print(f"  target = {metrics_with_umax['coef_umax']:.6f}*umax + {metrics_with_umax['coef_U']:.6f}*U + ({metrics_with_umax['intercept']:.6f})")
+            print(f"  R² = {metrics_with_umax['r2']:.4f}, MAE = {metrics_with_umax['mae']:.4f}")
+            print()
+            print("Without umax (target = B*U + C):")
+            print(f"  target = {metrics_without_umax['coef_U']:.6f}*U + ({metrics_without_umax['intercept']:.6f})")
+            print(f"  R² = {metrics_without_umax['r2']:.4f}, MAE = {metrics_without_umax['mae']:.4f}")
+            print("=" * 60)
+
+            metrics = metrics_with_umax if use_umax else metrics_without_umax
         else:
-            print(f"\nC++ format:\n{cpp_output}")
+            metrics = fit_model(X, y, use_umax=use_umax)
+
+            print()
+            print("=" * 60)
+            print("Model Results:")
+            if use_umax:
+                print(f"  target = {metrics['coef_umax']:.6f}*umax + {metrics['coef_U']:.6f}*U + ({metrics['intercept']:.6f})")
+            else:
+                print(f"  target = {metrics['coef_U']:.6f}*U + ({metrics['intercept']:.6f})")
+            print(f"  R² = {metrics['r2']:.4f}")
+            print(f"  MAE = {metrics['mae']:.4f}")
+            print("=" * 60)
+
+        if args.cpp_format:
+            cpp_output = format_cpp_output(metrics)
+            if args.output:
+                args.output.write_text(cpp_output + "\n")
+                print(f"\nC++ coefficients written to {args.output}")
+            else:
+                print(f"\nC++ format:\n{cpp_output}")
 
     return 0
 
