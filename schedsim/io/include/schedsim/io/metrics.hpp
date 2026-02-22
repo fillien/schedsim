@@ -60,9 +60,9 @@ struct SimulationMetrics {
     /// @brief Per-task deadline miss counts (task ID -> count).
     std::unordered_map<uint64_t, uint64_t> deadline_misses_per_task;
 
-    // -- Rejected tasks ------------------------------------------------------
+    // -- Rejected arrivals ---------------------------------------------------
 
-    uint64_t rejected_tasks{0};  ///< Number of tasks rejected by the admission test.
+    uint64_t rejected_arrivals{0};  ///< Number of job arrivals rejected by admission control.
 
     // -- Waiting times -------------------------------------------------------
 

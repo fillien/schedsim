@@ -595,7 +595,7 @@ NB_MODULE(pyschedsim, m) {
         .def_rw("context_switches", &SimulationMetrics::context_switches)
         .def_rw("total_energy_mj", &SimulationMetrics::total_energy_mj)
         .def_rw("average_utilization", &SimulationMetrics::average_utilization)
-        .def_rw("rejected_tasks", &SimulationMetrics::rejected_tasks)
+        .def_rw("rejected_arrivals", &SimulationMetrics::rejected_arrivals)
         .def_rw("cluster_migrations", &SimulationMetrics::cluster_migrations)
         .def_rw("transitions", &SimulationMetrics::transitions)
         .def_rw("core_state_requests", &SimulationMetrics::core_state_requests)

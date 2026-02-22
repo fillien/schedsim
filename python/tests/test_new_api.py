@@ -387,7 +387,7 @@ def test_simulation_metrics_struct():
     assert m.context_switches == 0
     assert m.total_energy_mj == 0.0
     assert m.average_utilization == 0.0
-    assert m.rejected_tasks == 0
+    assert m.rejected_arrivals == 0
     assert m.cluster_migrations == 0
     assert m.transitions == 0
     assert m.core_state_requests == 0

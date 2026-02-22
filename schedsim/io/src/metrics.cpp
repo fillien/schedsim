@@ -90,7 +90,7 @@ SimulationMetrics compute_metrics(const std::vector<TraceRecord>& traces) {
             metrics.deadline_misses_per_task[tid]++;
         }
         else if (record.type == "task_rejected") {
-            metrics.rejected_tasks++;
+            metrics.rejected_arrivals++;
         }
         else if (record.type == "frequency_update") {
             SimulationMetrics::FrequencyChange fc;

@@ -130,9 +130,9 @@ The ``SimulationMetrics`` struct contains:
    * - ``average_utilization``
      - double
      - Average processor utilization across all processors
-   * - ``rejected_tasks``
+   * - ``rejected_arrivals``
      - int
-     - Tasks rejected by admission control
+     - Job arrivals rejected by admission control
    * - ``cluster_migrations``
      - int
      - Tasks moved between clusters

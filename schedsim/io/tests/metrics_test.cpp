@@ -258,7 +258,7 @@ TEST_F(MetricsTest, RejectedTasks) {
     });
 
     auto metrics = compute_metrics(traces);
-    EXPECT_EQ(metrics.rejected_tasks, 2u);
+    EXPECT_EQ(metrics.rejected_arrivals, 2u);
 }
 
 TEST_F(MetricsTest, FrequencyChanges) {

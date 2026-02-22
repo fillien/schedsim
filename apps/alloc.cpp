@@ -339,7 +339,7 @@ int main(int argc, char** argv) {
             result = dynamic_cast<algo::CountingAllocator&>(*allocator).allocation_count();
         } else {
             auto metrics = io::compute_metrics(trace_writer.records());
-            result = metrics.rejected_tasks;
+            result = metrics.rejected_arrivals;
         }
 
         // 13. Print CSV line
