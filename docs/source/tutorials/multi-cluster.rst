@@ -7,9 +7,11 @@ allocators assign tasks to clusters based on utilization-aware heuristics.
 
 .. note::
 
-   Multi-cluster allocation is **C++ only**. The ``MultiClusterAllocator``,
-   ``FirstFitAllocator``, ``WorstFitAllocator``, and ``BestFitAllocator``
-   classes are not exposed in the Python bindings.
+   The Python bindings expose ``Cluster``, ``FFCapAllocator``, and
+   ``CountingAllocator`` for multi-cluster allocation. The generic bin-packing
+   allocators (``FirstFitAllocator``, ``WorstFitAllocator``,
+   ``BestFitAllocator``) and other C++ allocator variants remain C++ only.
+   See :doc:`../api-python/scheduling` for the Python API reference.
 
 Concepts
 --------

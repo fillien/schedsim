@@ -160,8 +160,10 @@ using the UUniFast-Discard algorithm.
 
 .. note::
 
-   Scenario generation is currently C++ only. The ``generate_scenario`` and
-   ``uunifast_discard`` functions are not exposed in the Python bindings.
+   The Python bindings expose ``from_utilizations()`` for generating task sets
+   programmatically. The lower-level functions ``generate_scenario`` and
+   ``uunifast_discard`` remain C++ only. See :doc:`../api-python/io` for
+   the Python generation API.
 
 Basic Generation
 ^^^^^^^^^^^^^^^^

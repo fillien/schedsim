@@ -21,6 +21,12 @@ CBS bandwidth servers, and EDF scheduling.
 
 .. toctree::
    :maxdepth: 2
+   :caption: Python API Reference
+
+   api-python/index
+
+.. toctree::
+   :maxdepth: 2
    :caption: Tutorials
 
    tutorials/index
