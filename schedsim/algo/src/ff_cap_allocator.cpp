@@ -16,8 +16,7 @@ Cluster* FFCapAllocator::select_cluster(const core::Task& task) {
               });
 
     for (auto* cluster : sorted) {
-        if (cluster->scaled_utilization(util) <= cluster->u_target() &&
-            cluster->can_admit(task.wcet(), task.period())) {
+        if (cluster->try_admit_scaled(util)) {
             return cluster;
         }
     }

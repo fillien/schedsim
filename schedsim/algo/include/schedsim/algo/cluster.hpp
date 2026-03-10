@@ -130,6 +130,22 @@ public:
     /// @see Scheduler::can_admit
     [[nodiscard]] bool can_admit(core::Duration budget, core::Duration period) const;
 
+    /// @brief Try to admit a task using cluster-level GFB with scaled utilization.
+    ///
+    /// Performs two checks using the cluster-local (scaled) utilization:
+    /// 1. GFB: total_scaled_util + scaled_util <= m - (m-1)*u_max_scaled
+    /// 2. u_target: scaled_util <= u_target
+    ///
+    /// If both pass, updates internal scaled-utilization tracking and returns true.
+    ///
+    /// @param task_util The task utilization in reference units.
+    /// @return True if the task was admitted.
+    bool try_admit_scaled(double task_util);
+
+    /// @brief Get the total scaled utilization of admitted tasks.
+    /// @return Total scaled utilization.
+    [[nodiscard]] double total_scaled_utilization() const noexcept { return total_scaled_utilization_; }
+
 private:
     core::ClockDomain& clock_domain_;
     Scheduler& scheduler_;
@@ -137,6 +153,8 @@ private:
     double reference_freq_max_;  // cluster[0].freq_max for cross-cluster normalization
     double u_target_{1.0};
     std::optional<std::size_t> processor_id_;
+    double total_scaled_utilization_{0.0};
+    double max_scaled_utilization_{0.0};
 };
 
 } // namespace schedsim::algo

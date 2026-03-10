@@ -4,6 +4,7 @@
 
 #include <schedsim/core/clock_domain.hpp>
 
+#include <algorithm>
 #include <optional>
 
 namespace schedsim::algo {
@@ -52,6 +53,29 @@ double Cluster::utilization() const noexcept {
 
 bool Cluster::can_admit(core::Duration budget, core::Duration period) const {
     return scheduler_.can_admit(budget, period);
+}
+
+bool Cluster::try_admit_scaled(double task_util) {
+    constexpr double epsilon = 1e-9;
+    double scaled = scaled_utilization(task_util);
+
+    // u_target check
+    if (scaled > u_target_ + epsilon) {
+        return false;
+    }
+
+    // GFB check with scaled utilization: capacity = m - (m-1)*u_max
+    auto m = static_cast<double>(processor_count());
+    double u_max = std::max(max_scaled_utilization_, scaled);
+    double capacity = (m > 1.0) ? m - (m - 1.0) * u_max : m;
+    if (total_scaled_utilization_ + scaled > capacity + epsilon) {
+        return false;
+    }
+
+    // Admit: update tracking
+    total_scaled_utilization_ += scaled;
+    max_scaled_utilization_ = u_max;
+    return true;
 }
 
 } // namespace schedsim::algo
