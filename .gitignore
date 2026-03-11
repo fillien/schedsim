@@ -25,6 +25,8 @@
 /iframe_figures
 /tmp
 /tasq_sim
+/acceptance_results
+/acceptance_results_exynos
 
 /*.png
 /*.tex
