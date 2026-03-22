@@ -8,6 +8,8 @@
 /data_*
 /alloc*
 /tasksets/
+/tasksets_*/
+/min_tasksets*/
 /vgcore.*
 /trace/stream
 /rtsched.sty
