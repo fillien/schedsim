@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <optional>
+#include <vector>
 
 namespace schedsim::core {
 class ClockDomain;
@@ -142,6 +143,23 @@ public:
     /// @return True if the task was admitted.
     bool try_admit_scaled(double task_util);
 
+    /// @brief Reverse a previous try_admit_scaled() call.
+    ///
+    /// Decrements total_scaled_utilization_ and recomputes
+    /// max_scaled_utilization_ from the remaining admitted tasks (O(n)).
+    ///
+    /// @param task_util The task utilization in reference units (same value
+    ///                  originally passed to try_admit_scaled).
+    void unadmit_scaled(double task_util);
+
+    /// @brief Unconditionally restore accounting for a previously unadmitted task.
+    ///
+    /// Used for rollback: re-adds the scaled utilization without performing
+    /// admission checks (u_target, GFB). This is the inverse of unadmit_scaled.
+    ///
+    /// @param task_util The task utilization in reference units.
+    void readmit_scaled(double task_util);
+
     /// @brief Get the total scaled utilization of admitted tasks.
     /// @return Total scaled utilization.
     [[nodiscard]] double total_scaled_utilization() const noexcept { return total_scaled_utilization_; }
@@ -155,6 +173,7 @@ private:
     std::optional<std::size_t> processor_id_;
     double total_scaled_utilization_{0.0};
     double max_scaled_utilization_{0.0};
+    std::vector<double> admitted_scaled_utils_;
 };
 
 } // namespace schedsim::algo

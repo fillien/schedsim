@@ -5,6 +5,7 @@
 #include <schedsim/core/clock_domain.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <optional>
 
 namespace schedsim::algo {
@@ -75,7 +76,40 @@ bool Cluster::try_admit_scaled(double task_util) {
     // Admit: update tracking
     total_scaled_utilization_ += scaled;
     max_scaled_utilization_ = u_max;
+    admitted_scaled_utils_.push_back(scaled);
     return true;
+}
+
+void Cluster::unadmit_scaled(double task_util) {
+    double scaled = scaled_utilization(task_util);
+    total_scaled_utilization_ -= scaled;
+    if (total_scaled_utilization_ < 0.0) {
+        total_scaled_utilization_ = 0.0;
+    }
+
+    // Find and erase the matching entry (epsilon-based for floating-point safety)
+    auto it = std::find_if(admitted_scaled_utils_.begin(), admitted_scaled_utils_.end(),
+                           [scaled](double v) { return std::abs(v - scaled) < 1e-12; });
+    if (it != admitted_scaled_utils_.end()) {
+        admitted_scaled_utils_.erase(it);
+    }
+
+    // Recompute max from remaining entries
+    if (admitted_scaled_utils_.empty()) {
+        max_scaled_utilization_ = 0.0;
+    } else {
+        max_scaled_utilization_ = *std::max_element(
+            admitted_scaled_utils_.begin(), admitted_scaled_utils_.end());
+    }
+}
+
+void Cluster::readmit_scaled(double task_util) {
+    double scaled = scaled_utilization(task_util);
+    total_scaled_utilization_ += scaled;
+    admitted_scaled_utils_.push_back(scaled);
+    if (scaled > max_scaled_utilization_) {
+        max_scaled_utilization_ = scaled;
+    }
 }
 
 } // namespace schedsim::algo

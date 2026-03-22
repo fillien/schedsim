@@ -36,6 +36,7 @@
 #include <schedsim/algo/counting_allocator.hpp>
 #include <schedsim/algo/edf_scheduler.hpp>
 #include <schedsim/algo/error.hpp>
+#include <schedsim/algo/ff_cap_adaptive_linear_allocator.hpp>
 #include <schedsim/algo/ff_cap_allocator.hpp>
 #include <schedsim/algo/multi_cluster_allocator.hpp>
 #include <schedsim/algo/scheduler.hpp>
@@ -497,12 +498,21 @@ NB_MODULE(pyschedsim, m) {
         .def("can_admit", &Cluster::can_admit, "budget"_a, "period"_a);
 
     nb::class_<Allocator>(m, "Allocator");
-    nb::class_<MultiClusterAllocator, Allocator>(m, "MultiClusterAllocator");
+    nb::class_<MultiClusterAllocator, Allocator>(m, "MultiClusterAllocator")
+        .def("enable_migration", &MultiClusterAllocator::enable_migration,
+             "Enable task migration on subsequent job arrivals.");
 
     nb::class_<FFCapAllocator, MultiClusterAllocator>(m, "FFCapAllocator")
         .def(nb::init<Engine&, std::vector<Cluster*>>(),
              "engine"_a, "clusters"_a,
              nb::keep_alive<1, 2>(), nb::keep_alive<1, 3>());
+
+    nb::class_<FFCapAdaptiveLinearAllocator, MultiClusterAllocator>(m, "FFCapAdaptiveLinearAllocator")
+        .def(nb::init<Engine&, std::vector<Cluster*>>(),
+             "engine"_a, "clusters"_a,
+             nb::keep_alive<1, 2>(), nb::keep_alive<1, 3>())
+        .def("set_expected_total_util", &FFCapAdaptiveLinearAllocator::set_expected_total_util,
+             "util"_a);
 
     nb::class_<CountingAllocator, MultiClusterAllocator>(m, "CountingAllocator")
         .def(nb::init<Engine&, std::vector<Cluster*>>(),
@@ -731,12 +741,14 @@ NB_MODULE(pyschedsim, m) {
     m.def("from_utilizations", [](const std::vector<double>& utils,
                                    double success_rate,
                                    double compression_rate,
-                                   unsigned seed) {
+                                   unsigned seed,
+                                   std::size_t num_hyperperiods,
+                                   std::size_t min_jobs) {
         WeibullJobConfig config{success_rate, compression_rate};
         std::mt19937 rng(seed);
-        auto tasks = from_utilizations(utils, config, rng);
+        auto tasks = from_utilizations(utils, config, rng, num_hyperperiods, min_jobs);
         ScenarioData scenario;
         scenario.tasks = std::move(tasks);
         return scenario;
-    }, "utilizations"_a, "success_rate"_a = 1.0, "compression_rate"_a = 1.0, "seed"_a = 42);
+    }, "utilizations"_a, "success_rate"_a = 1.0, "compression_rate"_a = 1.0, "seed"_a = 42, "num_hyperperiods"_a = 1, "min_jobs"_a = 0);
 }

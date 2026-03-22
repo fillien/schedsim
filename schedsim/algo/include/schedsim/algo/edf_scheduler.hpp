@@ -17,6 +17,7 @@
 #include <deque>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <span>
 #include <unordered_map>
 #include <vector>
@@ -122,6 +123,54 @@ public:
     ///
     /// @param server The CBS server to try detaching.
     void try_detach_server(CbsServer& server);
+
+    /// @name Migration Support
+    /// @{
+
+    /// @brief Remove an Inactive server for a task (used by cluster migration).
+    ///
+    /// Decrements total_utilization_, erases the task_to_server_ mapping,
+    /// and notifies the reclamation policy with Detached.
+    ///
+    /// @pre The server must be in Inactive state.
+    /// @param task The task whose server should be removed.
+    /// @warning Internal migration method. Directly modifies scheduler state
+    ///          without full consistency checks. Use only from MultiClusterAllocator.
+    void remove_inactive_server(core::Task& task);
+
+    /// @brief Detach the task-to-server mapping without removing the server.
+    ///
+    /// Used for zombie migration: the CBS server stays alive for GRUB
+    /// deadline tracking, but the task mapping is cleared so new jobs
+    /// do not route to the old server.
+    ///
+    /// @param task The task to unlink from its server.
+    /// @warning Internal migration method. Erases the task-to-server mapping
+    ///          without removing the server. Use only from MultiClusterAllocator.
+    void detach_task_mapping(core::Task& task);
+
+    /// @brief Temporarily adjust total_utilization_ for migration evaluation.
+    ///
+    /// The allocator uses this to temporarily exclude a server's utilization
+    /// while re-evaluating cluster placement, then restores it.
+    ///
+    /// @param delta The amount to add (negative to subtract).
+    /// @warning Dangerous: directly modifies total_utilization_ without notifying
+    ///          reclamation, DVFS, or DPM policies. Must be paired with a
+    ///          corresponding restore call. Use only from MultiClusterAllocator.
+    void adjust_utilization(double delta);
+
+    /// @brief Get the expected number of arrivals for a task, if set.
+    /// @param task The task to query.
+    /// @return The expected arrival count, or std::nullopt if not set.
+    [[nodiscard]] std::optional<std::size_t> get_expected_arrivals(const core::Task& task) const;
+
+    /// @brief Get the number of arrivals received for a task.
+    /// @param task The task to query.
+    /// @return The arrival count (0 if task has never arrived).
+    [[nodiscard]] std::size_t get_arrival_count(const core::Task& task) const;
+
+    /// @}
 
     /// @name Server Management
     /// @{

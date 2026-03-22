@@ -26,6 +26,7 @@ protected:
     /// @return Pointer to the chosen Cluster, or @c nullptr if no cluster has sufficient capacity.
     /// @see MultiClusterAllocator::select_cluster
     Cluster* select_cluster(const core::Task& task) override;
+    [[nodiscard]] bool tracks_scaled_utilization() const noexcept override { return true; }
 };
 
 } // namespace schedsim::algo

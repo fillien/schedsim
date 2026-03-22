@@ -154,4 +154,18 @@ void CbsServer::consume_budget(core::Duration amount) {
     }
 }
 
+void CbsServer::set_pending_removal(std::function<void()> callback) {
+    pending_removal_ = true;
+    on_removal_callback_ = std::move(callback);
+}
+
+void CbsServer::fire_removal_callback() {
+    if (on_removal_callback_) {
+        auto cb = std::move(on_removal_callback_);
+        on_removal_callback_ = nullptr;
+        cb();
+        pending_removal_ = false;
+    }
+}
+
 } // namespace schedsim::algo

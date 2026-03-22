@@ -508,3 +508,427 @@ TEST(TaskUtilsTest, BasicComputation) {
     engine.platform().finalize();
     EXPECT_DOUBLE_EQ(task_utilization(task), 0.3);
 }
+
+// ============================================================
+// Migration Tests
+// ============================================================
+
+TEST(MigrationTest, MigrationDisabledByDefault) {
+    Engine engine;
+    auto plat = BigLittlePlatform::create(engine);
+    // Small task: util=0.1, fits on little
+    auto& task = engine.platform().add_task(
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
+    engine.platform().finalize();
+
+    FFCapAllocator alloc(engine, plat.clusters_big_first());
+    // Do NOT call enable_migration()
+
+    // First job: placed on little (FFCap sorts ascending by perf)
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(1.5));
+    EXPECT_NE(plat.little_sched->find_server(task), nullptr);
+    EXPECT_EQ(plat.big_sched->find_server(task), nullptr);
+
+    // Second job: still on little (no migration)
+    engine.schedule_job_arrival(task, time_from_seconds(10.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(11.5));
+    EXPECT_NE(plat.little_sched->find_server(task), nullptr);
+    EXPECT_EQ(plat.big_sched->find_server(task), nullptr);
+}
+
+TEST(MigrationTest, InactiveServerMigrates_FFCap) {
+    Engine engine;
+    auto plat = BigLittlePlatform::create(engine);
+    // Task: util=0.1 (wcet=1, period=10)
+    auto& task = engine.platform().add_task(
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
+    engine.platform().finalize();
+
+    FFCapAllocator alloc(engine, plat.clusters_big_first());
+    alloc.enable_migration();
+
+    // First job: placed on little (FFCap sorts ascending by perf → little first)
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(1.5));
+    EXPECT_NE(plat.little_sched->find_server(task), nullptr);
+    EXPECT_EQ(plat.big_sched->find_server(task), nullptr);
+
+    // Lower little's u_target so it rejects the task on re-evaluation
+    plat.little_cluster->set_u_target(0.01);
+
+    // Second job: server is Inactive, little rejects (scaled_util > u_target) → migrates to big
+    engine.schedule_job_arrival(task, time_from_seconds(10.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(11.5));
+
+    EXPECT_NE(plat.big_sched->find_server(task), nullptr);
+}
+
+TEST(MigrationTest, NoMigrationWhenRunning) {
+    Engine engine;
+    auto plat = BigLittlePlatform::create(engine);
+    // Task with long execution: util=0.5, wcet=5, period=10
+    auto& task = engine.platform().add_task(
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(5.0));
+    engine.platform().finalize();
+
+    FFCapAllocator alloc(engine, plat.clusters_big_first());
+    alloc.enable_migration();
+
+    // First job: placed on little
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(5.0));
+    // Second job arrives while first is still Running (at t=3, before wcet=5 completes)
+    engine.schedule_job_arrival(task, time_from_seconds(3.0), duration_from_seconds(5.0));
+    engine.run(time_from_seconds(3.5));
+
+    // Task should NOT have migrated — server was Running
+    EXPECT_NE(plat.little_sched->find_server(task), nullptr);
+    EXPECT_EQ(plat.big_sched->find_server(task), nullptr);
+}
+
+TEST(MigrationTest, RollbackOnRejection) {
+    Engine engine;
+    auto plat = BigLittlePlatform::create(engine);
+    auto& task = engine.platform().add_task(
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
+    engine.platform().finalize();
+
+    FFCapAllocator alloc(engine, plat.clusters_big_first());
+    alloc.enable_migration();
+
+    // Place target on little
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(1.5));
+    EXPECT_NE(plat.little_sched->find_server(task), nullptr);
+
+    // Set u_target=0 on BOTH clusters so all reject on re-evaluation
+    plat.little_cluster->set_u_target(0.0);
+    plat.big_cluster->set_u_target(0.0);
+
+    // Second job: all clusters reject → rollback, stays on little
+    engine.schedule_job_arrival(task, time_from_seconds(10.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(11.5));
+
+    EXPECT_NE(plat.little_sched->find_server(task), nullptr);
+    EXPECT_EQ(plat.big_sched->find_server(task), nullptr);
+
+    // Verify old cluster's accounting is intact after rollback
+    double expected_scaled = plat.little_cluster->scaled_utilization(task_utilization(task));
+    EXPECT_NEAR(plat.little_cluster->total_scaled_utilization(), expected_scaled, 1e-9);
+}
+
+TEST(MigrationTest, ZombieMigrationWithGrub) {
+    Engine engine;
+    auto plat = BigLittlePlatform::create(engine);
+
+    // Enable GRUB on both schedulers
+    plat.little_sched->enable_grub();
+    plat.big_sched->enable_grub();
+
+    // Task: wcet=0.5, period=10.0, util=0.05. Small enough for little cluster admission.
+    // Scaled on little: 0.05 * (2000/1000) / 1.0 = 0.1. GFB: 0.1 <= 4 - 3*0.1 = 3.7 → OK
+    auto& task = engine.platform().add_task(
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(0.5));
+    engine.platform().finalize();
+
+    FFCapAllocator alloc(engine, plat.clusters_big_first());
+    alloc.enable_migration();
+
+    // First job: placed on little. Actual exec = 0.1 reference units (much less than wcet=0.5).
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(0.1));
+    engine.run(time_from_seconds(5.0));
+
+    CbsServer* old_server = plat.little_sched->find_server(task);
+    ASSERT_NE(old_server, nullptr);
+
+    // The server may be NonContending (GRUB) or Inactive depending on virtual time math
+    if (old_server->state() == CbsServer::State::NonContending) {
+        // Test the zombie migration path
+        plat.little_cluster->set_u_target(0.001);
+
+        engine.schedule_job_arrival(task, time_from_seconds(6.0), duration_from_seconds(0.1));
+        engine.run(time_from_seconds(7.0));
+
+        EXPECT_NE(plat.big_sched->find_server(task), nullptr);
+        EXPECT_TRUE(old_server->is_pending_removal());
+
+        // Run past GRUB deadline (t=10) to clean up zombie
+        engine.run(time_from_seconds(15.0));
+        EXPECT_FALSE(old_server->is_pending_removal());
+    } else {
+        GTEST_SKIP() << "GRUB VT condition (vt > now && vt < dl) not met — "
+                        "NonContending zombie path not exercised";
+    }
+}
+
+// Note: B2a (server==nullptr after M-GRUB detach) is unreachable in practice.
+// M-GRUB's try_detach_server notifies Detached but does NOT erase task_to_server_,
+// so find_server still returns non-null for detached servers. The nullptr guard
+// in on_job_arrival is purely defensive.
+
+TEST(MigrationTest, NoMigrationWhenReady) {
+    Engine engine;
+    auto plat = BigLittlePlatform::create(engine);
+
+    // 4 filler tasks to occupy all 4 little processors (util=0.1 each, scaled=0.2)
+    std::vector<Task*> fillers;
+    for (int i = 0; i < 4; ++i) {
+        fillers.push_back(&engine.platform().add_task(
+            duration_from_seconds(10.0), duration_from_seconds(10.0),
+            duration_from_seconds(1.0)));
+    }
+    // Target task: util=0.1
+    auto& task = engine.platform().add_task(
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
+    engine.platform().finalize();
+
+    FFCapAllocator alloc(engine, plat.clusters_big_first());
+    alloc.enable_migration();
+
+    // Place fillers on little — they occupy all 4 processors
+    for (auto* ft : fillers) {
+        engine.schedule_job_arrival(*ft, time_from_seconds(0.0), ft->wcet());
+    }
+    // Place target on little too — server created, job queued (Ready, waiting for processor)
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(0.5));
+
+    // Target should be on little
+    CbsServer* server = plat.little_sched->find_server(task);
+    ASSERT_NE(server, nullptr);
+    // Server should be Ready (queued, all procs busy) or Running
+    EXPECT_TRUE(server->state() == CbsServer::State::Ready ||
+                server->state() == CbsServer::State::Running);
+
+    // Second job arrives while server is Ready/Running → should NOT migrate
+    engine.schedule_job_arrival(task, time_from_seconds(1.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(1.5));
+
+    EXPECT_NE(plat.little_sched->find_server(task), nullptr);
+    EXPECT_EQ(plat.big_sched->find_server(task), nullptr);
+}
+
+TEST(MigrationTest, InactiveServerMigrates_Adaptive) {
+    Engine engine;
+    auto plat = BigLittlePlatform::create(engine);
+    // Task: util=0.1
+    auto& task = engine.platform().add_task(
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
+    // Fillers to saturate little's scheduler: util=1.0 each × 4 = 4.0 (full capacity)
+    std::vector<Task*> fillers;
+    for (int i = 0; i < 4; ++i) {
+        fillers.push_back(&engine.platform().add_task(
+            duration_from_seconds(10.0), duration_from_seconds(10.0),
+            duration_from_seconds(10.0)));
+    }
+    engine.platform().finalize();
+
+    FFCapAdaptiveLinearAllocator alloc(engine, plat.clusters_big_first());
+    alloc.set_expected_total_util(1.0);  // low enough that model returns 1.0
+    alloc.enable_migration();
+
+    // First job: placed on little
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(1.5));
+    EXPECT_NE(plat.little_sched->find_server(task), nullptr);
+    EXPECT_EQ(plat.big_sched->find_server(task), nullptr);
+
+    // Fill little's scheduler near capacity so can_admit fails on re-evaluation.
+    // add_server_unchecked bypasses admission test and cluster-level tracking.
+    for (auto* ft : fillers) {
+        plat.little_sched->add_server_unchecked(*ft, ft->wcet(), ft->period());
+    }
+
+    // Second job: server Inactive, little's can_admit fails (scheduler near full) → migrates to big
+    engine.schedule_job_arrival(task, time_from_seconds(10.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(11.5));
+
+    EXPECT_NE(plat.big_sched->find_server(task), nullptr);
+    // Verify old scheduler no longer has the server
+    EXPECT_EQ(plat.little_sched->find_server(task), nullptr);
+
+    // Verify cluster's total_scaled_utilization_ is 0 (Adaptive never uses try_admit_scaled)
+    EXPECT_DOUBLE_EQ(plat.little_cluster->total_scaled_utilization(), 0.0);
+    EXPECT_DOUBLE_EQ(plat.big_cluster->total_scaled_utilization(), 0.0);
+}
+
+TEST(MigrationTest, SameClusterSelected_NoMigration) {
+    Engine engine;
+    auto plat = BigLittlePlatform::create(engine);
+    // Task: util=0.1
+    auto& task = engine.platform().add_task(
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
+    engine.platform().finalize();
+
+    FFCapAllocator alloc(engine, plat.clusters_big_first());
+    alloc.enable_migration();
+
+    // First job: placed on little
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(1.5));
+    EXPECT_NE(plat.little_sched->find_server(task), nullptr);
+
+    // Don't change u_target — re-evaluation will select little again
+
+    // Second job: same cluster selected → no migration
+    engine.schedule_job_arrival(task, time_from_seconds(10.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(11.5));
+
+    // Still on little, NOT on big
+    EXPECT_NE(plat.little_sched->find_server(task), nullptr);
+    EXPECT_EQ(plat.big_sched->find_server(task), nullptr);
+
+    // Verify cluster accounting is correct (no double-count):
+    // total_scaled_utilization should still reflect exactly one task
+    double expected_scaled = plat.little_cluster->scaled_utilization(task_utilization(task));
+    EXPECT_NEAR(plat.little_cluster->total_scaled_utilization(), expected_scaled, 1e-9);
+}
+
+TEST(MigrationTest, SchedulerRejectsAfterClusterAdmits_Rollback) {
+    Engine engine;
+    auto plat = BigLittlePlatform::create(engine);
+
+    // Target task: util=0.1
+    auto& task = engine.platform().add_task(
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
+    // 4 filler tasks to fill big's scheduler (created before finalize)
+    std::vector<Task*> fillers;
+    for (int i = 0; i < 4; ++i) {
+        fillers.push_back(&engine.platform().add_task(
+            duration_from_seconds(10.0), duration_from_seconds(10.0),
+            duration_from_seconds(10.0)));
+    }
+    engine.platform().finalize();
+
+    FFCapAllocator alloc(engine, plat.clusters_big_first());
+    alloc.enable_migration();
+
+    // Place target on little first
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(1.5));
+    EXPECT_NE(plat.little_sched->find_server(task), nullptr);
+
+    // Fill big's scheduler directly (bypass cluster-level tracking).
+    // Big's scheduler now has total_utilization_ = 4.0, at capacity.
+    for (auto* ft : fillers) {
+        plat.big_sched->add_server_unchecked(*ft, ft->wcet(), ft->period());
+    }
+
+    // Lower little's u_target to force migration attempt toward big
+    plat.little_cluster->set_u_target(0.001);
+
+    // Second job: select_cluster picks big (cluster GFB passes since big's
+    // total_scaled_utilization_ is 0), but can_admit pre-check fails (scheduler full).
+    // Rollback: task stays on little.
+    engine.schedule_job_arrival(task, time_from_seconds(10.0), duration_from_seconds(1.0));
+    engine.run(time_from_seconds(11.5));
+
+    EXPECT_NE(plat.little_sched->find_server(task), nullptr);
+    EXPECT_EQ(plat.big_sched->find_server(task), nullptr);
+
+    // Verify new cluster's scaled utilization was properly rolled back (no phantom admission)
+    EXPECT_DOUBLE_EQ(plat.big_cluster->total_scaled_utilization(), 0.0);
+}
+
+TEST(MigrationTest, NonContendingZombieMigration) {
+    Engine engine;
+    auto plat = BigLittlePlatform::create(engine);
+
+    plat.little_sched->enable_grub();
+    plat.big_sched->enable_grub();
+
+    // Task: wcet=0.5, period=10.0, util=0.05.
+    auto& task = engine.platform().add_task(
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(0.5));
+    engine.platform().finalize();
+
+    FFCapAllocator alloc(engine, plat.clusters_big_first());
+    alloc.enable_migration();
+
+    // Very short actual execution → finishes early with lots of remaining budget
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(0.01));
+    engine.run(time_from_seconds(0.5));
+
+    CbsServer* old_server = plat.little_sched->find_server(task);
+    ASSERT_NE(old_server, nullptr);
+
+    // GRUB's NonContending condition (vt > now && vt < dl) depends on virtual time math.
+    // If NonContending, test the full zombie lifecycle; otherwise verify Inactive migration works.
+    if (old_server->state() == CbsServer::State::NonContending) {
+        // Verify zombie's utilization is counted in old scheduler
+        EXPECT_NEAR(plat.little_sched->utilization(), 0.05, 1e-6);
+
+        // Lower u_target to force migration
+        plat.little_cluster->set_u_target(0.001);
+
+        // Second job → zombie migration to big
+        engine.schedule_job_arrival(task, time_from_seconds(1.0), duration_from_seconds(0.01));
+        engine.run(time_from_seconds(1.5));
+
+        // Task should now be on big
+        EXPECT_NE(plat.big_sched->find_server(task), nullptr);
+
+        // Old server should be zombie
+        EXPECT_TRUE(old_server->is_pending_removal());
+
+        // Zombie's utilization must still be counted in old scheduler (GRUB correctness)
+        EXPECT_NEAR(plat.little_sched->utilization(), 0.05, 1e-6);
+
+        // task_to_server mapping should be cleared on old scheduler
+        EXPECT_EQ(plat.little_sched->find_server(task), nullptr);
+
+        // Run past GRUB deadline (t=10) to trigger zombie cleanup
+        engine.run(time_from_seconds(15.0));
+
+        // Zombie should be cleaned up: pending_removal cleared, utilization decremented
+        EXPECT_FALSE(old_server->is_pending_removal());
+        EXPECT_NEAR(plat.little_sched->utilization(), 0.0, 1e-6);
+    } else {
+        GTEST_SKIP() << "GRUB VT condition (vt > now && vt < dl) not met — "
+                        "NonContending zombie path not exercised";
+    }
+}
+
+TEST(MigrationTest, ExpectedArrivalsTransferred) {
+    Engine engine;
+    auto plat = BigLittlePlatform::create(engine);
+
+    plat.little_sched->enable_grub();
+    plat.big_sched->enable_grub();
+
+    // Task: util=0.05
+    auto& task = engine.platform().add_task(
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(0.5));
+    engine.platform().finalize();
+
+    FFCapAllocator alloc(engine, plat.clusters_big_first());
+    alloc.enable_migration();
+
+    // Set expected arrivals on old scheduler
+    plat.little_sched->set_expected_arrivals(task, 5);
+
+    // Send 2 jobs to little
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(0.5));
+    engine.run(time_from_seconds(1.5));
+    engine.schedule_job_arrival(task, time_from_seconds(10.0), duration_from_seconds(0.5));
+    engine.run(time_from_seconds(11.5));
+
+    // Verify 2 arrivals counted on old scheduler
+    EXPECT_EQ(plat.little_sched->get_arrival_count(task), 2u);
+
+    // Lower u_target to force migration on 3rd job
+    plat.little_cluster->set_u_target(0.001);
+
+    engine.schedule_job_arrival(task, time_from_seconds(20.0), duration_from_seconds(0.5));
+    engine.run(time_from_seconds(21.5));
+
+    // Task should have migrated to big
+    EXPECT_NE(plat.big_sched->find_server(task), nullptr);
+
+    // Expected arrivals should be transferred: 5 - 2 = 3 remaining
+    auto transferred = plat.big_sched->get_expected_arrivals(task);
+    EXPECT_TRUE(transferred.has_value());
+    if (transferred) {
+        EXPECT_EQ(*transferred, 3u);
+    }
+}

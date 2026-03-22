@@ -183,6 +183,49 @@ const CbsServer* EdfScheduler::find_server(const core::Task& task) const {
     return (it != task_to_server_.end()) ? it->second : nullptr;
 }
 
+// Migration support
+
+void EdfScheduler::remove_inactive_server(core::Task& task) {
+    auto it = task_to_server_.find(&task);
+    if (it == task_to_server_.end()) {
+        return;
+    }
+    CbsServer* server = it->second;
+    assert(server->state() == CbsServer::State::Inactive);
+
+    total_utilization_ -= server->utilization();
+    if (total_utilization_ < 0.0) {
+        total_utilization_ = 0.0;
+    }
+    task_to_server_.erase(it);
+
+    notify_server_state_change(*server, ReclamationPolicy::ServerStateChange::Detached);
+}
+
+void EdfScheduler::detach_task_mapping(core::Task& task) {
+    task_to_server_.erase(&task);
+}
+
+void EdfScheduler::adjust_utilization(double delta) {
+    total_utilization_ += delta;
+    if (total_utilization_ < 0.0) {
+        total_utilization_ = 0.0;
+    }
+}
+
+std::optional<std::size_t> EdfScheduler::get_expected_arrivals(const core::Task& task) const {
+    auto it = expected_arrivals_.find(&task);
+    if (it != expected_arrivals_.end()) {
+        return it->second;
+    }
+    return std::nullopt;
+}
+
+std::size_t EdfScheduler::get_arrival_count(const core::Task& task) const {
+    auto it = arrival_counts_.find(&task);
+    return (it != arrival_counts_.end()) ? it->second : 0;
+}
+
 void EdfScheduler::set_deadline_miss_policy(DeadlineMissPolicy policy) {
     deadline_miss_policy_ = policy;
 }
@@ -259,6 +302,10 @@ double EdfScheduler::max_scheduler_utilization() const {
 }
 
 double EdfScheduler::max_server_utilization() const {
+    // Note: zombie servers (pending_removal) are intentionally included.
+    // Their utilization is still counted in total_utilization_ (for GRUB
+    // correctness), so u_max must also include them to maintain the GFB
+    // schedulability bound: capacity = m - (m-1) * u_max.
     double max_util = 0.0;
     for (const auto& server : servers_) {
         max_util = std::max(max_util, server.utilization());
@@ -1187,6 +1234,26 @@ void EdfScheduler::try_detach_server(CbsServer& server) {
     if (server.has_pending_jobs()) {
         return;
     }
+
+    // Zombie cleanup: server was migrated away while NonContending.
+    // The GRUB deadline has now fired and the server reached Inactive.
+    if (server.is_pending_removal()) {
+        server.fire_removal_callback();
+        total_utilization_ -= server.utilization();
+        if (total_utilization_ < 0.0) {
+            total_utilization_ = 0.0;
+        }
+        // task_to_server_ was already erased during migration (detach_task_mapping)
+        notify_server_state_change(server, ReclamationPolicy::ServerStateChange::Detached);
+        return;
+    }
+
+    // Note: zombie server objects remain in servers_ deque after cleanup
+    // (cannot safely erase from middle of deque without invalidating pointers).
+    // They are inert: Inactive state, no task mapping, no processor mapping.
+    // get_ready_servers() skips them since they are not in Ready state.
+
+    // Original M-GRUB detach logic
     const core::Task* task = server.task();
     auto exp_it = expected_arrivals_.find(task);
     auto cnt_it = arrival_counts_.find(task);

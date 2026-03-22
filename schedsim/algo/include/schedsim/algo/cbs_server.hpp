@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <deque>
+#include <functional>
 
 namespace schedsim::algo {
 
@@ -246,6 +247,26 @@ public:
     void consume_budget(core::Duration amount);
 
     // -------------------------------------------------------------------
+    // Migration support
+    // -------------------------------------------------------------------
+
+    /// @brief Mark this server for deferred removal (zombie migration).
+    ///
+    /// When the server eventually transitions to Inactive (e.g., after a
+    /// GRUB deadline fires), the callback is invoked and the server is
+    /// cleaned up by EdfScheduler::try_detach_server().
+    ///
+    /// @param callback Cleanup action to run when the zombie is removed.
+    void set_pending_removal(std::function<void()> callback);
+
+    /// @brief Check if this server is marked for deferred removal.
+    /// @return True if set_pending_removal() was called.
+    [[nodiscard]] bool is_pending_removal() const noexcept { return pending_removal_; }
+
+    /// @brief Fire and clear the removal callback (idempotent).
+    void fire_removal_callback();
+
+    // -------------------------------------------------------------------
     // Task association
     // -------------------------------------------------------------------
 
@@ -280,6 +301,9 @@ private:
     std::deque<core::Job> job_queue_;
     core::Task* task_{nullptr};
     EdfScheduler* scheduler_{nullptr};
+
+    bool pending_removal_{false};
+    std::function<void()> on_removal_callback_;
 };
 
 } // namespace schedsim::algo
