@@ -621,44 +621,57 @@ TEST(MigrationTest, ZombieMigrationWithGrub) {
     Engine engine;
     auto plat = BigLittlePlatform::create(engine);
 
-    // Enable GRUB on both schedulers
     plat.little_sched->enable_grub();
     plat.big_sched->enable_grub();
 
-    // Task: wcet=0.5, period=10.0, util=0.05. Small enough for little cluster admission.
-    // Scaled on little: 0.05 * (2000/1000) / 1.0 = 0.1. GFB: 0.1 <= 4 - 3*0.1 = 3.7 → OK
+    // Target task: wcet=1.0, period=10.0, util=0.1.
     auto& task = engine.platform().add_task(
-        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(0.5));
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
+    // Helper tasks placed via allocator to increase GRUB's scheduler_utilization_.
+    // With a single server, M-GRUB bandwidth == U_i exactly → vt == now (strict > fails).
+    // Helpers must be activated (receive jobs) so GRUB adds them to scheduler_utils_.
+    // util=0.1 each → scaled on little = 0.2, fits GFB.
+    std::vector<Task*> helpers;
+    for (int i = 0; i < 3; ++i) {
+        helpers.push_back(&engine.platform().add_task(
+            duration_from_seconds(10.0), duration_from_seconds(10.0),
+            duration_from_seconds(1.0)));  // util=0.1 each
+    }
     engine.platform().finalize();
 
     FFCapAllocator alloc(engine, plat.clusters_big_first());
     alloc.enable_migration();
 
-    // First job: placed on little. Actual exec = 0.1 reference units (much less than wcet=0.5).
+    // Place helpers on little first (long-running jobs to keep them active)
+    for (auto* h : helpers) {
+        engine.schedule_job_arrival(*h, time_from_seconds(0.0), h->wcet());
+    }
+    // Target job: short actual execution (0.1 ref units, wcet=1.0) → finishes early
     engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(0.1));
-    engine.run(time_from_seconds(5.0));
+    // Run past job completion but before VT deadline
+    // With 4 servers (total_u=0.4, u_max=0.1, m=4):
+    //   bandwidth = max(1 - (4-3*0.1-0.4)/4, 0.01) = max(1-3.3/4, 0.01) = 0.175
+    //   vt_increment = (0.175/0.1) * wall_elapsed. Job exec=0.1ref, speed=0.5, wall=0.2
+    //   vt_increment = 1.75 * 0.2 = 0.35. VT timer at t=0.35. Job done at t≈0.2.
+    engine.run(time_from_seconds(0.3));
 
     CbsServer* old_server = plat.little_sched->find_server(task);
     ASSERT_NE(old_server, nullptr);
+    ASSERT_EQ(old_server->state(), CbsServer::State::NonContending);
 
-    // The server may be NonContending (GRUB) or Inactive depending on virtual time math
-    if (old_server->state() == CbsServer::State::NonContending) {
-        // Test the zombie migration path
-        plat.little_cluster->set_u_target(0.001);
+    // Lower u_target to force migration
+    plat.little_cluster->set_u_target(0.001);
 
-        engine.schedule_job_arrival(task, time_from_seconds(6.0), duration_from_seconds(0.1));
-        engine.run(time_from_seconds(7.0));
+    // Second job while NonContending → zombie migration to big
+    engine.schedule_job_arrival(task, time_from_seconds(0.3), duration_from_seconds(0.1));
+    engine.run(time_from_seconds(0.32));
 
-        EXPECT_NE(plat.big_sched->find_server(task), nullptr);
-        EXPECT_TRUE(old_server->is_pending_removal());
+    EXPECT_NE(plat.big_sched->find_server(task), nullptr);
+    EXPECT_TRUE(old_server->is_pending_removal());
 
-        // Run past GRUB deadline (t=10) to clean up zombie
-        engine.run(time_from_seconds(15.0));
-        EXPECT_FALSE(old_server->is_pending_removal());
-    } else {
-        GTEST_SKIP() << "GRUB VT condition (vt > now && vt < dl) not met — "
-                        "NonContending zombie path not exercised";
-    }
+    // Run past VT deadline to clean up zombie
+    engine.run(time_from_seconds(5.0));
+    EXPECT_FALSE(old_server->is_pending_removal());
 }
 
 // Note: B2a (server==nullptr after M-GRUB detach) is unreachable in practice.
@@ -837,56 +850,62 @@ TEST(MigrationTest, NonContendingZombieMigration) {
     plat.little_sched->enable_grub();
     plat.big_sched->enable_grub();
 
-    // Task: wcet=0.5, period=10.0, util=0.05.
+    // Target task: wcet=1.0, period=10.0, util=0.1.
     auto& task = engine.platform().add_task(
-        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(0.5));
+        duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(1.0));
+    // 3 helper tasks (util=0.1 each) to increase GRUB scheduler_utilization_.
+    std::vector<Task*> helpers;
+    for (int i = 0; i < 3; ++i) {
+        helpers.push_back(&engine.platform().add_task(
+            duration_from_seconds(10.0), duration_from_seconds(10.0),
+            duration_from_seconds(1.0)));
+    }
     engine.platform().finalize();
 
     FFCapAllocator alloc(engine, plat.clusters_big_first());
     alloc.enable_migration();
 
-    // Very short actual execution → finishes early with lots of remaining budget
-    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(0.01));
-    engine.run(time_from_seconds(0.5));
+    // Activate helpers on little (long-running jobs)
+    for (auto* h : helpers) {
+        engine.schedule_job_arrival(*h, time_from_seconds(0.0), h->wcet());
+    }
+    // Target: short actual execution → finishes early → NonContending
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(0.1));
+    engine.run(time_from_seconds(0.3));
 
     CbsServer* old_server = plat.little_sched->find_server(task);
     ASSERT_NE(old_server, nullptr);
+    ASSERT_EQ(old_server->state(), CbsServer::State::NonContending);
 
-    // GRUB's NonContending condition (vt > now && vt < dl) depends on virtual time math.
-    // If NonContending, test the full zombie lifecycle; otherwise verify Inactive migration works.
-    if (old_server->state() == CbsServer::State::NonContending) {
-        // Verify zombie's utilization is counted in old scheduler
-        EXPECT_NEAR(plat.little_sched->utilization(), 0.05, 1e-6);
+    // Verify all servers' utilization counted: target(0.1) + 3 helpers(0.1) = 0.4
+    EXPECT_NEAR(plat.little_sched->utilization(), 0.4, 1e-6);
 
-        // Lower u_target to force migration
-        plat.little_cluster->set_u_target(0.001);
+    // Lower u_target to force migration
+    plat.little_cluster->set_u_target(0.001);
 
-        // Second job → zombie migration to big
-        engine.schedule_job_arrival(task, time_from_seconds(1.0), duration_from_seconds(0.01));
-        engine.run(time_from_seconds(1.5));
+    // Second job while NonContending → zombie migration to big
+    engine.schedule_job_arrival(task, time_from_seconds(0.3), duration_from_seconds(0.1));
+    engine.run(time_from_seconds(0.32));
 
-        // Task should now be on big
-        EXPECT_NE(plat.big_sched->find_server(task), nullptr);
+    // Task should now be on big
+    EXPECT_NE(plat.big_sched->find_server(task), nullptr);
 
-        // Old server should be zombie
-        EXPECT_TRUE(old_server->is_pending_removal());
+    // Old server should be zombie
+    EXPECT_TRUE(old_server->is_pending_removal());
 
-        // Zombie's utilization must still be counted in old scheduler (GRUB correctness)
-        EXPECT_NEAR(plat.little_sched->utilization(), 0.05, 1e-6);
+    // Zombie's utilization must still be counted in old scheduler (GRUB correctness)
+    EXPECT_NEAR(plat.little_sched->utilization(), 0.4, 1e-6);
 
-        // task_to_server mapping should be cleared on old scheduler
-        EXPECT_EQ(plat.little_sched->find_server(task), nullptr);
+    // task_to_server mapping should be cleared on old scheduler
+    EXPECT_EQ(plat.little_sched->find_server(task), nullptr);
 
-        // Run past GRUB deadline (t=10) to trigger zombie cleanup
-        engine.run(time_from_seconds(15.0));
+    // Run past VT deadline to trigger zombie cleanup
+    engine.run(time_from_seconds(5.0));
 
-        // Zombie should be cleaned up: pending_removal cleared, utilization decremented
-        EXPECT_FALSE(old_server->is_pending_removal());
-        EXPECT_NEAR(plat.little_sched->utilization(), 0.0, 1e-6);
-    } else {
-        GTEST_SKIP() << "GRUB VT condition (vt > now && vt < dl) not met — "
-                        "NonContending zombie path not exercised";
-    }
+    // Zombie cleaned up: pending_removal cleared, utilization decremented
+    EXPECT_FALSE(old_server->is_pending_removal());
+    // Only helpers' utilization remains
+    EXPECT_NEAR(plat.little_sched->utilization(), 0.3, 1e-6);
 }
 
 TEST(MigrationTest, ExpectedArrivalsTransferred) {
