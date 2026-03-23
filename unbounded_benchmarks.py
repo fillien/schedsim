@@ -732,9 +732,9 @@ N_SCENARIOS_MIXED = 1000
 
 # (fraction of tasks, lower bound, upper bound)
 UTIL_CLASSES = [
-    (0.40, 0.01, 0.10),  # light
-    (0.20, 0.18, 0.22),  # medium
-    (0.40, 0.50, 0.70),  # heavy
+    (0.40, 0.01, 0.12),  # light
+    (0.20, 0.25, 0.33),  # medium
+    (0.40, 0.50, 0.80),  # heavy
 ]
 
 CLASS_MIDS = [(lo + hi) / 2 for _, lo, hi in UTIL_CLASSES]
@@ -1152,7 +1152,7 @@ ORION_PLATFORM_CAP = ORION_BIG_CAP + ORION_MID_CAP + ORION_LITTLE_CAP  # 9.776
 UTIL_MAX_ORION = 11.0
 UTIL_STEP_ORION = 0.1
 UTIL_MIN_ORION = 1.0
-N_TASKS_ORION = int(np.ceil(UTIL_MAX_ORION / UTIL_UNBOUNDED_HI))  # ~13
+N_TASKS_ORION = 30  # enough headroom for UUniFast-Discard (avg 11.0/30 = 0.37 << 0.9)
 TASKSET_DIR_UNBOUNDED_ORION = "tasksets_unbounded_orion"
 
 util_points_orion = np.round(
@@ -1161,7 +1161,7 @@ util_points_orion = np.round(
 
 # %%
 def _generate_one_unbounded_orion(util, scenario_idx):
-    seed = int(round(util * 10000)) * 40000 + scenario_idx
+    seed = 2_000_000_000 + int(round(util * 10000)) * 1100 + scenario_idx
     random.seed(seed)
     utils = uunifast_discard(N_TASKS_ORION, util, UTIL_UNBOUNDED_LO, UTIL_UNBOUNDED_HI)
     folder = os.path.join(TASKSET_DIR_UNBOUNDED_ORION, str(int(round(util * 10))))
