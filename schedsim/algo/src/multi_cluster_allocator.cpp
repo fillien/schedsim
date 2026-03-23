@@ -6,9 +6,44 @@
 #include <schedsim/algo/scheduler.hpp>
 #include <schedsim/algo/task_utils.hpp>
 
+#include <schedsim/algo/cbs_server.hpp>
+
 #include <schedsim/core/clock_domain.hpp>
 
 namespace schedsim::algo {
+
+void MultiClusterAllocator::cleanup_completed_tasks(const core::Task* exclude) {
+    std::vector<const core::Task*> to_erase;
+
+    for (const auto& [task_ptr, cluster_ptr] : task_assignments_) {
+        if (task_ptr == exclude)
+            continue;
+
+        const auto& edf =
+            static_cast<const EdfScheduler&>(cluster_ptr->scheduler());
+        const CbsServer* server = edf.find_server(*task_ptr);
+
+        bool completed = false;
+        if (!server) {
+            // Server was detached (M-GRUB) — task is done
+            completed = true;
+        } else if (server->state() == CbsServer::State::Inactive &&
+                   !server->has_pending_jobs()) {
+            completed = true;
+        }
+
+        if (completed) {
+            if (tracks_scaled_utilization()) {
+                cluster_ptr->unadmit_scaled(task_utilization(*task_ptr));
+            }
+            to_erase.push_back(task_ptr);
+        }
+    }
+
+    for (const auto* t : to_erase) {
+        task_assignments_.erase(t);
+    }
+}
 
 MultiClusterAllocator::MultiClusterAllocator(core::Engine& engine,
                                              std::vector<Cluster*> clusters)
@@ -22,6 +57,8 @@ MultiClusterAllocator::MultiClusterAllocator(core::Engine& engine,
 }
 
 void MultiClusterAllocator::on_job_arrival(core::Task& task, core::Job job) {
+    cleanup_completed_tasks(&task);
+
     auto it = task_assignments_.find(&task);
 
     if (it != task_assignments_.end()) {
