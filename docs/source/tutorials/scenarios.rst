@@ -216,7 +216,7 @@ the WCET:
 
    io::WeibullJobConfig weibull{
        .success_rate = 1.0,       // fraction of jobs that complete within WCET
-       .compression_rate = 1.0,   // shape parameter scaling
+       .compression_rate = 1.0,   // minimum duration as a fraction of WCET
    };
 
    auto scenario = io::generate_uunifast_discard_weibull(
@@ -241,7 +241,7 @@ The ``schedgen`` command-line tool wraps the generation functions:
             --period-mode range -d 100 \
             -o scenario.json
 
-   # Harmonic periods (powers of 2 from a base)
+   # Fixed 100--500 us period grid (legacy harmonic mode)
    schedgen -n 8 -u 2.5 --umax 1 \
             --period-mode harmonic \
             -o scenario.json

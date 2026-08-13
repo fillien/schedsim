@@ -57,9 +57,9 @@ schedgen [OPTIONS]
 | `-u, --utilization <x>` | Target total utilization (required, can exceed 1.0 for multicore) |
 | `--umin <x>` | Min per-task utilization [0,1] (default: 0) |
 | `--umax <x>` | Max per-task utilization [0,1] (default: 1) |
-| `-s, --success <x>` | Success rate for deadline budget [0,1] (default: 1) |
+| `-s, --success <x>` | Success rate for deadline budget (0,1] (default: 1) |
 | `-c, --compression <x>` | Compression ratio (min duration/WCET) [0,1] (default: 1) |
-| `--period-mode <mode>` | `harmonic` (fixed set) or `range` (default: range) |
+| `--period-mode <mode>` | `harmonic` (legacy fixed grid) or `range` (default: range) |
 | `--period-min <ms>` | Min period in ms (default: 10, range mode) |
 | `--period-max <ms>` | Max period in ms (default: 1000, range mode) |
 | `-d, --duration <s>` | Simulation duration in seconds (range mode) |

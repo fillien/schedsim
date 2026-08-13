@@ -151,14 +151,14 @@ Options
      - Maximum per-task utilization [0, 1]
    * - ``-s, --success``
      - ``1``
-     - Weibull success rate for deadline budget [0, 1]
+     - Weibull success rate for deadline budget (0, 1]
    * - ``-c, --compression``
      - ``1``
      - Compression ratio (min job duration / WCET) [0, 1]
    * - ``--period-mode``
      - ``range``
      - Period selection: ``range`` (random from interval) or ``harmonic``
-       (fixed harmonic set)
+       (legacy name for the fixed 100--500 microsecond grid)
    * - ``--period-min``
      - ``10``
      - Minimum period in ms (range mode only)
@@ -196,8 +196,9 @@ Generation Modes
 split. If ``--duration`` is specified, concrete jobs are generated up to that
 time with execution times scaled by ``--exec-ratio``.
 
-**Harmonic mode** uses a fixed set of harmonic periods and Weibull-distributed
-job execution times controlled by ``--success`` and ``--compression``.
+**Harmonic mode** is the legacy name for a fixed 100--500 microsecond period
+grid. It produces Weibull-distributed job execution times controlled by
+``--success`` and ``--compression``.
 
 Batch Mode
 ^^^^^^^^^^
@@ -241,7 +242,7 @@ Examples
    # 10 implicit-deadline tasks, total U=3.0, log-uniform periods, with jobs
    schedgen -n 10 -u 3.0 --period-min 5 --period-max 200 -d 1.0 -o taskset.json
 
-   # Harmonic task set (Weibull jobs, 90% success rate)
+   # Fixed-grid task set (legacy harmonic mode, 90% success rate)
    schedgen -n 8 -u 2.5 --period-mode harmonic -s 0.9 -c 0.5 -o taskset.json
 
    # Batch: 1000 task sets with 4 threads

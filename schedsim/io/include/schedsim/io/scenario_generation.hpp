@@ -3,7 +3,7 @@
 /// @file scenario_generation.hpp
 /// @brief Programmatic task-set and job generation for scheduling experiments.
 ///
-/// Provides UUniFast-based utilization splitting, harmonic period selection,
+/// Provides UUniFast-based utilization splitting, fixed period-grid selection,
 /// Weibull-distributed execution times, and convenience wrappers that produce
 /// complete ScenarioData instances ready for simulation.
 ///
@@ -18,18 +18,25 @@
 
 namespace schedsim::io {
 
-/// @brief Harmonic period set (microseconds).
+/// @brief Fixed period candidates used by the Weibull generators (microseconds).
 ///
-/// All ten periods divide the common hyperperiod HYPERPERIOD_US = 25200,
-/// ensuring that the generated task sets have a bounded hyperperiod.
+/// The public name is retained for compatibility with the original harmonic
+/// generator. The current candidates form a 100--500 microsecond grid and do
+/// not all divide HYPERPERIOD_US exactly.
 ///
 /// @ingroup io_generation
-inline constexpr std::array<int, 10> HARMONIC_PERIODS_US{
-    25200, 12600, 8400, 6300, 5040, 4200, 3600, 3150, 2800, 2520};
+inline constexpr std::array<int, 21> HARMONIC_PERIODS_US{
+    100, 120, 140, 160, 180, 200, 220,
+    240, 260, 280, 300, 320, 340, 360,
+    380, 400, 420, 440, 460, 480, 500};
 
-/// @brief Hyperperiod shared by all entries in HARMONIC_PERIODS_US (microseconds).
+/// @brief Nominal job-generation window (microseconds).
+///
+/// Job counts are computed as `HYPERPERIOD_US / period` using integer
+/// division. Despite the legacy name, this is not a common hyperperiod for
+/// every entry in HARMONIC_PERIODS_US.
 /// @ingroup io_generation
-inline constexpr int HYPERPERIOD_US = 25200;
+inline constexpr int HYPERPERIOD_US = 500;
 
 /// @brief UUniFast algorithm: generate @p num_tasks utilizations summing to
 ///        @p target_utilization.
@@ -146,15 +153,17 @@ ScenarioData generate_scenario(
 /// @ingroup io_generation
 /// @see generate_weibull_jobs
 struct WeibullJobConfig {
-    double success_rate{1.0};      ///< Percentile for WCET budget [0, 1].
+    double success_rate{1.0};      ///< Fraction of jobs within WCET (0, 1].
     double compression_rate{1.0};  ///< Minimum duration as a fraction of WCET [0, 1].
 };
 
 /// @brief Generate jobs with Weibull-distributed execution durations.
 ///
-/// Produces @p hyperperiod_jobs jobs spaced one @p period apart. Each job's
-/// duration is drawn from a Weibull distribution parameterised by @p config
-/// and clamped to [0, @p wcet].
+/// Produces @p hyperperiod_jobs jobs spaced one @p period apart. Durations are
+/// drawn from a truncated Weibull distribution whose lower bound is
+/// `compression_rate * wcet`. The `success_rate` quantile is mapped to
+/// @p wcet, so lower success rates permit execution-time overruns. When
+/// `success_rate == 1`, every duration is at most @p wcet.
 ///
 /// @param period           Task period (inter-arrival spacing).
 /// @param wcet             Worst-case execution time (upper clamp).
@@ -162,6 +171,9 @@ struct WeibullJobConfig {
 /// @param config           Weibull distribution parameters.
 /// @param rng              Mersenne Twister PRNG instance.
 /// @return Vector of generated job parameters.
+///
+/// @throws std::invalid_argument If success_rate is outside (0, 1] or
+///         compression_rate is outside [0, 1].
 ///
 /// @see WeibullJobConfig, generate_uunifast_discard_weibull
 std::vector<JobParams> generate_weibull_jobs(
@@ -171,20 +183,20 @@ std::vector<JobParams> generate_weibull_jobs(
     const WeibullJobConfig& config,
     std::mt19937& rng);
 
-/// @brief Pick a random period from the harmonic fixed set.
+/// @brief Pick a random period from the fixed candidate set.
 ///
-/// Uniformly selects one of the ten entries in HARMONIC_PERIODS_US and
+/// Uniformly selects one of the entries in HARMONIC_PERIODS_US and
 /// returns it as a @c core::Duration.
 ///
 /// @param rng  Mersenne Twister PRNG instance.
-/// @return A duration corresponding to one of the harmonic periods.
+/// @return A duration corresponding to one of the fixed period candidates.
 ///
 /// @see HARMONIC_PERIODS_US, HYPERPERIOD_US
 core::Duration pick_harmonic_period(std::mt19937& rng);
 
 /// @brief Full UUniFast-Discard + Weibull scenario generation.
 ///
-/// Combines uunifast_discard for utilization splitting, harmonic period
+/// Combines uunifast_discard for utilization splitting, fixed period
 /// selection, and generate_weibull_jobs for job generation into a single
 /// call. Task IDs start at 1 (legacy convention).
 ///
@@ -221,19 +233,26 @@ ScenarioData merge_scenarios(const ScenarioData& a, const ScenarioData& b);
 
 /// @brief Build task parameters from an explicit utilization vector.
 ///
-/// Creates one task per entry in @p utilizations, assigns harmonic periods,
+/// Creates one task per entry in @p utilizations, assigns fixed-grid periods,
 /// and generates Weibull-distributed jobs. Useful when utilizations are
 /// obtained from an external source rather than UUniFast.
 ///
-/// @param utilizations  Per-task utilizations.
-/// @param config        Weibull job configuration.
-/// @param rng           Mersenne Twister PRNG instance.
+/// @param utilizations     Per-task utilizations.
+/// @param config           Weibull job configuration.
+/// @param rng              Mersenne Twister PRNG instance.
+/// @param num_hyperperiods Number of nominal generation windows to simulate
+///                         (legacy name; default 1).
+/// @param min_jobs         Minimum total jobs across all tasks. Period
+///                         assignment is retried until this threshold is met
+///                         (default 0 = no minimum).
 /// @return Vector of fully populated task parameters.
 ///
 /// @see generate_weibull_jobs, pick_harmonic_period
 std::vector<TaskParams> from_utilizations(
     const std::vector<double>& utilizations,
     const WeibullJobConfig& config,
-    std::mt19937& rng);
+    std::mt19937& rng,
+    std::size_t num_hyperperiods = 1,
+    std::size_t min_jobs = 0);
 
 } // namespace schedsim::io

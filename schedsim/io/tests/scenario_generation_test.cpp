@@ -288,18 +288,17 @@ TEST_F(ScenarioGenerationTest, UUniFastDiscardZeroTasks) {
 }
 
 // =============================================================================
-// Harmonic Period Tests
+// Fixed Period Candidate Tests
 // =============================================================================
 
-TEST_F(ScenarioGenerationTest, HarmonicPeriodsAreUsed) {
-    // Generate many periods and verify they're all from the harmonic set
+TEST_F(ScenarioGenerationTest, FixedPeriodCandidatesAreUsed) {
+    // Generate many periods and verify they're all from the configured set.
     for (int i = 0; i < 100; ++i) {
         Duration period = pick_harmonic_period(rng);
         int period_us = static_cast<int>(duration_to_seconds(period) * 1'000'000.0);
 
-        // Check that the period divides the hyperperiod
-        EXPECT_EQ(HYPERPERIOD_US % period_us, 0)
-            << "Period " << period_us << " does not divide hyperperiod";
+        EXPECT_LE(period_us, HYPERPERIOD_US)
+            << "Period " << period_us << " exceeds the generation window";
 
         // Check that the period is in the valid set
         bool found = false;
@@ -309,7 +308,7 @@ TEST_F(ScenarioGenerationTest, HarmonicPeriodsAreUsed) {
                 break;
             }
         }
-        EXPECT_TRUE(found) << "Period " << period_us << " not in harmonic set";
+        EXPECT_TRUE(found) << "Period " << period_us << " not in candidate set";
     }
 }
 
@@ -317,10 +316,10 @@ TEST_F(ScenarioGenerationTest, HarmonicPeriodsAreUsed) {
 // Weibull Job Generation Tests
 // =============================================================================
 
-TEST_F(ScenarioGenerationTest, WeibullJobsDontExceedWcet) {
+TEST_F(ScenarioGenerationTest, WeibullJobsDontExceedWcetWhenFullSuccess) {
     Duration period = duration_from_seconds(0.01);  // 10ms
     Duration wcet = duration_from_seconds(0.002);   // 2ms
-    WeibullJobConfig config{.success_rate = 0.5, .compression_rate = 0.5};
+    WeibullJobConfig config{.success_rate = 1.0, .compression_rate = 0.5};
 
     auto jobs = generate_weibull_jobs(period, wcet, 10, config, rng);
 
@@ -328,6 +327,27 @@ TEST_F(ScenarioGenerationTest, WeibullJobsDontExceedWcet) {
     for (const auto& job : jobs) {
         EXPECT_LE(duration_to_seconds(job.duration), duration_to_seconds(wcet) + 1e-10);
     }
+}
+
+TEST_F(ScenarioGenerationTest, WeibullJobsSuccessRateControlsBudgetPercentile) {
+    Duration period = duration_from_seconds(0.01);  // 10ms
+    Duration wcet = duration_from_seconds(0.002);   // 2ms
+    WeibullJobConfig config{.success_rate = 0.5, .compression_rate = 0.5};
+
+    auto jobs = generate_weibull_jobs(period, wcet, 1000, config, rng);
+
+    EXPECT_EQ(jobs.size(), 1000u);
+    double wcet_sec = duration_to_seconds(wcet);
+    int below = 0;
+    for (const auto& job : jobs) {
+        if (duration_to_seconds(job.duration) <= wcet_sec) {
+            ++below;
+        }
+    }
+    // With success_rate=0.5, ~50% of jobs should be within budget (allow ±10%)
+    double ratio = static_cast<double>(below) / 1000.0;
+    EXPECT_GT(ratio, 0.4);
+    EXPECT_LT(ratio, 0.6);
 }
 
 TEST_F(ScenarioGenerationTest, WeibullJobsRespectCompression) {
@@ -380,12 +400,22 @@ TEST_F(ScenarioGenerationTest, WeibullJobsZeroJobs) {
     EXPECT_TRUE(jobs.empty());
 }
 
+TEST_F(ScenarioGenerationTest, WeibullJobsRejectZeroSuccessRate) {
+    Duration period = duration_from_seconds(0.01);
+    Duration wcet = duration_from_seconds(0.002);
+    WeibullJobConfig config{.success_rate = 0.0, .compression_rate = 0.5};
+
+    EXPECT_THROW(
+        generate_weibull_jobs(period, wcet, 1, config, rng),
+        std::invalid_argument);
+}
+
 // =============================================================================
 // Full UUniFast-Discard-Weibull Generation Tests
 // =============================================================================
 
 TEST_F(ScenarioGenerationTest, UUniFastDiscardWeibullBasic) {
-    WeibullJobConfig config{.success_rate = 0.9, .compression_rate = 0.5};
+    WeibullJobConfig config{.success_rate = 1.0, .compression_rate = 0.5};
 
     auto scenario = generate_uunifast_discard_weibull(5, 2.5, 0.1, 0.9, config, rng);
 
@@ -570,6 +600,41 @@ TEST_F(ScenarioGenerationTest, FromUtilizationsEmpty) {
 
     auto tasks = from_utilizations(utilizations, config, rng);
     EXPECT_TRUE(tasks.empty());
+}
+
+TEST_F(ScenarioGenerationTest, FromUtilizationsRepeatsGenerationWindow) {
+    std::vector<double> utilizations{0.5};
+    WeibullJobConfig config{};
+    constexpr std::size_t NUM_WINDOWS = 3;
+
+    auto tasks = from_utilizations(
+        utilizations, config, rng, NUM_WINDOWS);
+
+    ASSERT_EQ(tasks.size(), 1u);
+    int period_us = static_cast<int>(
+        duration_to_seconds(tasks[0].period) * 1'000'000.0);
+    std::size_t expected_jobs =
+        static_cast<std::size_t>(HYPERPERIOD_US / period_us) * NUM_WINDOWS;
+    EXPECT_EQ(tasks[0].jobs.size(), expected_jobs);
+}
+
+TEST_F(ScenarioGenerationTest, FromUtilizationsHonorsMinimumJobCount) {
+    std::vector<double> utilizations{0.5};
+    WeibullJobConfig config{};
+
+    auto tasks = from_utilizations(utilizations, config, rng, 1, 5);
+
+    ASSERT_EQ(tasks.size(), 1u);
+    EXPECT_GE(tasks[0].jobs.size(), 5u);
+}
+
+TEST_F(ScenarioGenerationTest, FromUtilizationsRejectsZeroGenerationWindows) {
+    std::vector<double> utilizations{0.5};
+    WeibullJobConfig config{};
+
+    EXPECT_THROW(
+        from_utilizations(utilizations, config, rng, 0),
+        std::invalid_argument);
 }
 
 // =============================================================================

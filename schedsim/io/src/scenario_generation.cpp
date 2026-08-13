@@ -220,6 +220,15 @@ std::vector<JobParams> generate_weibull_jobs(
     const WeibullJobConfig& config,
     std::mt19937& rng) {
 
+    if (config.success_rate <= 0.0 || config.success_rate > 1.0) {
+        throw std::invalid_argument(
+            "generate_weibull_jobs: success_rate must be in (0, 1]");
+    }
+    if (config.compression_rate < 0.0 || config.compression_rate > 1.0) {
+        throw std::invalid_argument(
+            "generate_weibull_jobs: compression_rate must be in [0, 1]");
+    }
+
     if (hyperperiod_jobs == 0) {
         return {};
     }
@@ -227,26 +236,37 @@ std::vector<JobParams> generate_weibull_jobs(
     double wcet_sec = duration_to_seconds(wcet);
     double period_sec = duration_to_seconds(period);
 
-    // Generate durations with Weibull distribution
+    // Generate durations with Weibull distribution.
+    // The success_rate percentile of the distribution equals wcet (the budget).
+    // Jobs above the percentile have durations exceeding the budget.
     std::vector<double> durations(hyperperiod_jobs);
-    if (config.compression_rate >= 1.0) {
-        // No compression: all durations are exactly wcet
+    if (config.compression_rate >= 1.0 && config.success_rate >= 1.0) {
+        // No variability: all durations are exactly wcet
         std::fill(durations.begin(), durations.end(), wcet_sec);
     } else {
+        constexpr double SHAPE = 1.0;
+        constexpr double SCALE = 2.0;
+        constexpr double UPPER_BOUND_QUANT = 0.99;
+        const double UPPER_BOUND = inverse_weibull_cdf(SHAPE, SCALE, UPPER_BOUND_QUANT);
+
         double min_duration = config.compression_rate * wcet_sec;
+
+        // Compute the upper bound of the mapped distribution so that the
+        // success_rate percentile of the truncated Weibull equals wcet.
+        double max_duration;
+        if (config.success_rate >= 1.0) {
+            max_duration = wcet_sec;
+        } else {
+            double s_budget = inverse_weibull_cdf(
+                SHAPE, SCALE, config.success_rate * UPPER_BOUND_QUANT);
+            max_duration = min_duration
+                + (wcet_sec - min_duration) * UPPER_BOUND / s_budget;
+        }
+
         for (auto& dur : durations) {
-            dur = bounded_weibull(min_duration, wcet_sec, rng);
+            dur = bounded_weibull(min_duration, max_duration, rng);
         }
     }
-
-    // Sort to find budget at success_rate percentile
-    std::sort(durations.begin(), durations.end());
-    std::size_t budget_index = static_cast<std::size_t>(
-        std::ceil(static_cast<double>(hyperperiod_jobs - 1) * config.success_rate));
-    // Budget is not used here but could be useful for logging
-
-    // Shuffle back to random order
-    std::shuffle(durations.begin(), durations.end(), rng);
 
     // Generate jobs with sequential arrivals
     std::vector<JobParams> jobs;
@@ -292,9 +312,9 @@ ScenarioData generate_uunifast_discard_weibull(
         throw std::invalid_argument(
             "generate_uunifast_discard_weibull: target_utilization > num_tasks * umax");
     }
-    if (config.success_rate < 0.0 || config.success_rate > 1.0) {
+    if (config.success_rate <= 0.0 || config.success_rate > 1.0) {
         throw std::invalid_argument(
-            "generate_uunifast_discard_weibull: success_rate must be in [0, 1]");
+            "generate_uunifast_discard_weibull: success_rate must be in (0, 1]");
     }
     if (config.compression_rate < 0.0 || config.compression_rate > 1.0) {
         throw std::invalid_argument(
@@ -355,10 +375,16 @@ ScenarioData merge_scenarios(const ScenarioData& first, const ScenarioData& seco
 std::vector<TaskParams> from_utilizations(
     const std::vector<double>& utilizations,
     const WeibullJobConfig& config,
-    std::mt19937& rng) {
+    std::mt19937& rng,
+    std::size_t num_hyperperiods,
+    std::size_t min_jobs) {
 
     if (utilizations.empty()) {
         return {};
+    }
+    if (num_hyperperiods == 0) {
+        throw std::invalid_argument(
+            "from_utilizations: num_hyperperiods must be >= 1");
     }
 
     // Validate
@@ -368,39 +394,52 @@ std::vector<TaskParams> from_utilizations(
                 "from_utilizations: each utilization must be in [0, 1]");
         }
     }
-    if (config.success_rate < 0.0 || config.success_rate > 1.0) {
+    if (config.success_rate <= 0.0 || config.success_rate > 1.0) {
         throw std::invalid_argument(
-            "from_utilizations: success_rate must be in [0, 1]");
+            "from_utilizations: success_rate must be in (0, 1]");
     }
     if (config.compression_rate < 0.0 || config.compression_rate > 1.0) {
         throw std::invalid_argument(
             "from_utilizations: compression_rate must be in [0, 1]");
     }
 
-    std::vector<TaskParams> tasks;
-    tasks.reserve(utilizations.size());
+    // Retry with different period draws until total jobs >= min_jobs
+    for (int attempt = 0; attempt < 1000; ++attempt) {
+        std::vector<TaskParams> tasks;
+        tasks.reserve(utilizations.size());
+        std::size_t job_count = 0;
 
-    for (std::size_t idx = 0; idx < utilizations.size(); ++idx) {
-        Duration period = pick_harmonic_period(rng);
-        double util = utilizations[idx];
-        Duration wcet = scale_duration(period, util);
+        for (std::size_t idx = 0; idx < utilizations.size(); ++idx) {
+            Duration period = pick_harmonic_period(rng);
+            double util = utilizations[idx];
+            Duration wcet = scale_duration(period, util);
 
-        int period_us = static_cast<int>(duration_to_seconds(period) * 1'000'000.0);
-        std::size_t num_jobs = static_cast<std::size_t>(HYPERPERIOD_US / period_us);
+            int period_us = static_cast<int>(duration_to_seconds(period) * 1'000'000.0);
+            std::size_t jobs_per_hp = static_cast<std::size_t>(HYPERPERIOD_US / period_us);
+            std::size_t total_jobs = jobs_per_hp * num_hyperperiods;
+            job_count += total_jobs;
 
-        auto jobs = generate_weibull_jobs(period, wcet, num_jobs, config, rng);
+            auto jobs = generate_weibull_jobs(period, wcet, total_jobs, config, rng);
 
-        TaskParams task;
-        task.id = idx + 1;  // Task IDs start at 1
-        task.period = period;
-        task.relative_deadline = period;
-        task.wcet = wcet;
-        task.jobs = std::move(jobs);
+            TaskParams task;
+            task.id = idx + 1;
+            task.period = period;
+            task.relative_deadline = period;
+            task.wcet = wcet;
+            task.jobs = std::move(jobs);
 
-        tasks.push_back(std::move(task));
+            tasks.push_back(std::move(task));
+        }
+
+        if (job_count >= min_jobs) {
+            return tasks;
+        }
+        // Advance RNG past the failed attempt (already done by the loop)
     }
 
-    return tasks;
+    throw std::runtime_error(
+        "from_utilizations: could not generate >= " + std::to_string(min_jobs)
+        + " jobs after 1000 attempts");
 }
 
 } // namespace schedsim::io

@@ -55,14 +55,14 @@ Config parse_args(int argc, char** argv) {
         ("totalu", "Alias for --utilization", cxxopts::value<double>())
         ("umin", "Min per-task utilization [0,1] (default: 0)", cxxopts::value<double>()->default_value("0"))
         ("umax", "Max per-task utilization [0,1] (default: 1)", cxxopts::value<double>()->default_value("1"))
-        ("s,success", "Success rate for deadline budget [0,1] (default: 1)", cxxopts::value<double>()->default_value("1"))
+        ("s,success", "Success rate for deadline budget (0,1] (default: 1)", cxxopts::value<double>()->default_value("1"))
         ("c,compression", "Compression ratio (min duration/WCET) [0,1] (default: 1)",
             cxxopts::value<double>()->default_value("1"))
         ("period-min", "Min period in ms (default: 10, range mode only)", cxxopts::value<double>()->default_value("10"))
         ("period-max", "Max period in ms (default: 1000, range mode only)", cxxopts::value<double>()->default_value("1000"))
         ("log-uniform", "Log-uniform periods (default for range mode)")
         ("uniform", "Uniform periods (range mode only)")
-        ("period-mode", "Period selection: 'harmonic' (fixed set) or 'range' (default: range)",
+        ("period-mode", "Period selection: 'harmonic' (legacy fixed grid) or 'range' (default: range)",
             cxxopts::value<std::string>()->default_value("range"))
         ("d,duration", "Simulation duration in seconds (range mode only, 0 = no jobs)",
             cxxopts::value<double>()->default_value("0"))
@@ -189,8 +189,8 @@ Config parse_args(int argc, char** argv) {
         std::exit(64);
     }
 
-    if (config.success_rate < 0.0 || config.success_rate > 1.0) {
-        std::cerr << "Error: success rate must be in [0, 1]" << std::endl;
+    if (config.success_rate <= 0.0 || config.success_rate > 1.0) {
+        std::cerr << "Error: success rate must be in (0, 1]" << std::endl;
         std::exit(64);
     }
 

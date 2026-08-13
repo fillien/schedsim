@@ -186,29 +186,37 @@ Scenario Generation
    .. py:attribute:: success_rate
       :type: float
 
-      Fraction of jobs that complete within their WCET. A value of 1.0
-      means all jobs finish at or before their WCET; values below 1.0
-      introduce overruns.
+      Fraction of jobs that complete within their WCET, in ``(0, 1]``. A
+      value of 1.0 means all jobs finish at or before their WCET; lower
+      values introduce overruns.
 
    .. py:attribute:: compression_rate
       :type: float
 
-      Shape parameter scaling for the Weibull distribution. Higher values
-      produce execution times clustered more tightly around the mean.
+      Lower bound for generated execution times as a fraction of WCET, in
+      ``[0, 1]``. For example, ``0.5`` prevents durations below half the
+      task WCET.
 
-.. py:function:: from_utilizations(utilizations: list[float], success_rate: float = 1.0, compression_rate: float = 1.0, seed: int = 42) -> ScenarioData
+.. py:function:: from_utilizations(utilizations: list[float], success_rate: float = 1.0, compression_rate: float = 1.0, seed: int = 42, num_hyperperiods: int = 1, min_jobs: int = 0) -> ScenarioData
 
    Generate a random task set from a list of per-task utilization values.
 
-   One task is created per entry in *utilizations*. Periods are drawn
-   log-uniformly, WCETs are computed as ``period * utilization``, and
-   job execution times are sampled from a Weibull distribution controlled
-   by *success_rate* and *compression_rate*.
+   One task is created per entry in *utilizations*. Periods are selected
+   uniformly from the fixed 100--500 microsecond grid, WCETs are computed as
+   ``period * utilization``, and job execution times are sampled from a
+   Weibull distribution controlled by *success_rate* and *compression_rate*.
+   The legacy *num_hyperperiods* name controls how many nominal 500
+   microsecond generation windows are produced.
 
    :param utilizations: List of per-task utilization values, each in (0, 1].
-   :param success_rate: Fraction of jobs completing within WCET (default 1.0).
-   :param compression_rate: Weibull shape scaling (default 1.0).
+   :param success_rate: Fraction of jobs completing within WCET, in ``(0, 1]``
+      (default 1.0).
+   :param compression_rate: Minimum duration as a fraction of WCET, in
+      ``[0, 1]`` (default 1.0).
    :param seed: RNG seed for reproducibility (default 42).
+   :param num_hyperperiods: Number of nominal generation windows (default 1).
+   :param min_jobs: Minimum total job count across all tasks. Period selection
+      is retried up to 1,000 times when necessary (default 0, disabled).
    :returns: A :py:class:`ScenarioData` with one task per utilization entry.
 
 .. note::
@@ -278,8 +286,10 @@ from a list of per-task utilizations:
    scenario = sim.from_utilizations(
        [0.3, 0.25, 0.2],
        success_rate=0.95,      # 5 % of jobs may overrun
-       compression_rate=1.0,
+       compression_rate=0.5,  # durations are at least 50 % of WCET
        seed=42,
+       num_hyperperiods=100,
+       min_jobs=700,
    )
 
    print(f"Generated {len(scenario.tasks)} tasks")
