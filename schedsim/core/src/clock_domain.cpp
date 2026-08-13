@@ -78,10 +78,9 @@ void ClockDomain::set_power_coefficients(std::array<double, 4> coeffs) noexcept 
 }
 
 Power ClockDomain::power_at_frequency(Frequency freq) const noexcept {
-    // Convert frequency to GHz for polynomial evaluation
     double f_ghz = freq.mhz / 1000.0;
 
-    // P(f) = a0 + a1*f + a2*f^2 + a3*f^3
+    // P(f) = a0 + a1*f + a2*f^2 + a3*f^3  (f in GHz, P in mW)
     double power = power_coefficients_[0]
                  + power_coefficients_[1] * f_ghz
                  + power_coefficients_[2] * f_ghz * f_ghz
