@@ -1,0 +1,13 @@
+{
+  "clusters": [
+    {
+      "effective_freq": 800.0,
+      "frequencies": [800.0, 1800.0],
+      "power_model": [
+        44.33100178, 3.410453667, 21.93142733, 46.09381282
+      ],
+      "procs": 4,
+      "perf_score": 1.0
+    }
+  ]
+}

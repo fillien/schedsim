@@ -40,7 +40,7 @@ N_TASKS_ORION = 30
 N_SCENARIOS = 1000
 TASKSET_DIR = "tasksets_unbounded_orion"
 ENERGY_POLICIES = [("grub", "GRUB"), ("grub_pa", "GRUB-PA"), ("csf", "CSF"), ("ffa", "FFA")]
-OUTDIR = os.path.expanduser("~/Nextcloud/these/manuscript/chap5-dynamic-allocation/data")
+OUTDIR = os.path.expanduser("~/Nextcloud/these/manuscript/chap5-dynamic-allocation/data/orion-o6-unbounded")
 
 util_points = np.round(
     np.arange(UTIL_MIN_ORION, UTIL_MAX_ORION + UTIL_STEP_ORION / 2, UTIL_STEP_ORION), 4
@@ -379,23 +379,22 @@ if __name__ == "__main__":
         .sort(["policy", "migration", "total_util"])
     )
 
-    # -- Export CSVs --
-    os.makedirs(OUTDIR, exist_ok=True)
+    # -- Export PGFplots-ready CSVs (wide format) --
+    from pgfplots_export import export_alloc_csvs, export_energy_csvs
 
-    exports = [
-        (orion_comparison_summary, "ub_orion_acceptance.csv"),
-        (orion_deadline_summary, "ub_orion_deadline_miss.csv"),
-        (orion_completion_summary, "ub_orion_completion.csv"),
-        (orion_cluster_summary, "ub_orion_cluster_util.csv"),
-        (orion_sig_df, "ub_orion_sig.csv"),
-        (orion_energy_summary, "ub_orion_energy_summary.csv"),
-        (orion_migration_summary, "ub_orion_migration_count.csv"),
-    ]
+    print("Exporting allocator CSVs (wide format):")
+    export_alloc_csvs(
+        orion_comparison_summary.join(orion_deadline_summary, on=["allocator", "migration", "total_util"])
+            .join(orion_completion_summary, on=["allocator", "migration", "total_util"]),
+        orion_cluster_summary,
+        orion_sig_df,
+        OUTDIR,
+        has_migration=True,
+        migration_summary=orion_migration_summary,
+    )
 
-    for df, filename in exports:
-        path = os.path.join(OUTDIR, filename)
-        df.write_csv(path)
-        print(f"  {filename}: {df.shape[0]} rows")
+    print("Exporting energy CSVs (wide format):")
+    export_energy_csvs(orion_energy_summary, OUTDIR, has_migration=True)
 
     elapsed = time.time() - t0
-    print(f"\nDone in {elapsed / 60:.1f} minutes. Exported {len(exports)} CSV files to {OUTDIR}/")
+    print(f"\nDone in {elapsed / 60:.1f} minutes. CSVs in {OUTDIR}/")
