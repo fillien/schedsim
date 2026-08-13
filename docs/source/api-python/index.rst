@@ -85,7 +85,8 @@ All public symbols are exported directly under ``pyschedsim``:
   ``ClockDomain``, ``PowerDomain``, ``Task``, ``Job``, ``ProcessorState``,
   ``CStateScope``, helper functions
 - **Scheduling**: ``EdfScheduler``, ``CbsServer``, ``Cluster``,
-  ``SingleSchedulerAllocator``, ``FFCapAllocator``, ``CountingAllocator``,
+  ``SingleSchedulerAllocator``, ``FFCapAllocator``,
+  ``FFCapAdaptiveLinearAllocator``, ``CountingAllocator``,
   ``AdmissionTest``, ``DeadlineMissPolicy``
 - **I/O**: ``TraceWriter``, ``MemoryTraceWriter``, ``FileJsonTraceWriter``,
   ``NullTraceWriter``, platform and scenario loaders

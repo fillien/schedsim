@@ -10,7 +10,9 @@ namespace schedsim::algo {
 /// Builds on FFCapAllocator by dynamically adjusting the admission threshold
 /// using a linear function of the observed maximum per-task utilisation and the
 /// expected total task-set utilisation.  The threshold tightens as the
-/// allocator gathers more information about incoming workloads.
+/// allocator gathers more information about incoming workloads. Task sets with
+/// expected total utilisation at or below 3.5 retain the full threshold of 1.0;
+/// the fitted linear model is applied only above that boundary.
 ///
 /// @see MultiClusterAllocator for the base class and task-binding semantics.
 /// @see FFCapAllocator for the non-adaptive capacity-aware variant.

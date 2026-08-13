@@ -10,9 +10,13 @@ namespace {
 constexpr double A_UMAX = 1.616;
 constexpr double B_U    = 0.098;
 constexpr double C      = -0.373;
+constexpr double LOW_UTILIZATION_THRESHOLD = 3.5;
 
 double linear_model(double umax, double total_util) {
-    return std::clamp(A_UMAX * umax + B_U * total_util + C, 0.0, 1.0);
+    if (total_util <= LOW_UTILIZATION_THRESHOLD) {
+        return 1.0;
+    }
+    return std::clamp(B_U * total_util + A_UMAX * umax + C, 0.0, 1.0);
 }
 } // namespace
 

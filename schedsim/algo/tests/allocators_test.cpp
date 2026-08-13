@@ -290,7 +290,7 @@ TEST(FFCapAllocatorTest, PrefersLittleWhenCapacityAllows) {
 // FFCapAdaptiveLinearAllocator
 // ============================================================
 
-TEST(FFCapAdaptiveLinearAllocatorTest, ModelSetsUTarget) {
+TEST(FFCapAdaptiveLinearAllocatorTest, LowUtilizationUsesFullTarget) {
     Engine engine;
     auto plat = BigLittlePlatform::create(engine);
     // Task: wcet=5, period=10 => util=0.5
@@ -303,14 +303,28 @@ TEST(FFCapAdaptiveLinearAllocatorTest, ModelSetsUTarget) {
     engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(5.0));
     engine.run(time_from_seconds(0.5));
 
-    // Model: A*umax + B*U + C = 1.616*0.5 + 0.098*2.0 + (-0.373) = 0.808 + 0.196 - 0.373 = 0.631
-    // This target is set on the little cluster (smallest perf, sorted first)
-    EXPECT_NEAR(plat.little_cluster->u_target(), 0.631, 0.01);
+    // Below the fitted-model boundary, retain the full LITTLE-cluster target.
+    EXPECT_DOUBLE_EQ(plat.little_cluster->u_target(), 1.0);
 }
 
-TEST(FFCapAdaptiveLinearAllocatorTest, KnownModelValues) {
-    // Verify the model output for known inputs
-    // umax=1.0, U=4.0 => 1.616*1.0 + 0.098*4.0 + (-0.373) = 1.616+0.392-0.373 = 1.635 => clamped to 1.0
+TEST(FFCapAdaptiveLinearAllocatorTest, ModelSetsUTargetAboveBoundary) {
+    Engine engine;
+    auto plat = BigLittlePlatform::create(engine);
+    // Task utilization is 0.2.
+    auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(2.0));
+    engine.platform().finalize();
+
+    FFCapAdaptiveLinearAllocator alloc(engine, plat.clusters_big_first());
+    alloc.set_expected_total_util(4.0);
+
+    engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(2.0));
+    engine.run(time_from_seconds(0.5));
+
+    // 1.616*0.2 + 0.098*4.0 - 0.373 = 0.3422
+    EXPECT_NEAR(plat.little_cluster->u_target(), 0.3422, 0.0001);
+}
+
+TEST(FFCapAdaptiveLinearAllocatorTest, ModelClampsTargetToOne) {
     Engine engine;
     auto plat = BigLittlePlatform::create(engine);
     auto& task = engine.platform().add_task(duration_from_seconds(10.0), duration_from_seconds(10.0), duration_from_seconds(10.0));
@@ -322,7 +336,7 @@ TEST(FFCapAdaptiveLinearAllocatorTest, KnownModelValues) {
     engine.schedule_job_arrival(task, time_from_seconds(0.0), duration_from_seconds(10.0));
     engine.run(time_from_seconds(0.5));
 
-    EXPECT_DOUBLE_EQ(plat.little_cluster->u_target(), 1.0);  // clamped
+    EXPECT_DOUBLE_EQ(plat.little_cluster->u_target(), 1.0);
 }
 
 // ============================================================

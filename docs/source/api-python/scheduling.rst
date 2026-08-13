@@ -393,6 +393,28 @@ FFCapAllocator
 
 ----
 
+FFCapAdaptiveLinearAllocator
+----------------------------
+
+.. py:class:: FFCapAdaptiveLinearAllocator(engine: Engine, clusters: list[Cluster])
+
+   Capacity-aware allocator with a linearly adaptive admission threshold. Like
+   :class:`FFCapAllocator`, it evaluates clusters in order but dynamically
+   tightens the lowest-performance cluster's ``u_target`` based on the observed
+   workload. Expected total utilization at or below 3.5 keeps ``u_target`` at
+   1.0; larger workloads use the fitted linear model.
+
+   :param engine: The simulation engine.
+   :param clusters: Ordered list of clusters to consider.
+
+   .. py:method:: set_expected_total_util(util: float) -> None
+
+      Set the expected aggregate task utilization (sum of individual
+      utilisations). This value combines with the observed maximum per-task
+      utilisation to update the adaptive threshold.
+
+----
+
 CountingAllocator
 -----------------
 
