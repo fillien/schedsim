@@ -99,15 +99,6 @@ protected:
     bool migration_enabled_{false};
 
 private:
-    /// @brief Remove completed tasks from bookkeeping.
-    ///
-    /// Scans task_assignments_ for tasks whose CBS server is Inactive with
-    /// no pending jobs (or detached). For allocators that track scaled
-    /// utilization, calls unadmit_scaled() to free cluster capacity.
-    ///
-    /// @param exclude  Task to skip (the one currently receiving a job).
-    void cleanup_completed_tasks(const core::Task* exclude);
-
     core::Engine& engine_;
     std::vector<Cluster*> clusters_;
     std::unordered_map<const core::Task*, Cluster*> task_assignments_;
