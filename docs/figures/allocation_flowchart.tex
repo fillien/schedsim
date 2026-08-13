@@ -1,0 +1,139 @@
+% Allocation flowchart — tikzpicture only (no document preamble)
+%
+% Required in parent document:
+%   \usepackage{tikz}
+%   \usetikzlibrary{shapes.geometric, shapes.misc, arrows.meta, positioning, calc}
+%
+% Three-column layout:
+%   LEFT   first-arrival path: FFCap for new task → assign or reject
+%   CENTRE main spine: arrival → is-known? → migration? →
+%          inactive? → re-evaluate → different-cluster?
+%   RIGHT  terminal "forward-to-cluster" boxes
+
+\begin{tikzpicture}[
+  % ---------------------------------------------------------------- node styles
+  startstop/.style={
+    rounded rectangle,
+    draw=blue!80!black, fill=blue!15, thick,
+    text width=5.0cm, align=center, minimum height=0.65cm,
+    font=\footnotesize,
+  },
+  process/.style={
+    rounded rectangle,
+    draw=blue!60!black, fill=blue!25, thick,
+    text width=5.0cm, align=center, minimum height=0.65cm,
+    font=\footnotesize,
+  },
+  decision/.style={
+    diamond, aspect=2.8,
+    draw=black!60, fill=black!8, thick,
+    text width=3.2cm, align=center, inner sep=0pt,
+    font=\footnotesize,
+  },
+  twoline/.style={        % taller diamond for two-line content
+    diamond, aspect=2.4,
+    draw=black!60, fill=black!8, thick,
+    text width=3.2cm, align=center, inner sep=0pt,
+    font=\footnotesize,
+  },
+  terminal/.style={       % "forward / assign / migrate" terminal boxes
+    rounded rectangle,
+    draw=green!55!black, fill=green!8, thick,
+    text width=3.5cm, align=center, minimum height=0.65cm,
+    font=\footnotesize,
+  },
+  reject/.style={
+    rounded rectangle,
+    draw=red!70, fill=red!10, thick, dashed,
+    text width=3.1cm, align=center, minimum height=0.65cm,
+    font=\footnotesize,
+  },
+  leftdecision/.style={   % FFCap diamond on the left branch
+    diamond, aspect=2.3,
+    draw=black!60, fill=black!8, thick,
+    text width=2.9cm, align=center, inner sep=0pt,
+    font=\footnotesize,
+  },
+  arr/.style={-{Stealth[length=5pt,width=4pt]}, thick},
+  lbl/.style={font=\footnotesize, inner sep=2pt},
+  node distance=0.50cm and 2.1cm,
+]
+
+% ================================================================= CENTRE SPINE
+\node[startstop] (arrival)
+  {Job arrival for task $\tau_i$};
+
+\node[decision, below=0.65cm of arrival] (known)
+  {$\tau_i$ already assigned\\to cluster $G_k$?};
+
+\node[decision, below=0.85cm of known] (migr)
+  {Migration enabled?};
+
+\node[twoline, below=0.85cm of migr] (inactive)
+  {Server state:\\[1pt]\textit{Inactive} or \textit{NonContending}?};
+
+\node[process, below=0.85cm of inactive] (reeval)
+  {Temporarily unadmit $\tau_i$;\\re-run \textsc{select\_cluster}()};
+
+\node[decision, below=0.85cm of reeval] (diffcluster)
+  {Different cluster\\selected \& admitted?};
+
+% ================================================================= RIGHT TERMINALS
+\node[terminal, right=of migr] (fwd_nomig)
+  {Forward $\tau_i$'s job to\\current cluster $G_k$};
+
+\node[terminal, right=of inactive] (fwd_active)
+  {Forward $\tau_i$'s job to\\current cluster $G_k$};
+
+\node[terminal, right=of diffcluster] (fwd_migrate)
+  {Migrate $\tau_i$ to $G_{k'}$;\\forward job there};
+
+% Rollback terminal: same column as right terminals, below fwd_migrate
+\node[terminal, below=0.50cm of fwd_migrate] (fwd_rollback)
+  {Rollback; forward $\tau_i$'s job\\to current cluster $G_k$};
+
+% ================================================================= LEFT BRANCH  (first-arrival path)
+% The FFCap decision is positioned to the left of 'inactive' so the
+% horizontal detour from known.west can drop naturally down the left side.
+
+\node[leftdecision, left=2.2cm of inactive] (ffcap_new)
+  {\textsc{FFCap}:\\\textsc{select\_cluster}()};
+
+\node[terminal, above left=0.60cm and 0cm of ffcap_new] (fwd_new)
+  {Assign $\tau_i$ to $G_k$;\\forward job};
+
+\node[reject, below=0.60cm of ffcap_new] (reject)
+  {Reject $\tau_i$:\\no cluster admits};
+
+% ================================================================= ARROWS
+
+% --- Centre spine ---
+\draw[arr] (arrival)  -- (known);
+\draw[arr] (known)    -- node[lbl, right=2pt]{Yes} (migr);
+\draw[arr] (migr)     -- node[lbl, right=2pt]{Yes} (inactive);
+\draw[arr] (inactive) -- node[lbl, right=2pt]{Yes} (reeval);
+\draw[arr] (reeval)   -- (diffcluster);
+
+% --- Right branches ---
+\draw[arr] (migr.east)        -- node[lbl, above=2pt]{No} (fwd_nomig.west);
+\draw[arr] (inactive.east)    -- node[lbl, above=2pt]{No} (fwd_active.west);
+\draw[arr] (diffcluster.east) -- node[lbl, above=2pt]{Yes} (fwd_migrate.west);
+
+% diffcluster → No: exit west, drop down, enter fwd_rollback from the left
+% We route: diffcluster.west → left clearance → down → fwd_rollback.west
+\draw[arr] (diffcluster.west)
+    -- ++(-0.55,0) node[lbl, above=2pt, pos=0.6]{No}
+    |- (fwd_rollback.west);
+
+% --- Left branch: known → No ---
+% Exit known.west, travel left then down to ffcap_new
+\draw[arr] (known.west)
+    -| node[lbl, above=2pt, pos=0.15]{No} (ffcap_new.north east);
+
+% ffcap_new → Found (up to assign terminal)
+\draw[arr] (ffcap_new.north) -- node[lbl, right=2pt]{Found} (fwd_new.south);
+
+% ffcap_new → None (down to reject)
+\draw[arr] (ffcap_new.south) -- node[lbl, right=2pt]{None} (reject.north);
+
+\end{tikzpicture}
