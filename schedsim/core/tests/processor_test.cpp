@@ -218,6 +218,42 @@ TEST_F(ProcessorEngineTest, DeadlineMissHandler) {
     EXPECT_TRUE(handler_called);
 }
 
+TEST_F(ProcessorEngineTest, DeadlineMissReportedOnceAfterReassignment) {
+    Engine engine;
+    auto& type = engine.platform().add_processor_type("big", 1.0);
+    auto& clock = engine.platform().add_clock_domain(
+        Frequency{500.0}, Frequency{2000.0});
+    auto& power = engine.platform().add_power_domain({
+        {0, CStateScope::PerProcessor, duration_from_seconds(0.0), Power{100.0}}
+    });
+    auto& first = engine.platform().add_processor(type, clock, power);
+    auto& second = engine.platform().add_processor(type, clock, power);
+    engine.platform().finalize();
+
+    Task task(
+        0,
+        duration_from_seconds(10.0),
+        duration_from_seconds(1.0),
+        duration_from_seconds(3.0));
+    Job job(task, duration_from_seconds(3.0), time_from_seconds(1.0));
+
+    int miss_count = 0;
+    first.set_deadline_miss_handler(
+        [&](Processor&, Job&) { ++miss_count; });
+    second.set_deadline_miss_handler(
+        [&](Processor&, Job&) { ++miss_count; });
+
+    first.assign(job);
+    engine.run(time_from_seconds(1.1));
+    ASSERT_EQ(miss_count, 1);
+
+    first.clear();
+    second.assign(job);
+    engine.run(time_from_seconds(1.2));
+
+    EXPECT_EQ(miss_count, 1);
+}
+
 TEST_F(ProcessorEngineTest, SpeedAffectsCompletionTime) {
     // Use a slower frequency
     proc_->clock_domain().set_frequency(Frequency{1000.0});  // Half speed

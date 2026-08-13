@@ -168,9 +168,11 @@ void Processor::on_completion_timer() {
 void Processor::on_deadline_timer() {
     deadline_timer_.clear();
 
-    if (!current_job_) {
+    if (!current_job_ || current_job_->deadline_miss_reported()) {
         return;
     }
+
+    current_job_->set_deadline_miss_reported();
 
     // Update consumed work
     if (state_ == ProcessorState::Running) {

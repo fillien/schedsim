@@ -55,6 +55,12 @@ public:
     /// @see Processor
     void consume_work(Duration amount);
 
+    /// @brief Check whether a deadline miss has already been reported for this job.
+    [[nodiscard]] bool deadline_miss_reported() const noexcept { return deadline_miss_reported_; }
+
+    /// @brief Mark that a deadline miss has been reported for this job.
+    void set_deadline_miss_reported() noexcept { deadline_miss_reported_ = true; }
+
     // Movable, not copyable (Decision 73)
     Job(const Job&) = delete;
     Job& operator=(const Job&) = delete;
@@ -68,6 +74,7 @@ private:
     Duration remaining_work_;
     Duration total_work_;
     TimePoint absolute_deadline_;
+    bool deadline_miss_reported_{false};
 };
 
 } // namespace schedsim::core
