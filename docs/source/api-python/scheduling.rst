@@ -217,7 +217,7 @@ EdfScheduler
       :param sleep_cstate: C-state level for idle processors (default ``1``).
 
 Example — EdfScheduler with GRUB reclamation
-"""""""""""""""""""""""""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: python
 
@@ -438,7 +438,7 @@ CountingAllocator
    the full C++ allocator reference.
 
 Example — Multi-cluster setup with FFCapAllocator
-""""""""""""""""""""""""""""""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: python
 

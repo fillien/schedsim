@@ -56,6 +56,7 @@ public:
     void consume_work(Duration amount);
 
     /// @brief Check whether a deadline miss has already been reported for this job.
+    /// @return True after this job's first deadline miss has been reported.
     [[nodiscard]] bool deadline_miss_reported() const noexcept { return deadline_miss_reported_; }
 
     /// @brief Mark that a deadline miss has been reported for this job.
